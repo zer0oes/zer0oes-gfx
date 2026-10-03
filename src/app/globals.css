@@ -69,8 +69,10 @@ body {
 .protected-media {
   transition: filter 0.25s ease;
 }
+/* Flou instantané (la capture peut figer l'écran très vite) ; fondu seulement au retour */
 [data-shield="on"] .protected-media {
   filter: blur(28px) saturate(0.6);
+  transition: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .protected-media {
