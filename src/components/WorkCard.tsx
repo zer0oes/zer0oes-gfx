@@ -31,7 +31,7 @@ export function WorkCard({ work }: { work: Work }) {
       <div className="p-5">
         <h3 className="font-display text-lg font-semibold">{work.title}</h3>
         <p className="mt-1 text-sm text-muted">{work.description}</p>
-        <p className="mt-3 text-xs text-muted/70">Pour {work.client}</p>
+        <p className="mt-3 text-xs text-muted/70">Chaîne : {work.client}</p>
       </div>
     </article>
   );

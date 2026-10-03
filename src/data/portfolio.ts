@@ -1,5 +1,5 @@
-// Réalisations affichées dans le portfolio.
-// CONTENU PROVISOIRE : remplacer par les vraies créations.
+// Réalisations affichées dans le portfolio : projets zer0oes et TomaVega
+// (captures faites dans StreamerLab, événements de chat et d'alertes simulés).
 // Pour ajouter un visuel : déposer le fichier dans /public/portfolio/
 // puis renseigner `image: "/portfolio/mon-fichier.webp"`.
 // Sans image, une vignette de couleur générée est affichée à la place.
@@ -19,61 +19,67 @@ export type Work = {
   category: Category;
   description: string;
   image?: string;
-  // Couleurs de la vignette provisoire
+  // Couleurs de la vignette de secours (si pas d'image)
   colors: [string, string];
   featured?: boolean;
 };
 
 export const works: Work[] = [
   {
-    id: "neon-arcade",
-    title: "Neon Arcade",
-    client: "Streameur·se exemple",
+    id: "zer0oes-starting-screen",
+    title: "Écran « Stream Starting »",
+    client: "zer0oes",
     category: "overlays",
-    description: "Overlay rétro-futuriste avec cadre caméra animé.",
+    description: "Écran d'attente avec cadre animé, chat néon, derniers événements et barre d'objectif.",
+    image: "/portfolio/zer0oes-starting-screen.webp",
     colors: ["#7c3aed", "#06b6d4"],
     featured: true,
   },
   {
-    id: "cozy-forest",
-    title: "Cozy Forest",
-    client: "Streameur·se exemple",
+    id: "tomavega-starting-screen",
+    title: "Starting screen",
+    client: "TomaVega",
     category: "overlays",
-    description: "Ambiance douce et végétale pour streams chill.",
-    colors: ["#15803d", "#facc15"],
-  },
-  {
-    id: "pixel-pop",
-    title: "Pixel Pop",
-    client: "Streameur·se exemple",
-    category: "alertes",
-    description: "Alertes en pixel art avec effets sonores.",
-    colors: ["#ec4899", "#f97316"],
+    description: "Logo néon animé, titre de scène et réseaux sociaux, avec le tchat de la communauté.",
+    image: "/portfolio/tomavega-starting-screen.webp",
+    colors: ["#22c55e", "#6366f1"],
     featured: true,
   },
   {
-    id: "glitch-raid",
-    title: "Glitch Raid",
-    client: "Streameur·se exemple",
+    id: "zer0oes-alertes",
+    title: "Alertes néon",
+    client: "zer0oes",
     category: "alertes",
-    description: "Alerte de raid avec effet glitch plein écran.",
-    colors: ["#ef4444", "#3b82f6"],
+    description: "Alertes StreamElements au look néon violet : follow, sub, sub offert, cheer, tip et raid.",
+    image: "/portfolio/zer0oes-alerte-sub.webp",
+    colors: ["#ec4899", "#7c3aed"],
+    featured: true,
   },
   {
-    id: "sub-goal",
-    title: "Sub Goal",
-    client: "Streameur·se exemple",
+    id: "tomavega-alertes",
+    title: "Alertes électriques",
+    client: "TomaVega",
+    category: "alertes",
+    description: "Alertes pour StreamElements et Streamlabs, une animation par type d'événement.",
+    image: "/portfolio/tomavega-alerte-sub.webp",
+    colors: ["#6366f1", "#0ea5e9"],
+  },
+  {
+    id: "zer0oes-widgets",
+    title: "Chat néon et barre d'objectif",
+    client: "zer0oes",
     category: "widgets",
-    description: "Barre d'objectif d'abonnements animée et personnalisable.",
+    description: "Chat personnalisé, derniers follow / sub / tip animés et barre d'objectif multi-événements.",
+    image: "/portfolio/zer0oes-widgets.webp",
     colors: ["#0ea5e9", "#a855f7"],
-    featured: true,
   },
   {
-    id: "chat-box",
-    title: "Chat Box",
-    client: "Streameur·se exemple",
+    id: "tomavega-chat",
+    title: "Tchat communautaire",
+    client: "TomaVega",
     category: "widgets",
-    description: "Chat stylisé aux couleurs de la chaîne.",
+    description: "Tchat au design de la chaîne, branché sur les vrais messages, avec badges VIP, abonnés et rôles.",
+    image: "/portfolio/tomavega-chat.webp",
     colors: ["#14b8a6", "#6366f1"],
   },
 ];
