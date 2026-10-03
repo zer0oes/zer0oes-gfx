@@ -14,15 +14,16 @@ export default function CgvPage() {
         <h2>1. Objet</h2>
         <p>
           Les présentes conditions régissent la vente des prestations de création graphique proposées sur le site{" "}
-          {site.name} (overlays, alertes, widgets et éléments visuels pour le streaming), par {legal.ownerName},{" "}
+          {site.name} (identité visuelle, logos, bannières, habillage de stream et éléments visuels pour créateurs de contenu), par {legal.ownerName},{" "}
           {legal.status}, SIRET {legal.siret}, {legal.address}.
         </p>
 
         <h2>2. Prestations</h2>
         <p>
-          Chaque pack correspond à une création réalisée sur mesure, selon le brief transmis par le client après la
-          commande. Le contenu de chaque pack (éléments livrés, nombre d&apos;allers-retours de corrections) est décrit
-          sur la page Offres au moment de la commande. Les demandes hors pack font l&apos;objet d&apos;un devis.
+          Trois offres sont proposées : « Premier look », « Identité signature » et « Univers complet ». Chacune
+          correspond à une création réalisée sur mesure, selon l&apos;échange de cadrage et le brief transmis par le
+          client après la commande. Les livrables de chaque offre sont décrits sur la page Offres au moment de la
+          commande. Les demandes hors offre font l&apos;objet d&apos;un devis.
         </p>
 
         <h2>3. Prix et paiement</h2>
@@ -39,8 +40,9 @@ export default function CgvPage() {
             brief complet.
           </li>
           <li>
-            Les corrections sont incluses dans la limite prévue par le pack. Les modifications supplémentaires ou les
-            changements de direction après validation peuvent être facturés.
+            {/* À COMPLÉTER : préciser le nombre de corrections incluses par offre. */}
+            Les corrections incluses sont précisées lors de l&apos;échange de cadrage. Les modifications
+            supplémentaires ou les changements de direction après validation peuvent être facturés.
           </li>
           <li>Les fichiers finaux sont livrés par lien de téléchargement.</li>
         </ul>

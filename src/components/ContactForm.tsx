@@ -28,7 +28,7 @@ export function ContactForm() {
         <Field label="Type de demande">
           <select name="type" className={inputClass} defaultValue="Projet sur mesure">
             <option>Projet sur mesure</option>
-            <option>Question sur un pack</option>
+            <option>Question sur une offre</option>
             <option>Collaboration / partenariat</option>
             <option>Autre</option>
           </select>

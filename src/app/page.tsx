@@ -6,10 +6,10 @@ import { works } from "@/data/portfolio";
 import { site } from "@/data/site";
 
 const steps = [
-  { title: "Vous choisissez", text: "Un pack prêt à commander, ou une demande sur mesure." },
+  { title: "Vous choisissez", text: "Une offre prête à commander, ou une demande sur mesure." },
   { title: "Vous briefez", text: "Univers, couleurs, références : un formulaire simple juste après la commande." },
   { title: "Je crée", text: `Premières maquettes, retours, ajustements. Livraison en ${site.deliveryDays} jours ouvrés.` },
-  { title: "Vous streamez", text: "Fichiers prêts pour OBS, Streamlabs ou StreamElements." },
+  { title: "Vous vous lancez", text: "Une identité prête à déployer sur vos plateformes et vos contenus." },
 ];
 
 export default function Home() {
@@ -34,7 +34,7 @@ export default function Home() {
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted">{site.description}</p>
           <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/offres" className="rounded-full bg-accent px-7 py-3 font-semibold text-background transition hover:brightness-110">
-              Voir les packs
+              Voir les offres
             </Link>
             <Link href="/portfolio" className="rounded-full border border-border bg-background/40 px-7 py-3 font-semibold transition hover:border-accent">
               Découvrir le portfolio
@@ -70,7 +70,7 @@ export default function Home() {
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="flex items-end justify-between gap-4">
-          <h2 className="font-display text-3xl font-bold">Les packs</h2>
+          <h2 className="font-display text-3xl font-bold">Les offres</h2>
           <Link href="/offres" className="text-sm text-accent hover:underline">Détail des offres →</Link>
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">

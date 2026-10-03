@@ -7,24 +7,24 @@ import { site } from "@/data/site";
 
 export const metadata: Metadata = {
   title: "Offres",
-  description: "Packs Débutant, Confirmé et Full : overlays, alertes et widgets créés sur mesure pour votre stream.",
+  description: "Premier look, Identité signature, Univers complet : trois offres d'identité visuelle sur mesure pour créateurs de contenu.",
 };
 
 const faq = [
   {
     q: "Comment se passe la création après la commande ?",
-    a: "Juste après le paiement, vous remplissez un court brief (univers, couleurs, références). Je vous envoie ensuite une première proposition, puis on ajuste ensemble selon le nombre de retours inclus dans votre pack.",
+    a: "Juste après le paiement, vous remplissez un court brief (univers, couleurs, références). On fait ensuite l'échange de cadrage, puis je vous présente une première proposition que l'on ajuste ensemble.",
   },
   {
     q: "Quel est le délai de livraison ?",
-    a: `Comptez ${site.deliveryDays} jours ouvrés après réception du brief complet, selon le pack choisi.`,
+    a: `Comptez ${site.deliveryDays} jours ouvrés après réception du brief complet, selon l'offre choisie.`,
   },
   {
     q: "Sous quelle forme sont livrés les fichiers ?",
-    a: "Fichiers PNG / WebM / MP4 prêts à importer dans OBS, Streamlabs ou StreamElements, avec un guide d'installation.",
+    a: "Des fichiers prêts à l'emploi, aux formats adaptés à vos plateformes, livrés par lien de téléchargement. L'offre Identité signature inclut un guide d'utilisation, et l'offre Univers complet une séance de prise en main.",
   },
   {
-    q: "Je ne trouve pas mon bonheur dans les packs.",
+    q: "Aucune offre ne correspond à mon projet.",
     a: "Pas de souci : décrivez votre projet via la page contact et je vous prépare un devis sur mesure.",
   },
 ];
@@ -34,8 +34,8 @@ export default async function OffresPage({ searchParams }: PageProps<"/offres">)
 
   return (
     <>
-      <PageHeader eyebrow="Offres" title="Choisissez votre pack">
-        Chaque pack est une création sur mesure, réalisée pour votre chaîne après la commande.
+      <PageHeader eyebrow="Offres" title="Choisissez votre offre">
+        Chaque offre est une création sur mesure, réalisée pour vous après la commande.
       </PageHeader>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6">

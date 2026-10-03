@@ -9,22 +9,30 @@ export function PackCard({ pack, order = false }: { pack: Pack; order?: boolean 
         pack.highlight ? "border-accent bg-surface-2 shadow-[0_0_40px_-12px_var(--accent)]" : "border-border bg-surface"
       }`}
     >
-      {pack.highlight && (
-        <span className="absolute -top-3 left-6 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-background">
-          Le plus choisi
-        </span>
-      )}
       <h3 className="font-display text-xl font-bold">{pack.name}</h3>
-      <p className="mt-2 text-sm text-muted">{pack.pitch}</p>
-      <p className="mt-6 font-display text-4xl font-bold">{formatPrice(pack.price)}</p>
-      <ul className="mt-6 flex-1 space-y-3 text-sm">
-        {pack.features.map((f) => (
+      <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-accent">Pour qui</p>
+      <p className="mt-1 text-sm text-muted">{pack.audience}</p>
+      <p className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="font-display text-4xl font-bold">{formatPrice(pack.price)}</span>
+        {pack.provisionalPrice && (
+          <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-200">
+            Prix provisoire
+          </span>
+        )}
+      </p>
+      <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-accent">Livrables</p>
+      <ul className="mt-3 space-y-3 text-sm">
+        {pack.deliverables.map((f) => (
           <li key={f} className="flex gap-2">
             <span className="text-accent-2" aria-hidden>✓</span>
             <span>{f}</span>
           </li>
         ))}
       </ul>
+      <div className="mt-6 flex-1">
+        <p className="text-xs font-semibold uppercase tracking-widest text-accent">Le bénéfice</p>
+        <p className="mt-1 text-sm font-medium">{pack.benefit}</p>
+      </div>
 
       {order ? (
         <form action={createCheckout} className="mt-8 space-y-3">

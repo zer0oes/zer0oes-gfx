@@ -49,7 +49,7 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
       <PageHeader eyebrow={paid || demo ? "Commande confirmée" : "Commande reçue"} title="Merci !">
         {pack ? (
           <>
-            Votre <strong className="text-foreground">{pack.name}</strong> est réservé.
+            Votre offre <strong className="text-foreground">« {pack.name} »</strong> est réservée.
           </>
         ) : (
           "Votre commande est enregistrée."
