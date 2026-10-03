@@ -19,12 +19,16 @@ export function Watermark({ active = true, sheet = false }: { active?: boolean; 
   const { watermark } = useContext(ProtectionContext);
   if (watermark === "off") return null;
   if (sheet) {
-    // Planche d'emotes : mosaïque légère par-dessus toute la planche
+    // Planche d'emotes : un seul logo discret dans le coin (chaque emote a déjà le sien, incrusté)
     return (
-      <span
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src="/logo-zeroes-gfx.png"
+        alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-[2]"
-        style={{ backgroundImage: "url(/logo-zeroes-gfx.png)", backgroundSize: "120px auto", backgroundRepeat: "space", opacity: 0.12 }}
+        draggable={false}
+        className="pointer-events-none absolute bottom-3 right-4 z-[2] h-auto w-28 sm:w-36"
+        style={{ opacity: 0.5 }}
       />
     );
   }
