@@ -13,6 +13,8 @@ export type FinanceSettings = {
   // Frais Stripe par paiement : pourcentage + montant fixe (centimes)
   stripePercent: number;
   stripeFixed: number;
+  // Factures Abby : envoyer aussi le PDF au client par e-mail
+  abbySendInvoice: boolean;
 };
 
 // Taux 2026, à mettre à jour si l'URSSAF ou Stripe changent (modifiables dans l'admin).
@@ -23,6 +25,7 @@ export const defaultFinance: FinanceSettings = {
   vlRate: 2.2,
   stripePercent: 1.5,
   stripeFixed: 25,
+  abbySendInvoice: false,
 };
 
 export type NetBreakdown = {

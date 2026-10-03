@@ -259,6 +259,13 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           <Field label="Frais Stripe fixes par paiement (€)">
             <input name="stripeFixed" defaultValue={euros(finance.stripeFixed)} inputMode="decimal" required className={input} />
           </Field>
+          <div className="sm:col-span-3">
+            <Check
+              name="abbySendInvoice"
+              label="Factures Abby : envoyer aussi le PDF de la facture au client par e-mail"
+              defaultChecked={finance.abbySendInvoice}
+            />
+          </div>
           <div className="flex items-end">
             <button type="submit" className={save}>
               Enregistrer les taux

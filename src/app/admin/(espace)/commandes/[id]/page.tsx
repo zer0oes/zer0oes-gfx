@@ -7,7 +7,7 @@ import { formatRate, netBreakdown } from "@/lib/finance";
 import { paymentSummary } from "@/lib/orders";
 import { depositAmount, formatPrice } from "@/lib/pricing";
 import { balanceDue, getStore, orderStatuses } from "@/lib/store";
-import { addNote, updateStatus } from "../../../actions";
+import { addNote, retryInvoiceAction, updateStatus } from "../../../actions";
 
 export const metadata: Metadata = { title: "Commande" };
 
@@ -27,7 +27,7 @@ const card = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
 export default async function OrderPage({ params }: PageProps<"/admin/commandes/[id]">) {
   const { id } = await params;
   const store = getStore();
-  const [order, finance] = await Promise.all([store.getOrder(id), store.getFinance()]);
+  const [order, finance, invoices] = await Promise.all([store.getOrder(id), store.getFinance(), store.listInvoices(id)]);
   if (!order) notFound();
   const due = balanceDue(order);
 
@@ -78,6 +78,58 @@ export default async function OrderPage({ params }: PageProps<"/admin/commandes/
                 <code className="text-xs text-muted">{order.stripeSessionId}</code>
               </Row>
             </dl>
+          </section>
+
+          <section className={card}>
+            <h2 className="font-semibold">Facturation</h2>
+            {(order.billingName || order.billingAddress || order.companyName) && (
+              <dl className="mt-3 divide-y divide-border">
+                {order.billingName && <Row label="Nom">{order.billingName}</Row>}
+                {order.billingAddress && (
+                  <Row label="Adresse">
+                    {[order.billingAddress.line1, order.billingAddress.line2, [order.billingAddress.postalCode, order.billingAddress.city].filter(Boolean).join(" "), order.billingAddress.country]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </Row>
+                )}
+                {order.companyName && <Row label="Société">{order.companyName}</Row>}
+                {order.companySiret && <Row label="SIRET">{order.companySiret}</Row>}
+                {order.companyVat && <Row label="N° TVA">{order.companyVat}</Row>}
+              </dl>
+            )}
+            <ul className="mt-3 space-y-2">
+              {invoices.map((inv) => (
+                <li key={inv.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-background/60 p-3 text-sm">
+                  <span className="font-medium">
+                    {inv.kind === "acompte" ? "Facture d'acompte" : inv.kind === "solde" ? "Facture de solde" : "Facture"}
+                  </span>
+                  <span>{formatPrice(inv.amount)} HT</span>
+                  {inv.number && <span className="text-muted">n° {inv.number}</span>}
+                  {inv.status === "emise" ? (
+                    <span className="text-emerald-300">{inv.demo ? "simulée (démo)" : "émise et payée"}</span>
+                  ) : (
+                    <span className="text-amber-300">{inv.status === "echec" ? "en attente (échec)" : "en attente"}</span>
+                  )}
+                  {inv.sentToCustomer && <span className="text-xs text-muted">envoyée au client</span>}
+                  {inv.abbyInvoiceId && !inv.demo && inv.finalized && (
+                    <a href={`/admin/factures/${inv.id}`} target="_blank" className="text-accent hover:underline">
+                      PDF
+                    </a>
+                  )}
+                  {inv.status !== "emise" && (
+                    <form action={retryInvoiceAction} className="ml-auto">
+                      <input type="hidden" name="id" value={inv.id} />
+                      <input type="hidden" name="orderId" value={order.id} />
+                      <button type="submit" className="rounded-full border border-amber-500/50 px-3 py-1 text-xs text-amber-200 hover:bg-amber-500/10">
+                        Réessayer
+                      </button>
+                    </form>
+                  )}
+                  {inv.error && <p className="w-full text-xs text-red-300">{inv.error}</p>}
+                </li>
+              ))}
+              {invoices.length === 0 && <li className="text-sm text-muted">Aucune facture.</li>}
+            </ul>
           </section>
 
           <section className={card}>

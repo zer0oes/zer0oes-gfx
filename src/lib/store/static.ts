@@ -45,4 +45,7 @@ export const staticStore: Store = {
   listOrders: async () => [],
   updateOrder: readOnly,
   addNote: readOnly,
+  listInvoices: async () => [],
+  getInvoiceByKey: async () => null,
+  saveInvoice: readOnly,
 };

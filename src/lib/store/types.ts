@@ -27,6 +27,31 @@ export function statusLabel(s: OrderStatus) {
 
 export type OrderNote = { id: string; createdAt: string; body: string };
 
+export type BillingAddress = { line1?: string; line2?: string; postalCode?: string; city?: string; country?: string };
+
+// Facture Abby liée à un paiement (une seule par payment_intent).
+export type InvoiceKind = "acompte" | "solde" | "complete";
+export type Invoice = {
+  id: string;
+  orderId: string;
+  paymentKey: string;
+  kind: InvoiceKind;
+  amount: number;
+  paidAt: string;
+  status: "en_attente" | "emise" | "echec";
+  abbyCustomerId?: string;
+  abbyInvoiceId?: string;
+  number?: string;
+  finalized: boolean;
+  paidMarked: boolean;
+  sentToCustomer: boolean;
+  demo: boolean;
+  error?: string;
+  attempts: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Order = {
   id: string;
   createdAt: string;
@@ -52,6 +77,14 @@ export type Order = {
   balancePaidAt?: string;
   // Frais Stripe réels (centimes), si connus
   feesPaid?: number;
+  // Facturation (collectée par Stripe Checkout)
+  paymentIntentId?: string;
+  balancePaymentIntentId?: string;
+  billingName?: string;
+  billingAddress?: BillingAddress;
+  companyName?: string;
+  companySiret?: string;
+  companyVat?: string;
   brief?: Record<string, string>;
   briefReceivedAt?: string;
   notes: OrderNote[];
@@ -60,7 +93,15 @@ export type Order = {
 export type NewOrder = Omit<
   Order,
   "id" | "createdAt" | "updatedAt" | "status" | "notes" | "balanceSessionId" | "balanceUrl" | "balancePaidAt" | "brief" | "briefReceivedAt" | "feesPaid"
-> & { feesPaid?: number };
+> & {
+  feesPaid?: number;
+  paymentIntentId?: string;
+  billingName?: string;
+  billingAddress?: BillingAddress;
+  companyName?: string;
+  companySiret?: string;
+  companyVat?: string;
+};
 
 export type OrderPatch = Partial<
   Pick<
@@ -75,6 +116,7 @@ export type OrderPatch = Partial<
     | "customerEmail"
     | "customerName"
     | "feesPaid"
+    | "balancePaymentIntentId"
   >
 >;
 
@@ -114,6 +156,10 @@ export interface Store {
   listOrders(status?: OrderStatus): Promise<Order[]>;
   updateOrder(id: string, patch: OrderPatch): Promise<void>;
   addNote(orderId: string, body: string): Promise<void>;
+  // Factures
+  listInvoices(orderId?: string): Promise<Invoice[]>;
+  getInvoiceByKey(paymentKey: string): Promise<Invoice | null>;
+  saveInvoice(invoice: Omit<Invoice, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<Invoice>;
 }
 
 export class ReadOnlyStoreError extends Error {

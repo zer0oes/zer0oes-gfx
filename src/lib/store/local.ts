@@ -7,11 +7,16 @@ import type { Catalog } from "@/lib/pricing";
 import { defaultProtection, type ProtectionSettings } from "@/lib/protection";
 import { assertNotProduction } from "@/lib/env";
 import { staticCatalog, staticPortfolio } from "./static";
-import type { Order, Portfolio, Store } from "./types";
+import type { Invoice, Order, Portfolio, Store } from "./types";
 
 // Magasin JSON local, pour développer et tester l'admin sans Supabase.
 // Fichier .data/dev-store.json (ignoré par git). Interdit en production.
-type Data = Catalog & Portfolio & { orders: Order[]; finance?: FinanceSettings; protection?: ProtectionSettings };
+type Data = Catalog & Portfolio & {
+  orders: Order[];
+  invoices?: Invoice[];
+  finance?: FinanceSettings;
+  protection?: ProtectionSettings;
+};
 
 const FILE = path.join(process.cwd(), ".data", "dev-store.json");
 const UPLOADS = path.join(process.cwd(), "public", "uploads");
@@ -114,6 +119,21 @@ export const localStore: Store = {
     mutate((d) => {
       const o = d.orders.find((x) => x.id === id);
       if (o) Object.assign(o, patch, { updatedAt: new Date().toISOString() });
+    }),
+  listInvoices: async (orderId) => ((await load()).invoices ?? []).filter((i) => !orderId || i.orderId === orderId),
+  getInvoiceByKey: async (key) => ((await load()).invoices ?? []).find((i) => i.paymentKey === key) ?? null,
+  saveInvoice: (inv) =>
+    mutate((d) => {
+      d.invoices ??= [];
+      const now = new Date().toISOString();
+      const existing = d.invoices.find((i) => (inv.id ? i.id === inv.id : i.paymentKey === inv.paymentKey));
+      if (existing) {
+        Object.assign(existing, inv, { updatedAt: now });
+        return existing;
+      }
+      const created: Invoice = { ...inv, id: randomUUID(), createdAt: now, updatedAt: now };
+      d.invoices.push(created);
+      return created;
     }),
   addNote: (orderId, body) =>
     mutate((d) => {

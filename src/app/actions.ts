@@ -66,6 +66,25 @@ export async function createCheckout(formData: FormData) {
           },
     ],
     metadata: quoteMetadata(q),
+    // Coordonnées pour la facture Abby (nom, adresse ; société et SIRET / TVA pour les pros)
+    billing_address_collection: "required",
+    tax_id_collection: { enabled: true },
+    custom_fields: [
+      {
+        key: "raisonsociale",
+        label: { type: "custom", custom: "Raison sociale (si client pro)" },
+        type: "text",
+        optional: true,
+        text: { maximum_length: 120 },
+      },
+      {
+        key: "siret",
+        label: { type: "custom", custom: "N° SIRET (si client pro)" },
+        type: "text",
+        optional: true,
+        text: { minimum_length: 9, maximum_length: 20 },
+      },
+    ],
     success_url: `${base}/merci?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${base}/offres?annule=1`,
   });

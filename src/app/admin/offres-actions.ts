@@ -142,6 +142,7 @@ export async function saveFinanceAction(formData: FormData) {
     vlRate,
     stripePercent,
     stripeFixed,
+    abbySendInvoice: formData.get("abbySendInvoice") === "on",
   });
   done("/admin/offres");
 }

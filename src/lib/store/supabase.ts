@@ -5,7 +5,7 @@ import { supabaseSecretKey, supabaseUrl } from "@/lib/env";
 import { defaultFinance, type FinanceSettings } from "@/lib/finance";
 import { defaultProtection, isWatermarkLevel, type ProtectionSettings } from "@/lib/protection";
 import type { Option, Pack } from "@/lib/pricing";
-import type { NewOrder, Order, OrderPatch, OrderStatus, Store } from "./types";
+import type { Invoice, NewOrder, Order, OrderPatch, OrderStatus, Store } from "./types";
 
 // Client avec la clé secrète : contourne la RLS, donc réservé au serveur
 // (pages publiques en lecture, et actions admin après contrôle de l'accès).
@@ -95,11 +95,41 @@ function toOrder(r: Row, notes: Row[]): Order {
     balanceUrl: opt<string>(r.balance_url),
     balancePaidAt: opt<string>(r.balance_paid_at),
     feesPaid: opt<number>(r.fees_paid),
+    paymentIntentId: opt<string>(r.payment_intent_id),
+    balancePaymentIntentId: opt<string>(r.balance_payment_intent_id),
+    billingName: opt<string>(r.billing_name),
+    billingAddress: opt<Order["billingAddress"]>(r.billing_address),
+    companyName: opt<string>(r.company_name),
+    companySiret: opt<string>(r.company_siret),
+    companyVat: opt<string>(r.company_vat),
     brief: opt<Record<string, string>>(r.brief),
     briefReceivedAt: opt<string>(r.brief_received_at),
     notes: notes
       .filter((n) => n.order_id === r.id)
       .map((n) => ({ id: n.id as string, createdAt: n.created_at as string, body: n.body as string })),
+  };
+}
+
+function toInvoice(r: Row): Invoice {
+  return {
+    id: r.id as string,
+    orderId: r.order_id as string,
+    paymentKey: r.payment_key as string,
+    kind: r.kind as Invoice["kind"],
+    amount: r.amount as number,
+    paidAt: r.paid_at as string,
+    status: r.status as Invoice["status"],
+    abbyCustomerId: opt<string>(r.abby_customer_id),
+    abbyInvoiceId: opt<string>(r.abby_invoice_id),
+    number: opt<string>(r.number),
+    finalized: r.finalized as boolean,
+    paidMarked: r.paid_marked as boolean,
+    sentToCustomer: r.sent_to_customer as boolean,
+    demo: r.demo as boolean,
+    error: opt<string>(r.error),
+    attempts: r.attempts as number,
+    createdAt: r.created_at as string,
+    updatedAt: r.updated_at as string,
   };
 }
 
@@ -114,6 +144,7 @@ const orderColumns: Record<keyof OrderPatch, string> = {
   customerEmail: "customer_email",
   customerName: "customer_name",
   feesPaid: "fees_paid",
+  balancePaymentIntentId: "balance_payment_intent_id",
 };
 
 const selectOrders = () => db().from("orders").select("*");
@@ -256,6 +287,7 @@ export const supabaseStore: Store = {
       vlRate: Number(r.vl_rate),
       stripePercent: Number(r.stripe_percent),
       stripeFixed: r.stripe_fixed as number,
+      abbySendInvoice: Boolean(r.abby_send_invoice),
     };
   },
 
@@ -279,6 +311,7 @@ export const supabaseStore: Store = {
         vl_rate: f.vlRate,
         stripe_percent: f.stripePercent,
         stripe_fixed: f.stripeFixed,
+        abby_send_invoice: f.abbySendInvoice,
         updated_at: new Date().toISOString(),
       }),
     );
@@ -409,6 +442,12 @@ export const supabaseStore: Store = {
           customer_name: o.customerName,
           customer_email: o.customerEmail,
           fees_paid: o.feesPaid ?? null,
+          payment_intent_id: o.paymentIntentId ?? null,
+          billing_name: o.billingName ?? null,
+          billing_address: o.billingAddress ?? null,
+          company_name: o.companyName ?? null,
+          company_siret: o.companySiret ?? null,
+          company_vat: o.companyVat ?? null,
         })
         .select("*")
         .single(),
@@ -435,6 +474,40 @@ export const supabaseStore: Store = {
     const row: Row = { updated_at: new Date().toISOString() };
     for (const [k, v] of Object.entries(patch)) row[orderColumns[k as keyof OrderPatch]] = v ?? null;
     check(await db().from("orders").update(row).eq("id", id));
+  },
+
+  async listInvoices(orderId) {
+    let q = db().from("invoices").select("*").order("created_at");
+    if (orderId) q = q.eq("order_id", orderId);
+    return (check(await q) as Row[]).map(toInvoice);
+  },
+
+  async getInvoiceByKey(key) {
+    const r = check(await db().from("invoices").select("*").eq("payment_key", key).maybeSingle()) as Row | null;
+    return r ? toInvoice(r) : null;
+  },
+
+  async saveInvoice(inv) {
+    const row = {
+      order_id: inv.orderId,
+      payment_key: inv.paymentKey,
+      kind: inv.kind,
+      amount: inv.amount,
+      paid_at: inv.paidAt,
+      status: inv.status,
+      abby_customer_id: inv.abbyCustomerId ?? null,
+      abby_invoice_id: inv.abbyInvoiceId ?? null,
+      number: inv.number ?? null,
+      finalized: inv.finalized,
+      paid_marked: inv.paidMarked,
+      sent_to_customer: inv.sentToCustomer,
+      demo: inv.demo,
+      error: inv.error ?? null,
+      attempts: inv.attempts,
+      updated_at: new Date().toISOString(),
+    };
+    const r = check(await db().from("invoices").upsert(row, { onConflict: "payment_key" }).select("*").single()) as Row;
+    return toInvoice(r);
   },
 
   async addNote(orderId, body) {

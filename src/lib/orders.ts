@@ -1,7 +1,9 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
-import { notify } from "@/lib/notify";
+import { abbyConfigured, createAbbyApi } from "@/lib/abby";
+import { invoicePayment, type InvoiceDeps, type PaymentInput } from "@/lib/invoicing";
+import { notify, sendToCustomer } from "@/lib/notify";
 import {
   amountToPay,
   formatPrice,
@@ -122,6 +124,76 @@ export function paymentSummary(o: Pick<Order, "totalPrice" | "paymentType" | "de
   });
 }
 
+// --- Factures Abby ----------------------------------------------------------------
+
+// Factures réelles uniquement pour de vrais paiements : jamais pour une commande de
+// démo, ni tant que Stripe est en mode test (sk_test_…), sauf ABBY_IN_TEST_MODE=1.
+// Une facture émise dans Abby ne se supprime pas.
+export function realInvoicingEnabled(order: { demo: boolean }) {
+  if (!abbyConfigured() || order.demo) return false;
+  const stripeKey = process.env.STRIPE_SECRET_KEY ?? "";
+  return stripeKey.startsWith("sk_live_") || process.env.ABBY_IN_TEST_MODE === "1";
+}
+
+async function invoiceDeps(order: { demo: boolean }): Promise<InvoiceDeps> {
+  const store = getStore();
+  return {
+    store,
+    api: realInvoicingEnabled(order) ? createAbbyApi() : null,
+    sendToCustomer: (await store.getFinance()).abbySendInvoice,
+    notifyAdmin: (subject, fields) => notify({ subject, fields }),
+    emailCustomer: async (to, subject, text, pdf, filename) => {
+      await sendToCustomer({ to, subject, text, attachments: [{ filename, content: pdf }] });
+    },
+  };
+}
+
+// Facture du paiement (jamais bloquant : en cas d'échec, la facture reste « en attente »).
+export async function invoiceForPayment(orderId: string, payment: PaymentInput) {
+  const store = getStore();
+  if (store.kind === "static") return null;
+  const order = await store.getOrder(orderId);
+  if (!order) return null;
+  try {
+    return await invoicePayment(await invoiceDeps(order), order, payment);
+  } catch (e) {
+    console.error("Facturation :", e);
+    return null;
+  }
+}
+
+// Relance manuelle depuis l'admin (même clé de paiement : pas de doublon).
+export async function retryInvoice(invoiceId: string) {
+  const store = getStore();
+  const inv = (await store.listInvoices()).find((i) => i.id === invoiceId);
+  if (!inv) throw new Error("Facture introuvable.");
+  return invoiceForPayment(inv.orderId, { key: inv.paymentKey, kind: inv.kind, amount: inv.amount, paidAt: inv.paidAt });
+}
+
+const paymentIntentId = (s: Stripe.Checkout.Session) =>
+  typeof s.payment_intent === "string" ? s.payment_intent : (s.payment_intent?.id ?? undefined);
+
+// Coordonnées de facturation collectées par Stripe Checkout.
+function billingFrom(s: Stripe.Checkout.Session) {
+  const a = s.customer_details?.address;
+  const custom = (key: string) => s.custom_fields?.find((f) => f.key === key)?.text?.value?.trim() || undefined;
+  return {
+    billingName: s.customer_details?.name ?? undefined,
+    billingAddress: a
+      ? {
+          line1: a.line1 ?? undefined,
+          line2: a.line2 ?? undefined,
+          postalCode: a.postal_code ?? undefined,
+          city: a.city ?? undefined,
+          country: a.country ?? undefined,
+        }
+      : undefined,
+    companyName: custom("raisonsociale"),
+    companySiret: custom("siret"),
+    companyVat: s.customer_details?.tax_ids?.[0]?.value ?? undefined,
+  };
+}
+
 // Frais Stripe réels d'une session payée (via la balance transaction), si disponibles.
 async function realStripeFee(sessionId: string): Promise<number | undefined> {
   const stripe = getStripe();
@@ -151,7 +223,7 @@ export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
 
   const fee = await realStripeFee(s.id);
   if (m.kind === "solde" && m.orderId) {
-    await markBalancePaid(m.orderId, s.amount_total ?? 0, fee);
+    await markBalancePaid(m.orderId, s.amount_total ?? 0, fee, paymentIntentId(s) ?? s.id);
     return;
   }
 
@@ -159,9 +231,19 @@ export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
   const customerEmail = s.customer_details?.email ?? "";
   const customerName = s.customer_details?.name ?? "";
   if (q && store.kind !== "static") {
-    await store.recordPaidOrder(
-      { ...newOrderFrom(q, { sessionId: s.id, demo: false, customerName, customerEmail, amountPaid: s.amount_total ?? q.amount }), feesPaid: fee },
-    );
+    const order = await store.recordPaidOrder({
+      ...newOrderFrom(q, { sessionId: s.id, demo: false, customerName, customerEmail, amountPaid: s.amount_total ?? q.amount }),
+      ...billingFrom(s),
+      paymentIntentId: paymentIntentId(s),
+      feesPaid: fee,
+    });
+    // Une facture par paiement (clé = payment_intent : un webhook rejoué ne crée pas de doublon)
+    await invoiceForPayment(order.id, {
+      key: paymentIntentId(s) ?? s.id,
+      kind: q.payment === "acompte" ? "acompte" : "complete",
+      amount: s.amount_total ?? q.amount,
+      paidAt: new Date((s.created ?? Date.now() / 1000) * 1000).toISOString(),
+    });
   }
 
   await notify({
@@ -197,7 +279,15 @@ export async function handleAsyncPaymentFailed(s: Stripe.Checkout.Session) {
 export async function recordDemoOrder(q: CheckoutQuote) {
   const sessionId = `demo_${randomUUID()}`;
   const store = getStore();
-  if (store.kind !== "static") await store.recordPaidOrder(newOrderFrom(q, { sessionId, demo: true }));
+  if (store.kind !== "static") {
+    const order = await store.recordPaidOrder(newOrderFrom(q, { sessionId, demo: true }));
+    await invoiceForPayment(order.id, {
+      key: sessionId,
+      kind: q.payment === "acompte" ? "acompte" : "complete",
+      amount: q.amount,
+      paidAt: new Date().toISOString(),
+    });
+  }
   return sessionId;
 }
 
@@ -216,21 +306,30 @@ export async function attachBrief(sessionId: string, brief: Record<string, strin
   return order;
 }
 
-export async function markBalancePaid(orderId: string, amount: number, fee?: number) {
+export async function markBalancePaid(orderId: string, amount: number, fee?: number, paymentKey?: string) {
   const store = getStore();
   const order = await store.getOrder(orderId);
-  if (!order || order.balancePaidAt) return;
+  if (!order) return;
+  const key = paymentKey ?? order.balanceSessionId ?? `solde_${orderId}`;
+  if (order.balancePaidAt) {
+    // Webhook rejoué : la facture du solde est reprise si elle n'a pas abouti
+    await invoiceForPayment(orderId, { key, kind: "solde", amount, paidAt: order.balancePaidAt });
+    return;
+  }
+  const paidAt = new Date().toISOString();
   await store.updateOrder(orderId, {
+    balancePaymentIntentId: key,
     amountPaid: order.amountPaid + amount,
     // Frais réels cumulés seulement si ceux de l'acompte étaient connus aussi
     ...(fee !== undefined && order.feesPaid !== undefined ? { feesPaid: order.feesPaid + fee } : {}),
-    balancePaidAt: new Date().toISOString(),
+    balancePaidAt: paidAt,
     status: order.status === "terminee" ? "terminee" : "solde_paye",
   });
   await notify({
     subject: `[Solde payé] ${order.offerName} — ${order.customerEmail}`,
     fields: { Commande: order.id, Montant: formatPrice(amount), Client: order.customerEmail },
   });
+  await invoiceForPayment(orderId, { key, kind: "solde", amount, paidAt });
 }
 
 // Crée le lien de paiement du solde (montant recalculé ici depuis la commande).

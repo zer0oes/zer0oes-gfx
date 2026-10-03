@@ -12,7 +12,8 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
   const { statut } = await searchParams;
   const status = isOrderStatus(statut) ? statut : undefined;
   const store = getStore();
-  const [orders, all] = await Promise.all([store.listOrders(status), store.listOrders()]);
+  const [orders, all, invoices] = await Promise.all([store.listOrders(status), store.listOrders(), store.listInvoices()]);
+  const pendingInvoice = new Set(invoices.filter((i) => i.status !== "emise").map((i) => i.orderId));
   const counts = Object.fromEntries(orderStatuses.map((s) => [s.id, all.filter((o) => o.status === s.id).length]));
 
   const chip = (href: string, label: string, active: boolean, n: number) => (
@@ -74,6 +75,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
                     <td className="whitespace-nowrap px-4 py-3">{due > 0 ? formatPrice(due) : "—"}</td>
                     <td className="px-4 py-3">
                       <StatusBadge status={o.status} />
+                      {pendingInvoice.has(o.id) && <span className="ml-2 text-xs text-amber-300">facture en attente</span>}
                     </td>
                   </tr>
                 );

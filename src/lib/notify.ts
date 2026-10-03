@@ -41,10 +41,21 @@ export async function notify({ subject, replyTo, fields }: Message) {
 
 // E-mail envoyé à un client (ex. lien de paiement du solde). Même fonctionnement :
 // Resend si configuré, sinon affichage dans les logs serveur.
-export async function sendToCustomer({ to, subject, text }: { to: string; subject: string; text: string }) {
+export async function sendToCustomer({
+  to,
+  subject,
+  text,
+  attachments,
+}: {
+  to: string;
+  subject: string;
+  text: string;
+  attachments?: { filename: string; content: Uint8Array }[];
+}) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.info(`[e-mail client → ${to}] ${subject}\n${text}`);
+    const files = attachments?.length ? `\n(pièces jointes : ${attachments.map((a) => a.filename).join(", ")})` : "";
+    console.info(`[e-mail client → ${to}] ${subject}\n${text}${files}`);
     return { sent: false };
   }
   const res = await fetch("https://api.resend.com/emails", {
@@ -56,6 +67,7 @@ export async function sendToCustomer({ to, subject, text }: { to: string; subjec
       reply_to: process.env.NOTIFY_EMAIL,
       subject,
       text,
+      attachments: attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString("base64") })),
     }),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);

@@ -6,7 +6,7 @@ import { siteUrl } from "@/lib/site-url";
 import { devLogin, logout, requireAdmin, supabaseAuthClient } from "@/lib/auth";
 import { adminEmails, devLoginAllowed, isAdminEmail, supabaseAuthConfigured } from "@/lib/env";
 import { sendToCustomer } from "@/lib/notify";
-import { createBalanceLink } from "@/lib/orders";
+import { createBalanceLink, retryInvoice } from "@/lib/orders";
 import { formatPrice } from "@/lib/pricing";
 import { getStore, isOrderStatus } from "@/lib/store";
 
@@ -100,4 +100,14 @@ export async function sendBalanceLink(_prev: AdminFormState, formData: FormData)
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "Erreur lors de la création du lien." };
   }
+}
+
+// --- Factures --------------------------------------------------------------------
+
+export async function retryInvoiceAction(formData: FormData) {
+  await requireAdmin();
+  const id = formData.get("id")?.toString() ?? "";
+  const orderId = formData.get("orderId")?.toString() ?? "";
+  await retryInvoice(id);
+  revalidatePath(`/admin/commandes/${orderId}`);
 }
