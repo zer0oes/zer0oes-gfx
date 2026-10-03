@@ -312,6 +312,16 @@ export const supabaseStore: Store = {
     check(await db().from("works").delete().eq("id", id));
   },
 
+  async reorderWorks(ids) {
+    await Promise.all(ids.map(async (id, position) => check(await db().from("works").update({ position }).eq("id", id))));
+  },
+
+  async createSignedUpload(path) {
+    const bucket = db().storage.from("portfolio");
+    const data = check(await bucket.createSignedUploadUrl(path, { upsert: true })) as { token: string };
+    return { token: data.token, publicUrl: bucket.getPublicUrl(path).data.publicUrl };
+  },
+
   async uploadAsset(path, data, contentType) {
     const bucket = db().storage.from("portfolio");
     check(await bucket.upload(path, data, { contentType, upsert: true }));

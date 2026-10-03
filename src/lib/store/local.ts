@@ -70,6 +70,14 @@ export const localStore: Store = {
     }),
   saveWork: (w, position) => mutate((d) => upsertAt(d.works, w, position)),
   deleteWork: (id) => mutate((d) => void (d.works = d.works.filter((w) => w.id !== id))),
+  reorderWorks: (ids) =>
+    mutate((d) => {
+      const rank = (id: string) => (ids.includes(id) ? ids.indexOf(id) : ids.length);
+      // Tri stable : seules les réalisations listées changent de place entre elles.
+      const listed = d.works.filter((w) => ids.includes(w.id)).sort((a, b) => rank(a.id) - rank(b.id));
+      let k = 0;
+      d.works = d.works.map((w) => (ids.includes(w.id) ? listed[k++] : w));
+    }),
   uploadAsset: async (rel, data) => {
     assertNotProduction("Le magasin JSON local");
     const safe = rel.replace(/[^a-z0-9/._-]/gi, "-").replace(/\.\.+/g, ".");
