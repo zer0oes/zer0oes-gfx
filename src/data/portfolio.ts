@@ -303,7 +303,7 @@ export const works: Work[] = [
     streamer: "zer0oes",
     category: "reseaux",
     description: "Photo de profil aux lumières néon de la chaîne, la même sur Twitch, YouTube et les réseaux, pour être reconnue partout.",
-    image: "/portfolio/zer0oes-avatar.webp",
+    image: "/portfolio/zer0oes-avatar-v2.webp",
     colors: ["#be185d", "#4c1d95"],
   },
   {
