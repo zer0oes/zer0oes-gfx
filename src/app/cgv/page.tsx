@@ -110,10 +110,11 @@ export default async function CgvPage() {
           incompatibilité avec un logiciel tiers.
         </p>
 
-        <h2>8. Réclamations et médiation</h2>
+        <h2>8. Litiges</h2>
         <p>
-          Toute réclamation peut être adressée à <a href={`mailto:${site.email}`}>{site.email}</a>. En cas de litige,
-          le client consommateur peut recourir gratuitement au médiateur de la consommation : {legal.mediator}.
+          Toute réclamation doit d&apos;abord être adressée à <a href={`mailto:${site.email}`}>{site.email}</a>, afin
+          de rechercher une solution amiable. À défaut d&apos;accord, le litige sera porté devant les tribunaux
+          compétents.
         </p>
 
         <h2>9. Droit applicable</h2>
