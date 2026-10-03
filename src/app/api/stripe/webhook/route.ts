@@ -1,10 +1,12 @@
 import type Stripe from "stripe";
-import { handleCheckoutCompleted } from "@/lib/orders";
+import { handleAsyncPaymentFailed, handleCheckoutCompleted } from "@/lib/orders";
 import { getStripe } from "@/lib/stripe";
 
 // Webhook Stripe : enregistre la commande (ou le paiement du solde) et prévient Aurore.
 // À déclarer dans le Dashboard Stripe : https://<domaine>/api/stripe/webhook
-// (événement checkout.session.completed), puis renseigner STRIPE_WEBHOOK_SECRET.
+// (événements checkout.session.completed, checkout.session.async_payment_succeeded et
+// checkout.session.async_payment_failed), puis renseigner STRIPE_WEBHOOK_SECRET.
+// Les moyens de paiement (carte, PayPal…) sont gérés par Stripe : aucun n'est imposé ici.
 export async function POST(request: Request) {
   const stripe = getStripe();
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -23,9 +25,14 @@ export async function POST(request: Request) {
     return new Response("Signature invalide", { status: 400 });
   }
 
-  if (event.type === "checkout.session.completed") {
+  if (
+    event.type === "checkout.session.completed" ||
+    event.type === "checkout.session.async_payment_succeeded" ||
+    event.type === "checkout.session.async_payment_failed"
+  ) {
     try {
-      await handleCheckoutCompleted(event.data.object);
+      if (event.type === "checkout.session.async_payment_failed") await handleAsyncPaymentFailed(event.data.object);
+      else await handleCheckoutCompleted(event.data.object);
     } catch (e) {
       console.error(e);
       // 500 : Stripe renverra l'événement plus tard.

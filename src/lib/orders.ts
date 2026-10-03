@@ -123,7 +123,11 @@ export function paymentSummary(o: Pick<Order, "totalPrice" | "paymentType" | "de
 }
 
 // Paiement Stripe confirmé (webhook) : commande, ou solde d'une commande.
+// Appelé pour checkout.session.completed et checkout.session.async_payment_succeeded :
+// rien n'est marqué payé tant que payment_status n'est pas « paid » (moyens de
+// paiement différés : virement, PayPal selon les cas…).
 export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
+  if (s.payment_status !== "paid") return;
   const store = getStore();
   const m = s.metadata ?? {};
 
@@ -151,6 +155,20 @@ export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
       "Montant encaissé": s.amount_total != null ? formatPrice(s.amount_total) : "?",
       Client: customerName,
       "E-mail": customerEmail,
+      Session: s.id,
+    },
+  });
+}
+
+// Paiement différé refusé : seule Aurore est prévenue, rien n'est enregistré comme payé.
+export async function handleAsyncPaymentFailed(s: Stripe.Checkout.Session) {
+  const m = s.metadata ?? {};
+  await notify({
+    subject: `[Paiement échoué] ${m.kind === "solde" ? "Solde" : m.offerName ?? m.packId ?? "Commande"} — ${s.customer_details?.email ?? ""}`,
+    fields: {
+      Type: m.kind === "solde" ? `Solde de la commande ${m.orderId}` : "Commande",
+      Offre: m.offerName ?? m.packId ?? "?",
+      "E-mail": s.customer_details?.email ?? "",
       Session: s.id,
     },
   });
