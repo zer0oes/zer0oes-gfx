@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { site } from "@/data/site";
 
@@ -6,9 +7,7 @@ export function Footer() {
     <footer className="mt-24 border-t border-border/60">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
         <div>
-          <p className="font-display text-lg font-bold">
-            zer0oes <span className="text-gradient">gfx</span>
-          </p>
+          <Image src="/logo-zeroes-gfx.png" alt="zer0oes gfx" width={1400} height={250} className="h-9 w-auto" />
           <p className="mt-2 text-sm text-muted">{site.tagline}</p>
         </div>
         <nav className="flex flex-col gap-2 text-sm text-muted" aria-label="Pied de page">

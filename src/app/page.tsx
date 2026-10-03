@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
 import { WorkCard } from "@/components/WorkCard";
@@ -27,8 +28,15 @@ export default function Home() {
           }}
         />
         <div className="relative mx-auto max-w-4xl px-4 py-24 text-center sm:px-6 sm:py-32">
-          <p className="text-sm font-semibold uppercase tracking-widest text-accent">Overlays · Alertes · Widgets</p>
-          <h1 className="mt-4 font-display text-5xl font-bold leading-tight tracking-tight sm:text-7xl">
+          <Image
+            src="/logo-zeroes-gfx.png"
+            alt="zer0oes gfx"
+            width={1400}
+            height={250}
+            priority
+            className="mx-auto h-auto w-full max-w-[560px]"
+          />
+          <h1 className="mt-10 font-display text-5xl font-bold leading-tight tracking-tight sm:text-7xl">
             Un stream qui <span className="text-gradient">vous ressemble</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted">{site.description}</p>
