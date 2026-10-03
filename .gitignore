@@ -44,3 +44,6 @@ next-env.d.ts
 # Magasin local de développement (jamais en production)
 /.data/
 /public/uploads/
+
+# Aide-mémoire local des variables Heroku (contient des secrets)
+.env.heroku-memo
