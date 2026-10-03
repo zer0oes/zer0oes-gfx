@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { NetTable, priceCases } from "@/components/admin/NetTable";
 import { chargesRate, formatRate } from "@/lib/finance";
 import { formatPrice, type Pack } from "@/lib/pricing";
+import { watermarkLevels } from "@/lib/protection";
 import { getStore } from "@/lib/store";
 import {
   archivePackAction,
@@ -9,6 +10,7 @@ import {
   deletePackAction,
   movePackAction,
   saveFinanceAction,
+  saveProtectionAction,
   saveOptionsAction,
   savePackAction,
   saveSettingsAction,
@@ -138,7 +140,11 @@ function PackForm({ pack }: { pack: Pack }) {
 export default async function AdminOffersPage({ searchParams }: PageProps<"/admin/offres">) {
   const { enregistre, erreur } = await searchParams;
   const store = getStore();
-  const [{ settings, packs, options }, finance] = await Promise.all([store.getCatalog(), store.getFinance()]);
+  const [{ settings, packs, options }, finance, protection] = await Promise.all([
+    store.getCatalog(),
+    store.getFinance(),
+    store.getProtection(),
+  ]);
   const euro = (cents: number) => formatPrice(cents);
   const optionRows = [...options, undefined, undefined, undefined];
 
@@ -174,6 +180,31 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
               Enregistrer les réglages
             </button>
           </div>
+        </form>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-2 font-display text-xl font-bold">Protection du portfolio</h2>
+        <p className="mb-4 text-sm text-muted">
+          Mesures dissuasives : aucun site ne peut empêcher totalement une capture d&apos;écran, mais elles compliquent la
+          récupération des fichiers et signent chaque visuel.
+        </p>
+        <form action={saveProtectionAction} className={`${card} grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end`}>
+          <Field label="Filigrane « zer0oes gfx »" hint="Affiché sur les images et vidéos du portfolio (et sur l'accueil).">
+            <select name="watermark" defaultValue={protection.watermark} className={input}>
+              {watermarkLevels.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div className="pb-2">
+            <Check name="blur" label="Flouter les médias quand la fenêtre perd le focus ou qu'une capture est détectée" defaultChecked={protection.blur} />
+          </div>
+          <button type="submit" className={save}>
+            Enregistrer
+          </button>
         </form>
       </section>
 

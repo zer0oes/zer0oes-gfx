@@ -75,6 +75,10 @@ export function HoverVideo({ src }: { src: string }) {
       loop
       playsInline
       preload="none"
+      disablePictureInPicture
+      disableRemotePlayback
+      controlsList="nodownload noremoteplayback"
+      draggable={false}
       aria-hidden
       tabIndex={-1}
       className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${

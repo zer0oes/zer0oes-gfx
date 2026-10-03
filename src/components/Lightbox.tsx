@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { categories, emoteGroups, type Work } from "@/data/portfolio";
+import { ProtectedMedia } from "./protection";
 
 const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
 
@@ -107,31 +108,22 @@ export function Lightbox({
               <EmoteSheet key={work.id} work={work} reducedMotion={reducedMotion} />
             ) : (
             <div className="relative aspect-video w-[min(100%,calc(70dvh*16/9))] overflow-hidden rounded-xl border border-border bg-black shadow-2xl">
-              {work.video ? (
-                <video
-                  key={work.id}
-                  src={work.video}
-                  poster={work.image}
-                  muted
-                  loop
-                  playsInline
-                  autoPlay={!reducedMotion}
-                  controls={reducedMotion}
-                  preload="metadata"
-                  aria-label={`${work.title} — animation`}
-                  className="block h-full w-full object-contain"
-                />
-              ) : work.image ? (
-                <Image
-                  key={work.id}
-                  src={work.image}
-                  alt={work.title}
-                  width={1600}
-                  height={900}
-                  sizes="(min-width: 1280px) 1152px, 100vw"
-                  className="block h-full w-full object-contain"
-                />
-              ) : null}
+              <ProtectedMedia className="h-full w-full">
+                {work.video ? (
+                  <LightboxVideo key={work.id} src={work.video} poster={work.image} title={work.title} autoPlay={!reducedMotion} />
+                ) : work.image ? (
+                  <Image
+                    key={work.id}
+                    src={work.image}
+                    alt={work.title}
+                    width={1600}
+                    height={900}
+                    draggable={false}
+                    sizes="(min-width: 1280px) 1152px, 100vw"
+                    className="block h-full w-full object-contain"
+                  />
+                ) : null}
+              </ProtectedMedia>
             </div>
             )}
             <figcaption className="mt-4 w-full max-w-3xl text-center">
@@ -217,13 +209,14 @@ function EmoteSheet({ work, reducedMotion }: { work: Work; reducedMotion: boolea
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-3 sm:gap-4">
               {emotes.map((e) => (
                 <li key={e.name} className="group flex flex-col items-center gap-1.5">
-                  <span className="relative h-20 w-20 sm:h-24 sm:w-24">
+                  <ProtectedMedia watermark={false} className="h-20 w-20 sm:h-24 sm:w-24">
                     <Image
                       src={e.animated ? e.src.replace(/\.webp$/, "-still.webp") : e.src}
                       alt={`Emote ${e.name}${e.animated ? " (animée)" : ""}`}
                       width={112}
                       height={112}
                       unoptimized
+                      draggable={false}
                       className="h-full w-full object-contain"
                     />
                     {e.animated && !reducedMotion && (
@@ -234,10 +227,11 @@ function EmoteSheet({ work, reducedMotion }: { work: Work; reducedMotion: boolea
                         width={112}
                         height={112}
                         unoptimized
+                        draggable={false}
                         className="absolute inset-0 h-full w-full object-contain transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100"
                       />
                     )}
-                  </span>
+                  </ProtectedMedia>
                   <span className="font-mono text-[11px] text-muted">{e.name}</span>
                 </li>
               ))}
@@ -246,5 +240,42 @@ function EmoteSheet({ work, reducedMotion }: { work: Work; reducedMotion: boolea
         );
       })}
     </div>
+  );
+}
+
+// Vidéo de la visionneuse : sans contrôles natifs (pas de téléchargement ni
+// d'image dans l'image) ; bouton lecture/pause du site si la lecture auto est coupée.
+function LightboxVideo({ src, poster, title, autoPlay }: { src: string; poster?: string; title: string; autoPlay: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(autoPlay);
+  return (
+    <>
+      <video
+        ref={ref}
+        src={src}
+        poster={poster}
+        muted
+        loop
+        playsInline
+        autoPlay={autoPlay}
+        preload="metadata"
+        disablePictureInPicture
+        disableRemotePlayback
+        controlsList="nodownload noremoteplayback nofullscreen"
+        draggable={false}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        aria-label={`${title} — animation`}
+        className="block h-full w-full object-contain"
+      />
+      <button
+        type="button"
+        onClick={() => (ref.current?.paused ? ref.current.play() : ref.current?.pause())}
+        aria-label={playing ? "Mettre en pause l'animation" : "Lire l'animation"}
+        className="absolute bottom-3 left-3 z-[3] rounded-full bg-background/80 px-3 py-1.5 text-xs backdrop-blur hover:bg-surface-2"
+      >
+        {playing ? "❚❚ Pause" : "▶ Lire"}
+      </button>
+    </>
   );
 }

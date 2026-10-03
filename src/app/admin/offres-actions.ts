@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import type { Formula, Option, Pack } from "@/lib/pricing";
+import { isWatermarkLevel } from "@/lib/protection";
 import { getStore } from "@/lib/store";
 
 // Conversion « 490 », « 490,50 » ou « 1 990 » (€) → centimes. null si invalide.
@@ -142,6 +143,16 @@ export async function saveFinanceAction(formData: FormData) {
     stripePercent,
     stripeFixed,
   });
+  done("/admin/offres");
+}
+
+// --- Protection du portfolio ------------------------------------------------------
+
+export async function saveProtectionAction(formData: FormData) {
+  await requireAdmin();
+  const watermark = text(formData, "watermark", 20);
+  if (!isWatermarkLevel(watermark)) done("/admin/offres", "Niveau de filigrane invalide.");
+  await getStore().saveProtection({ blur: formData.get("blur") === "on", watermark });
   done("/admin/offres");
 }
 

@@ -2,6 +2,7 @@ import { defaultSettings, options, packs } from "@/data/packs";
 import { streamers, works } from "@/data/portfolio";
 import { defaultFinance } from "@/lib/finance";
 import type { Catalog } from "@/lib/pricing";
+import { defaultProtection } from "@/lib/protection";
 import { ReadOnlyStoreError, type Portfolio, type Store } from "./types";
 
 // Contenu par défaut, tiré de src/data.
@@ -29,6 +30,8 @@ export const staticStore: Store = {
   reorderPacks: readOnly,
   getFinance: async () => ({ ...defaultFinance }),
   saveFinance: readOnly,
+  getProtection: async () => ({ ...defaultProtection }),
+  saveProtection: readOnly,
   saveOptions: readOnly,
   saveStreamer: readOnly,
   deleteStreamer: readOnly,

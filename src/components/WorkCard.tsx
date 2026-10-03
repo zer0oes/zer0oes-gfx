@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { categories, type Work } from "@/data/portfolio";
 import { HoverVideo } from "./HoverVideo";
+import { ProtectedMedia } from "./protection";
 
 export function WorkCard({
   work,
@@ -22,13 +23,17 @@ export function WorkCard({
     <article data-hover-root className="group relative overflow-hidden rounded-2xl border border-border bg-surface transition focus-within:border-accent hover:-translate-y-1 hover:border-accent/60">
       <div className="relative aspect-video overflow-hidden">
         {work.image ? (
-          <Image
-            src={work.image}
-            alt={work.title}
-            fill
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            className="object-cover transition duration-500 group-hover:scale-105"
-          />
+          <ProtectedMedia className="absolute inset-0">
+            <Image
+              src={work.image}
+              alt={work.title}
+              fill
+              draggable={false}
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              className="object-cover transition duration-500 group-hover:scale-105"
+            />
+            {work.video && <HoverVideo src={work.video} />}
+          </ProtectedMedia>
         ) : (
           // Vignette provisoire tant qu'aucun visuel n'est fourni
           <div
@@ -39,7 +44,6 @@ export function WorkCard({
             <span className="font-display text-2xl font-bold text-white/90 drop-shadow">{work.title}</span>
           </div>
         )}
-        {work.video && work.image && <HoverVideo src={work.video} />}
         <span className="absolute left-3 top-3 rounded-full bg-background/80 px-3 py-1 text-xs font-medium backdrop-blur">
           {category}
         </span>
@@ -52,7 +56,7 @@ export function WorkCard({
       <div className="p-5">
         <h3 className="font-display text-lg font-semibold">
           {href ? (
-            <Link href={href} className="outline-none after:absolute after:inset-0 after:content-['']">
+            <Link href={href} className="outline-none after:absolute after:inset-0 after:z-[5] after:content-['']">
               {work.title}
             </Link>
           ) : onOpen ? (
@@ -61,7 +65,7 @@ export function WorkCard({
               type="button"
               onClick={onOpen}
               aria-haspopup="dialog"
-              className="text-left outline-none after:absolute after:inset-0 after:content-['']"
+              className="text-left outline-none after:absolute after:inset-0 after:z-[5] after:content-['']"
             >
               {work.title}
             </button>

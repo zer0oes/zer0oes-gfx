@@ -4,6 +4,7 @@ import { PackCard } from "@/components/PackCard";
 import { WorkGrid } from "@/components/WorkGrid";
 import { site } from "@/data/site";
 import { activePacks } from "@/lib/pricing";
+import { ProtectedMedia } from "@/components/protection";
 import { getStore } from "@/lib/store";
 
 const steps = (deliveryDays: string) => [
@@ -59,7 +60,9 @@ export default async function Home() {
                 style={{ background: "linear-gradient(135deg, var(--accent-3), var(--accent), var(--accent-2))" }}
               />
               <div className="relative overflow-hidden rounded-2xl border border-border bg-surface">
+                <ProtectedMedia>
                 <Image
+                  draggable={false}
                   src={hero.image}
                   alt={`${hero.title} — ${heroStreamer}`}
                   width={1600}
@@ -68,6 +71,7 @@ export default async function Home() {
                   sizes="(min-width: 1024px) 560px, 100vw"
                   className="h-auto w-full"
                 />
+                </ProtectedMedia>
               </div>
               <p className="relative mt-3 text-center text-xs text-muted lg:text-right">
                 {hero.title} · {heroStreamer}

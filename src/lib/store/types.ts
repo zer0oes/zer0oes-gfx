@@ -1,6 +1,7 @@
 import type { Streamer, Work } from "@/data/portfolio";
 import type { FinanceSettings } from "@/lib/finance";
 import type { Catalog, Option, Pack, PaymentType, PricingSettings } from "@/lib/pricing";
+import type { ProtectionSettings } from "@/lib/protection";
 
 export type Portfolio = { streamers: Streamer[]; works: Work[] };
 
@@ -92,6 +93,8 @@ export interface Store {
   deletePack(id: string): Promise<void>;
   reorderPacks(orderedIds: string[]): Promise<void>;
   getFinance(): Promise<FinanceSettings>;
+  getProtection(): Promise<ProtectionSettings>;
+  saveProtection(protection: ProtectionSettings): Promise<void>;
   saveFinance(finance: FinanceSettings): Promise<void>;
   saveOptions(options: Option[]): Promise<void>;
   // Admin : portfolio

@@ -64,3 +64,21 @@ body {
   color: var(--accent);
   text-decoration: underline;
 }
+
+/* Protection du portfolio : flou des médias quand la fenêtre perd le focus */
+.protected-media {
+  transition: filter 0.25s ease;
+}
+[data-shield="on"] .protected-media {
+  filter: blur(28px) saturate(0.6);
+}
+@media (prefers-reduced-motion: reduce) {
+  .protected-media {
+    transition: none;
+  }
+}
+.protected-media img,
+.protected-media video {
+  -webkit-user-drag: none;
+  user-select: none;
+}

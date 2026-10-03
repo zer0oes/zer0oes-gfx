@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Emote, Streamer, Work } from "@/data/portfolio";
 import { supabaseSecretKey, supabaseUrl } from "@/lib/env";
 import { defaultFinance, type FinanceSettings } from "@/lib/finance";
+import { defaultProtection, isWatermarkLevel, type ProtectionSettings } from "@/lib/protection";
 import type { Option, Pack } from "@/lib/pricing";
 import type { NewOrder, Order, OrderPatch, OrderStatus, Store } from "./types";
 
@@ -256,6 +257,16 @@ export const supabaseStore: Store = {
       stripePercent: Number(r.stripe_percent),
       stripeFixed: r.stripe_fixed as number,
     };
+  },
+
+  async getProtection() {
+    const r = check(await db().from("settings").select("protect_blur, watermark").eq("id", 1).maybeSingle()) as Row | null;
+    if (!r) return { ...defaultProtection };
+    return { blur: r.protect_blur as boolean, watermark: isWatermarkLevel(r.watermark) ? r.watermark : "discret" };
+  },
+
+  async saveProtection(p: ProtectionSettings) {
+    check(await db().from("settings").update({ protect_blur: p.blur, watermark: p.watermark, updated_at: new Date().toISOString() }).eq("id", 1));
   },
 
   async saveFinance(f: FinanceSettings) {

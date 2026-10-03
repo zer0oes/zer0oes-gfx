@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { HoverVideo } from "@/components/HoverVideo";
+import { ProtectedMedia } from "@/components/protection";
 import { PageHeader } from "@/components/ui";
 import { categories, projectHref } from "@/data/portfolio";
 import { getStore } from "@/lib/store";
@@ -40,15 +41,18 @@ export default async function PortfolioPage() {
             >
               <div className="relative aspect-video overflow-hidden bg-background">
                 {cover?.image && (
-                  <Image
-                    src={cover.image}
-                    alt=""
-                    fill
-                    sizes="(min-width: 1024px) 560px, 100vw"
-                    className="object-cover transition duration-500 group-hover:scale-105"
-                  />
+                  <ProtectedMedia className="absolute inset-0">
+                    <Image
+                      src={cover.image}
+                      alt=""
+                      fill
+                      draggable={false}
+                      sizes="(min-width: 1024px) 560px, 100vw"
+                      className="object-cover transition duration-500 group-hover:scale-105"
+                    />
+                    {cover.video && <HoverVideo src={cover.video} />}
+                  </ProtectedMedia>
                 )}
-                {cover?.video && <HoverVideo src={cover.video} />}
               </div>
               <div className="p-6">
                 <div className="flex items-center justify-between gap-4">
