@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { WorkGrid } from "@/components/WorkGrid";
-import { categories, projectHref } from "@/data/portfolio";
+import { categories, projectHref, type Category } from "@/data/portfolio";
 import { getStore } from "@/lib/store";
 
 export async function generateStaticParams() {
@@ -25,10 +25,11 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
   if (!streamer) notFound();
 
   const own = works.filter((w) => w.streamer === streamer.id);
-  const tabs = categories.filter((c) => own.some((w) => w.category === c.id));
+  const sections = categories.filter((c) => own.some((w) => w.category === c.id));
+  // Onglet « Tout » (par défaut) : vue d'ensemble, rangée par type
+  const tabs = [{ id: "tout", label: "Tout" }, ...sections];
   const requested = (await searchParams).type;
-  const active = tabs.find((t) => t.id === requested) ?? tabs[0];
-  const shown = own.filter((w) => w.category === active?.id);
+  const active = sections.find((t) => t.id === requested) ?? tabs[0];
 
   return (
     <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
@@ -56,12 +57,12 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
       <nav aria-label="Types de réalisations" className="mt-10 border-b border-border">
         <ul className="-mb-px flex gap-1 overflow-x-auto">
           {tabs.map((t) => {
-            const n = own.filter((w) => w.category === t.id).length;
+            const n = t.id === "tout" ? own.length : own.filter((w) => w.category === t.id).length;
             const current = t.id === active?.id;
             return (
               <li key={t.id}>
                 <Link
-                  href={projectHref(streamer.id, t.id)}
+                  href={t.id === "tout" ? projectHref(streamer.id) : projectHref(streamer.id, t.id as Category)}
                   scroll={false}
                   aria-current={current ? "page" : undefined}
                   className={`block whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition ${
@@ -76,10 +77,26 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
         </ul>
       </nav>
 
-      <div className="mt-8">
-        {/* key : réinitialise la visionneuse au changement d'onglet */}
-        <WorkGrid key={active?.id} works={shown} showStreamer={false} />
-      </div>
+      {active.id === "tout" ? (
+        sections.map((c) => (
+          <section key={c.id} aria-labelledby={`type-${c.id}`} className="mt-10">
+            <div className="mb-4 flex items-baseline justify-between gap-4">
+              <h2 id={`type-${c.id}`} className="font-display text-2xl font-bold">
+                {c.label}
+              </h2>
+              <Link href={projectHref(streamer.id, c.id)} scroll={false} className="text-sm text-muted hover:text-foreground">
+                Voir uniquement {c.label.toLowerCase()} →
+              </Link>
+            </div>
+            <WorkGrid works={own.filter((w) => w.category === c.id)} showStreamer={false} />
+          </section>
+        ))
+      ) : (
+        <div className="mt-8">
+          {/* key : réinitialise la visionneuse au changement d'onglet */}
+          <WorkGrid key={active.id} works={own.filter((w) => w.category === active.id)} showStreamer={false} />
+        </div>
+      )}
     </div>
   );
 }
