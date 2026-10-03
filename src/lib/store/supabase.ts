@@ -2,7 +2,7 @@ import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Emote, Streamer, Work } from "@/data/portfolio";
 import { supabaseSecretKey, supabaseUrl } from "@/lib/env";
-import { defaultFinance, type FinanceSettings } from "@/lib/finance";
+import { defaultFinance, isUrssafPeriodicity, type FinanceSettings } from "@/lib/finance";
 import { defaultProtection, isWatermarkLevel, type ProtectionSettings } from "@/lib/protection";
 import type { Option, Pack } from "@/lib/pricing";
 import type { Invoice, NewOrder, Order, OrderPatch, OrderStatus, Store } from "./types";
@@ -107,6 +107,7 @@ function toOrder(r: Row, notes: Row[]): Order {
     notes: notes
       .filter((n) => n.order_id === r.id)
       .map((n) => ({ id: n.id as string, createdAt: n.created_at as string, body: n.body as string })),
+    refunds: (r.refunds as Order["refunds"]) ?? [],
   };
 }
 
@@ -145,6 +146,7 @@ const orderColumns: Record<keyof OrderPatch, string> = {
   customerName: "customer_name",
   feesPaid: "fees_paid",
   balancePaymentIntentId: "balance_payment_intent_id",
+  refunds: "refunds",
 };
 
 const selectOrders = () => db().from("orders").select("*");
@@ -288,6 +290,7 @@ export const supabaseStore: Store = {
       stripePercent: Number(r.stripe_percent),
       stripeFixed: r.stripe_fixed as number,
       abbySendInvoice: Boolean(r.abby_send_invoice),
+      urssafPeriodicity: isUrssafPeriodicity(r.urssaf_periodicity) ? r.urssaf_periodicity : defaultFinance.urssafPeriodicity,
     };
   },
 
@@ -312,6 +315,7 @@ export const supabaseStore: Store = {
         stripe_percent: f.stripePercent,
         stripe_fixed: f.stripeFixed,
         abby_send_invoice: f.abbySendInvoice,
+        urssaf_periodicity: f.urssafPeriodicity,
         updated_at: new Date().toISOString(),
       }),
     );

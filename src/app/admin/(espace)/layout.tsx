@@ -4,6 +4,7 @@ import { getStore } from "@/lib/store";
 import { logoutAction } from "../actions";
 
 const nav = [
+  { href: "/admin", label: "Tableau de bord" },
   { href: "/admin/commandes", label: "Commandes" },
   { href: "/admin/offres", label: "Offres et réglages" },
   { href: "/admin/portfolio", label: "Portfolio" },
@@ -18,7 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="flex min-h-dvh flex-col md:flex-row">
       <aside className="border-b border-border bg-surface md:w-60 md:shrink-0 md:border-b-0 md:border-r">
         <div className="flex items-center justify-between gap-4 p-4 md:block">
-          <Link href="/admin/commandes" className="font-display text-lg font-bold">
+          <Link href="/admin" className="font-display text-lg font-bold">
             Admin <span className="text-gradient">gfx</span>
           </Link>
           <p className="truncate text-xs text-muted md:mt-1">{admin.email}</p>

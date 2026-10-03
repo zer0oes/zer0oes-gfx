@@ -27,6 +27,9 @@ export function statusLabel(s: OrderStatus) {
 
 export type OrderNote = { id: string; createdAt: string; body: string };
 
+// Remboursement Stripe (montant en centimes, date du remboursement).
+export type Refund = { id: string; amount: number; at: string; paymentIntentId?: string };
+
 export type BillingAddress = { line1?: string; line2?: string; postalCode?: string; city?: string; country?: string };
 
 // Facture Abby liée à un paiement (une seule par payment_intent).
@@ -88,11 +91,12 @@ export type Order = {
   brief?: Record<string, string>;
   briefReceivedAt?: string;
   notes: OrderNote[];
+  refunds?: Refund[];
 };
 
 export type NewOrder = Omit<
   Order,
-  "id" | "createdAt" | "updatedAt" | "status" | "notes" | "balanceSessionId" | "balanceUrl" | "balancePaidAt" | "brief" | "briefReceivedAt" | "feesPaid"
+  "id" | "createdAt" | "updatedAt" | "status" | "notes" | "refunds" | "balanceSessionId" | "balanceUrl" | "balancePaidAt" | "brief" | "briefReceivedAt" | "feesPaid"
 > & {
   feesPaid?: number;
   paymentIntentId?: string;
@@ -117,6 +121,7 @@ export type OrderPatch = Partial<
     | "customerName"
     | "feesPaid"
     | "balancePaymentIntentId"
+    | "refunds"
   >
 >;
 

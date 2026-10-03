@@ -15,5 +15,5 @@ export async function GET(request: NextRequest) {
     login.searchParams.set("erreur", "1");
     return NextResponse.redirect(login);
   }
-  return NextResponse.redirect(new URL("/admin/commandes", request.url));
+  return NextResponse.redirect(new URL("/admin", request.url));
 }

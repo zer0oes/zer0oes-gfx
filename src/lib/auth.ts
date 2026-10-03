@@ -31,11 +31,12 @@ export async function supabaseAuthClient() {
 
 // Connexion de développement (sans Supabase) : cookie signé, refusée en production.
 const DEV_COOKIE = "zgfx_dev_admin";
-let devSecret: string | null = null;
+// Secret partagé par tout le processus (pages et route handlers sont des modules distincts en dev)
+const devGlobal = globalThis as typeof globalThis & { __zgfxDevSecret?: string };
 function devSign(value: string) {
   assertNotProduction("La connexion admin de développement");
-  devSecret ??= process.env.ADMIN_SESSION_SECRET || randomBytes(32).toString("hex");
-  return createHmac("sha256", devSecret).update(value).digest("hex");
+  devGlobal.__zgfxDevSecret ??= process.env.ADMIN_SESSION_SECRET || randomBytes(32).toString("hex");
+  return createHmac("sha256", devGlobal.__zgfxDevSecret).update(value).digest("hex");
 }
 
 export async function devLogin(email: string) {

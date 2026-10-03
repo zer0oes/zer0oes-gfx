@@ -161,7 +161,7 @@ Seuls les e-mails listés dans `ADMIN_EMAILS` peuvent entrer dans l'admin.
 3. **Webhook** (une fois le site en ligne) : Stripe > Développeurs > Webhooks > ajouter un endpoint
    - URL : `https://www.mondomaine.fr/api/stripe/webhook`
    - Événements : `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
-     `checkout.session.async_payment_failed`
+     `checkout.session.async_payment_failed`, `charge.refunded` (remboursements)
    - Copier le secret de signature (`whsec_…`) dans `STRIPE_WEBHOOK_SECRET`.
 
    Le mode test et le mode live ont chacun leur webhook et leur secret.
@@ -244,6 +244,11 @@ Le site redirige alors automatiquement vers `https://www.mondomaine.fr`.
 
 Adresse : `/admin`. Saisir ton e-mail, puis cliquer sur le lien reçu.
 
+- **Tableau de bord** (page d'accueil de l'admin) : par mois, trimestre, année ou période choisie,
+  chiffre d'affaires encaissé (remboursements déduits), cotisations URSSAF estimées, frais Stripe, net,
+  nouvelles commandes et soldes restant à encaisser ; prochaine échéance URSSAF (rythme mensuel ou
+  trimestriel réglable dans Offres et réglages) ; graphiques avec tableaux de données ; export CSV.
+  Tant qu'il n'y a aucune vente réelle, des chiffres d'exemple sont affichés avec un bandeau.
 - **Commandes** : paiements reçus, brief du client, revenu net estimé (frais Stripe, URSSAF),
   envoi du lien de paiement du solde, notes, factures Abby (téléchargement, relance en cas d'échec).
 - **Offres** : prix, formules, options, acompte, remise logo, ordre d'affichage, archivage.

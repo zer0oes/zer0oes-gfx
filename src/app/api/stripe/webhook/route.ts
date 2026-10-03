@@ -1,11 +1,11 @@
 import type Stripe from "stripe";
-import { handleAsyncPaymentFailed, handleCheckoutCompleted } from "@/lib/orders";
+import { handleAsyncPaymentFailed, handleChargeRefunded, handleCheckoutCompleted } from "@/lib/orders";
 import { getStripe } from "@/lib/stripe";
 
 // Webhook Stripe : enregistre la commande (ou le paiement du solde) et prévient Aurore.
 // À déclarer dans le Dashboard Stripe : https://<domaine>/api/stripe/webhook
-// (événements checkout.session.completed, checkout.session.async_payment_succeeded et
-// checkout.session.async_payment_failed), puis renseigner STRIPE_WEBHOOK_SECRET.
+// (événements checkout.session.completed, checkout.session.async_payment_succeeded,
+// checkout.session.async_payment_failed et charge.refunded), puis renseigner STRIPE_WEBHOOK_SECRET.
 // Les moyens de paiement (carte, PayPal…) sont gérés par Stripe : aucun n'est imposé ici.
 export async function POST(request: Request) {
   const stripe = getStripe();
@@ -28,10 +28,12 @@ export async function POST(request: Request) {
   if (
     event.type === "checkout.session.completed" ||
     event.type === "checkout.session.async_payment_succeeded" ||
-    event.type === "checkout.session.async_payment_failed"
+    event.type === "checkout.session.async_payment_failed" ||
+    event.type === "charge.refunded"
   ) {
     try {
-      if (event.type === "checkout.session.async_payment_failed") await handleAsyncPaymentFailed(event.data.object);
+      if (event.type === "charge.refunded") await handleChargeRefunded(event.data.object);
+      else if (event.type === "checkout.session.async_payment_failed") await handleAsyncPaymentFailed(event.data.object);
       else await handleCheckoutCompleted(event.data.object);
     } catch (e) {
       console.error(e);

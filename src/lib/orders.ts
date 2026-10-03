@@ -17,6 +17,7 @@ import {
   type PaymentType,
 } from "@/lib/pricing";
 import { balanceDue, getStore, type NewOrder, type Order } from "@/lib/store";
+import { mergeRefunds, refundedTotal } from "@/lib/refunds";
 import { getStripe } from "@/lib/stripe";
 
 // Commande calculée côté serveur à partir des identifiants envoyés par le formulaire.
@@ -271,6 +272,36 @@ export async function handleAsyncPaymentFailed(s: Stripe.Checkout.Session) {
       Offre: m.offerName ?? m.packId ?? "?",
       "E-mail": s.customer_details?.email ?? "",
       Session: s.id,
+    },
+  });
+}
+
+// Remboursement fait depuis le Dashboard Stripe (total ou partiel) : les remboursements du
+// paiement sont relus chez Stripe et enregistrés sur la commande, puis Aurore est prévenue.
+// Ils sont déduits du chiffre d'affaires dans le tableau de bord.
+export async function handleChargeRefunded(charge: Stripe.Charge) {
+  const pi = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+  const store = getStore();
+  const stripe = getStripe();
+  if (!pi || !stripe || store.kind === "static") return;
+  const order = (await store.listOrders()).find((o) => o.paymentIntentId === pi || o.balancePaymentIntentId === pi);
+  if (!order) return;
+
+  const list = await stripe.refunds.list({ payment_intent: pi, limit: 100 });
+  const fromStripe = list.data
+    .filter((r) => r.status === "succeeded" || r.status === "pending")
+    .map((r) => ({ id: r.id, amount: r.amount, at: new Date(r.created * 1000).toISOString() }));
+  const refunds = mergeRefunds(order.refunds, pi, fromStripe);
+  await store.updateOrder(order.id, { refunds });
+
+  await notify({
+    subject: `[Remboursement] ${order.offerName} — ${order.customerEmail}`,
+    fields: {
+      Commande: order.id,
+      "Remboursé sur ce paiement": formatPrice(charge.amount_refunded),
+      "Total remboursé sur la commande": formatPrice(refundedTotal(refunds)),
+      Client: order.customerEmail,
+      Rappel: "Pense à faire l'avoir correspondant dans Abby si une facture a été émise.",
     },
   });
 }

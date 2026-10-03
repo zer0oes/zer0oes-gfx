@@ -259,6 +259,12 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           <Field label="Frais Stripe fixes par paiement (€)">
             <input name="stripeFixed" defaultValue={euros(finance.stripeFixed)} inputMode="decimal" required className={input} />
           </Field>
+          <Field label="Déclaration URSSAF" hint="Rythme choisi à la création de ta micro-entreprise (visible dans ton espace autoentrepreneur.urssaf.fr).">
+            <select name="urssafPeriodicity" defaultValue={finance.urssafPeriodicity} className={input}>
+              <option value="trimestrielle">Trimestrielle</option>
+              <option value="mensuelle">Mensuelle</option>
+            </select>
+          </Field>
           <div className="sm:col-span-3">
             <Check
               name="abbySendInvoice"

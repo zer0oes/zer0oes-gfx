@@ -34,7 +34,7 @@ export async function sendMagicLink(_prev: AdminFormState, formData: FormData): 
 export async function devLoginAction() {
   if (!devLoginAllowed()) redirect("/admin/connexion");
   await devLogin(adminEmails()[0]);
-  redirect("/admin/commandes");
+  redirect("/admin");
 }
 
 export async function logoutAction() {

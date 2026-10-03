@@ -8,7 +8,7 @@ import { devLoginAction } from "../actions";
 export const metadata: Metadata = { title: "Connexion" };
 
 export default async function AdminLoginPage({ searchParams }: PageProps<"/admin/connexion">) {
-  if (await getAdmin()) redirect("/admin/commandes");
+  if (await getAdmin()) redirect("/admin");
   const { erreur } = await searchParams;
 
   return (

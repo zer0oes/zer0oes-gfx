@@ -15,7 +15,15 @@ export type FinanceSettings = {
   stripeFixed: number;
   // Factures Abby : envoyer aussi le PDF au client par e-mail
   abbySendInvoice: boolean;
+  // Déclaration du chiffre d'affaires à l'URSSAF
+  urssafPeriodicity: UrssafPeriodicity;
 };
+
+export type UrssafPeriodicity = "mensuelle" | "trimestrielle";
+
+export function isUrssafPeriodicity(v: unknown): v is UrssafPeriodicity {
+  return v === "mensuelle" || v === "trimestrielle";
+}
 
 // Taux 2026, à mettre à jour si l'URSSAF ou Stripe changent (modifiables dans l'admin).
 export const defaultFinance: FinanceSettings = {
@@ -26,6 +34,7 @@ export const defaultFinance: FinanceSettings = {
   stripePercent: 1.5,
   stripeFixed: 25,
   abbySendInvoice: false,
+  urssafPeriodicity: "trimestrielle",
 };
 
 export type NetBreakdown = {

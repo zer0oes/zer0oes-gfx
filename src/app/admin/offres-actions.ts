@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
+import { isUrssafPeriodicity } from "@/lib/finance";
 import type { Formula, Option, Pack } from "@/lib/pricing";
 import { isWatermarkLevel } from "@/lib/protection";
 import { getStore } from "@/lib/store";
@@ -135,6 +136,7 @@ export async function saveFinanceAction(formData: FormData) {
     done("/admin/offres", "Les taux doivent être des pourcentages entre 0 et 100.");
   }
   if (stripeFixed === null) done("/admin/offres", "Frais fixe Stripe invalide.");
+  const periodicity = formData.get("urssafPeriodicity");
   await getStore().saveFinance({
     urssafRate,
     cfpRate,
@@ -143,6 +145,7 @@ export async function saveFinanceAction(formData: FormData) {
     stripePercent,
     stripeFixed,
     abbySendInvoice: formData.get("abbySendInvoice") === "on",
+    urssafPeriodicity: isUrssafPeriodicity(periodicity) ? periodicity : "trimestrielle",
   });
   done("/admin/offres");
 }
