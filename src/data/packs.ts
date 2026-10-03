@@ -99,7 +99,6 @@ export const options: Option[] = [
   { id: "banniere", name: "Bannière pour une plateforme supplémentaire", price: 6000 },
   { id: "panneaux-twitch", name: "Pack de 6 panneaux Twitch", price: 9000 },
   { id: "animation-logo", name: "Animation du logo", price: 18000, priceFrom: true },
-  { id: "mascotte", name: "Mascotte illustrée", price: 30000, priceFrom: true },
 ];
 
 // Types d'overlays proposés au choix dans le brief.
