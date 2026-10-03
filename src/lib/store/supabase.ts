@@ -369,6 +369,11 @@ export const supabaseStore: Store = {
     await Promise.all(ids.map(async (id, position) => check(await db().from("works").update({ position }).eq("id", id))));
   },
 
+  async downloadAsset(path) {
+    const blob = check(await db().storage.from("portfolio").download(path)) as Blob;
+    return new Uint8Array(await blob.arrayBuffer());
+  },
+
   async createSignedUpload(path) {
     const bucket = db().storage.from("portfolio");
     const data = check(await bucket.createSignedUploadUrl(path, { upsert: true })) as { token: string };

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { categories, emoteGroups, type Work } from "@/data/portfolio";
-import { ProtectedMedia } from "./protection";
+import { ProtectedMedia, Watermark } from "./protection";
 
 const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
 
@@ -199,7 +199,13 @@ export function Lightbox({
 // Planche d'emotes, groupées comme dans le tableau d'Aurore, sur le fond du site.
 function EmoteSheet({ work, reducedMotion }: { work: Work; reducedMotion: boolean }) {
   return (
-    <div className="max-h-[68dvh] w-[min(100%,64rem)] overflow-y-auto rounded-xl border border-border bg-background p-4 shadow-2xl sm:p-6">
+    <div className="max-h-[68dvh] w-[min(100%,64rem)] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl">
+      <div
+        className="protected-media relative select-none p-4 [-webkit-touch-callout:none] sm:p-6"
+        onContextMenu={(e) => e.preventDefault()}
+        onDragStart={(e) => e.preventDefault()}
+      >
+        <Watermark sheet />
       {emoteGroups.map((g) => {
         const emotes = work.emotes!.filter((e) => e.group === g.id);
         if (!emotes.length) return null;
@@ -239,6 +245,7 @@ function EmoteSheet({ work, reducedMotion }: { work: Work; reducedMotion: boolea
           </section>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -268,6 +275,7 @@ function LightboxVideo({ src, poster, title, autoPlay }: { src: string; poster?:
         aria-label={`${title} — animation`}
         className="block h-full w-full object-contain"
       />
+      <Watermark />
       <button
         type="button"
         onClick={() => (ref.current?.paused ? ref.current.play() : ref.current?.pause())}

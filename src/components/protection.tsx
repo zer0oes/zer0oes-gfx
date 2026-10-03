@@ -13,33 +13,43 @@ export function ProtectionProvider({ value, children }: { value: ProtectionSetti
   return <ProtectionContext.Provider value={value}>{children}</ProtectionContext.Provider>;
 }
 
-const mark = (opacity: number, size: number) =>
-  `url("data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' width='${size * 2.6}' height='${size * 1.6}'><text x='50%' y='55%' text-anchor='middle' font-family='Arial,sans-serif' font-weight='700' font-size='${size / 4.2}' fill='white' fill-opacity='${opacity}' transform='rotate(-24 ${size * 1.3} ${size * 0.8})'>zer0oes gfx</text></svg>`,
-  )}")`;
-
-function Watermark() {
+// Filigrane superposé (logo blanc), pour les vidéos : les images, elles, ont le
+// filigrane incrusté dans le fichier à l'envoi.
+export function Watermark({ active = true, sheet = false }: { active?: boolean; sheet?: boolean }) {
   const { watermark } = useContext(ProtectionContext);
   if (watermark === "off") return null;
-  if (watermark === "mosaique") {
-    return <span aria-hidden className="pointer-events-none absolute inset-0 z-[2]" style={{ backgroundImage: mark(0.16, 120) }} />;
-  }
-  if (watermark === "visible") {
+  if (sheet) {
+    // Planche d'emotes : mosaïque légère par-dessus toute la planche
     return (
-      <span aria-hidden className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center">
-        <span className="select-none font-display text-[clamp(1rem,6cqw,3.5rem)] font-bold text-white/30 [text-shadow:0_1px_6px_rgb(0_0_0/0.5)]">
-          zer0oes gfx
-        </span>
-      </span>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-[2]"
+        style={{ backgroundImage: "url(/logo-zeroes-gfx.png)", backgroundSize: "120px auto", backgroundRepeat: "space", opacity: 0.12 }}
+      />
+    );
+  }
+  const fade = `transition-opacity duration-300 ${active ? "opacity-100" : "opacity-0"}`;
+  if (watermark === "mosaique") {
+    return (
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 z-[2] ${fade}`}
+        style={{ backgroundImage: "url(/logo-zeroes-gfx.png)", backgroundSize: "16% auto", backgroundRepeat: "space", opacity: active ? 0.16 : 0 }}
+      />
     );
   }
   return (
-    <span
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/logo-zeroes-gfx.png"
+      alt=""
       aria-hidden
-      className="pointer-events-none absolute bottom-2 right-3 z-[2] select-none font-display text-xs font-bold text-white/45 [text-shadow:0_1px_3px_rgb(0_0_0/0.6)] sm:text-sm"
-    >
-      zer0oes gfx
-    </span>
+      draggable={false}
+      className={`pointer-events-none absolute z-[2] h-auto ${
+        watermark === "visible" ? "left-1/2 top-1/2 w-[42%] -translate-x-1/2 -translate-y-1/2" : "bottom-[3%] right-[2.5%] w-[16%]"
+      } ${fade}`}
+      style={{ opacity: active ? (watermark === "visible" ? 0.32 : 0.55) : 0 }}
+    />
   );
 }
 
@@ -48,7 +58,7 @@ function Watermark() {
 export function ProtectedMedia({
   children,
   className = "",
-  watermark = true,
+  watermark = false,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -105,7 +115,10 @@ export function ScreenShield() {
       const k = e.key.toLowerCase();
       return (
         e.key === "PrintScreen" ||
-        // Windows : Win+Maj+S ; macOS : Cmd+Maj+3/4/5
+        // Dès Win/Cmd + Maj, avant la 3e touche (Win+Maj+S, Cmd+Maj+3/4/5)
+        (e.shiftKey && e.metaKey) ||
+        ((e.key === "Meta" || e.key === "OS") && e.shiftKey) ||
+        (e.key === "Shift" && e.metaKey) ||
         (e.shiftKey && e.metaKey && ["s", "3", "4", "5"].includes(k))
       );
     };

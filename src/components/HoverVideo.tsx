@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Watermark } from "./protection";
 
 // Une seule vidéo d'aperçu joue à la fois.
 let playing: HTMLVideoElement | null = null;
@@ -69,21 +70,24 @@ export function HoverVideo({ src }: { src: string }) {
   }, [src]);
 
   return (
-    <video
-      ref={ref}
-      muted
-      loop
-      playsInline
-      preload="none"
-      disablePictureInPicture
-      disableRemotePlayback
-      controlsList="nodownload noremoteplayback"
-      draggable={false}
-      aria-hidden
-      tabIndex={-1}
-      className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-        active ? "opacity-100" : "opacity-0"
-      }`}
-    />
+    <>
+      <video
+        ref={ref}
+        muted
+        loop
+        playsInline
+        preload="none"
+        disablePictureInPicture
+        disableRemotePlayback
+        controlsList="nodownload noremoteplayback"
+        draggable={false}
+        aria-hidden
+        tabIndex={-1}
+        className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+          active ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      <Watermark active={active} />
+    </>
   );
 }

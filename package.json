@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "node --conditions=react-server --import tsx --test \"src/**/*.test.ts\"",
     "db:seed:generate": "tsx scripts/generate-seed.mts",
-    "db:check": "tsx scripts/check-migrations.mts"
+    "db:check": "tsx scripts/check-migrations.mts",
+    "watermark:images": "tsx scripts/watermark-images.mts",
+    "watermark:videos": "tsx scripts/watermark-videos.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -18,6 +20,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
+    "sharp": "^0.35.5",
     "stripe": "^23.0.0"
   },
   "devDependencies": {

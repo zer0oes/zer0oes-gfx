@@ -105,6 +105,7 @@ export interface Store {
   reorderWorks(orderedIds: string[]): Promise<void>;
   // Upload signé (Supabase) : le navigateur envoie le fichier directement au stockage.
   createSignedUpload?(path: string): Promise<{ token: string; publicUrl: string }>;
+  downloadAsset?(path: string): Promise<Uint8Array>;
   uploadAsset(path: string, data: Uint8Array, contentType: string): Promise<string>;
   // Commandes
   recordPaidOrder(order: NewOrder): Promise<Order>;

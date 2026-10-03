@@ -2,7 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { useState } from "react";
-import { prepareUpload, uploadDirect } from "@/app/admin/portfolio-actions";
+import { finalizeUpload, prepareUpload, uploadDirect } from "@/app/admin/portfolio-actions";
 import type { MediaKind } from "@/lib/uploads";
 
 // Champ média : URL existante, ou envoi d'un fichier (directement vers Supabase
@@ -40,7 +40,10 @@ export function MediaInput({
           .storage.from("portfolio")
           .uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type });
         if (error) throw new Error(error.message);
-        setUrl(ticket.publicUrl);
+        // Filigrane incrusté côté serveur (images)
+        const done = await finalizeUpload({ path: ticket.path, kind, publicUrl: ticket.publicUrl });
+        if (done.error) throw new Error(done.error);
+        setUrl(done.url);
       } else {
         const fd = new FormData();
         fd.set("file", file);

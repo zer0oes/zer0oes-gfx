@@ -6,6 +6,7 @@ import type { Emote, Work } from "@/data/portfolio";
 import { requireAdmin } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { checkUpload, sniffType, storagePath, type MediaKind } from "@/lib/uploads";
+import { watermarkImage } from "@/lib/watermark";
 
 const text = (f: FormData, k: string, max = 2000) => (f.get(k)?.toString() ?? "").trim().slice(0, max);
 const slug = (s: string) =>
@@ -174,6 +175,29 @@ export async function uploadDirect(formData: FormData): Promise<{ url?: string; 
   const real = sniffType(bytes);
   const error = real ? checkUpload(kind, real, bytes.length) : "Format de fichier non reconnu.";
   if (error) return { error };
-  const url = await store.uploadAsset(storagePath(text(formData, "folder", 60), file.name, real!), bytes, real!);
+  // Images du portfolio : filigrane incrusté selon le réglage de l'admin
+  let data: Uint8Array = bytes;
+  let type = real!;
+  if (kind === "image" || kind === "emote") {
+    const wm = await watermarkImage(bytes, (await store.getProtection()).watermark, kind);
+    if (wm) ({ data, type } = wm);
+  }
+  const url = await store.uploadAsset(storagePath(text(formData, "folder", 60), file.name, type), data, type);
+  return { url };
+}
+
+// Après un envoi signé vers Supabase : incruste le filigrane dans l'image côté serveur.
+export async function finalizeUpload(input: { path: string; kind: MediaKind; publicUrl: string }): Promise<{ url: string; error?: string }> {
+  await requireAdmin();
+  const store = getStore();
+  if (input.kind === "video" || !store.downloadAsset) return { url: input.publicUrl };
+  if (!/^[a-z0-9-]+\/[a-z0-9-]+\.[a-z0-9]+$/.test(input.path)) return { url: input.publicUrl, error: "Chemin invalide." };
+  const bytes = await store.downloadAsset(input.path);
+  const real = sniffType(bytes);
+  const error = real ? checkUpload(input.kind, real, bytes.length) : "Format de fichier non reconnu.";
+  if (error) return { url: "", error };
+  const wm = await watermarkImage(bytes, (await store.getProtection()).watermark, input.kind);
+  if (!wm) return { url: input.publicUrl };
+  const url = await store.uploadAsset(input.path.replace(/\.[a-z0-9]+$/, ".webp"), wm.data, wm.type);
   return { url };
 }
