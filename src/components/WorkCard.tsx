@@ -1,7 +1,15 @@
 import Image from "next/image";
-import { categories, type Work } from "@/data/portfolio";
+import { categories, getStreamer, type Work } from "@/data/portfolio";
 
-export function WorkCard({ work, onOpen }: { work: Work; onOpen?: () => void }) {
+export function WorkCard({
+  work,
+  onOpen,
+  showStreamer = true,
+}: {
+  work: Work;
+  onOpen?: () => void;
+  showStreamer?: boolean;
+}) {
   const category = categories.find((c) => c.id === work.category)?.label;
   return (
     <article className="group relative overflow-hidden rounded-2xl border border-border bg-surface transition focus-within:border-accent hover:-translate-y-1 hover:border-accent/60">
@@ -50,7 +58,7 @@ export function WorkCard({ work, onOpen }: { work: Work; onOpen?: () => void }) 
           )}
         </h3>
         <p className="mt-1 text-sm text-muted">{work.description}</p>
-        <p className="mt-3 text-xs text-muted/70">Chaîne : {work.client}</p>
+        {showStreamer && <p className="mt-3 text-xs text-muted/70">Chaîne : {getStreamer(work.streamer)?.name}</p>}
       </div>
     </article>
   );

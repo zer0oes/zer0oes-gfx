@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { categories, type Work } from "@/data/portfolio";
+import { categories, emoteGroups, getStreamer, type Work } from "@/data/portfolio";
 
 const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
 
@@ -101,6 +101,9 @@ export function Lightbox({
           }}
         >
           <figure className="flex w-full max-w-6xl flex-col items-center">
+            {work.emotes ? (
+              <EmoteSheet key={work.id} work={work} reducedMotion={reducedMotion} />
+            ) : (
             <div className="relative aspect-video w-[min(100%,calc(70dvh*16/9))] overflow-hidden rounded-xl border border-border bg-black shadow-2xl">
               {work.video ? (
                 <video
@@ -128,9 +131,10 @@ export function Lightbox({
                 />
               ) : null}
             </div>
+            )}
             <figcaption className="mt-4 w-full max-w-3xl text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-                {category} · {work.client}
+                {category} · {getStreamer(work.streamer)?.name}
               </p>
               <h2 id="lightbox-title" className="mt-1 font-display text-xl font-bold sm:text-2xl">
                 {work.title}
@@ -194,5 +198,37 @@ export function Lightbox({
         </div>
       )}
     </dialog>
+  );
+}
+
+// Planche d'emotes, groupées comme dans le tableau d'Aurore, sur le fond du site.
+function EmoteSheet({ work, reducedMotion }: { work: Work; reducedMotion: boolean }) {
+  return (
+    <div className="max-h-[68dvh] w-[min(100%,64rem)] overflow-y-auto rounded-xl border border-border bg-background p-4 shadow-2xl sm:p-6">
+      {emoteGroups.map((g) => {
+        const emotes = work.emotes!.filter((e) => e.group === g.id);
+        if (!emotes.length) return null;
+        return (
+          <section key={g.id} className="mb-6 last:mb-0">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-accent">{g.label}</h3>
+            <ul className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-3 sm:gap-4">
+              {emotes.map((e) => (
+                <li key={e.name} className="flex flex-col items-center gap-1.5">
+                  <Image
+                    src={e.animated && reducedMotion ? e.src.replace(/.webp$/, "-still.webp") : e.src}
+                    alt={`Emote ${e.name}`}
+                    width={112}
+                    height={112}
+                    unoptimized
+                    className="h-20 w-20 object-contain sm:h-24 sm:w-24"
+                  />
+                  <span className="font-mono text-[11px] text-muted">{e.name}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
   );
 }

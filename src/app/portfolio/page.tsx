@@ -11,7 +11,7 @@ export default function PortfolioPage() {
   return (
     <>
       <PageHeader eyebrow="Portfolio" title="Réalisations">
-        Overlays, alertes et widgets créés pour des chaînes Twitch, YouTube et Kick.
+        Overlays, widgets, alertes et emotes, rangés par streameur.
       </PageHeader>
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <PortfolioGallery />

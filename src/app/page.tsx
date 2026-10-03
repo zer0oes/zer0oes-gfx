@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
 import { WorkGrid } from "@/components/WorkGrid";
 import { packs } from "@/data/packs";
-import { works } from "@/data/portfolio";
+import { getStreamer, works } from "@/data/portfolio";
 import { site } from "@/data/site";
 
 const steps = [
@@ -17,6 +17,7 @@ export default function Home() {
   const featured = works.filter((w) => w.featured);
   // Visuel du hero : première réalisation mise en avant
   const hero = featured[0];
+  const heroStreamer = hero && getStreamer(hero.streamer)?.name;
 
   return (
     <>
@@ -55,7 +56,7 @@ export default function Home() {
               <div className="relative overflow-hidden rounded-2xl border border-border bg-surface">
                 <Image
                   src={hero.image}
-                  alt={`${hero.title} — ${hero.client}`}
+                  alt={`${hero.title} — ${heroStreamer}`}
                   width={1600}
                   height={900}
                   priority
@@ -64,7 +65,7 @@ export default function Home() {
                 />
               </div>
               <p className="relative mt-3 text-center text-xs text-muted lg:text-right">
-                {hero.title} · {hero.client}
+                {hero.title} · {heroStreamer}
               </p>
             </Link>
           )}
