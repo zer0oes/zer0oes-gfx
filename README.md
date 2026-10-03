@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# zer0oes gfx
 
-## Getting Started
+Site vitrine et boutique : overlays, alertes et widgets sur mesure pour streameurs.
 
-First, run the development server:
+Next.js 16 (App Router, TypeScript) · Tailwind CSS 4 · Stripe Checkout · déploiement Vercel.
+
+## Démarrer en local
 
 ```bash
+npm install
+cp .env.example .env.local   # facultatif : sans clés, le site tourne en mode démo
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Puis ouvrir http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Modifier les contenus
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Tout le contenu provisoire est regroupé dans `src/data/` :
 
-## Learn More
+| Fichier | Contenu |
+| --- | --- |
+| `src/data/packs.ts` | Les 3 packs : nom, prix (en centimes), description, contenu |
+| `src/data/portfolio.ts` | Les réalisations du portfolio (catégorie, texte, image) |
+| `src/data/site.ts` | E-mail, réseaux, délai de livraison, infos légales (SIRET, adresse…) |
 
-To learn more about Next.js, take a look at the following resources:
+Pour les visuels du portfolio : déposer les fichiers dans `public/portfolio/` puis renseigner
+`image: "/portfolio/nom-du-fichier.webp"` sur la réalisation. Sans image, une vignette colorée s'affiche.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Les pages `src/app/cgv/page.tsx` et `src/app/mentions-legales/page.tsx` sont des modèles à relire avant la mise en ligne.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Pages
 
-## Deploy on Vercel
+- `/` Accueil · `/portfolio` · `/offres` · `/contact`
+- `/merci` page après paiement, avec le formulaire de brief
+- `/mentions-legales` · `/cgv`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Paiement (Stripe)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Renseigner `STRIPE_SECRET_KEY` (clé de test `sk_test_…` pour commencer).
+2. Le bouton « Commander » crée une session Stripe Checkout avec le prix défini dans `packs.ts`
+   (ou un `stripePriceId` si vous préférez gérer les prix dans le Dashboard Stripe).
+3. Après paiement, Stripe renvoie vers `/merci?session_id=…` où le client remplit son brief.
+4. Optionnel : déclarer le webhook `https://<domaine>/api/stripe/webhook` (événement
+   `checkout.session.completed`) et renseigner `STRIPE_WEBHOOK_SECRET` pour être notifiée de chaque commande.
+
+Sans `STRIPE_SECRET_KEY`, « Commander » mène directement à `/merci` en mode démo.
+
+## Réception des formulaires
+
+Contact, brief et notifications de commande sont envoyés par e-mail via [Resend](https://resend.com) si
+`RESEND_API_KEY` et `NOTIFY_EMAIL` sont définies. Sinon ils s'affichent dans les logs du serveur.
