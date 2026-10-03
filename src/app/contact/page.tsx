@@ -6,7 +6,7 @@ import { site } from "@/data/site";
 
 export const metadata: Metadata = {
   title: "Sur-mesure & contact",
-  description: "Un projet d'overlay, d'alertes ou de widget sur mesure ? Demandez un devis.",
+  description: "Un projet d'overlay, d'alertes ou de widget sur mesure ? Demande un devis.",
 };
 
 export default async function ContactPage({ searchParams }: PageProps<"/contact">) {
@@ -15,8 +15,8 @@ export default async function ContactPage({ searchParams }: PageProps<"/contact"
 
   return (
     <>
-      <PageHeader eyebrow="Sur-mesure" title="Parlons de votre projet">
-        Refonte complète, widget interactif, identité pour un événement ou simple question : écrivez-moi, je réponds
+      <PageHeader eyebrow="Sur-mesure" title="Parlons de ton projet">
+        Refonte complète, widget interactif, identité pour un événement ou simple question : écris-moi, je réponds
         sous 48 h ouvrées.
       </PageHeader>
       <div className="mx-auto grid max-w-5xl gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_2fr]">

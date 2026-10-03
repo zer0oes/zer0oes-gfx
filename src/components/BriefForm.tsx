@@ -42,7 +42,7 @@ export function BriefForm({
         </Field>
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Lien de votre chaîne *">
+        <Field label="Lien de ta chaîne *">
           <input name="channel" required placeholder="https://twitch.tv/…" className={inputClass} />
         </Field>
         <Field label="Plateforme principale">
@@ -63,13 +63,13 @@ export function BriefForm({
           <input name="logoLink" required placeholder="https://…" className={inputClass} />
         </Field>
       )}
-      <Field label="Univers et ambiance *" hint="Jeux streamés, thème, mots qui décrivent votre chaîne…">
+      <Field label="Univers et ambiance *" hint="Jeux streamés, thème, mots qui décrivent ta chaîne…">
         <textarea name="universe" required rows={4} className={inputClass} />
       </Field>
       <Field label="Couleurs souhaitées" hint="Codes couleur, logo existant, couleurs à éviter…">
         <input name="colors" className={inputClass} />
       </Field>
-      <Field label="Références visuelles" hint="Liens vers des overlays, chaînes ou images qui vous inspirent.">
+      <Field label="Références visuelles" hint="Liens vers des overlays, chaînes ou images qui t'inspirent.">
         <textarea name="references" rows={3} className={inputClass} />
       </Field>
       <Field label="Éléments à inclure" hint="Textes des écrans, réseaux sociaux à afficher, emplacement caméra…">

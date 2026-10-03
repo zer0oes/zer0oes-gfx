@@ -7,10 +7,10 @@ import { getStreamer, works } from "@/data/portfolio";
 import { site } from "@/data/site";
 
 const steps = [
-  { title: "Vous choisissez", text: "Une offre prête à commander, ou une demande sur mesure." },
-  { title: "Vous briefez", text: "Univers, couleurs, références et overlays choisis : un formulaire simple juste après la commande." },
+  { title: "Tu choisis", text: "Une offre prête à commander, ou une demande sur mesure." },
+  { title: "Tu briefes", text: "Univers, couleurs, références et overlays choisis : un formulaire simple juste après la commande." },
   { title: "Je crée", text: `Premières maquettes, retours, ajustements. Livraison en ${site.deliveryDays} jours ouvrés.` },
-  { title: "Vous streamez", text: "Des visuels prêts à utiliser, avec fond transparent lorsque nécessaire." },
+  { title: "Tu streames", text: "Des visuels prêts à utiliser, avec fond transparent lorsque nécessaire." },
 ];
 
 export default function Home() {
@@ -34,7 +34,7 @@ export default function Home() {
           <div className="text-center lg:text-left">
             <p className="text-sm font-semibold uppercase tracking-widest text-accent">Logo · Overlays · Emotes</p>
             <h1 className="mt-4 font-display text-5xl font-bold leading-tight tracking-tight sm:text-6xl xl:text-7xl">
-              Un stream qui <span className="text-gradient">vous ressemble</span>
+              Un stream qui <span className="text-gradient">te ressemble</span>
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg text-muted lg:mx-0">{site.description}</p>
             <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
@@ -111,7 +111,7 @@ export default function Home() {
         <div className="rounded-3xl border border-border bg-surface-2 p-10 text-center">
           <h2 className="font-display text-3xl font-bold">Un projet plus spécifique ?</h2>
           <p className="mx-auto mt-3 max-w-xl text-muted">
-            Widget interactif, refonte complète, identité pour un événement : parlons-en et je vous fais un devis.
+            Widget interactif, refonte complète, identité pour un événement : parlons-en et je te fais un devis.
           </p>
           <Link href="/contact" className="mt-8 inline-block rounded-full bg-foreground px-7 py-3 font-semibold text-background transition hover:brightness-90">
             Demander un devis

@@ -186,7 +186,7 @@ export function Lightbox({
                     <path d="M15 6l-6 6 6 6" />
                   </svg>
                 </button>
-                <span className="text-xs text-muted/70">Glissez pour naviguer</span>
+                <span className="text-xs text-muted/70">Glisse pour naviguer</span>
                 <button type="button" onClick={() => go(1)} aria-label="Réalisation suivante" className="rounded-full bg-surface/80 p-3">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                     <path d="M9 6l6 6-6 6" />

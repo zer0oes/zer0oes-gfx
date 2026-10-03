@@ -23,7 +23,7 @@ export function ContactForm({ defaultType = "Projet sur mesure" }: { defaultType
         </Field>
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Lien de votre chaîne">
+        <Field label="Lien de ta chaîne">
           <input name="channel" type="url" placeholder="https://twitch.tv/…" className={inputClass} />
         </Field>
         <Field label="Type de demande">
@@ -46,13 +46,13 @@ export function ContactForm({ defaultType = "Projet sur mesure" }: { defaultType
         </select>
       </Field>
       <OptionsField legend="Options à la carte" options={optionChoices} />
-      <Field label="Votre projet *">
+      <Field label="Ton projet *">
         <textarea
           name="message"
           required
           minLength={10}
           rows={6}
-          placeholder="Décrivez ce dont vous avez besoin : éléments, ambiance, délais…"
+          placeholder="Décris ce dont tu as besoin : éléments, ambiance, délais…"
           className={inputClass}
         />
       </Field>

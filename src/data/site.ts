@@ -4,7 +4,7 @@ export const site = {
   name: "zer0oes gfx",
   tagline: "Identité visuelle et overlays de stream sur mesure",
   description:
-    "Logo, overlays, bannière, avatar et emotes sur mesure pour Twitch, YouTube et Kick. Une identité visuelle de stream qui vous ressemble.",
+    "Logo, overlays, bannière, avatar et emotes sur mesure pour Twitch, YouTube et Kick. Une identité visuelle de stream qui te ressemble.",
   email: "zer0oes.pro@gmail.com",
   socials: [
     { label: "Twitch", href: "https://www.twitch.tv/zer0oes" },

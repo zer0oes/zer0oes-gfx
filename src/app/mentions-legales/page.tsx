@@ -51,12 +51,12 @@ export default function MentionsLegalesPage() {
         <h2>Données personnelles</h2>
         <p>
           Les informations transmises via les formulaires de contact et de brief sont utilisées uniquement pour
-          répondre à votre demande et réaliser votre commande. Elles ne sont ni vendues ni cédées à des tiers. Les
+          répondre à ta demande et réaliser ta commande. Elles ne sont ni vendues ni cédées à des tiers. Les
           paiements sont traités par Stripe ; aucune donnée bancaire n&apos;est stockée sur ce site.
         </p>
         <p>
-          Conformément au RGPD, vous disposez d&apos;un droit d&apos;accès, de rectification et de suppression de vos
-          données en écrivant à <a href={`mailto:${site.email}`}>{site.email}</a>. Vous pouvez également introduire
+          Conformément au RGPD, tu disposes d&apos;un droit d&apos;accès, de rectification et de suppression de tes
+          données en écrivant à <a href={`mailto:${site.email}`}>{site.email}</a>. Tu peux également introduire
           une réclamation auprès de la CNIL.
         </p>
 

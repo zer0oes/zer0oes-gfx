@@ -109,7 +109,7 @@ export async function sendContact(
   if (!name || !EMAIL_RE.test(email) || message.length < 10) {
     return {
       ok: false,
-      message: "Merci de renseigner votre nom, un e-mail valide et un message (10 caractères minimum).",
+      message: "Merci d'indiquer ton nom, un e-mail valide et un message (10 caractères minimum).",
     };
   }
 
@@ -129,9 +129,9 @@ export async function sendContact(
     });
   } catch (e) {
     console.error(e);
-    return { ok: false, message: "L'envoi a échoué, réessayez ou écrivez-moi directement par e-mail." };
+    return { ok: false, message: "L'envoi a échoué, réessaie ou écris-moi directement par e-mail." };
   }
-  return { ok: true, message: "Message envoyé ! Je vous réponds sous 48 h ouvrées." };
+  return { ok: true, message: "Message envoyé ! Je te réponds sous 48 h ouvrées." };
 }
 
 export async function sendBrief(
@@ -142,10 +142,10 @@ export async function sendBrief(
   const channel = field(formData, "channel", 300);
   const universe = field(formData, "universe");
   if (!EMAIL_RE.test(email) || !channel || !universe) {
-    return { ok: false, message: "Merci de renseigner au minimum votre e-mail, votre chaîne et votre univers." };
+    return { ok: false, message: "Merci d'indiquer au minimum ton e-mail, ta chaîne et ton univers." };
   }
   if (field(formData, "hasLogo", 5) === "1" && !field(formData, "logoLink", 1000)) {
-    return { ok: false, message: "Merci d'indiquer le lien vers votre logo existant." };
+    return { ok: false, message: "Merci d'indiquer le lien vers ton logo existant." };
   }
 
   // Vérifie côté serveur la commande Stripe associée, si présente.
@@ -189,7 +189,7 @@ export async function sendBrief(
     });
   } catch (e) {
     console.error(e);
-    return { ok: false, message: "L'envoi a échoué, réessayez ou envoyez votre brief par e-mail." };
+    return { ok: false, message: "L'envoi a échoué, réessaie ou envoie ton brief par e-mail." };
   }
-  return { ok: true, message: "Brief bien reçu ! Je reviens vers vous sous 48 h ouvrées pour démarrer." };
+  return { ok: true, message: "Brief bien reçu ! Je reviens vers toi sous 48 h ouvrées pour démarrer." };
 }

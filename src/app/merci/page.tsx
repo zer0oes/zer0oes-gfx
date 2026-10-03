@@ -14,7 +14,7 @@ import {
 import { getStripe } from "@/lib/stripe";
 
 export const metadata: Metadata = {
-  title: "Merci pour votre commande",
+  title: "Merci pour ta commande",
   robots: { index: false },
 };
 
@@ -70,12 +70,12 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
       <PageHeader eyebrow={paid || demo ? "Commande confirmée" : "Commande reçue"} title="Merci !">
         {pack ? (
           <>
-            Votre offre <strong className="text-foreground">« {formulaName(pack, formula)} »</strong> est réservée.
+            Ton offre <strong className="text-foreground">« {formulaName(pack, formula)} »</strong> est réservée.
           </>
         ) : (
-          "Votre commande est enregistrée."
+          "Ta commande est enregistrée."
         )}{" "}
-        Pour lancer la création, racontez-moi votre chaîne en quelques minutes.
+        Pour lancer la création, raconte-moi ta chaîne en quelques minutes.
       </PageHeader>
       <div className="mx-auto max-w-2xl px-4 sm:px-6">
         {formula && (
@@ -91,7 +91,7 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
               </>
             )}
             {paymentLabel(orderPrice(formula.price, hasLogo), payment)}
-            {payment === "acompte" && <>, avant la remise des fichiers définitifs. Je vous enverrai une facture ou un lien de paiement pour le solde.</>}
+            {payment === "acompte" && <>, avant la remise des fichiers définitifs. Je t'enverrai une facture ou un lien de paiement pour le solde.</>}
           </p>
         )}
         {demo && (
@@ -100,7 +100,7 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
           </p>
         )}
         <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-          <h2 className="mb-6 font-display text-2xl font-bold">Votre brief</h2>
+          <h2 className="mb-6 font-display text-2xl font-bold">Ton brief</h2>
           <BriefForm sessionId={sessionId} packId={pack?.id} formulaId={formula?.id} payment={payment} hasLogo={hasLogo} email={email} overlayHint={overlayHint} />
         </div>
       </div>

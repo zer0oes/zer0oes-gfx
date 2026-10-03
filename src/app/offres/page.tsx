@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 const faq = [
   {
     q: "Comment se passe la création après la commande ?",
-    a: "Juste après le paiement, vous remplissez un court brief : univers, couleurs, références et overlays souhaités (démarrage, pause, fin, discussion ou gameplay). Je vous présente ensuite une première proposition que l'on ajuste ensemble : deux séries de corrections regroupées sont incluses.",
+    a: "Juste après le paiement, tu remplis un court brief : univers, couleurs, références et overlays souhaités (démarrage, pause, fin, discussion ou gameplay). Je te présente ensuite une première proposition que l'on ajuste ensemble : deux séries de corrections regroupées sont incluses.",
   },
   {
     q: "J'ai déjà un logo, est-ce moins cher ?",
@@ -22,19 +22,19 @@ const faq = [
   },
   {
     q: "Puis-je payer en plusieurs fois ?",
-    a: `Oui : à la commande, vous pouvez régler la totalité ou un acompte de ${site.depositPercent} %. Le solde est à régler à la livraison, avant la remise des fichiers définitifs, sur facture ou par lien de paiement.`,
+    a: `Oui : à la commande, tu peux régler la totalité ou un acompte de ${site.depositPercent} %. Le solde est à régler à la livraison, avant la remise des fichiers définitifs, sur facture ou par lien de paiement.`,
   },
   {
     q: "Comment commander l'offre Univers complet ?",
-    a: `Elle est proposée à partir de 1 990 € HT, animations légères comprises. Demandez un devis via la page contact : les animations complexes sont chiffrées selon votre projet. Un acompte de ${site.depositPercent} % est demandé à l'acceptation du devis.`,
+    a: `Elle est proposée à partir de 1 990 € HT, animations légères comprises. Demande un devis via la page contact : les animations complexes sont chiffrées selon ton projet. Un acompte de ${site.depositPercent} % est demandé à l'acceptation du devis.`,
   },
   {
     q: "Comment ajouter une option ?",
-    a: "Les emotes et l'animation des overlays se choisissent directement dans les formules des offres. Les autres options à la carte se cochent dans votre brief après la commande, ou dans votre demande de devis ; je vous confirme le montant avant de les réaliser.",
+    a: "Les emotes et l'animation des overlays se choisissent directement dans les formules des offres. Les autres options à la carte se cochent dans ton brief après la commande, ou dans ta demande de devis ; je te confirme le montant avant de les réaliser.",
   },
   {
     q: "Quel est le délai de livraison ?",
-    a: `Comptez ${site.deliveryDays} jours ouvrés après réception du brief complet, selon l'offre choisie.`,
+    a: `Compte ${site.deliveryDays} jours ouvrés après réception du brief complet, selon l'offre choisie.`,
   },
   {
     q: "Sous quelle forme sont livrés les visuels ?",
@@ -42,7 +42,7 @@ const faq = [
   },
   {
     q: "Aucune offre ne correspond à mon projet.",
-    a: "Pas de souci : décrivez votre projet via la page contact et je vous prépare un devis sur mesure.",
+    a: "Pas de souci : décris ton projet via la page contact et je te prépare un devis sur mesure.",
   },
 ];
 
@@ -58,7 +58,7 @@ export default async function OffresPage({ searchParams }: PageProps<"/offres">)
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {annule && (
           <p role="status" className="mb-8 rounded-lg border border-border bg-surface px-4 py-3 text-center text-sm text-muted">
-            Paiement annulé : aucun montant n&apos;a été débité. Vous pouvez reprendre votre commande quand vous voulez.
+            Paiement annulé : aucun montant n&apos;a été débité. Tu peux reprendre ta commande quand tu veux.
           </p>
         )}
         <div className="grid gap-6 pt-3 md:grid-cols-3">
@@ -69,7 +69,7 @@ export default async function OffresPage({ searchParams }: PageProps<"/offres">)
         <p className="mt-6 text-center text-sm text-muted">
           Prix en euros HT — {legal.vatNote}. Paiement sécurisé par Stripe, en une fois ou avec un acompte de{" "}
           {site.depositPercent} % (solde à la livraison). Besoin d&apos;autre chose ?{" "}
-          <Link href="/contact" className="text-accent hover:underline">Demandez un devis sur mesure</Link>.
+          <Link href="/contact" className="text-accent hover:underline">Demande un devis sur mesure</Link>.
         </p>
 
         <aside className="mx-auto mt-16 max-w-3xl rounded-2xl border border-accent/50 bg-accent/10 p-6 sm:p-8">
@@ -104,7 +104,7 @@ export default async function OffresPage({ searchParams }: PageProps<"/offres">)
           </ul>
           <p className="mt-4 text-sm text-muted">
             Livraison des visuels prêts à utiliser, avec fond transparent lorsque nécessaire. L&apos;installation dans
-            OBS peut être chiffrée séparément. Les options se cochent dans votre brief après la commande, ou dans votre
+            OBS peut être chiffrée séparément. Les options se cochent dans ton brief après la commande, ou dans ta
             demande de devis.
           </p>
         </section>
