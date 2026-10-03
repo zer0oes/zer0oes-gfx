@@ -76,8 +76,8 @@ export const works: Work[] = [
     client: "zer0oes",
     category: "widgets",
     description: "Chat personnalisé, derniers follow / sub / tip animés et barre d'objectif multi-événements.",
-    image: "/portfolio/zer0oes-widgets.webp",
-    video: "/portfolio/zer0oes-widgets.mp4",
+    image: "/portfolio/zer0oes-chat-objectif.webp",
+    video: "/portfolio/zer0oes-chat-objectif.mp4",
     colors: ["#0ea5e9", "#a855f7"],
   },
   {
@@ -86,8 +86,8 @@ export const works: Work[] = [
     client: "TomaVega",
     category: "widgets",
     description: "Tchat au design de la chaîne, branché sur les vrais messages, avec badges VIP, abonnés et rôles.",
-    image: "/portfolio/tomavega-chat.webp",
-    video: "/portfolio/tomavega-chat.mp4",
+    image: "/portfolio/tomavega-tchat.webp",
+    video: "/portfolio/tomavega-tchat.mp4",
     colors: ["#14b8a6", "#6366f1"],
   },
 ];
