@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
-import { WorkCard } from "@/components/WorkCard";
+import { WorkGrid } from "@/components/WorkGrid";
 import { packs } from "@/data/packs";
 import { works } from "@/data/portfolio";
 import { site } from "@/data/site";
@@ -76,10 +76,8 @@ export default function Home() {
           <h2 className="font-display text-3xl font-bold">Réalisations phares</h2>
           <Link href="/portfolio" className="text-sm text-accent hover:underline">Tout voir →</Link>
         </div>
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((w) => (
-            <WorkCard key={w.id} work={w} />
-          ))}
+        <div className="mt-8">
+          <WorkGrid works={featured} />
         </div>
       </section>
 

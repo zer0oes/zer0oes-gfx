@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { categories, works, type Category } from "@/data/portfolio";
-import { WorkCard } from "./WorkCard";
+import { WorkGrid } from "./WorkGrid";
 
 export function PortfolioGallery() {
   const [filter, setFilter] = useState<Category | "all">("all");
@@ -28,10 +28,8 @@ export function PortfolioGallery() {
           </button>
         ))}
       </div>
-      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {shown.map((w) => (
-          <WorkCard key={w.id} work={w} />
-        ))}
+      <div className="mt-8">
+        <WorkGrid works={shown} />
       </div>
     </>
   );

@@ -1,10 +1,10 @@
 import Image from "next/image";
 import { categories, type Work } from "@/data/portfolio";
 
-export function WorkCard({ work }: { work: Work }) {
+export function WorkCard({ work, onOpen }: { work: Work; onOpen?: () => void }) {
   const category = categories.find((c) => c.id === work.category)?.label;
   return (
-    <article className="group overflow-hidden rounded-2xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60">
+    <article className="group relative overflow-hidden rounded-2xl border border-border bg-surface transition focus-within:border-accent hover:-translate-y-1 hover:border-accent/60">
       <div className="relative aspect-video overflow-hidden">
         {work.image ? (
           <Image
@@ -27,9 +27,28 @@ export function WorkCard({ work }: { work: Work }) {
         <span className="absolute left-3 top-3 rounded-full bg-background/80 px-3 py-1 text-xs font-medium backdrop-blur">
           {category}
         </span>
+        {work.video && (
+          <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-background/80 px-3 py-1 text-xs font-medium backdrop-blur">
+            <span aria-hidden>▶</span> Animé
+          </span>
+        )}
       </div>
       <div className="p-5">
-        <h3 className="font-display text-lg font-semibold">{work.title}</h3>
+        <h3 className="font-display text-lg font-semibold">
+          {onOpen ? (
+            // Le bouton couvre toute la carte (motif « carte cliquable »)
+            <button
+              type="button"
+              onClick={onOpen}
+              aria-haspopup="dialog"
+              className="text-left outline-none after:absolute after:inset-0 after:content-['']"
+            >
+              {work.title}
+            </button>
+          ) : (
+            work.title
+          )}
+        </h3>
         <p className="mt-1 text-sm text-muted">{work.description}</p>
         <p className="mt-3 text-xs text-muted/70">Chaîne : {work.client}</p>
       </div>
