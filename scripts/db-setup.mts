@@ -8,50 +8,15 @@
 // Les mots de passe et clés ne sont jamais affichés.
 import fs from "node:fs";
 import path from "node:path";
-import postgres from "postgres";
-import { apply, describeDbUrl, plan, readMigrations, verify, type Db } from "./lib/db-setup-core";
+import { apply, plan, readMigrations, verify } from "./lib/db-setup-core";
+import { connectFromEnv } from "./lib/pg-connect";
 
 const root = process.cwd();
 const args = new Set(process.argv.slice(2));
 const confirm = args.has("--yes");
 const forceSeed = args.has("--seed");
 
-for (const file of [".env.local", ".env"]) {
-  // Les variables déjà définies ne sont pas écrasées
-  if (fs.existsSync(path.join(root, file))) process.loadEnvFile(path.join(root, file));
-}
-
-const raw = process.env.SUPABASE_DB_URL;
-if (!raw) {
-  console.error(
-    "SUPABASE_DB_URL manquante dans .env.local.\n" +
-      "Supabase > bouton « Connect » > « Session pooler » : copie la chaîne, remplace [YOUR-PASSWORD]\n" +
-      "par le mot de passe de la base, puis ajoute la ligne SUPABASE_DB_URL=… dans .env.local.",
-  );
-  process.exit(1);
-}
-const target = describeDbUrl(raw, process.env.NEXT_PUBLIC_SUPABASE_URL);
-if (!target.ok) {
-  console.error(target.error);
-  process.exit(1);
-}
-console.log(`Base cible : projet ${target.ref ?? "?"} (${target.host}:${target.port})`);
-for (const w of target.warnings) console.warn("Attention :", w);
-
-const local = /^(localhost|127\.0\.0\.1)$/.test(target.host);
-const sql = postgres(raw, { ssl: local ? false : "require", max: 1, prepare: false, onnotice: () => {}, connect_timeout: 20 });
-
-const wrap = (s: postgres.Sql | postgres.TransactionSql): Db => ({
-  exec: async (text) => {
-    await s.unsafe(text);
-  },
-  query: async <T,>(text: string, params: unknown[] = []) =>
-    (await s.unsafe(text, params as postgres.ParameterOrJSON<never>[])) as unknown as T[],
-  transaction: async (fn) => {
-    await (s as postgres.Sql).begin((tx) => fn(wrap(tx)));
-  },
-});
-const db = wrap(sql);
+const { db, end, safeError } = connectFromEnv(root);
 
 try {
   const migrations = readMigrations(root);
@@ -79,12 +44,11 @@ try {
     if (r.withoutRls.length) process.exitCode = 1;
   }
 } catch (e) {
-  // Message d'erreur seul : jamais la chaîne de connexion
-  const msg = e instanceof Error ? e.message : String(e);
-  console.error("Échec :", msg.split(raw).join("<SUPABASE_DB_URL>"));
+  const msg = safeError(e);
+  console.error("Échec :", msg);
   if (/ENOTFOUND|ENETUNREACH|EHOSTUNREACH/.test(msg)) console.error("Connexion impossible : utilise la chaîne « Session pooler ».");
   if (/password authentication failed/.test(msg)) console.error("Mot de passe refusé : vérifie le mot de passe de la base (Project Settings > Database).");
   process.exitCode = 1;
 } finally {
-  await sql.end({ timeout: 5 });
+  await end();
 }

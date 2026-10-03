@@ -11,6 +11,7 @@
     "db:seed:generate": "tsx scripts/generate-seed.mts",
     "db:check": "tsx scripts/check-migrations.mts",
     "db:setup": "tsx scripts/db-setup.mts",
+    "db:portfolio": "tsx scripts/db-portfolio.mts",
     "watermark:images": "tsx scripts/watermark-images.mts",
     "watermark:videos": "tsx scripts/watermark-videos.mts"
   },

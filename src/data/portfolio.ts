@@ -6,10 +6,11 @@
 // Sans image, une vignette de couleur générée est affichée à la place.
 // `video` (optionnel) : courte boucle MP4 lue en grand dans la visionneuse, avec l'image en affiche.
 
-export type Category = "overlays" | "widgets" | "alertes" | "emotes";
+export type Category = "logo" | "overlays" | "widgets" | "alertes" | "emotes";
 
 // L'ordre ici est aussi l'ordre d'affichage dans chaque section streameur.
 export const categories: { id: Category; label: string }[] = [
+  { id: "logo", label: "Logo" },
   { id: "overlays", label: "Overlays" },
   { id: "widgets", label: "Widgets" },
   { id: "alertes", label: "Alertes" },
@@ -91,6 +92,15 @@ const zer0oesEmotes: Emote[] = [
 
 export const works: Work[] = [
   {
+    id: "zer0oes-logo",
+    title: "Logo zer0oes",
+    streamer: "zer0oes",
+    category: "logo",
+    description: "Logo manuscrit tracé d'un seul trait, décliné en blanc et en violet pour le stream et les réseaux.",
+    image: "/portfolio/zer0oes-logo.webp",
+    colors: ["#5b21b6", "#2e1065"],
+  },
+  {
     id: "zer0oes-starting-screen",
     title: "Écran « Stream Starting »",
     streamer: "zer0oes",
@@ -100,6 +110,44 @@ export const works: Work[] = [
     video: "/portfolio/zer0oes-starting-screen-v2.mp4",
     colors: ["#7c3aed", "#06b6d4"],
     featured: true,
+  },
+  {
+    id: "zer0oes-paused",
+    title: "Écran « Stream Paused »",
+    streamer: "zer0oes",
+    category: "overlays",
+    description: "Écran de pause : illustration de la chaîne, cadre animé, chat, musique et objectifs restent visibles.",
+    image: "/portfolio/zer0oes-paused.webp",
+    video: "/portfolio/zer0oes-paused.mp4",
+    colors: ["#7c3aed", "#ec4899"],
+  },
+  {
+    id: "zer0oes-ending",
+    title: "Écran « Stream Ending »",
+    streamer: "zer0oes",
+    category: "overlays",
+    description: "Écran de fin de live, dans la continuité des écrans de lancement et de pause.",
+    image: "/portfolio/zer0oes-ending.webp",
+    video: "/portfolio/zer0oes-ending.mp4",
+    colors: ["#ec4899", "#7c3aed"],
+  },
+  {
+    id: "zer0oes-gaming",
+    title: "Scène « Gaming »",
+    streamer: "zer0oes",
+    category: "overlays",
+    description: "Scène de jeu : bandeau d'infos en haut, webcam, musique et objectif discrets pour laisser la place au jeu.",
+    image: "/portfolio/zer0oes-gaming.webp",
+    colors: ["#0ea5e9", "#7c3aed"],
+  },
+  {
+    id: "zer0oes-just-chatting",
+    title: "Scène « Just Chatting »",
+    streamer: "zer0oes",
+    category: "overlays",
+    description: "Scène de discussion : grand fond illustré, webcam, chat néon, musique et objectif.",
+    image: "/portfolio/zer0oes-just-chatting.webp",
+    colors: ["#a855f7", "#06b6d4"],
   },
   {
     id: "zer0oes-chat",

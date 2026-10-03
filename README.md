@@ -278,6 +278,7 @@ Les montants nets affichés sont des estimations, à vérifier avec ta déclarat
 | `npm run db:check` | Vérifie migrations, seed et RLS sur une base en mémoire (sans connexion) |
 | `npm run db:setup` | Installe ou met à jour la base Supabase (simulation ; `-- --yes` pour appliquer) |
 | `npm run db:seed:generate` | Régénère `supabase/seed.sql` depuis `src/data/` |
+| `npm run db:portfolio` | Ajoute dans Supabase les réalisations de `src/data/portfolio.ts` qui n'y sont pas encore, sans rien modifier (simulation ; `-- --yes` pour appliquer). À lancer après le déploiement des médias. |
 | `npm run watermark:images -- discret` | Incruste le filigrane dans les images et emotes fournies avec le site (`discret`, `visible`, `mosaique` ou `off`) |
 | `npm run watermark:videos -- discret` | Même chose pour les vidéos (nécessite ffmpeg sur le PC) |
 
