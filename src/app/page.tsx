@@ -15,6 +15,8 @@ const steps = [
 
 export default function Home() {
   const featured = works.filter((w) => w.featured);
+  // Visuel du hero : première réalisation mise en avant
+  const hero = featured[0];
 
   return (
     <>
@@ -27,27 +29,45 @@ export default function Home() {
               "radial-gradient(40% 50% at 20% 30%, var(--accent-3), transparent), radial-gradient(40% 50% at 80% 20%, var(--accent-2), transparent), radial-gradient(50% 50% at 50% 90%, var(--accent), transparent)",
           }}
         />
-        <div className="relative mx-auto max-w-4xl px-4 py-24 text-center sm:px-6 sm:py-32">
-          <Image
-            src="/logo-zeroes-gfx.png"
-            alt="zer0oes gfx"
-            width={1400}
-            height={250}
-            priority
-            className="mx-auto h-auto w-full max-w-[560px]"
-          />
-          <h1 className="mt-10 font-display text-5xl font-bold leading-tight tracking-tight sm:text-7xl">
-            Un stream qui <span className="text-gradient">vous ressemble</span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted">{site.description}</p>
-          <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href="/offres" className="rounded-full bg-accent px-7 py-3 font-semibold text-background transition hover:brightness-110">
-              Voir les offres
-            </Link>
-            <Link href="/portfolio" className="rounded-full border border-border bg-background/40 px-7 py-3 font-semibold transition hover:border-accent">
-              Découvrir le portfolio
-            </Link>
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.05fr_1fr]">
+          <div className="text-center lg:text-left">
+            <p className="text-sm font-semibold uppercase tracking-widest text-accent">Logo · Overlays · Emotes</p>
+            <h1 className="mt-4 font-display text-5xl font-bold leading-tight tracking-tight sm:text-6xl xl:text-7xl">
+              Un stream qui <span className="text-gradient">vous ressemble</span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-xl text-lg text-muted lg:mx-0">{site.description}</p>
+            <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
+              <Link href="/offres" className="rounded-full bg-accent px-7 py-3 text-center font-semibold text-background transition hover:brightness-110">
+                Voir les offres
+              </Link>
+              <Link href="/portfolio" className="rounded-full border border-border bg-background/40 px-7 py-3 text-center font-semibold transition hover:border-accent">
+                Découvrir le portfolio
+              </Link>
+            </div>
           </div>
+          {hero?.image && (
+            <Link href="/portfolio" className="group relative block">
+              <div
+                aria-hidden
+                className="absolute -inset-3 rounded-3xl opacity-60 blur-2xl transition group-hover:opacity-80"
+                style={{ background: "linear-gradient(135deg, var(--accent-3), var(--accent), var(--accent-2))" }}
+              />
+              <div className="relative overflow-hidden rounded-2xl border border-border bg-surface">
+                <Image
+                  src={hero.image}
+                  alt={`${hero.title} — ${hero.client}`}
+                  width={1600}
+                  height={900}
+                  priority
+                  sizes="(min-width: 1024px) 560px, 100vw"
+                  className="h-auto w-full"
+                />
+              </div>
+              <p className="relative mt-3 text-center text-xs text-muted lg:text-right">
+                {hero.title} · {hero.client}
+              </p>
+            </Link>
+          )}
         </div>
       </section>
 
