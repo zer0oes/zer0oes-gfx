@@ -12,11 +12,17 @@ export default function MentionsLegalesPage() {
       <article className="prose-legal mx-auto max-w-3xl px-4 sm:px-6">
         <h2>Éditeur du site</h2>
         <p>
-          {site.name} — {legal.ownerName}
+          Le site {site.name} est édité par {legal.ownerName}, {legal.status}.
           <br />
-          {legal.status}
+          Nom commercial : {legal.commercialName}
           <br />
-          SIRET : {legal.siret}
+          SIREN : {legal.siren} — SIRET : {legal.siret}
+          <br />
+          {legal.registration}
+          <br />
+          Code APE : {legal.ape}
+          <br />
+          N° de TVA intracommunautaire : {legal.vatNumber}
           <br />
           {legal.address}
           <br />

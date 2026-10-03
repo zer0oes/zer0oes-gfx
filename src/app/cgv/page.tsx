@@ -15,7 +15,7 @@ export default function CgvPage() {
         <p>
           Les présentes conditions régissent la vente des prestations de création graphique proposées sur le site{" "}
           {site.name} (identité visuelle, logos, bannières, habillage de stream et éléments visuels pour créateurs de contenu), par {legal.ownerName},{" "}
-          {legal.status}, SIRET {legal.siret}, {legal.address}.
+          {legal.status} (nom commercial {legal.commercialName}), SIRET {legal.siret}, {legal.address}.
         </p>
 
         <h2>2. Prestations</h2>
