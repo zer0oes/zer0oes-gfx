@@ -192,6 +192,15 @@ export const works: Work[] = [
     featured: true,
   },
   {
+    id: "tomavega-logo",
+    title: "Logo TomaVega",
+    streamer: "tomavega",
+    category: "logo",
+    description: "Logo électrique aux éclats néon bleu, violet et vert, avec un V en forme d'éclair.",
+    image: "/portfolio/tomavega-logo.webp",
+    colors: ["#22c55e", "#7c3aed"],
+  },
+  {
     id: "tomavega-starting-screen",
     title: "Starting screen",
     streamer: "tomavega",
@@ -230,6 +239,15 @@ export const works: Work[] = [
     image: "/portfolio/tomavega-alertes.webp",
     video: "/portfolio/tomavega-alertes.mp4",
     colors: ["#6366f1", "#0ea5e9"],
+  },
+  {
+    id: "tomavega-banniere-youtube",
+    title: "Bannière YouTube",
+    streamer: "tomavega",
+    category: "reseaux",
+    description: "Bannière sur fond minéral avec éclats verts et violets, logo néon, thèmes de la chaîne et réseaux sociaux.",
+    image: "/portfolio/tomavega-banniere-youtube.webp",
+    colors: ["#22c55e", "#111827"],
   },
   {
     id: "zer0oes-emotes",
