@@ -167,8 +167,8 @@ export const works: Work[] = [
     streamer: "zer0oes",
     category: "widgets",
     description: "Barre d'objectif multi-événements qui se remplit en direct.",
-    image: "/portfolio/zer0oes-objectif.webp",
-    video: "/portfolio/zer0oes-objectif.mp4",
+    image: "/portfolio/zer0oes-objectif-obs.webp",
+    video: "/portfolio/zer0oes-objectif-obs.mp4",
     colors: ["#0ea5e9", "#7c3aed"],
   },
   {
@@ -176,9 +176,9 @@ export const works: Work[] = [
     title: "Lecteur musique",
     streamer: "zer0oes",
     category: "widgets",
-    description: "Morceau en cours sur Spotify, avec pochette et progression (morceau fictif pour l'aperçu).",
-    image: "/portfolio/zer0oes-musique.webp",
-    video: "/portfolio/zer0oes-musique.mp4",
+    description: "Morceau en cours sur Spotify, avec pochette, artiste et progression.",
+    image: "/portfolio/zer0oes-musique-obs.webp",
+    video: "/portfolio/zer0oes-musique-obs.mp4",
     colors: ["#571bc3", "#ff4d8d"],
   },
   {
