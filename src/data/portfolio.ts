@@ -36,6 +36,11 @@ export function getStreamer(id: string) {
   return streamers.find((s) => s.id === id);
 }
 
+// Lien vers la page projet d'un streameur, sur l'onglet d'un type donné
+export function projectHref(streamer: string, category?: Category) {
+  return `/portfolio/${streamer}${category ? `?type=${category}` : ""}`;
+}
+
 // Planche d'emotes : groupes repris du tableau d'Aurore.
 export const emoteGroups = [
   { id: "follower", label: "Émoticônes de follower" },
@@ -188,6 +193,8 @@ export const works: Work[] = [
     category: "emotes",
     description: "19 emotes de follower et d'abonné, et 6 emotes animées, dans le style de la chaîne.",
     image: "/portfolio/zer0oes-emotes.webp",
+    // Aperçu au survol (la vue en grand affiche la planche complète)
+    video: "/portfolio/zer0oes-emotes-animees.mp4",
     colors: ["#ef4444", "#7c3aed"],
     emotes: zer0oesEmotes,
   },

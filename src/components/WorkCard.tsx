@@ -1,18 +1,23 @@
 import Image from "next/image";
+import Link from "next/link";
 import { categories, getStreamer, type Work } from "@/data/portfolio";
+import { HoverVideo } from "./HoverVideo";
 
 export function WorkCard({
   work,
   onOpen,
+  href,
   showStreamer = true,
 }: {
   work: Work;
   onOpen?: () => void;
+  // Lien vers une page (alternative à onOpen)
+  href?: string;
   showStreamer?: boolean;
 }) {
   const category = categories.find((c) => c.id === work.category)?.label;
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-border bg-surface transition focus-within:border-accent hover:-translate-y-1 hover:border-accent/60">
+    <article data-hover-root className="group relative overflow-hidden rounded-2xl border border-border bg-surface transition focus-within:border-accent hover:-translate-y-1 hover:border-accent/60">
       <div className="relative aspect-video overflow-hidden">
         {work.image ? (
           <Image
@@ -32,6 +37,7 @@ export function WorkCard({
             <span className="font-display text-2xl font-bold text-white/90 drop-shadow">{work.title}</span>
           </div>
         )}
+        {work.video && work.image && <HoverVideo src={work.video} />}
         <span className="absolute left-3 top-3 rounded-full bg-background/80 px-3 py-1 text-xs font-medium backdrop-blur">
           {category}
         </span>
@@ -43,7 +49,11 @@ export function WorkCard({
       </div>
       <div className="p-5">
         <h3 className="font-display text-lg font-semibold">
-          {onOpen ? (
+          {href ? (
+            <Link href={href} className="outline-none after:absolute after:inset-0 after:content-['']">
+              {work.title}
+            </Link>
+          ) : onOpen ? (
             // Le bouton couvre toute la carte (motif « carte cliquable »)
             <button
               type="button"

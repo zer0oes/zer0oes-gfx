@@ -213,15 +213,28 @@ function EmoteSheet({ work, reducedMotion }: { work: Work; reducedMotion: boolea
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-accent">{g.label}</h3>
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-3 sm:gap-4">
               {emotes.map((e) => (
-                <li key={e.name} className="flex flex-col items-center gap-1.5">
-                  <Image
-                    src={e.animated && reducedMotion ? e.src.replace(/.webp$/, "-still.webp") : e.src}
-                    alt={`Emote ${e.name}`}
-                    width={112}
-                    height={112}
-                    unoptimized
-                    className="h-20 w-20 object-contain sm:h-24 sm:w-24"
-                  />
+                <li key={e.name} className="group flex flex-col items-center gap-1.5">
+                  <span className="relative h-20 w-20 sm:h-24 sm:w-24">
+                    <Image
+                      src={e.animated ? e.src.replace(/\.webp$/, "-still.webp") : e.src}
+                      alt={`Emote ${e.name}${e.animated ? " (animée)" : ""}`}
+                      width={112}
+                      height={112}
+                      unoptimized
+                      className="h-full w-full object-contain"
+                    />
+                    {e.animated && !reducedMotion && (
+                      // Animée au survol avec une souris, en continu sur écran tactile
+                      <Image
+                        src={e.src}
+                        alt=""
+                        width={112}
+                        height={112}
+                        unoptimized
+                        className="absolute inset-0 h-full w-full object-contain transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100"
+                      />
+                    )}
+                  </span>
                   <span className="font-mono text-[11px] text-muted">{e.name}</span>
                 </li>
               ))}

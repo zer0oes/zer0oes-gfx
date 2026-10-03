@@ -78,7 +78,7 @@ export default function Home() {
           <Link href="/portfolio" className="text-sm text-accent hover:underline">Tout voir →</Link>
         </div>
         <div className="mt-8">
-          <WorkGrid works={featured} />
+          <WorkGrid works={featured} linkToProject />
         </div>
       </section>
 
