@@ -36,7 +36,7 @@ export function quote(
   input: { packId?: string | null; formulaId?: string | null; payment?: unknown; hasLogo?: boolean },
 ): CheckoutQuote | null {
   const pack = getPack(catalog.packs, input.packId);
-  if (!pack || !pack.checkout) return null;
+  if (!pack || !pack.checkout || pack.archived) return null;
   const formula = getFormula(pack, input.formulaId);
   if (!formula) return null;
   const s = catalog.settings;
@@ -122,6 +122,24 @@ export function paymentSummary(o: Pick<Order, "totalPrice" | "paymentType" | "de
   });
 }
 
+// Frais Stripe réels d'une session payée (via la balance transaction), si disponibles.
+async function realStripeFee(sessionId: string): Promise<number | undefined> {
+  const stripe = getStripe();
+  if (!stripe) return undefined;
+  try {
+    const s = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ["payment_intent.latest_charge.balance_transaction"],
+    });
+    const pi = s.payment_intent as Stripe.PaymentIntent | null;
+    const charge = pi?.latest_charge as Stripe.Charge | null | undefined;
+    const bt = charge?.balance_transaction as Stripe.BalanceTransaction | null | undefined;
+    return typeof bt?.fee === "number" ? bt.fee : undefined;
+  } catch (e) {
+    console.warn("Frais Stripe indisponibles :", e instanceof Error ? e.message : e);
+    return undefined;
+  }
+}
+
 // Paiement Stripe confirmé (webhook) : commande, ou solde d'une commande.
 // Appelé pour checkout.session.completed et checkout.session.async_payment_succeeded :
 // rien n'est marqué payé tant que payment_status n'est pas « paid » (moyens de
@@ -131,8 +149,9 @@ export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
   const store = getStore();
   const m = s.metadata ?? {};
 
+  const fee = await realStripeFee(s.id);
   if (m.kind === "solde" && m.orderId) {
-    await markBalancePaid(m.orderId, s.amount_total ?? 0);
+    await markBalancePaid(m.orderId, s.amount_total ?? 0, fee);
     return;
   }
 
@@ -141,7 +160,7 @@ export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
   const customerName = s.customer_details?.name ?? "";
   if (q && store.kind !== "static") {
     await store.recordPaidOrder(
-      newOrderFrom(q, { sessionId: s.id, demo: false, customerName, customerEmail, amountPaid: s.amount_total ?? q.amount }),
+      { ...newOrderFrom(q, { sessionId: s.id, demo: false, customerName, customerEmail, amountPaid: s.amount_total ?? q.amount }), feesPaid: fee },
     );
   }
 
@@ -197,12 +216,14 @@ export async function attachBrief(sessionId: string, brief: Record<string, strin
   return order;
 }
 
-export async function markBalancePaid(orderId: string, amount: number) {
+export async function markBalancePaid(orderId: string, amount: number, fee?: number) {
   const store = getStore();
   const order = await store.getOrder(orderId);
   if (!order || order.balancePaidAt) return;
   await store.updateOrder(orderId, {
     amountPaid: order.amountPaid + amount,
+    // Frais réels cumulés seulement si ceux de l'acompte étaient connus aussi
+    ...(fee !== undefined && order.feesPaid !== undefined ? { feesPaid: order.feesPaid + fee } : {}),
     balancePaidAt: new Date().toISOString(),
     status: order.status === "terminee" ? "terminee" : "solde_paye",
   });

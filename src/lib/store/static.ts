@@ -1,5 +1,6 @@
 import { defaultSettings, options, packs } from "@/data/packs";
 import { streamers, works } from "@/data/portfolio";
+import { defaultFinance } from "@/lib/finance";
 import type { Catalog } from "@/lib/pricing";
 import { ReadOnlyStoreError, type Portfolio, type Store } from "./types";
 
@@ -24,6 +25,10 @@ export const staticStore: Store = {
   getPortfolio: async () => staticPortfolio(),
   saveSettings: readOnly,
   savePack: readOnly,
+  deletePack: readOnly,
+  reorderPacks: readOnly,
+  getFinance: async () => ({ ...defaultFinance }),
+  saveFinance: readOnly,
   saveOptions: readOnly,
   saveStreamer: readOnly,
   deleteStreamer: readOnly,

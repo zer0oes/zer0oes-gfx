@@ -1,4 +1,5 @@
 import type { Streamer, Work } from "@/data/portfolio";
+import type { FinanceSettings } from "@/lib/finance";
 import type { Catalog, Option, Pack, PaymentType, PricingSettings } from "@/lib/pricing";
 
 export type Portfolio = { streamers: Streamer[]; works: Work[] };
@@ -48,6 +49,8 @@ export type Order = {
   balanceSessionId?: string;
   balanceUrl?: string;
   balancePaidAt?: string;
+  // Frais Stripe réels (centimes), si connus
+  feesPaid?: number;
   brief?: Record<string, string>;
   briefReceivedAt?: string;
   notes: OrderNote[];
@@ -55,8 +58,8 @@ export type Order = {
 
 export type NewOrder = Omit<
   Order,
-  "id" | "createdAt" | "updatedAt" | "status" | "notes" | "balanceSessionId" | "balanceUrl" | "balancePaidAt" | "brief" | "briefReceivedAt"
->;
+  "id" | "createdAt" | "updatedAt" | "status" | "notes" | "balanceSessionId" | "balanceUrl" | "balancePaidAt" | "brief" | "briefReceivedAt" | "feesPaid"
+> & { feesPaid?: number };
 
 export type OrderPatch = Partial<
   Pick<
@@ -70,6 +73,7 @@ export type OrderPatch = Partial<
     | "briefReceivedAt"
     | "customerEmail"
     | "customerName"
+    | "feesPaid"
   >
 >;
 
@@ -85,6 +89,10 @@ export interface Store {
   // Admin : offres et réglages
   saveSettings(settings: PricingSettings): Promise<void>;
   savePack(pack: Pack): Promise<void>;
+  deletePack(id: string): Promise<void>;
+  reorderPacks(orderedIds: string[]): Promise<void>;
+  getFinance(): Promise<FinanceSettings>;
+  saveFinance(finance: FinanceSettings): Promise<void>;
   saveOptions(options: Option[]): Promise<void>;
   // Admin : portfolio
   saveStreamer(streamer: Streamer, position?: number): Promise<void>;

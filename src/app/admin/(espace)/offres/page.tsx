@@ -1,7 +1,18 @@
 import type { Metadata } from "next";
-import type { Pack } from "@/lib/pricing";
+import { NetTable, priceCases } from "@/components/admin/NetTable";
+import { chargesRate, formatRate } from "@/lib/finance";
+import { formatPrice, type Pack } from "@/lib/pricing";
 import { getStore } from "@/lib/store";
-import { saveOptionsAction, savePackAction, saveSettingsAction } from "../../offres-actions";
+import {
+  archivePackAction,
+  createPackAction,
+  deletePackAction,
+  movePackAction,
+  saveFinanceAction,
+  saveOptionsAction,
+  savePackAction,
+  saveSettingsAction,
+} from "../../offres-actions";
 
 export const metadata: Metadata = { title: "Offres et réglages" };
 
@@ -29,13 +40,49 @@ function Check({ name, label, defaultChecked }: { name: string; label: string; d
   );
 }
 
+function PackControls({ pack, first, last }: { pack: Pack; first: boolean; last: boolean }) {
+  const small = "rounded-full border border-border px-3 py-1 text-xs hover:border-accent disabled:opacity-30";
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+      <form action={movePackAction} className="flex gap-1">
+        <input type="hidden" name="id" value={pack.id} />
+        <button name="dir" value="up" disabled={first} aria-label={`Monter ${pack.name}`} className={small}>
+          ↑
+        </button>
+        <button name="dir" value="down" disabled={last} aria-label={`Descendre ${pack.name}`} className={small}>
+          ↓
+        </button>
+      </form>
+      <form action={archivePackAction}>
+        <input type="hidden" name="id" value={pack.id} />
+        {pack.archived && <input type="hidden" name="restore" value="1" />}
+        <button type="submit" className={small}>
+          {pack.archived ? "Remettre en ligne" : "Archiver (masquer du site)"}
+        </button>
+      </form>
+      <form action={deletePackAction} className="ml-auto flex items-center gap-2 text-muted">
+        <input type="hidden" name="id" value={pack.id} />
+        <label className="flex items-center gap-1">
+          <input type="checkbox" name="confirm" /> confirmer
+        </label>
+        <button type="submit" className="rounded-full border border-red-500/40 px-3 py-1 text-red-300 hover:bg-red-500/10">
+          Supprimer
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function PackForm({ pack }: { pack: Pack }) {
   // Formules existantes + 2 lignes vides pour en ajouter
   const rows = [...(pack.formulas ?? []), undefined, undefined];
   return (
-    <form action={savePackAction} className={`${card} space-y-4`}>
+    <form action={savePackAction} className={`${card} space-y-4 ${pack.archived ? "opacity-70" : ""}`}>
       <input type="hidden" name="id" value={pack.id} />
-      <h3 className="font-display text-xl font-bold">{pack.name}</h3>
+      <h3 className="font-display text-xl font-bold">
+        {pack.name}
+        {pack.archived && <span className="ml-2 align-middle text-xs font-normal text-amber-300">archivée</span>}
+      </h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nom">
           <input name="name" defaultValue={pack.name} required className={input} />
@@ -90,7 +137,9 @@ function PackForm({ pack }: { pack: Pack }) {
 
 export default async function AdminOffersPage({ searchParams }: PageProps<"/admin/offres">) {
   const { enregistre, erreur } = await searchParams;
-  const { settings, packs, options } = await getStore().getCatalog();
+  const store = getStore();
+  const [{ settings, packs, options }, finance] = await Promise.all([store.getCatalog(), store.getFinance()]);
+  const euro = (cents: number) => formatPrice(cents);
   const optionRows = [...options, undefined, undefined, undefined];
 
   return (
@@ -131,9 +180,103 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
       <section className="mt-10">
         <h2 className="mb-4 font-display text-xl font-bold">Offres</h2>
         <div className="space-y-6">
-          {packs.map((p) => (
-            <PackForm key={p.id} pack={p} />
+          {packs.map((p, i) => (
+            <div key={p.id}>
+              <PackControls pack={p} first={i === 0} last={i === packs.length - 1} />
+              <PackForm pack={p} />
+            </div>
           ))}
+          <form action={createPackAction} className={`${card} grid gap-3 sm:grid-cols-[2fr_1fr_auto_auto] sm:items-end`}>
+            <h3 className="font-semibold sm:col-span-4">Nouvelle offre</h3>
+            <Field label="Nom">
+              <input name="name" required className={input} />
+            </Field>
+            <Field label="Prix (€ HT)">
+              <input name="price" required inputMode="decimal" className={input} />
+            </Field>
+            <label className="flex items-center gap-2 pb-2 text-sm">
+              <input type="checkbox" name="checkout" defaultChecked className="accent-[var(--accent)]" /> Commandable en ligne
+            </label>
+            <button type="submit" className={save}>
+              Créer
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-2 font-display text-xl font-bold">Revenu net</h2>
+        <p className="mb-4 text-sm text-muted">
+          Ce qu&apos;il te reste réellement sur chaque vente, après frais de paiement et cotisations.
+        </p>
+        <form action={saveFinanceAction} className={`${card} grid gap-4 sm:grid-cols-3`}>
+          <Field label="Cotisations URSSAF (%)" hint="Micro-entreprise, activité libérale non réglementée (BNC). Taux 2026, à mettre à jour si l'URSSAF change.">
+            <input name="urssafRate" defaultValue={finance.urssafRate} inputMode="decimal" required className={input} />
+          </Field>
+          <Field label="Formation professionnelle, CFP (%)" hint="Taux 2026.">
+            <input name="cfpRate" defaultValue={finance.cfpRate} inputMode="decimal" required className={input} />
+          </Field>
+          <div className="space-y-2">
+            <Field label="Versement libératoire (%)" hint="Impôt sur le revenu prélevé avec les cotisations, si tu as opté pour ce régime.">
+              <input name="vlRate" defaultValue={finance.vlRate} inputMode="decimal" required className={input} />
+            </Field>
+            <Check name="vlEnabled" label="J'ai opté pour le versement libératoire" defaultChecked={finance.vlEnabled} />
+          </div>
+          <Field label="Frais Stripe (%)" hint="Cartes européennes standard ; vérifie dans ton tableau de bord Stripe.">
+            <input name="stripePercent" defaultValue={finance.stripePercent} inputMode="decimal" required className={input} />
+          </Field>
+          <Field label="Frais Stripe fixes par paiement (€)">
+            <input name="stripeFixed" defaultValue={euros(finance.stripeFixed)} inputMode="decimal" required className={input} />
+          </Field>
+          <div className="flex items-end">
+            <button type="submit" className={save}>
+              Enregistrer les taux
+            </button>
+          </div>
+        </form>
+
+        <details className={`${card} mt-4 text-sm`} open>
+          <summary className="cursor-pointer font-semibold">Comment lire les tableaux</summary>
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-muted">
+            <li><strong className="text-foreground">Encaissé HT</strong> : ce que paie le client (pas de TVA en franchise en base).</li>
+            <li>
+              <strong className="text-foreground">Frais Stripe</strong> : {formatRate(finance.stripePercent)} + {euro(finance.stripeFixed)} par paiement. Un
+              acompte puis un solde font deux paiements, donc deux frais fixes. Sur une commande réelle, les frais réels
+              Stripe remplacent cette estimation quand ils sont connus.
+            </li>
+            <li>
+              <strong className="text-foreground">URSSAF</strong> : {formatRate(finance.urssafRate)} du montant encaissé. Les frais Stripe ne
+              sont pas déductibles en micro-entreprise.
+            </li>
+            <li><strong className="text-foreground">CFP</strong> : {formatRate(finance.cfpRate)} du montant encaissé.</li>
+            {finance.vlEnabled && (
+              <li><strong className="text-foreground">Versement libératoire</strong> : {formatRate(finance.vlRate)} du montant encaissé.</li>
+            )}
+            <li>
+              <strong className="text-foreground">Net pour toi</strong> : ce qui reste, soit environ {formatRate(Math.round((100 - chargesRate(finance)) * 10) / 10)}
+              du prix moins les frais Stripe{finance.vlEnabled ? "" : ", avant impôt sur le revenu"}.
+            </li>
+          </ul>
+        </details>
+
+        <div className="mt-6 space-y-4">
+          {packs
+            .filter((p) => !p.archived)
+            .flatMap((p) =>
+              (p.formulas?.length ? p.formulas : [{ id: "base", label: p.name, price: p.price }]).map((f) => (
+                <NetTable
+                  key={`${p.id}-${f.id}`}
+                  title={`${f.id === p.formulas?.[0]?.id || !p.formulas ? p.name : `${p.name} — ${f.label}`} · ${p.priceFrom ? "à partir de " : ""}${euro(f.price)} HT`}
+                  cases={priceCases(f.price, settings, p.checkout)}
+                  finance={finance}
+                />
+              )),
+            )}
+          <NetTable
+            title="Options à la carte (payées en une fois)"
+            cases={options.map((o) => ({ label: `${o.name}${o.priceFrom ? " (à partir de)" : ""}`, payments: [o.price] }))}
+            finance={finance}
+          />
         </div>
       </section>
 

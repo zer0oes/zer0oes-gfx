@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
 import { PageHeader } from "@/components/ui";
 import { legal } from "@/data/site";
-import { formatOfferPrice, formatPrice, type PricingSettings } from "@/lib/pricing";
+import { activePacks, formatOfferPrice, formatPrice, type PricingSettings } from "@/lib/pricing";
 import { getStore } from "@/lib/store";
 
 export const metadata: Metadata = {
@@ -49,7 +49,9 @@ const faq = (site: PricingSettings) => [
 
 export default async function OffresPage({ searchParams }: PageProps<"/offres">) {
   const { annule } = await searchParams;
-  const { settings: site, packs, options } = await getStore().getCatalog();
+  const catalog = await getStore().getCatalog();
+  const { settings: site, options } = catalog;
+  const packs = activePacks(catalog.packs);
 
   return (
     <>

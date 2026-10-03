@@ -22,6 +22,11 @@ test("valeurs inconnues : formule de base, paiement complet, pas de remise", () 
   assert.equal(q.amount, 49000);
 });
 
+test("offre archivée : non commandable", () => {
+  const archived = { ...catalog, packs: catalog.packs.map((p) => (p.id === "premier-look" ? { ...p, archived: true } : p)) };
+  assert.equal(quote(archived, { packId: "premier-look", formulaId: "base" }), null);
+});
+
 test("offre sur devis : pas de paiement direct", () => {
   assert.equal(quote(catalog, { packId: "univers-complet" }), null);
   assert.equal(quote(catalog, { packId: "inexistant" }), null);

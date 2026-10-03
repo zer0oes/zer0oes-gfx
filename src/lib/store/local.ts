@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { defaultFinance, type FinanceSettings } from "@/lib/finance";
 import type { Catalog } from "@/lib/pricing";
 import { assertNotProduction } from "@/lib/env";
 import { staticCatalog, staticPortfolio } from "./static";
@@ -9,7 +10,7 @@ import type { Order, Portfolio, Store } from "./types";
 
 // Magasin JSON local, pour développer et tester l'admin sans Supabase.
 // Fichier .data/dev-store.json (ignoré par git). Interdit en production.
-type Data = Catalog & Portfolio & { orders: Order[] };
+type Data = Catalog & Portfolio & { orders: Order[]; finance?: FinanceSettings };
 
 const FILE = path.join(process.cwd(), ".data", "dev-store.json");
 const UPLOADS = path.join(process.cwd(), "public", "uploads");
@@ -61,6 +62,14 @@ export const localStore: Store = {
   },
   saveSettings: (settings) => mutate((d) => void (d.settings = settings)),
   savePack: (pack) => mutate((d) => upsertAt(d.packs, pack)),
+  deletePack: (id) => mutate((d) => void (d.packs = d.packs.filter((p) => p.id !== id))),
+  reorderPacks: (ids) =>
+    mutate((d) => {
+      const rank = (id: string) => (ids.includes(id) ? ids.indexOf(id) : ids.length);
+      d.packs.sort((a, b) => rank(a.id) - rank(b.id));
+    }),
+  getFinance: async () => ({ ...defaultFinance, ...(await load()).finance }),
+  saveFinance: (finance) => mutate((d) => void (d.finance = finance)),
   saveOptions: (options) => mutate((d) => void (d.options = options)),
   saveStreamer: (s, position) => mutate((d) => upsertAt(d.streamers, s, position)),
   deleteStreamer: (id) =>

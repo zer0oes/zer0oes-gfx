@@ -2,6 +2,7 @@ import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Emote, Streamer, Work } from "@/data/portfolio";
 import { supabaseSecretKey, supabaseUrl } from "@/lib/env";
+import { defaultFinance, type FinanceSettings } from "@/lib/finance";
 import type { Option, Pack } from "@/lib/pricing";
 import type { NewOrder, Order, OrderPatch, OrderStatus, Store } from "./types";
 
@@ -35,6 +36,7 @@ function toPack(r: Row, formulas: Row[]): Pack {
     extras: (r.extras as string[]).length ? (r.extras as string[]) : undefined,
     note: opt<string>(r.note),
     highlight: (r.highlight as boolean) || undefined,
+    archived: (r.archived as boolean) || undefined,
     formulas: formulas.length
       ? formulas.map((f) => ({
           id: f.id as string,
@@ -91,6 +93,7 @@ function toOrder(r: Row, notes: Row[]): Order {
     balanceSessionId: opt<string>(r.balance_session_id),
     balanceUrl: opt<string>(r.balance_url),
     balancePaidAt: opt<string>(r.balance_paid_at),
+    feesPaid: opt<number>(r.fees_paid),
     brief: opt<Record<string, string>>(r.brief),
     briefReceivedAt: opt<string>(r.brief_received_at),
     notes: notes
@@ -109,6 +112,7 @@ const orderColumns: Record<keyof OrderPatch, string> = {
   briefReceivedAt: "brief_received_at",
   customerEmail: "customer_email",
   customerName: "customer_name",
+  feesPaid: "fees_paid",
 };
 
 const selectOrders = () => db().from("orders").select("*");
@@ -194,12 +198,13 @@ export const supabaseStore: Store = {
 
   async savePack(p) {
     const existing = check(await db().from("packs").select("position").eq("id", p.id).maybeSingle()) as Row | null;
+    const last = check(await db().from("packs").select("position").order("position", { ascending: false }).limit(1)) as Row[];
     check(
       await db()
         .from("packs")
         .upsert({
           id: p.id,
-          position: existing?.position ?? 0,
+          position: existing?.position ?? ((last[0]?.position as number) ?? -1) + 1,
           name: p.name,
           tagline: p.tagline,
           price: p.price,
@@ -209,6 +214,7 @@ export const supabaseStore: Store = {
           extras: p.extras ?? [],
           note: p.note ?? null,
           highlight: Boolean(p.highlight),
+          archived: Boolean(p.archived),
           updated_at: new Date().toISOString(),
         }),
     );
@@ -229,6 +235,42 @@ export const supabaseStore: Store = {
           ),
       );
     }
+  },
+
+  async deletePack(id) {
+    check(await db().from("packs").delete().eq("id", id));
+  },
+
+  async reorderPacks(ids) {
+    await Promise.all(ids.map(async (id, position) => check(await db().from("packs").update({ position }).eq("id", id))));
+  },
+
+  async getFinance() {
+    const r = check(await db().from("finance_settings").select("*").eq("id", 1).maybeSingle()) as Row | null;
+    if (!r) return { ...defaultFinance };
+    return {
+      urssafRate: Number(r.urssaf_rate),
+      cfpRate: Number(r.cfp_rate),
+      vlEnabled: r.vl_enabled as boolean,
+      vlRate: Number(r.vl_rate),
+      stripePercent: Number(r.stripe_percent),
+      stripeFixed: r.stripe_fixed as number,
+    };
+  },
+
+  async saveFinance(f: FinanceSettings) {
+    check(
+      await db().from("finance_settings").upsert({
+        id: 1,
+        urssaf_rate: f.urssafRate,
+        cfp_rate: f.cfpRate,
+        vl_enabled: f.vlEnabled,
+        vl_rate: f.vlRate,
+        stripe_percent: f.stripePercent,
+        stripe_fixed: f.stripeFixed,
+        updated_at: new Date().toISOString(),
+      }),
+    );
   },
 
   async saveOptions(options) {
@@ -350,6 +392,7 @@ export const supabaseStore: Store = {
           logo_discount: o.logoDiscount,
           customer_name: o.customerName,
           customer_email: o.customerEmail,
+          fees_paid: o.feesPaid ?? null,
         })
         .select("*")
         .single(),

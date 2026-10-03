@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BalanceLinkForm } from "@/components/admin/BalanceLinkForm";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { formatRate, netBreakdown } from "@/lib/finance";
 import { paymentSummary } from "@/lib/orders";
-import { formatPrice } from "@/lib/pricing";
+import { depositAmount, formatPrice } from "@/lib/pricing";
 import { balanceDue, getStore, orderStatuses } from "@/lib/store";
 import { addNote, updateStatus } from "../../../actions";
 
@@ -25,9 +26,19 @@ const card = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
 
 export default async function OrderPage({ params }: PageProps<"/admin/commandes/[id]">) {
   const { id } = await params;
-  const order = await getStore().getOrder(id);
+  const store = getStore();
+  const [order, finance] = await Promise.all([store.getOrder(id), store.getFinance()]);
   if (!order) notFound();
   const due = balanceDue(order);
+
+  // Paiements réellement encaissés (acompte puis solde, ou paiement unique)
+  const deposit = depositAmount(order.totalPrice, { depositPercent: order.depositPercent, logoDiscount: 0, deliveryDays: "" });
+  const payments =
+    order.paymentType === "acompte" && order.balancePaidAt ? [deposit, order.amountPaid - deposit] : [order.amountPaid];
+  const realFees = order.demo ? undefined : order.feesPaid;
+  const net = netBreakdown(payments, finance, realFees);
+  const expected = due > 0 ? netBreakdown([...payments, due], finance) : null;
+  const money = (n: number) => `${formatPrice(n)}`;
 
   return (
     <>
@@ -135,6 +146,27 @@ export default async function OrderPage({ params }: PageProps<"/admin/commandes/
                   : "Commande réglée en totalité."}
               </p>
             )}
+          </section>
+
+          <section className={card}>
+            <h2 className="font-semibold">Revenu net</h2>
+            <dl className="mt-3 divide-y divide-border">
+              <Row label="Encaissé">{money(net.gross)} ({net.transactions} paiement{net.transactions > 1 ? "s" : ""})</Row>
+              <Row label="Frais Stripe">
+                −{money(net.fees)} <span className="text-xs text-muted">{realFees !== undefined ? "réels" : "estimés"}</span>
+              </Row>
+              <Row label={`URSSAF (${formatRate(finance.urssafRate)})`}>−{money(net.urssaf)}</Row>
+              <Row label={`CFP (${formatRate(finance.cfpRate)})`}>−{money(net.cfp)}</Row>
+              {finance.vlEnabled && <Row label={`Vers. libératoire (${formatRate(finance.vlRate)})`}>−{money(net.vl)}</Row>}
+              <Row label="Net pour toi">
+                <strong>{money(net.net)}</strong>
+              </Row>
+              {expected && (
+                <Row label="Net prévu">
+                  {money(expected.net)} <span className="text-xs text-muted">une fois le solde payé (frais estimés)</span>
+                </Row>
+              )}
+            </dl>
           </section>
 
           <section className={card}>

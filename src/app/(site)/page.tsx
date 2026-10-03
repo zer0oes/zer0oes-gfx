@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
 import { WorkGrid } from "@/components/WorkGrid";
 import { site } from "@/data/site";
+import { activePacks } from "@/lib/pricing";
 import { getStore } from "@/lib/store";
 
 const steps = (deliveryDays: string) => [
@@ -14,7 +15,9 @@ const steps = (deliveryDays: string) => [
 
 export default async function Home() {
   const store = getStore();
-  const [{ packs, settings }, { works, streamers }] = await Promise.all([store.getCatalog(), store.getPortfolio()]);
+  const [catalog, { works, streamers }] = await Promise.all([store.getCatalog(), store.getPortfolio()]);
+  const { settings } = catalog;
+  const packs = activePacks(catalog.packs);
   const featured = works.filter((w) => w.featured);
   const streamerNames = Object.fromEntries(streamers.map((s) => [s.id, s.name]));
   // Visuel du hero : première réalisation mise en avant

@@ -24,6 +24,8 @@ export type Pack = {
   formulas?: Formula[];
   note?: string;
   highlight?: boolean;
+  // Masquée du site et non commandable (conservée pour l'historique des commandes)
+  archived?: boolean;
 };
 
 export type Option = { id: string; name: string; price: number; priceFrom?: boolean; unit?: string };
@@ -43,6 +45,11 @@ export type PaymentType = "total" | "acompte";
 
 export function getPack(packs: Pack[], id: string | undefined | null) {
   return packs.find((p) => p.id === id);
+}
+
+// Offres visibles sur le site
+export function activePacks(packs: Pack[]) {
+  return packs.filter((p) => !p.archived);
 }
 
 export function getFormula(pack: Pack, formulaId: string | undefined | null) {

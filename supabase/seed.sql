@@ -3,6 +3,9 @@
 insert into public.settings (id, deposit_percent, logo_discount, delivery_days) values
   (1, 30, 15000, '7 à 14')
 on conflict (id) do update set deposit_percent = excluded.deposit_percent, logo_discount = excluded.logo_discount, delivery_days = excluded.delivery_days;
+insert into public.finance_settings (id, urssaf_rate, cfp_rate, vl_enabled, vl_rate, stripe_percent, stripe_fixed) values
+  (1, 25.6, 0.2, false, 2.2, 1.5, 25)
+on conflict (id) do update set urssaf_rate = excluded.urssaf_rate, cfp_rate = excluded.cfp_rate, vl_enabled = excluded.vl_enabled, vl_rate = excluded.vl_rate, stripe_percent = excluded.stripe_percent, stripe_fixed = excluded.stripe_fixed;
 insert into public.packs (id, position, name, tagline, price, price_from, checkout, deliverables, extras, note, highlight) values
   ('premier-look', 0, 'Premier look', 'L''essentiel pour lancer ta chaîne avec une identité cohérente.', 49000, false, true, array['Logo', '2 overlays fixes au choix', 'Bannière et avatar', '2 séries de corrections regroupées']::text[], array['Option : 5 emotes personnalisées pour 150 € HT']::text[], null, false),
   ('identite-signature', 1, 'Identité signature', 'Une identité complète pour affirmer ton style sur tes streams.', 99000, false, true, array['Logo et ses déclinaisons', '5 overlays fixes au choix', 'Bannière et avatar', '2 séries de corrections regroupées']::text[], array['10 emotes personnalisées : 280 € HT', 'Animation légère des 5 overlays : 450 € HT']::text[], null, true),

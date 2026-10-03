@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defaultSettings, options, packs } from "../src/data/packs";
 import { streamers, works } from "../src/data/portfolio";
+import { defaultFinance as f } from "../src/lib/finance";
 
 const q = (v: unknown): string => {
   if (v === null || v === undefined) return "null";
@@ -31,6 +32,12 @@ sql += rows(
   "settings",
   ["id", "deposit_percent", "logo_discount", "delivery_days"],
   [[1, defaultSettings.depositPercent, defaultSettings.logoDiscount, defaultSettings.deliveryDays]],
+  "id",
+);
+sql += rows(
+  "finance_settings",
+  ["id", "urssaf_rate", "cfp_rate", "vl_enabled", "vl_rate", "stripe_percent", "stripe_fixed"],
+  [[1, f.urssafRate, f.cfpRate, f.vlEnabled, f.vlRate, f.stripePercent, f.stripeFixed]],
   "id",
 );
 sql += rows(

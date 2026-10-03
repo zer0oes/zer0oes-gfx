@@ -34,7 +34,7 @@ await db.exec(seed); // idempotent
 console.log("seed OK (exécuté deux fois)");
 
 const count = async (t: string) => (await db.query<{ n: number }>(`select count(*)::int as n from ${t}`)).rows[0].n;
-for (const t of ["settings", "packs", "formulas", "options", "streamers", "works", "emotes"]) {
+for (const t of ["settings", "finance_settings", "packs", "formulas", "options", "streamers", "works", "emotes"]) {
   console.log(`  ${t}: ${await count(`public.${t}`)}`);
 }
 
@@ -56,9 +56,11 @@ await db.exec(`insert into public.orders (stripe_session_id, pack_id, formula_id
 await db.exec(`set role anon`);
 const anonOrders = await count("public.orders");
 const anonPacks = await count("public.packs");
+const anonFinance = await count("public.finance_settings");
 await db.exec(`reset role`);
 if (anonOrders !== 0) throw new Error("Le rôle anon peut lire les commandes !");
-console.log(`anon : ${anonPacks} offres visibles, ${anonOrders} commande visible`);
+if (anonFinance !== 0) throw new Error("Le rôle anon peut lire les réglages financiers !");
+console.log(`anon : ${anonPacks} offres visibles, ${anonOrders} commande visible, ${anonFinance} réglage financier visible`);
 
 // Espace client : un client connecté ne voit que ses commandes
 await db.exec(`update public.orders set customer_email = 'Client@Exemple.fr' where stripe_session_id = 'cs_test';

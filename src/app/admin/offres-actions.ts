@@ -88,6 +88,7 @@ export async function savePackAction(formData: FormData) {
     extras: lines(formData, "extras").length ? lines(formData, "extras") : undefined,
     note: text(formData, "note", 1000) || undefined,
     formulas: formulas.length ? formulas : undefined,
+    archived: current.archived,
   };
   await store.savePack(pack);
   done("/admin/offres");
@@ -112,5 +113,96 @@ export async function saveOptionsAction(formData: FormData) {
     });
   }
   await getStore().saveOptions(options);
+  done("/admin/offres");
+}
+
+// --- Revenu net : taux et frais ------------------------------------------------
+
+function percent(f: FormData, k: string): number | null {
+  const n = Number(text(f, k, 10).replace(",", "."));
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? Math.round(n * 100) / 100 : null;
+}
+
+export async function saveFinanceAction(formData: FormData) {
+  await requireAdmin();
+  const urssafRate = percent(formData, "urssafRate");
+  const cfpRate = percent(formData, "cfpRate");
+  const vlRate = percent(formData, "vlRate");
+  const stripePercent = percent(formData, "stripePercent");
+  const stripeFixed = parseEuros(formData.get("stripeFixed"));
+  if (urssafRate === null || cfpRate === null || vlRate === null || stripePercent === null) {
+    done("/admin/offres", "Les taux doivent être des pourcentages entre 0 et 100.");
+  }
+  if (stripeFixed === null) done("/admin/offres", "Frais fixe Stripe invalide.");
+  await getStore().saveFinance({
+    urssafRate,
+    cfpRate,
+    vlEnabled: formData.get("vlEnabled") === "on",
+    vlRate,
+    stripePercent,
+    stripeFixed,
+  });
+  done("/admin/offres");
+}
+
+// --- Offres : ajout, ordre, archivage, suppression ------------------------------
+
+export async function createPackAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const name = text(formData, "name", 120);
+  const price = parseEuros(formData.get("price"));
+  if (!name || price === null) done("/admin/offres", "Nom et prix obligatoires pour une nouvelle offre.");
+  const { packs } = await store.getCatalog();
+  let id = slug(name) || "offre";
+  while (packs.some((p) => p.id === id)) id = `${id}-2`;
+  const checkout = formData.get("checkout") === "on";
+  await store.savePack({
+    id,
+    name,
+    tagline: "",
+    price,
+    checkout,
+    deliverables: [],
+    formulas: checkout ? [{ id: "base", label: name, price }] : undefined,
+  });
+  done("/admin/offres");
+}
+
+export async function movePackAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const ids = (await store.getCatalog()).packs.map((p) => p.id);
+  const i = ids.indexOf(text(formData, "id", 60));
+  const j = i + (formData.get("dir") === "up" ? -1 : 1);
+  if (i < 0 || j < 0 || j >= ids.length) done("/admin/offres");
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  await store.reorderPacks(ids);
+  done("/admin/offres");
+}
+
+export async function archivePackAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const pack = (await store.getCatalog()).packs.find((p) => p.id === text(formData, "id", 60));
+  if (!pack) done("/admin/offres", "Offre introuvable.");
+  await store.savePack({ ...pack, archived: formData.get("restore") === "1" ? undefined : true });
+  done("/admin/offres");
+}
+
+// Suppression définitive, sauf si des commandes existent : l'offre est alors archivée.
+export async function deletePackAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const id = text(formData, "id", 60);
+  if (formData.get("confirm") !== "on") done("/admin/offres", "Coche la case de confirmation pour supprimer.");
+  const pack = (await store.getCatalog()).packs.find((p) => p.id === id);
+  if (!pack) done("/admin/offres", "Offre introuvable.");
+  const hasOrders = (await store.listOrders()).some((o) => o.packId === id);
+  if (hasOrders) {
+    await store.savePack({ ...pack, archived: true });
+    done("/admin/offres", `« ${pack.name} » a des commandes : elle a été archivée (masquée du site) plutôt que supprimée.`);
+  }
+  await store.deletePack(id);
   done("/admin/offres");
 }
