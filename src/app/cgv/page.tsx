@@ -31,10 +31,28 @@ export default function CgvPage() {
 
         <h2>3. Prix et paiement</h2>
         <p>
-          Les prix sont indiqués en euros hors taxes (HT). {legal.vatNote}. Pour les offres commandées en ligne, le
-          paiement s&apos;effectue en totalité à la commande, par carte bancaire via la plateforme sécurisée Stripe.
-          Pour les prestations sur devis, les modalités de paiement sont précisées dans le devis.
+          Les prix sont indiqués en euros hors taxes (HT). {legal.vatNote}. Le paiement s&apos;effectue par carte
+          bancaire via la plateforme sécurisée Stripe.
         </p>
+        <ul>
+          <li>
+            Offres commandées en ligne : le client choisit, à la commande, de régler la totalité du prix ou un acompte
+            de {site.depositPercent} % du prix de la formule choisie.
+          </li>
+          <li>
+            En cas d&apos;acompte, le solde ({100 - site.depositPercent} %) est dû à la livraison, avant la remise des
+            fichiers définitifs. Il est réglé sur facture ou par un lien de paiement transmis au client.
+          </li>
+          <li>
+            Prestations sur devis (dont l&apos;offre « Univers complet ») : un acompte de {site.depositPercent} % est
+            demandé à l&apos;acceptation du devis ; le solde est dû dans les mêmes conditions.
+          </li>
+          <li>
+            Sous réserve de l&apos;exercice du droit de rétractation dans les conditions de l&apos;article 5,
+            l&apos;acompte n&apos;est pas remboursable une fois la création commencée, sauf manquement du prestataire
+            à ses obligations.
+          </li>
+        </ul>
 
         <h2>4. Déroulement et délais</h2>
         <ul>
@@ -54,12 +72,18 @@ export default function CgvPage() {
         </ul>
 
         <h2>5. Droit de rétractation</h2>
+        {/* Formulation prudente, à faire relire par un professionnel du droit. */}
         <p>
-          Conformément à l&apos;article L221-28 du Code de la consommation, le droit de rétractation ne peut être exercé
-          pour les biens confectionnés selon les spécifications du consommateur ou nettement personnalisés, ni pour la
-          fourniture d&apos;un contenu numérique dont l&apos;exécution a commencé avec l&apos;accord préalable exprès du
-          consommateur, qui a renoncé à son droit de rétractation. En validant sa commande, le client demande le
-          démarrage immédiat de la création et reconnaît perdre son droit de rétractation.
+          Le client consommateur dispose d&apos;un délai de 14 jours à compter de la commande pour exercer son droit de
+          rétractation, sans avoir à se justifier (articles L221-18 et suivants du Code de la consommation), en
+          adressant sa demande à <a href={`mailto:${site.email}`}>{site.email}</a>.
+        </p>
+        <p>
+          En validant sa commande, le client demande expressément que la création commence avant la fin de ce délai.
+          S&apos;il se rétracte ensuite, il reste redevable d&apos;un montant proportionnel au travail déjà réalisé
+          (article L221-25). Il ne peut plus exercer son droit de rétractation lorsque la prestation a été pleinement
+          exécutée avant la fin du délai, ni pour un contenu numérique dont la fourniture a commencé avec son accord
+          préalable exprès et sa renonciation expresse à ce droit (article L221-28, 1° et 13°).
         </p>
 
         <h2>6. Droits d&apos;utilisation</h2>

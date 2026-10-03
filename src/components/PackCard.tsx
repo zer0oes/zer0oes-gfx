@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { createCheckout } from "@/app/actions";
 import { formatOfferPrice, type Pack } from "@/data/packs";
+import { OrderForm } from "./OrderForm";
 
 export function PackCard({ pack, order = false }: { pack: Pack; order?: boolean }) {
   const buttonClass = `w-full rounded-full px-5 py-3 text-center font-semibold transition hover:brightness-110 ${
     pack.highlight ? "bg-accent text-background" : "bg-foreground text-background"
   }`;
-  const formulas = pack.formulas ?? [];
 
   return (
     <div
@@ -48,42 +47,7 @@ export function PackCard({ pack, order = false }: { pack: Pack; order?: boolean 
           Voir le détail
         </Link>
       ) : pack.checkout ? (
-        <form action={createCheckout} className="mt-8 space-y-4">
-          <input type="hidden" name="packId" value={pack.id} />
-          {formulas.length > 1 && (
-            <fieldset className="space-y-2">
-              <legend className="mb-2 text-xs font-semibold uppercase tracking-widest text-accent">Formule</legend>
-              {formulas.map((f, i) => (
-                <label
-                  key={f.id}
-                  className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border bg-background/40 px-3 py-2 text-sm has-[:checked]:border-accent"
-                >
-                  <span className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="formulaId"
-                      value={f.id}
-                      defaultChecked={i === 0}
-                      className="accent-[var(--accent)]"
-                    />
-                    {f.label}
-                  </span>
-                  <span className="shrink-0 font-semibold">{formatOfferPrice(f)}</span>
-                </label>
-              ))}
-            </fieldset>
-          )}
-          <label className="flex items-start gap-2 text-xs text-muted">
-            <input type="checkbox" name="cgv" required className="mt-0.5 accent-[var(--accent)]" />
-            <span>
-              J&apos;accepte les <Link href="/cgv" className="underline hover:text-foreground">CGV</Link> et demande
-              le démarrage de la création dès le paiement.
-            </span>
-          </label>
-          <button type="submit" className={buttonClass}>
-            Commander
-          </button>
-        </form>
+        <OrderForm pack={pack} buttonClass={buttonClass} />
       ) : (
         <div className="mt-8">
           <Link href={`/contact?offre=${pack.id}`} className={`block ${buttonClass}`}>

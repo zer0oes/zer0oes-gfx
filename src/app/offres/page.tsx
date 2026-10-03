@@ -17,8 +17,12 @@ const faq = [
     a: "Juste après le paiement, vous remplissez un court brief : univers, couleurs, références et overlays souhaités (démarrage, pause, fin, discussion ou gameplay). Je vous présente ensuite une première proposition que l'on ajuste ensemble : deux séries de corrections regroupées sont incluses.",
   },
   {
+    q: "Puis-je payer en plusieurs fois ?",
+    a: `Oui : à la commande, vous pouvez régler la totalité ou un acompte de ${site.depositPercent} %. Le solde est à régler à la livraison, avant la remise des fichiers définitifs, sur facture ou par lien de paiement.`,
+  },
+  {
     q: "Comment commander l'offre Univers complet ?",
-    a: "Elle est proposée à partir de 1 990 € HT, animations légères comprises. Demandez un devis via la page contact : les animations complexes sont chiffrées selon votre projet.",
+    a: `Elle est proposée à partir de 1 990 € HT, animations légères comprises. Demandez un devis via la page contact : les animations complexes sont chiffrées selon votre projet. Un acompte de ${site.depositPercent} % est demandé à l'acceptation du devis.`,
   },
   {
     q: "Comment ajouter une option ?",
@@ -59,7 +63,8 @@ export default async function OffresPage({ searchParams }: PageProps<"/offres">)
           ))}
         </div>
         <p className="mt-6 text-center text-sm text-muted">
-          Prix en euros HT — {legal.vatNote}. Paiement sécurisé par Stripe. Besoin d&apos;autre chose ?{" "}
+          Prix en euros HT — {legal.vatNote}. Paiement sécurisé par Stripe, en une fois ou avec un acompte de{" "}
+          {site.depositPercent} % (solde à la livraison). Besoin d&apos;autre chose ?{" "}
           <Link href="/contact" className="text-accent hover:underline">Demandez un devis sur mesure</Link>.
         </p>
 

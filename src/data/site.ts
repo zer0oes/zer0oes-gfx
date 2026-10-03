@@ -14,6 +14,9 @@ export const site = {
   ],
   // Délai de livraison moyen affiché sur le site (en jours ouvrés)
   deliveryDays: "7 à 14",
+  // Acompte proposé à la commande (en %). Le solde est dû à la livraison,
+  // avant remise des fichiers définitifs (facture ou lien de paiement Stripe envoyé à la main).
+  depositPercent: 30,
 };
 
 // Informations légales — obligatoires pour les mentions légales et les CGV.

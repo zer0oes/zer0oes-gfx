@@ -2,7 +2,8 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { formulaName, getFormula, getPack } from "@/data/packs";
+import { amountToPay, formulaName, getFormula, getPack, parsePaymentType, paymentLabel } from "@/data/packs";
+import { site } from "@/data/site";
 import { getStripe } from "@/lib/stripe";
 import { notify } from "@/lib/notify";
 
@@ -24,29 +25,42 @@ export async function createCheckout(formData: FormData) {
   // Formule relue côté serveur : le navigateur n'envoie que son identifiant.
   const formula = getFormula(pack, formData.get("formulaId")?.toString());
   if (!formula) redirect("/offres");
+  // Paiement en une fois ou acompte : montant toujours calculé ici.
+  const payment = parsePaymentType(formData.get("payment"));
+  const amount = amountToPay(formula.price, payment);
 
   const stripe = getStripe();
   if (!stripe) {
     // Mode démo : pas de clé Stripe configurée.
-    redirect(`/merci?pack=${pack.id}&formule=${formula.id}&demo=1`);
+    redirect(`/merci?pack=${pack.id}&formule=${formula.id}&paiement=${payment}&demo=1`);
   }
 
   const base = await siteUrl();
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [
-      formula.stripePriceId
+      formula.stripePriceId && payment === "total"
         ? { price: formula.stripePriceId, quantity: 1 }
         : {
             quantity: 1,
             price_data: {
               currency: "eur",
-              unit_amount: formula.price,
-              product_data: { name: `zer0oes gfx — ${formulaName(pack, formula)}` },
+              unit_amount: amount,
+              product_data: {
+                name: `zer0oes gfx — ${formulaName(pack, formula)}${payment === "acompte" ? ` — Acompte ${site.depositPercent} %` : ""}`,
+                description: paymentLabel(formula.price, payment),
+              },
             },
           },
     ],
-    metadata: { packId: pack.id, formulaId: formula.id },
+    metadata: {
+      packId: pack.id,
+      formulaId: formula.id,
+      paymentType: payment,
+      depositPercent: payment === "acompte" ? String(site.depositPercent) : "",
+      totalPrice: String(formula.price),
+      amountCharged: String(amount),
+    },
     success_url: `${base}/merci?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${base}/offres?annule=1`,
   });
@@ -118,12 +132,16 @@ export async function sendBrief(
 
   // Vérifie côté serveur la commande Stripe associée, si présente.
   const sessionId = field(formData, "sessionId", 300);
-  let order = [field(formData, "packId", 50) || "inconnu", field(formData, "formulaId", 50)].filter(Boolean).join(" / ");
+  let order = [field(formData, "packId", 50) || "inconnu", field(formData, "formulaId", 50), field(formData, "payment", 20)]
+    .filter(Boolean)
+    .join(" / ");
   const stripe = getStripe();
   if (stripe && sessionId) {
     try {
       const s = await stripe.checkout.sessions.retrieve(sessionId);
-      order = `${s.metadata?.packId ?? "?"} / ${s.metadata?.formulaId ?? "?"} — ${s.payment_status} — ${s.id}`;
+      const total = Number(s.metadata?.totalPrice);
+      const paid = total ? ` — ${paymentLabel(total, parsePaymentType(s.metadata?.paymentType))}` : "";
+      order = `${s.metadata?.packId ?? "?"} / ${s.metadata?.formulaId ?? "?"}${paid} — ${s.payment_status} — ${s.id}`;
     } catch {
       order = `session invalide (${sessionId})`;
     }

@@ -1,3 +1,5 @@
+import { site } from "./site";
+
 // Offres et options (texte et tarifs fournis par Aurore).
 // Les prix sont en centimes d'euro HT (49000 = 490 € HT).
 // La mention TVA affichée à côté des prix se règle dans src/data/site.ts (legal.vatNote).
@@ -130,4 +132,25 @@ export const optionChoices = options.map((o) => ({ id: o.id, label: `${o.name} (
 // Nom complet d'une formule : « Premier look » ou « Premier look — Pack avec emotes »
 export function formulaName(pack: Pack, formula: Formula | undefined) {
   return !formula || formula.id === pack.formulas?.[0]?.id ? pack.name : `${pack.name} — ${formula.label}`;
+}
+
+// Paiement en une fois ou acompte (pourcentage réglé dans site.ts).
+export type PaymentType = "total" | "acompte";
+
+export function depositAmount(price: number) {
+  return Math.round((price * site.depositPercent) / 100);
+}
+
+export function amountToPay(price: number, payment: PaymentType) {
+  return payment === "acompte" ? depositAmount(price) : price;
+}
+
+export function paymentLabel(price: number, payment: PaymentType) {
+  if (payment !== "acompte") return `Paiement en une fois : ${formatPrice(price)} HT`;
+  const deposit = depositAmount(price);
+  return `Acompte de ${site.depositPercent} % : ${formatPrice(deposit)} HT sur ${formatPrice(price)} HT — solde de ${formatPrice(price - deposit)} HT à régler à la livraison`;
+}
+
+export function parsePaymentType(value: unknown): PaymentType {
+  return value === "acompte" ? "acompte" : "total";
 }

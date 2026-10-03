@@ -9,12 +9,14 @@ export function BriefForm({
   sessionId,
   packId,
   formulaId,
+  payment,
   email,
   overlayHint,
 }: {
   sessionId?: string;
   packId?: string;
   formulaId?: string;
+  payment?: string;
   email?: string;
   overlayHint?: string;
 }) {
@@ -27,6 +29,7 @@ export function BriefForm({
       <input type="hidden" name="sessionId" value={sessionId ?? ""} />
       <input type="hidden" name="packId" value={packId ?? ""} />
       <input type="hidden" name="formulaId" value={formulaId ?? ""} />
+      <input type="hidden" name="payment" value={payment ?? ""} />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="E-mail *">
           <input name="email" type="email" required defaultValue={email} className={inputClass} />
