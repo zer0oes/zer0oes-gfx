@@ -1,22 +1,14 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { notify } from "@/lib/notify";
 import { attachBrief, paymentSummary, quote, quoteMetadata, recordDemoOrder } from "@/lib/orders";
 import { getPack, logoDiscountLabel, paymentLabel } from "@/lib/pricing";
+import { siteUrl } from "@/lib/site-url";
 import { getStore } from "@/lib/store";
 import { getStripe } from "@/lib/stripe";
 
 export type FormState = { ok: boolean; message: string } | null;
-
-export async function siteUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  return `${proto}://${host}`;
-}
 
 export async function createCheckout(formData: FormData) {
   const catalog = await getStore().getCatalog();
