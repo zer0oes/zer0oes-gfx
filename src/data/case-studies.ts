@@ -95,9 +95,9 @@ export const caseStudies: Record<string, CaseStudy> = {
       },
       {
         kicker: "Le live en détail",
-        title: "Chaque moment a son écran.",
-        text: "La pause et les alertes gardent le même cadre animé et les mêmes néons que l'écran de lancement.",
-        works: ["zer0oes-paused", "zer0oes-alertes"],
+        title: "Le chat et les alertes, en néon.",
+        text: "Deux éléments à regarder de près : le chat et les alertes, dans les mêmes couleurs que l'écran de lancement.",
+        works: ["zer0oes-chat", "zer0oes-alertes"],
       },
       {
         kicker: "La communauté",
