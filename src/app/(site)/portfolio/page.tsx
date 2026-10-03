@@ -4,6 +4,7 @@ import Link from "next/link";
 import { HoverVideo } from "@/components/HoverVideo";
 import { ProtectedMedia } from "@/components/protection";
 import { PageHeader } from "@/components/ui";
+import { caseStudies } from "@/data/case-studies";
 import { categories, projectHref } from "@/data/portfolio";
 import { getStore } from "@/lib/store";
 
@@ -22,7 +23,10 @@ export default async function PortfolioPage() {
       <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-2">
         {streamers.map((s) => {
           const own = works.filter((w) => w.streamer === s.id);
-          const cover = own.find((w) => w.category === "overlays") ?? own[0];
+          // Couverture lisible en miniature (logo du projet), scène animée au survol
+          const study = caseStudies[s.id];
+          const cover = own.find((w) => w.id === study?.cover) ?? own.find((w) => w.category === "overlays") ?? own[0];
+          const coverVideo = own.find((w) => w.id === study?.coverVideo)?.video ?? cover?.video;
           const counts = categories
             .map((c) => {
               const items = own.filter((w) => w.category === c.id);
@@ -50,7 +54,7 @@ export default async function PortfolioPage() {
                       sizes="(min-width: 1024px) 560px, 100vw"
                       className="object-cover transition duration-500 group-hover:scale-105"
                     />
-                    {cover.video && <HoverVideo src={cover.video} />}
+                    {coverVideo && <HoverVideo src={coverVideo} />}
                   </ProtectedMedia>
                 )}
               </div>

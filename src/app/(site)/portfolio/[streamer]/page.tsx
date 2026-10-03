@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CaseStudyView } from "@/components/CaseStudyView";
 import { WorkGrid } from "@/components/WorkGrid";
+import { caseStudies } from "@/data/case-studies";
 import { categories, projectHref, type Category } from "@/data/portfolio";
 import { getStore } from "@/lib/store";
 
@@ -25,6 +27,17 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
   if (!streamer) notFound();
 
   const own = works.filter((w) => w.streamer === streamer.id);
+  const study = caseStudies[streamer.id];
+  if (study) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
+        <Link href="/portfolio" className="text-sm text-muted hover:text-foreground">
+          ← Tous les projets
+        </Link>
+        <CaseStudyView study={study} works={own} streamerName={streamer.name} />
+      </div>
+    );
+  }
   const sections = categories.filter((c) => own.some((w) => w.category === c.id));
   // Onglet « Tout » (par défaut) : vue d'ensemble, rangée par type
   const tabs = [{ id: "tout", label: "Tout" }, ...sections];
