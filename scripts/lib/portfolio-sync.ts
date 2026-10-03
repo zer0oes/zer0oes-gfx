@@ -42,3 +42,22 @@ export async function applyPortfolio(db: Db, p: PortfolioPlan, allStreamers: Str
     }
   });
 }
+
+// Mise à jour explicite de réalisations existantes (titre, texte, médias…) depuis src/data,
+// uniquement pour les identifiants demandés : le reste de la base n'est pas touché.
+export async function updateWorks(db: Db, works: Work[], ids: string[]) {
+  const missing = ids.filter((id) => !works.some((w) => w.id === id));
+  if (missing.length) throw new Error(`Réalisations inconnues dans src/data : ${missing.join(", ")}`);
+  const updated: string[] = [];
+  await db.transaction(async (tx) => {
+    for (const w of works.filter((x) => ids.includes(x.id))) {
+      const rows = await tx.query<{ id: string }>(
+        `update public.works set category = $2, title = $3, description = $4, image = $5, video = $6, colors = $7, featured = $8
+         where id = $1 returning id`,
+        [w.id, w.category, w.title, w.description, w.image ?? null, w.video ?? null, w.colors, Boolean(w.featured)],
+      );
+      if (rows.length) updated.push(w.id);
+    }
+  });
+  return updated;
+}

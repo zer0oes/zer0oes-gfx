@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { streamers, works } from "../../src/data/portfolio";
 import { apply, plan, readMigrations } from "./db-setup-core";
 import { pgliteDb, supabaseLikePglite } from "./pglite-supabase";
-import { applyPortfolio, planPortfolio } from "./portfolio-sync";
+import { applyPortfolio, planPortfolio, updateWorks } from "./portfolio-sync";
 
 const seed = fs.readFileSync(path.join(process.cwd(), "supabase", "seed.sql"), "utf8");
 
@@ -33,5 +33,21 @@ test("portfolio : ajoute seulement les réalisations absentes, sans toucher aux 
   // Relance : rien à ajouter
   const again = await planPortfolio(db, streamers, works);
   assert.equal(again.works.length + again.streamers.length, 0);
+  await pg.close();
+});
+
+test("portfolio : --maj met à jour seulement les réalisations demandées", async () => {
+  const pg = await supabaseLikePglite();
+  const db = pgliteDb(pg);
+  await apply(db, await plan(db, readMigrations(process.cwd())), seed);
+  await pg.exec(`update public.works set image = '/ancienne.webp', title = 'Ancien' where id in ('zer0oes-starting-screen', 'zer0oes-chat')`);
+  const updated = await updateWorks(db, works, ["zer0oes-starting-screen"]);
+  assert.deepEqual(updated, ["zer0oes-starting-screen"]);
+  const rows = (await pg.query<{ id: string; image: string }>(`select id, image from public.works where id in ('zer0oes-starting-screen', 'zer0oes-chat') order by id`)).rows;
+  assert.deepEqual(rows, [
+    { id: "zer0oes-chat", image: "/ancienne.webp" },
+    { id: "zer0oes-starting-screen", image: works.find((w) => w.id === "zer0oes-starting-screen")!.image },
+  ]);
+  await assert.rejects(updateWorks(db, works, ["inconnue"]));
   await pg.close();
 });
