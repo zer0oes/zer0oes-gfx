@@ -30,6 +30,9 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
   const tabs = [{ id: "tout", label: "Tout" }, ...sections];
   const requested = (await searchParams).type;
   const active = sections.find((t) => t.id === requested) ?? tabs[0];
+  // Une seule grille continue, dans l'ordre des types
+  const rank = (c: Category) => categories.findIndex((x) => x.id === c);
+  const all = [...own].sort((a, b) => rank(a.category) - rank(b.category));
 
   return (
     <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
@@ -77,26 +80,10 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
         </ul>
       </nav>
 
-      {active.id === "tout" ? (
-        sections.map((c) => (
-          <section key={c.id} aria-labelledby={`type-${c.id}`} className="mt-10">
-            <div className="mb-4 flex items-baseline justify-between gap-4">
-              <h2 id={`type-${c.id}`} className="font-display text-2xl font-bold">
-                {c.label}
-              </h2>
-              <Link href={projectHref(streamer.id, c.id)} scroll={false} className="text-sm text-muted hover:text-foreground">
-                Voir uniquement {c.label.toLowerCase()} →
-              </Link>
-            </div>
-            <WorkGrid works={own.filter((w) => w.category === c.id)} showStreamer={false} />
-          </section>
-        ))
-      ) : (
-        <div className="mt-8">
-          {/* key : réinitialise la visionneuse au changement d'onglet */}
-          <WorkGrid key={active.id} works={own.filter((w) => w.category === active.id)} showStreamer={false} />
-        </div>
-      )}
+      <div className="mt-8">
+        {/* key : réinitialise la visionneuse au changement d'onglet */}
+        <WorkGrid key={active.id} works={active.id === "tout" ? all : own.filter((w) => w.category === active.id)} showStreamer={false} />
+      </div>
     </div>
   );
 }
