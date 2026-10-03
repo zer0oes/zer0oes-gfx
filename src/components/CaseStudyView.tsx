@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import type { CaseStudy } from "@/data/case-studies";
-import type { Work } from "@/data/portfolio";
+import { categories, type Work } from "@/data/portfolio";
+import { Carousel, CarouselItem } from "./Carousel";
 import { HoverVideo } from "./HoverVideo";
 import { Lightbox } from "./Lightbox";
 import { ProtectedMedia } from "./protection";
@@ -19,7 +20,11 @@ export function CaseStudyView({ study, works, streamerName }: { study: CaseStudy
     .map((s) => ({ ...s, items: s.works.map((id) => byId.get(id)).filter((w): w is Work => Boolean(w)) }))
     .filter((s) => s.items.length);
   const featured = new Set([study.hero, ...sections.flatMap((s) => s.items.map((w) => w.id))]);
-  const others = works.filter((w) => !featured.has(w.id));
+  // Autres pièces regroupées par type (un carrousel par type)
+  const groups = categories
+    .map((c) => ({ ...c, items: works.filter((w) => !featured.has(w.id) && w.category === c.id) }))
+    .filter((g) => g.items.length);
+  const others = groups.flatMap((g) => g.items);
   // Ordre de la visionneuse : celui de la page
   const ordered = [...(hero ? [hero] : []), ...sections.flatMap((s) => s.items), ...others];
   const [open, setOpen] = useState<number | null>(null);
@@ -88,11 +93,20 @@ export function CaseStudyView({ study, works, streamerName }: { study: CaseStudy
             Les autres pièces du projet
           </h2>
           <p className="mt-2 text-muted">Variantes, widgets et déclinaisons, dans le même univers.</p>
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {others.map((w) => (
-              <WorkCard key={w.id} work={w} showStreamer={false} onOpen={() => openWork(w)} />
-            ))}
-          </div>
+          {groups.map((g) => (
+            <div key={g.id} className="mt-10">
+              <h3 className="mb-4 font-display text-lg font-semibold">
+                {g.label} <span className="text-sm font-normal text-muted">({g.items.length})</span>
+              </h3>
+              <Carousel label={`${g.label} — autres pièces`}>
+                {g.items.map((w) => (
+                  <CarouselItem key={w.id}>
+                    <WorkCard work={w} showStreamer={false} onOpen={() => openWork(w)} />
+                  </CarouselItem>
+                ))}
+              </Carousel>
+            </div>
+          ))}
         </section>
       )}
 
