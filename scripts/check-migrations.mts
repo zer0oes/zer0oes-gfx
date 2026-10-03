@@ -3,24 +3,10 @@
 // Usage : npm run db:check
 import fs from "node:fs";
 import path from "node:path";
-import { PGlite } from "@electric-sql/pglite";
+import { supabaseLikePglite } from "./lib/pglite-supabase";
 
 const root = process.cwd();
-const db = new PGlite();
-
-await db.exec(`
-  create role anon; create role authenticated;
-  create schema storage;
-  create schema auth;
-  -- Simulation de auth.jwt() : claims lus dans le réglage request.jwt.claims
-  create function auth.jwt() returns jsonb language sql stable
-    as $f$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $f$;
-  grant usage on schema auth to anon, authenticated;
-  create table storage.buckets (
-    id text primary key, name text, public boolean,
-    file_size_limit bigint, allowed_mime_types text[]
-  );
-`);
+const db = await supabaseLikePglite();
 
 const dir = path.join(root, "supabase", "migrations");
 for (const file of fs.readdirSync(dir).sort()) {

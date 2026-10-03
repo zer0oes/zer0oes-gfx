@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --conditions=react-server --import tsx --test \"src/**/*.test.ts\"",
+    "test": "node --conditions=react-server --import tsx --test \"src/**/*.test.ts\" \"scripts/**/*.test.ts\"",
     "db:seed:generate": "tsx scripts/generate-seed.mts",
     "db:check": "tsx scripts/check-migrations.mts",
+    "db:setup": "tsx scripts/db-setup.mts",
     "watermark:images": "tsx scripts/watermark-images.mts",
     "watermark:videos": "tsx scripts/watermark-videos.mts"
   },
@@ -31,6 +32,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "postgres": "^3.4.9",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"
