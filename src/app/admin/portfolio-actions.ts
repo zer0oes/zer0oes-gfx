@@ -17,7 +17,7 @@ const slug = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 60);
-const categories = ["logo", "overlays", "widgets", "alertes", "emotes"] as const;
+const categories = ["logo", "overlays", "widgets", "alertes", "emotes", "reseaux"] as const;
 const groups = ["follower", "abonne", "animee"] as const;
 
 // Les URLs de médias acceptées : fichiers du site, uploads locaux ou stockage Supabase.

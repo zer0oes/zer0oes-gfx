@@ -6,7 +6,7 @@
 // Sans image, une vignette de couleur générée est affichée à la place.
 // `video` (optionnel) : courte boucle MP4 lue en grand dans la visionneuse, avec l'image en affiche.
 
-export type Category = "logo" | "overlays" | "widgets" | "alertes" | "emotes";
+export type Category = "logo" | "overlays" | "widgets" | "alertes" | "emotes" | "reseaux";
 
 // L'ordre ici est aussi l'ordre d'affichage dans chaque section streameur.
 export const categories: { id: Category; label: string }[] = [
@@ -15,6 +15,7 @@ export const categories: { id: Category; label: string }[] = [
   { id: "widgets", label: "Widgets" },
   { id: "alertes", label: "Alertes" },
   { id: "emotes", label: "Emotes" },
+  { id: "reseaux", label: "Réseaux sociaux" },
 ];
 
 export type Streamer = { id: string; name: string; description: string; url?: string };
@@ -241,5 +242,32 @@ export const works: Work[] = [
     video: "/portfolio/zer0oes-emotes-animees.mp4",
     colors: ["#ef4444", "#7c3aed"],
     emotes: zer0oesEmotes,
+  },
+  {
+    id: "zer0oes-bannieres",
+    title: "Bannières Twitch et YouTube",
+    streamer: "zer0oes",
+    category: "reseaux",
+    description: "Bannières assorties pour Twitch et YouTube : logo, réseaux sociaux et portrait dans l'univers néon de la chaîne.",
+    image: "/portfolio/zer0oes-bannieres.webp",
+    colors: ["#ec4899", "#7c3aed"],
+  },
+  {
+    id: "zer0oes-avatar",
+    title: "Avatar",
+    streamer: "zer0oes",
+    category: "reseaux",
+    description: "Photo de profil aux lumières néon de la chaîne, la même sur Twitch, YouTube et les réseaux, pour être reconnue partout.",
+    image: "/portfolio/zer0oes-avatar.webp",
+    colors: ["#be185d", "#4c1d95"],
+  },
+  {
+    id: "zer0oes-panneaux",
+    title: "Panneaux Twitch",
+    streamer: "zer0oes",
+    category: "reseaux",
+    description: "Titres de panneaux pour la page Bio de Twitch : à propos, soutien, planning, abonnement, sponsors et config.",
+    image: "/portfolio/zer0oes-panneaux.webp",
+    colors: ["#7c3aed", "#0e0e10"],
   },
 ];
