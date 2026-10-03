@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { sendBrief } from "@/app/actions";
-import { optionChoices, overlayTypes } from "@/data/packs";
+import { overlayTypes } from "@/lib/pricing";
 import { Field, FormStatus, OptionsField, inputClass } from "./ui";
 
 export function BriefForm({
@@ -13,7 +13,9 @@ export function BriefForm({
   hasLogo,
   email,
   overlayHint,
+  optionChoices,
 }: {
+  optionChoices: { id: string; label: string }[];
   sessionId?: string;
   packId?: string;
   formulaId?: string;

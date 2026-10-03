@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { categories, emoteGroups, getStreamer, type Work } from "@/data/portfolio";
+import { categories, emoteGroups, type Work } from "@/data/portfolio";
 
 const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
 
@@ -24,11 +24,13 @@ function usePrefersReducedMotion() {
 // Échap, clic hors du visuel et bouton pour fermer ; flèches clavier et swipe pour naviguer.
 export function Lightbox({
   works,
+  streamerNames = {},
   index,
   onClose,
   onNavigate,
 }: {
   works: Work[];
+  streamerNames?: Record<string, string>;
   index: number | null;
   onClose: () => void;
   onNavigate: (index: number) => void;
@@ -134,7 +136,8 @@ export function Lightbox({
             )}
             <figcaption className="mt-4 w-full max-w-3xl text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-                {category} · {getStreamer(work.streamer)?.name}
+                {category}
+                {streamerNames[work.streamer] ? ` · ${streamerNames[work.streamer]}` : ""}
               </p>
               <h2 id="lightbox-title" className="mt-1 font-display text-xl font-bold sm:text-2xl">
                 {work.title}

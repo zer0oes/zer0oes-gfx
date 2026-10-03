@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/ContactForm";
 import { PageHeader } from "@/components/ui";
-import { getPack } from "@/data/packs";
+import { getPack, optionChoices } from "@/lib/pricing";
+import { getStore } from "@/lib/store";
 import { site } from "@/data/site";
 
 export const metadata: Metadata = {
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
 
 export default async function ContactPage({ searchParams }: PageProps<"/contact">) {
   const { offre } = await searchParams;
-  const quote = getPack(typeof offre === "string" ? offre : undefined)?.checkout === false;
+  const catalog = await getStore().getCatalog();
+  const quote = getPack(catalog.packs, typeof offre === "string" ? offre : undefined)?.checkout === false;
 
   return (
     <>
@@ -39,7 +41,7 @@ export default async function ContactPage({ searchParams }: PageProps<"/contact"
           </div>
         </aside>
         <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-          <ContactForm defaultType={quote ? "Devis Univers complet" : undefined} />
+          <ContactForm defaultType={quote ? "Devis Univers complet" : undefined} optionChoices={optionChoices(catalog.options)} />
         </div>
       </div>
     </>

@@ -1,37 +1,14 @@
-import { site } from "./site";
-
-// Offres et options (texte et tarifs fournis par Aurore).
+// Contenu par défaut des offres et options (texte et tarifs fournis par Aurore).
+// Utilisé tel quel sans base de données, et pour remplir la base Supabase (npm run db:seed).
+// Une fois Supabase branché, ces données se modifient depuis l'admin (/admin/offres).
 // Les prix sont en centimes d'euro HT (49000 = 490 € HT).
-// La mention TVA affichée à côté des prix se règle dans src/data/site.ts (legal.vatNote).
 //
 // `checkout: true`  → sélecteur de formule + bouton « Commander » vers Stripe Checkout.
-//                     Le prix payé est toujours relu ici côté serveur, jamais envoyé par le navigateur.
+//                     Le prix payé est toujours relu côté serveur, jamais envoyé par le navigateur.
 // `checkout: false` → bouton « Demander un devis » vers la page contact (prix « à partir de »).
-// Optionnel : renseigner `stripePriceId` sur une formule (price_...) pour utiliser un prix
-// créé dans le Dashboard Stripe au lieu du prix ci-dessous.
 
-export type Formula = {
-  id: string;
-  label: string;
-  price: number;
-  stripePriceId?: string;
-};
-
-export type Pack = {
-  id: string;
-  name: string;
-  tagline: string;
-  price: number;
-  priceFrom?: boolean;
-  checkout: boolean;
-  deliverables: string[];
-  // Options propres à l'offre, affichées sous les livrables
-  extras?: string[];
-  // Formules commandables (la première est la formule de base)
-  formulas?: Formula[];
-  note?: string;
-  highlight?: boolean;
-};
+import type { Option, Pack, PricingSettings } from "@/lib/pricing";
+import { site } from "./site";
 
 export const packs: Pack[] = [
   {
@@ -86,7 +63,6 @@ export const packs: Pack[] = [
 ];
 
 // Options à la carte : non vendues via Stripe, elles se cochent dans le brief ou la demande de devis.
-export type Option = { id: string; name: string; price: number; priceFrom?: boolean; unit?: string };
 
 export const options: Option[] = [
   { id: "overlay-fixe", name: "Overlay fixe supplémentaire", price: 9000 },
@@ -101,64 +77,8 @@ export const options: Option[] = [
   { id: "animation-logo", name: "Animation du logo", price: 18000, priceFrom: true },
 ];
 
-// Types d'overlays proposés au choix dans le brief.
-export const overlayTypes = ["Démarrage", "Pause", "Fin", "Discussion", "Gameplay"];
-
-export function getPack(id: string | undefined | null) {
-  return packs.find((p) => p.id === id);
-}
-
-export function getFormula(pack: Pack, formulaId: string | undefined | null) {
-  return pack.formulas?.find((f) => f.id === formulaId) ?? pack.formulas?.[0];
-}
-
-export function formatPrice(cents: number) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
-  }).format(cents / 100);
-}
-
-// « 490 € HT », « À partir de 1 990 € HT » ou « À partir de 70 € HT / unité »
-export function formatOfferPrice({ price, priceFrom, unit }: { price: number; priceFrom?: boolean; unit?: string }) {
-  return `${priceFrom ? "À partir de " : ""}${formatPrice(price)} HT${unit ? ` / ${unit}` : ""}`;
-}
-
-// Libellés des options pour les cases à cocher des formulaires.
-export const optionChoices = options.map((o) => ({ id: o.id, label: `${o.name} (${formatOfferPrice(o)})` }));
-
-// Nom complet d'une formule : « Premier look » ou « Premier look — Pack avec emotes »
-export function formulaName(pack: Pack, formula: Formula | undefined) {
-  return !formula || formula.id === pack.formulas?.[0]?.id ? pack.name : `${pack.name} — ${formula.label}`;
-}
-
-// Paiement en une fois ou acompte (pourcentage réglé dans site.ts).
-export type PaymentType = "total" | "acompte";
-
-export function depositAmount(price: number) {
-  return Math.round((price * site.depositPercent) / 100);
-}
-
-export function amountToPay(price: number, payment: PaymentType) {
-  return payment === "acompte" ? depositAmount(price) : price;
-}
-
-export function paymentLabel(price: number, payment: PaymentType) {
-  if (payment !== "acompte") return `Paiement en une fois : ${formatPrice(price)} HT`;
-  const deposit = depositAmount(price);
-  return `Acompte de ${site.depositPercent} % : ${formatPrice(deposit)} HT sur ${formatPrice(price)} HT — solde de ${formatPrice(price - deposit)} HT à régler à la livraison`;
-}
-
-// Prix de la formule après remise « logo déjà existant » (réglable dans site.ts).
-export function orderPrice(price: number, hasLogo: boolean) {
-  return Math.max(0, price - (hasLogo ? site.logoDiscount : 0));
-}
-
-export function logoDiscountLabel(price: number) {
-  return `Remise « logo déjà existant » : −${formatPrice(site.logoDiscount)} HT (${formatPrice(price)} → ${formatPrice(orderPrice(price, true))} HT)`;
-}
-
-export function parsePaymentType(value: unknown): PaymentType {
-  return value === "acompte" ? "acompte" : "total";
-}
+export const defaultSettings: PricingSettings = {
+  depositPercent: site.depositPercent,
+  logoDiscount: site.logoDiscount,
+  deliveryDays: site.deliveryDays,
+};

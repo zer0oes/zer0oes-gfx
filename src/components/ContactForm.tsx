@@ -2,10 +2,15 @@
 
 import { useActionState } from "react";
 import { sendContact } from "@/app/actions";
-import { optionChoices } from "@/data/packs";
 import { Field, FormStatus, OptionsField, inputClass } from "./ui";
 
-export function ContactForm({ defaultType = "Projet sur mesure" }: { defaultType?: string }) {
+export function ContactForm({
+  defaultType = "Projet sur mesure",
+  optionChoices,
+}: {
+  defaultType?: string;
+  optionChoices: { id: string; label: string }[];
+}) {
   const [state, action, pending] = useActionState(sendContact, null);
 
   if (state?.ok) return <FormStatus state={state} />;

@@ -2,23 +2,15 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import {
-  amountToPay,
-  formulaName,
-  getFormula,
-  getPack,
-  logoDiscountLabel,
-  orderPrice,
-  parsePaymentType,
-  paymentLabel,
-} from "@/data/packs";
-import { site } from "@/data/site";
-import { getStripe } from "@/lib/stripe";
 import { notify } from "@/lib/notify";
+import { attachBrief, paymentSummary, quote, quoteMetadata, recordDemoOrder } from "@/lib/orders";
+import { getPack, logoDiscountLabel, paymentLabel } from "@/lib/pricing";
+import { getStore } from "@/lib/store";
+import { getStripe } from "@/lib/stripe";
 
 export type FormState = { ok: boolean; message: string } | null;
 
-async function siteUrl() {
+export async function siteUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
@@ -27,55 +19,61 @@ async function siteUrl() {
 }
 
 export async function createCheckout(formData: FormData) {
-  const pack = getPack(formData.get("packId")?.toString());
+  const catalog = await getStore().getCatalog();
+  const packId = formData.get("packId")?.toString();
+  const pack = getPack(catalog.packs, packId);
   if (!pack) redirect("/offres");
   // Offre sur devis (prix « à partir de ») : pas de paiement direct.
   if (!pack.checkout) redirect(`/contact?offre=${pack.id}`);
-  // Formule relue côté serveur : le navigateur n'envoie que son identifiant.
-  const formula = getFormula(pack, formData.get("formulaId")?.toString());
-  if (!formula) redirect("/offres");
-  // Paiement en une fois ou acompte : montant toujours calculé ici.
-  const payment = parsePaymentType(formData.get("payment"));
-  // Remise « logo déjà existant » : appliquée ici, l'acompte se calcule sur le prix remisé.
-  const hasLogo = formData.get("logo") === "1";
-  const total = orderPrice(formula.price, hasLogo);
-  const amount = amountToPay(total, payment);
+
+  // Formule, mode de paiement et remise relus et recalculés ici : le navigateur
+  // n'envoie que des identifiants, jamais de montant.
+  const q = quote(catalog, {
+    packId,
+    formulaId: formData.get("formulaId")?.toString(),
+    payment: formData.get("payment"),
+    hasLogo: formData.get("logo") === "1",
+  });
+  if (!q) redirect("/offres");
 
   const stripe = getStripe();
   if (!stripe) {
     // Mode démo : pas de clé Stripe configurée.
-    redirect(`/merci?pack=${pack.id}&formule=${formula.id}&paiement=${payment}${hasLogo ? "&logo=1" : ""}&demo=1`);
+    const sessionId = await recordDemoOrder(q);
+    const params = new URLSearchParams({
+      session_id: sessionId,
+      pack: q.packId,
+      formule: q.formulaId,
+      paiement: q.payment,
+      demo: "1",
+    });
+    if (q.hasLogo) params.set("logo", "1");
+    redirect(`/merci?${params}`);
   }
 
+  const formula = pack.formulas?.find((f) => f.id === q.formulaId);
   const base = await siteUrl();
+  const s = catalog.settings;
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [
-      formula.stripePriceId && payment === "total" && !hasLogo
+      formula?.stripePriceId && q.payment === "total" && !q.hasLogo
         ? { price: formula.stripePriceId, quantity: 1 }
         : {
             quantity: 1,
             price_data: {
               currency: "eur",
-              unit_amount: amount,
+              unit_amount: q.amount,
               product_data: {
-                name: `zer0oes gfx — ${formulaName(pack, formula)}${hasLogo ? " — logo fourni" : ""}${payment === "acompte" ? ` — Acompte ${site.depositPercent} %` : ""}`,
-                description: [hasLogo ? logoDiscountLabel(formula.price) : "", paymentLabel(total, payment)].filter(Boolean).join(" · "),
+                name: `zer0oes gfx — ${q.offerName}${q.hasLogo ? " — logo fourni" : ""}${q.payment === "acompte" ? ` — Acompte ${s.depositPercent} %` : ""}`,
+                description: [q.hasLogo ? logoDiscountLabel(q.listPrice, s) : "", paymentLabel(q.totalPrice, q.payment, s)]
+                  .filter(Boolean)
+                  .join(" · "),
               },
             },
           },
     ],
-    metadata: {
-      packId: pack.id,
-      formulaId: formula.id,
-      paymentType: payment,
-      depositPercent: payment === "acompte" ? String(site.depositPercent) : "",
-      listPrice: String(formula.price),
-      logoProvided: hasLogo ? "oui" : "",
-      logoDiscount: hasLogo ? String(formula.price - total) : "",
-      totalPrice: String(total),
-      amountCharged: String(amount),
-    },
+    metadata: quoteMetadata(q),
     success_url: `${base}/merci?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${base}/offres?annule=1`,
   });
@@ -148,45 +146,45 @@ export async function sendBrief(
     return { ok: false, message: "Merci d'indiquer le lien vers ton logo existant." };
   }
 
-  // Vérifie côté serveur la commande Stripe associée, si présente.
+  const brief: Record<string, string> = {
+    "E-mail": email,
+    Pseudo: field(formData, "pseudo", 200),
+    Chaîne: channel,
+    Plateforme: field(formData, "platform", 100),
+    "Univers / ambiance": universe,
+    Couleurs: field(formData, "colors", 500),
+    Références: field(formData, "references"),
+    "Logo existant": field(formData, "logoLink", 1000),
+    "Overlays choisis": checked(formData, "overlays"),
+    "Éléments à inclure": field(formData, "elements"),
+    Options: checked(formData, "options"),
+    "Date souhaitée": field(formData, "deadline", 100),
+    Remarques: field(formData, "notes"),
+  };
+
+  // Rattache le brief à la commande enregistrée (session Stripe ou démo).
   const sessionId = field(formData, "sessionId", 300);
-  let order = [field(formData, "packId", 50) || "inconnu", field(formData, "formulaId", 50), field(formData, "payment", 20), field(formData, "hasLogo", 5) === "1" ? "logo fourni" : ""]
+  let orderLabel = [field(formData, "packId", 50) || "inconnu", field(formData, "formulaId", 50), field(formData, "payment", 20)]
     .filter(Boolean)
     .join(" / ");
-  const stripe = getStripe();
-  if (stripe && sessionId) {
-    try {
-      const s = await stripe.checkout.sessions.retrieve(sessionId);
-      const total = Number(s.metadata?.totalPrice);
-      const logo = s.metadata?.logoProvided === "oui" ? " — logo fourni" : "";
-      const paid = total ? `${logo} — ${paymentLabel(total, parsePaymentType(s.metadata?.paymentType))}` : logo;
-      order = `${s.metadata?.packId ?? "?"} / ${s.metadata?.formulaId ?? "?"}${paid} — ${s.payment_status} — ${s.id}`;
-    } catch {
-      order = `session invalide (${sessionId})`;
+  try {
+    const order = await attachBrief(sessionId, brief, email);
+    if (order) {
+      orderLabel = `${order.offerName}${order.hasLogo ? " — logo fourni" : ""} — ${paymentSummary(order)} — commande ${order.id}`;
+    } else {
+      const stripe = getStripe();
+      if (stripe && sessionId && !sessionId.startsWith("demo_")) {
+        const s = await stripe.checkout.sessions.retrieve(sessionId);
+        orderLabel = `${s.metadata?.offerName ?? s.metadata?.packId ?? "?"} — ${s.payment_status} — ${s.id}`;
+      }
     }
+  } catch (e) {
+    console.error(e);
+    orderLabel = `${orderLabel} (session ${sessionId})`;
   }
 
   try {
-    await notify({
-      subject: `[Brief] ${channel}`,
-      replyTo: email,
-      fields: {
-        Commande: order,
-        "E-mail": email,
-        Pseudo: field(formData, "pseudo", 200),
-        Chaîne: channel,
-        Plateforme: field(formData, "platform", 100),
-        "Univers / ambiance": universe,
-        Couleurs: field(formData, "colors", 500),
-        Références: field(formData, "references"),
-        "Logo existant": field(formData, "logoLink", 1000),
-        "Overlays choisis": checked(formData, "overlays"),
-        "Éléments à inclure": field(formData, "elements"),
-        Options: checked(formData, "options"),
-        "Date souhaitée": field(formData, "deadline", 100),
-        Remarques: field(formData, "notes"),
-      },
-    });
+    await notify({ subject: `[Brief] ${channel}`, replyTo: email, fields: { Commande: orderLabel, ...brief } });
   } catch (e) {
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou envoie ton brief par e-mail." };

@@ -3,14 +3,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { HoverVideo } from "@/components/HoverVideo";
 import { PageHeader } from "@/components/ui";
-import { categories, projectHref, streamers, works } from "@/data/portfolio";
+import { categories, projectHref } from "@/data/portfolio";
+import { getStore } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Portfolio",
   description: "Les projets réalisés pour des streameurs : overlays, widgets, alertes et emotes.",
 };
 
-export default function PortfolioPage() {
+export default async function PortfolioPage() {
+  const { streamers, works } = await getStore().getPortfolio();
   return (
     <>
       <PageHeader eyebrow="Portfolio" title="Projets">

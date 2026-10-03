@@ -2,19 +2,26 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { WorkGrid } from "@/components/WorkGrid";
-import { categories, getStreamer, projectHref, streamers, works } from "@/data/portfolio";
+import { categories, projectHref } from "@/data/portfolio";
+import { getStore } from "@/lib/store";
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const { streamers } = await getStore().getPortfolio();
   return streamers.map((s) => ({ streamer: s.id }));
 }
 
+async function findStreamer(id: string) {
+  const portfolio = await getStore().getPortfolio();
+  return { ...portfolio, streamer: portfolio.streamers.find((s) => s.id === id) };
+}
+
 export async function generateMetadata({ params }: PageProps<"/portfolio/[streamer]">): Promise<Metadata> {
-  const streamer = getStreamer((await params).streamer);
+  const { streamer } = await findStreamer((await params).streamer);
   return streamer ? { title: `${streamer.name} — Portfolio`, description: streamer.description } : {};
 }
 
 export default async function ProjectPage({ params, searchParams }: PageProps<"/portfolio/[streamer]">) {
-  const streamer = getStreamer((await params).streamer);
+  const { streamer, works } = await findStreamer((await params).streamer);
   if (!streamer) notFound();
 
   const own = works.filter((w) => w.streamer === streamer.id);

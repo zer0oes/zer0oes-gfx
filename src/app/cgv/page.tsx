@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
 import { legal, site } from "@/data/site";
+import { getStore } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Conditions générales de vente" };
 
 // MODÈLE PROVISOIRE : à relire et adapter (idéalement par un professionnel du droit)
 // avant la mise en ligne.
-export default function CgvPage() {
+export default async function CgvPage() {
+  const { settings } = await getStore().getCatalog();
   return (
     <>
       <PageHeader title="Conditions générales de vente" />
@@ -37,19 +39,19 @@ export default function CgvPage() {
         <ul>
           <li>
             Offres commandées en ligne : le client choisit, à la commande, de régler la totalité du prix ou un acompte
-            de {site.depositPercent} % du prix de la formule choisie.
+            de {settings.depositPercent} % du prix de la formule choisie.
           </li>
           <li>
-            En cas d&apos;acompte, le solde ({100 - site.depositPercent} %) est dû à la livraison, avant la remise des
+            En cas d&apos;acompte, le solde ({100 - settings.depositPercent} %) est dû à la livraison, avant la remise des
             fichiers définitifs. Il est réglé sur facture ou par un lien de paiement transmis au client.
           </li>
           <li>
-            Prestations sur devis (dont l&apos;offre « Univers complet ») : un acompte de {site.depositPercent} % est
+            Prestations sur devis (dont l&apos;offre « Univers complet ») : un acompte de {settings.depositPercent} % est
             demandé à l&apos;acceptation du devis ; le solde est dû dans les mêmes conditions.
           </li>
           <li>
             Remise « logo déjà existant » : lorsque le client fournit son propre logo, une remise de{" "}
-            {site.logoDiscount / 100} € HT est appliquée sur les offres « Premier look » et « Identité signature », et
+            {settings.logoDiscount / 100} € HT est appliquée sur les offres « Premier look » et « Identité signature », et
             sur devis pour « Univers complet ». Le logo doit être fourni en qualité suffisante, idéalement en format
             vectoriel ; toute retouche, reconstruction ou refonte éventuelle est chiffrée séparément. Le client garantit
             détenir les droits sur ce logo.
@@ -65,7 +67,7 @@ export default function CgvPage() {
         <ul>
           <li>Après le paiement, le client transmet son brief via le formulaire prévu à cet effet.</li>
           <li>
-            Le délai de livraison indicatif est de {site.deliveryDays} jours ouvrés à compter de la réception d&apos;un
+            Le délai de livraison indicatif est de {settings.deliveryDays} jours ouvrés à compter de la réception d&apos;un
             brief complet.
           </li>
           <li>

@@ -1,9 +1,8 @@
 import type Stripe from "stripe";
+import { handleCheckoutCompleted } from "@/lib/orders";
 import { getStripe } from "@/lib/stripe";
-import { formatPrice, formulaName, getFormula, getPack, parsePaymentType, paymentLabel } from "@/data/packs";
-import { notify } from "@/lib/notify";
 
-// Webhook Stripe : prévient Aurore à chaque paiement confirmé.
+// Webhook Stripe : enregistre la commande (ou le paiement du solde) et prévient Aurore.
 // À déclarer dans le Dashboard Stripe : https://<domaine>/api/stripe/webhook
 // (événement checkout.session.completed), puis renseigner STRIPE_WEBHOOK_SECRET.
 export async function POST(request: Request) {
@@ -25,24 +24,13 @@ export async function POST(request: Request) {
   }
 
   if (event.type === "checkout.session.completed") {
-    const s = event.data.object;
-    const pack = getPack(s.metadata?.packId);
-    const total = Number(s.metadata?.totalPrice);
-    const payment = parsePaymentType(s.metadata?.paymentType);
-    const offer = pack ? formulaName(pack, getFormula(pack, s.metadata?.formulaId)) : s.metadata?.packId ?? "?";
-    await notify({
-      subject: `[Commande] ${offer}${payment === "acompte" ? " — ACOMPTE" : ""}${s.metadata?.logoProvided === "oui" ? " — LOGO FOURNI" : ""} — ${s.customer_details?.email ?? ""}`,
-      replyTo: s.customer_details?.email ?? undefined,
-      fields: {
-        Offre: offer,
-        "Remise logo": s.metadata?.logoProvided === "oui" ? `oui (−${formatPrice(Number(s.metadata.logoDiscount))} HT, logo à fournir)` : "non",
-        Paiement: total ? paymentLabel(total, payment) : payment,
-        "Montant encaissé": s.amount_total != null ? formatPrice(s.amount_total) : "?",
-        Client: s.customer_details?.name ?? "",
-        "E-mail": s.customer_details?.email ?? "",
-        Session: s.id,
-      },
-    });
+    try {
+      await handleCheckoutCompleted(event.data.object);
+    } catch (e) {
+      console.error(e);
+      // 500 : Stripe renverra l'événement plus tard.
+      return new Response("Erreur d'enregistrement", { status: 500 });
+    }
   }
 
   return Response.json({ received: true });

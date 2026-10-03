@@ -32,10 +32,6 @@ export const streamers: Streamer[] = [
   },
 ];
 
-export function getStreamer(id: string) {
-  return streamers.find((s) => s.id === id);
-}
-
 // Lien vers la page projet d'un streameur, sur l'onglet d'un type donné
 export function projectHref(streamer: string, category?: Category) {
   return `/portfolio/${streamer}${category ? `?type=${category}` : ""}`;

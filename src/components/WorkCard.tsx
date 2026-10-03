@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { categories, getStreamer, type Work } from "@/data/portfolio";
+import { categories, type Work } from "@/data/portfolio";
 import { HoverVideo } from "./HoverVideo";
 
 export function WorkCard({
@@ -8,8 +8,10 @@ export function WorkCard({
   onOpen,
   href,
   showStreamer = true,
+  streamerName,
 }: {
   work: Work;
+  streamerName?: string;
   onOpen?: () => void;
   // Lien vers une page (alternative à onOpen)
   href?: string;
@@ -68,7 +70,7 @@ export function WorkCard({
           )}
         </h3>
         <p className="mt-1 text-sm text-muted">{work.description}</p>
-        {showStreamer && <p className="mt-3 text-xs text-muted/70">Chaîne : {getStreamer(work.streamer)?.name}</p>}
+        {showStreamer && streamerName && <p className="mt-3 text-xs text-muted/70">Chaîne : {streamerName}</p>}
       </div>
     </article>
   );

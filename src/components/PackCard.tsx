@@ -1,8 +1,16 @@
 import Link from "next/link";
-import { formatOfferPrice, type Pack } from "@/data/packs";
+import { formatOfferPrice, type Pack, type PricingSettings } from "@/lib/pricing";
 import { OrderForm } from "./OrderForm";
 
-export function PackCard({ pack, order = false }: { pack: Pack; order?: boolean }) {
+export function PackCard({
+  pack,
+  settings,
+  order = false,
+}: {
+  pack: Pack;
+  settings: PricingSettings;
+  order?: boolean;
+}) {
   const buttonClass = `w-full rounded-full px-5 py-3 text-center font-semibold transition hover:brightness-110 ${
     pack.highlight ? "bg-accent text-background" : "bg-foreground text-background"
   }`;
@@ -47,7 +55,7 @@ export function PackCard({ pack, order = false }: { pack: Pack; order?: boolean 
           Voir le détail
         </Link>
       ) : pack.checkout ? (
-        <OrderForm pack={pack} buttonClass={buttonClass} />
+        <OrderForm pack={pack} settings={settings} buttonClass={buttonClass} />
       ) : (
         <div className="mt-8">
           <Link href={`/contact?offre=${pack.id}`} className={`block ${buttonClass}`}>

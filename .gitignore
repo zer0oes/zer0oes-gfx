@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Magasin local de développement (jamais en production)
+/.data/
+/public/uploads/

@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
 import { PageHeader } from "@/components/ui";
-import { formatOfferPrice, formatPrice, options, packs } from "@/data/packs";
-import { legal, site } from "@/data/site";
+import { legal } from "@/data/site";
+import { formatOfferPrice, formatPrice, type PricingSettings } from "@/lib/pricing";
+import { getStore } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Offres",
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
     "Premier look, Identité signature, Univers complet : logo, overlays, bannière, avatar et emotes sur mesure pour ta chaîne.",
 };
 
-const faq = [
+const faq = (site: PricingSettings) => [
   {
     q: "Comment se passe la création après la commande ?",
     a: "Juste après le paiement, tu remplis un court brief : univers, couleurs, références et overlays souhaités (démarrage, pause, fin, discussion ou gameplay). Je te présente ensuite une première proposition que l'on ajuste ensemble : deux séries de corrections regroupées sont incluses.",
@@ -48,6 +49,7 @@ const faq = [
 
 export default async function OffresPage({ searchParams }: PageProps<"/offres">) {
   const { annule } = await searchParams;
+  const { settings: site, packs, options } = await getStore().getCatalog();
 
   return (
     <>
@@ -63,7 +65,7 @@ export default async function OffresPage({ searchParams }: PageProps<"/offres">)
         )}
         <div className="grid gap-6 pt-3 md:grid-cols-3">
           {packs.map((p) => (
-            <PackCard key={p.id} pack={p} order />
+            <PackCard key={p.id} pack={p} settings={site} order />
           ))}
         </div>
         <p className="mt-6 text-center text-sm text-muted">
@@ -112,7 +114,7 @@ export default async function OffresPage({ searchParams }: PageProps<"/offres">)
         <section className="mx-auto mt-20 max-w-3xl">
           <h2 className="font-display text-3xl font-bold">Questions fréquentes</h2>
           <div className="mt-6 divide-y divide-border rounded-2xl border border-border bg-surface">
-            {faq.map((f) => (
+            {faq(site).map((f) => (
               <details key={f.q} className="group p-5">
                 <summary className="cursor-pointer list-none font-semibold">
                   <span className="mr-2 text-accent group-open:hidden">+</span>

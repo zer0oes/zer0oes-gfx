@@ -3,19 +3,35 @@
 import Link from "next/link";
 import { useState } from "react";
 import { createCheckout } from "@/app/actions";
-import { depositAmount, formatOfferPrice, formatPrice, orderPrice, type Pack, type PaymentType } from "@/data/packs";
-import { site } from "@/data/site";
+import {
+  depositAmount,
+  formatOfferPrice,
+  formatPrice,
+  orderPrice,
+  type Pack,
+  type PaymentType,
+  type PricingSettings,
+} from "@/lib/pricing";
 
 // Choix de la formule et du mode de paiement. Les montants affichés ici sont
 // indicatifs : le montant encaissé est recalculé côté serveur (createCheckout).
-export function OrderForm({ pack, buttonClass }: { pack: Pack; buttonClass: string }) {
+export function OrderForm({
+  pack,
+  settings,
+  buttonClass,
+}: {
+  pack: Pack;
+  settings: PricingSettings;
+  buttonClass: string;
+}) {
+  const site = settings;
   const formulas = pack.formulas ?? [];
   const [formulaId, setFormulaId] = useState(formulas[0]?.id);
   const [payment, setPayment] = useState<PaymentType>("total");
   const [hasLogo, setHasLogo] = useState(false);
   const listPrice = formulas.find((f) => f.id === formulaId)?.price ?? pack.price;
-  const price = orderPrice(listPrice, hasLogo);
-  const deposit = depositAmount(price);
+  const price = orderPrice(listPrice, hasLogo, settings);
+  const deposit = depositAmount(price, settings);
 
   const choiceClass =
     "flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border bg-background/40 px-3 py-2 text-sm has-[:checked]:border-accent";

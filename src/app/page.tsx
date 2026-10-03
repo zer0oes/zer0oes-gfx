@@ -2,22 +2,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
 import { WorkGrid } from "@/components/WorkGrid";
-import { packs } from "@/data/packs";
-import { getStreamer, works } from "@/data/portfolio";
 import { site } from "@/data/site";
+import { getStore } from "@/lib/store";
 
-const steps = [
+const steps = (deliveryDays: string) => [
   { title: "Tu choisis", text: "Une offre prête à commander, ou une demande sur mesure." },
   { title: "Tu briefes", text: "Univers, couleurs, références et overlays choisis : un formulaire simple juste après la commande." },
-  { title: "Je crée", text: `Premières maquettes, retours, ajustements. Livraison en ${site.deliveryDays} jours ouvrés.` },
+  { title: "Je crée", text: `Premières maquettes, retours, ajustements. Livraison en ${deliveryDays} jours ouvrés.` },
   { title: "Tu streames", text: "Des visuels prêts à utiliser, avec fond transparent lorsque nécessaire." },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const store = getStore();
+  const [{ packs, settings }, { works, streamers }] = await Promise.all([store.getCatalog(), store.getPortfolio()]);
   const featured = works.filter((w) => w.featured);
+  const streamerNames = Object.fromEntries(streamers.map((s) => [s.id, s.name]));
   // Visuel du hero : première réalisation mise en avant
   const hero = featured[0];
-  const heroStreamer = hero && getStreamer(hero.streamer)?.name;
+  const heroStreamer = hero && streamerNames[hero.streamer];
 
   return (
     <>
@@ -78,14 +80,14 @@ export default function Home() {
           <Link href="/portfolio" className="text-sm text-accent hover:underline">Tout voir →</Link>
         </div>
         <div className="mt-8">
-          <WorkGrid works={featured} linkToProject />
+          <WorkGrid works={featured} streamerNames={streamerNames} linkToProject />
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h2 className="font-display text-3xl font-bold">Comment ça marche</h2>
         <ol className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((s, i) => (
+          {steps(settings.deliveryDays).map((s, i) => (
             <li key={s.title} className="rounded-2xl border border-border bg-surface p-6">
               <span className="font-display text-3xl font-bold text-gradient">0{i + 1}</span>
               <h3 className="mt-3 font-semibold">{s.title}</h3>
@@ -102,7 +104,7 @@ export default function Home() {
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {packs.map((p) => (
-            <PackCard key={p.id} pack={p} />
+            <PackCard key={p.id} pack={p} settings={settings} />
           ))}
         </div>
       </section>
