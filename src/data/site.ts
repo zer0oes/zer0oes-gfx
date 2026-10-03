@@ -39,9 +39,10 @@ export const legal = {
   vatNote: "TVA non applicable, art. 293 B du CGI",
   publicationDirector: "Aurore Salavert",
   host: {
-    name: "Vercel Inc.",
-    address: "440 N Barranca Ave #4133, Covina, CA 91723, États-Unis",
-    website: "https://vercel.com",
+    name: "Heroku, service de Salesforce, Inc.",
+    address: "Salesforce Tower, 415 Mission Street, 3rd Floor, San Francisco, CA 94105, États-Unis",
+    phone: "+1 415 901 7000",
+    website: "https://www.heroku.com",
   },
   lastUpdate: "3 octobre 2026",
 };

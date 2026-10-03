@@ -80,7 +80,7 @@ Le modèle complet et commenté est dans [`.env.example`](.env.example).
 
 | Variable | Obligatoire | Rôle |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | oui en ligne | Adresse publique du site, sans `/` final (ex. `https://www.mondomaine.fr`). Sert aux liens des e-mails et de Stripe, et à la redirection vers l'adresse canonique. |
+| `NEXT_PUBLIC_SITE_URL` | oui en ligne | Adresse publique du site, sans `/` final (ex. `https://www.zer0oes-gfx.com`). Sert aux liens des e-mails et de Stripe, et à la redirection vers l'adresse canonique. |
 | `STRIPE_SECRET_KEY` | pour payer | Clé secrète Stripe (`sk_test_…` puis `sk_live_…`). Sans elle : mode démo. |
 | `STRIPE_WEBHOOK_SECRET` | pour payer | Secret du webhook (`whsec_…`). Sans lui, les commandes ne sont pas enregistrées. |
 | `NEXT_PUBLIC_SUPABASE_URL` | oui en ligne | URL du projet Supabase |
@@ -90,7 +90,7 @@ Le modèle complet et commenté est dans [`.env.example`](.env.example).
 | `ADMIN_EMAILS` | non | E-mails autorisés dans l'admin, séparés par des virgules (défaut : zer0oes.pro@gmail.com) |
 | `RESEND_API_KEY` | pour les e-mails | Clé Resend. Sans elle, les e-mails sont seulement écrits dans les logs. |
 | `NOTIFY_EMAIL` | non | Adresse qui reçoit les notifications (défaut dans `.env.example`) |
-| `NOTIFY_FROM` | avec Resend | Expéditeur sur un domaine vérifié, ex. `zer0oes gfx <contact@mondomaine.fr>` |
+| `NOTIFY_FROM` | avec Resend | Expéditeur sur un domaine vérifié, ex. `zer0oes gfx <contact@zer0oes-gfx.com>` |
 | `ABBY_API_KEY` | pour les factures | Clé API Abby. Sans elle : factures simulées. |
 | `ABBY_VAT_CODE` | non | Code TVA des lignes (défaut `FR_00HT`, franchise en base de TVA) |
 | `ABBY_IN_TEST_MODE` | non | `1` pour créer de vraies factures même avec une clé Stripe de test (à éviter) |
@@ -146,8 +146,8 @@ appliqués, et refusera de toucher à la base.
 
 Dans **Authentication > URL Configuration** :
 
-- **Site URL** : `https://www.mondomaine.fr` (ou l'adresse Heroku en attendant)
-- **Redirect URLs** : ajouter `https://www.mondomaine.fr/admin/auth/callback`,
+- **Site URL** : `https://www.zer0oes-gfx.com` (ou l'adresse Heroku en attendant)
+- **Redirect URLs** : ajouter `https://www.zer0oes-gfx.com/admin/auth/callback`,
   l'adresse Heroku `https://<app>.herokuapp.com/admin/auth/callback` et
   `http://localhost:3000/admin/auth/callback`
 
@@ -167,7 +167,7 @@ expéditeur = une adresse de ton domaine. La limite se règle ensuite dans **Aut
 2. **PayPal** : Stripe > Paramètres > Moyens de paiement > activer PayPal. Rien à changer dans le code :
    Checkout propose automatiquement les moyens activés.
 3. **Webhook** (une fois le site en ligne) : Stripe > Développeurs > Webhooks > ajouter un endpoint
-   - URL : `https://www.mondomaine.fr/api/stripe/webhook`
+   - URL : `https://www.zer0oes-gfx.com/api/stripe/webhook`
    - Événements : `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
      `checkout.session.async_payment_failed`, `charge.refunded` (remboursements)
    - Copier le secret de signature (`whsec_…`) dans `STRIPE_WEBHOOK_SECRET`.
@@ -231,22 +231,22 @@ Chaque `git push` sur `master` redéploie ensuite le site (installation, `npm ru
 
 ## Nom de domaine chez OVH
 
-L'adresse principale est `www.mondomaine.fr` : Heroku ne peut pas recevoir directement le domaine nu.
+L'adresse principale est `www.zer0oes-gfx.com` : Heroku ne peut pas recevoir directement le domaine nu.
 
-1. Dans Heroku, **Settings > Domains > Add domain** : `www.mondomaine.fr`
-   (ou `heroku domains:add www.mondomaine.fr -a <app>`). Heroku affiche une **cible DNS**
+1. Dans Heroku, **Settings > Domains > Add domain** : `www.zer0oes-gfx.com`
+   (ou `heroku domains:add www.zer0oes-gfx.com -a <app>`). Heroku affiche une **cible DNS**
    (`…herokudns.com`).
 2. Dans OVH, **Zone DNS** du domaine : créer un enregistrement `CNAME` pour le sous-domaine `www`
    pointant vers cette cible (avec un `.` final). Supprimer l'ancien enregistrement `www` s'il existe.
-3. **Domaine nu** (`mondomaine.fr`) : dans OVH, **Redirection** > rediriger `mondomaine.fr` vers
-   `https://www.mondomaine.fr` (redirection visible permanente). Attention : selon l'offre OVH, cette
+3. **Domaine nu** (`zer0oes-gfx.com`) : dans OVH, **Redirection** > rediriger `zer0oes-gfx.com` vers
+   `https://www.zer0oes-gfx.com` (redirection visible permanente). Attention : selon l'offre OVH, cette
    redirection peut ne fonctionner qu'en `http://`.
 4. **Certificat HTTPS** : Heroku le crée automatiquement (ACM) une fois le DNS propagé
    (Settings > SSL Certificates ; sinon `heroku certs:auto:enable -a <app>`).
-5. Mettre à jour `NEXT_PUBLIC_SITE_URL=https://www.mondomaine.fr` dans les Config Vars (puis redéployer),
+5. Mettre à jour `NEXT_PUBLIC_SITE_URL=https://www.zer0oes-gfx.com` dans les Config Vars (puis redéployer),
    les **Redirect URLs** de Supabase, et l'URL du webhook Stripe.
 
-Le site redirige alors automatiquement vers `https://www.mondomaine.fr`.
+Le site redirige alors automatiquement vers `https://www.zer0oes-gfx.com`.
 
 ## Utiliser l'admin
 

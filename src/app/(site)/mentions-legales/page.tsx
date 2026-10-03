@@ -38,6 +38,8 @@ export default function MentionsLegalesPage() {
           <br />
           {legal.host.address}
           <br />
+          Téléphone : {legal.host.phone}
+          <br />
           <a href={legal.host.website}>{legal.host.website}</a>
         </p>
 
