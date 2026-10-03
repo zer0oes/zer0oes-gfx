@@ -48,6 +48,13 @@ export default function CgvPage() {
             demandé à l&apos;acceptation du devis ; le solde est dû dans les mêmes conditions.
           </li>
           <li>
+            Remise « logo déjà existant » : lorsque le client fournit son propre logo, une remise de{" "}
+            {site.logoDiscount / 100} € HT est appliquée sur les offres « Premier look » et « Identité signature », et
+            sur devis pour « Univers complet ». Le logo doit être fourni en qualité suffisante, idéalement en format
+            vectoriel ; toute retouche, reconstruction ou refonte éventuelle est chiffrée séparément. Le client garantit
+            détenir les droits sur ce logo.
+          </li>
+          <li>
             Sous réserve de l&apos;exercice du droit de rétractation dans les conditions de l&apos;article 5,
             l&apos;acompte n&apos;est pas remboursable une fois la création commencée, sauf manquement du prestataire
             à ses obligations.

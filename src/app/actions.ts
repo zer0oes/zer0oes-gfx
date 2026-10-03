@@ -2,7 +2,16 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { amountToPay, formulaName, getFormula, getPack, parsePaymentType, paymentLabel } from "@/data/packs";
+import {
+  amountToPay,
+  formulaName,
+  getFormula,
+  getPack,
+  logoDiscountLabel,
+  orderPrice,
+  parsePaymentType,
+  paymentLabel,
+} from "@/data/packs";
 import { site } from "@/data/site";
 import { getStripe } from "@/lib/stripe";
 import { notify } from "@/lib/notify";
@@ -27,19 +36,22 @@ export async function createCheckout(formData: FormData) {
   if (!formula) redirect("/offres");
   // Paiement en une fois ou acompte : montant toujours calculé ici.
   const payment = parsePaymentType(formData.get("payment"));
-  const amount = amountToPay(formula.price, payment);
+  // Remise « logo déjà existant » : appliquée ici, l'acompte se calcule sur le prix remisé.
+  const hasLogo = formData.get("logo") === "1";
+  const total = orderPrice(formula.price, hasLogo);
+  const amount = amountToPay(total, payment);
 
   const stripe = getStripe();
   if (!stripe) {
     // Mode démo : pas de clé Stripe configurée.
-    redirect(`/merci?pack=${pack.id}&formule=${formula.id}&paiement=${payment}&demo=1`);
+    redirect(`/merci?pack=${pack.id}&formule=${formula.id}&paiement=${payment}${hasLogo ? "&logo=1" : ""}&demo=1`);
   }
 
   const base = await siteUrl();
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [
-      formula.stripePriceId && payment === "total"
+      formula.stripePriceId && payment === "total" && !hasLogo
         ? { price: formula.stripePriceId, quantity: 1 }
         : {
             quantity: 1,
@@ -47,8 +59,8 @@ export async function createCheckout(formData: FormData) {
               currency: "eur",
               unit_amount: amount,
               product_data: {
-                name: `zer0oes gfx — ${formulaName(pack, formula)}${payment === "acompte" ? ` — Acompte ${site.depositPercent} %` : ""}`,
-                description: paymentLabel(formula.price, payment),
+                name: `zer0oes gfx — ${formulaName(pack, formula)}${hasLogo ? " — logo fourni" : ""}${payment === "acompte" ? ` — Acompte ${site.depositPercent} %` : ""}`,
+                description: [hasLogo ? logoDiscountLabel(formula.price) : "", paymentLabel(total, payment)].filter(Boolean).join(" · "),
               },
             },
           },
@@ -58,7 +70,10 @@ export async function createCheckout(formData: FormData) {
       formulaId: formula.id,
       paymentType: payment,
       depositPercent: payment === "acompte" ? String(site.depositPercent) : "",
-      totalPrice: String(formula.price),
+      listPrice: String(formula.price),
+      logoProvided: hasLogo ? "oui" : "",
+      logoDiscount: hasLogo ? String(formula.price - total) : "",
+      totalPrice: String(total),
       amountCharged: String(amount),
     },
     success_url: `${base}/merci?session_id={CHECKOUT_SESSION_ID}`,
@@ -129,10 +144,13 @@ export async function sendBrief(
   if (!EMAIL_RE.test(email) || !channel || !universe) {
     return { ok: false, message: "Merci de renseigner au minimum votre e-mail, votre chaîne et votre univers." };
   }
+  if (field(formData, "hasLogo", 5) === "1" && !field(formData, "logoLink", 1000)) {
+    return { ok: false, message: "Merci d'indiquer le lien vers votre logo existant." };
+  }
 
   // Vérifie côté serveur la commande Stripe associée, si présente.
   const sessionId = field(formData, "sessionId", 300);
-  let order = [field(formData, "packId", 50) || "inconnu", field(formData, "formulaId", 50), field(formData, "payment", 20)]
+  let order = [field(formData, "packId", 50) || "inconnu", field(formData, "formulaId", 50), field(formData, "payment", 20), field(formData, "hasLogo", 5) === "1" ? "logo fourni" : ""]
     .filter(Boolean)
     .join(" / ");
   const stripe = getStripe();
@@ -140,7 +158,8 @@ export async function sendBrief(
     try {
       const s = await stripe.checkout.sessions.retrieve(sessionId);
       const total = Number(s.metadata?.totalPrice);
-      const paid = total ? ` — ${paymentLabel(total, parsePaymentType(s.metadata?.paymentType))}` : "";
+      const logo = s.metadata?.logoProvided === "oui" ? " — logo fourni" : "";
+      const paid = total ? `${logo} — ${paymentLabel(total, parsePaymentType(s.metadata?.paymentType))}` : logo;
       order = `${s.metadata?.packId ?? "?"} / ${s.metadata?.formulaId ?? "?"}${paid} — ${s.payment_status} — ${s.id}`;
     } catch {
       order = `session invalide (${sessionId})`;
@@ -160,6 +179,7 @@ export async function sendBrief(
         "Univers / ambiance": universe,
         Couleurs: field(formData, "colors", 500),
         Références: field(formData, "references"),
+        "Logo existant": field(formData, "logoLink", 1000),
         "Overlays choisis": checked(formData, "overlays"),
         "Éléments à inclure": field(formData, "elements"),
         Options: checked(formData, "options"),

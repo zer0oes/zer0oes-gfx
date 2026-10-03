@@ -31,10 +31,11 @@ export async function POST(request: Request) {
     const payment = parsePaymentType(s.metadata?.paymentType);
     const offer = pack ? formulaName(pack, getFormula(pack, s.metadata?.formulaId)) : s.metadata?.packId ?? "?";
     await notify({
-      subject: `[Commande] ${offer}${payment === "acompte" ? " — ACOMPTE" : ""} — ${s.customer_details?.email ?? ""}`,
+      subject: `[Commande] ${offer}${payment === "acompte" ? " — ACOMPTE" : ""}${s.metadata?.logoProvided === "oui" ? " — LOGO FOURNI" : ""} — ${s.customer_details?.email ?? ""}`,
       replyTo: s.customer_details?.email ?? undefined,
       fields: {
         Offre: offer,
+        "Remise logo": s.metadata?.logoProvided === "oui" ? `oui (−${formatPrice(Number(s.metadata.logoDiscount))} HT, logo à fournir)` : "non",
         Paiement: total ? paymentLabel(total, payment) : payment,
         "Montant encaissé": s.amount_total != null ? formatPrice(s.amount_total) : "?",
         Client: s.customer_details?.name ?? "",

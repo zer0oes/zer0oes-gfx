@@ -151,6 +151,15 @@ export function paymentLabel(price: number, payment: PaymentType) {
   return `Acompte de ${site.depositPercent} % : ${formatPrice(deposit)} HT sur ${formatPrice(price)} HT — solde de ${formatPrice(price - deposit)} HT à régler à la livraison`;
 }
 
+// Prix de la formule après remise « logo déjà existant » (réglable dans site.ts).
+export function orderPrice(price: number, hasLogo: boolean) {
+  return Math.max(0, price - (hasLogo ? site.logoDiscount : 0));
+}
+
+export function logoDiscountLabel(price: number) {
+  return `Remise « logo déjà existant » : −${formatPrice(site.logoDiscount)} HT (${formatPrice(price)} → ${formatPrice(orderPrice(price, true))} HT)`;
+}
+
 export function parsePaymentType(value: unknown): PaymentType {
   return value === "acompte" ? "acompte" : "total";
 }

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
 import { PageHeader } from "@/components/ui";
-import { formatOfferPrice, options, packs } from "@/data/packs";
+import { formatOfferPrice, formatPrice, options, packs } from "@/data/packs";
 import { legal, site } from "@/data/site";
 
 export const metadata: Metadata = {
@@ -15,6 +15,10 @@ const faq = [
   {
     q: "Comment se passe la création après la commande ?",
     a: "Juste après le paiement, vous remplissez un court brief : univers, couleurs, références et overlays souhaités (démarrage, pause, fin, discussion ou gameplay). Je vous présente ensuite une première proposition que l'on ajuste ensemble : deux séries de corrections regroupées sont incluses.",
+  },
+  {
+    q: "J'ai déjà un logo, est-ce moins cher ?",
+    a: `Oui : ${formatPrice(site.logoDiscount)} HT de réduction sur Premier look et Identité signature (case « J'ai déjà mon logo »), et sur devis pour Univers complet. Le logo doit être fourni en qualité suffisante, idéalement en format vectoriel ; toute retouche, reconstruction ou refonte est chiffrée séparément.`,
   },
   {
     q: "Puis-je payer en plusieurs fois ?",
@@ -67,6 +71,22 @@ export default async function OffresPage({ searchParams }: PageProps<"/offres">)
           {site.depositPercent} % (solde à la livraison). Besoin d&apos;autre chose ?{" "}
           <Link href="/contact" className="text-accent hover:underline">Demandez un devis sur mesure</Link>.
         </p>
+
+        <aside className="mx-auto mt-16 max-w-3xl rounded-2xl border border-accent/50 bg-accent/10 p-6 sm:p-8">
+          <h2 className="font-display text-2xl font-bold">Tu as déjà ton logo ?</h2>
+          <p className="mt-3">
+            Profite de <strong>{formatPrice(site.logoDiscount)} HT de réduction sur ton pack</strong>. Je construis ton
+            habillage autour de ton identité existante.
+          </p>
+          <p className="mt-3 text-sm text-muted">
+            Le logo doit être fourni en qualité suffisante, idéalement en format vectoriel. Toute retouche,
+            reconstruction ou refonte éventuelle est chiffrée séparément.
+          </p>
+          <p className="mt-3 text-sm text-muted">
+            Coche « J&apos;ai déjà mon logo » sur Premier look ou Identité signature. Pour Univers complet, la remise
+            s&apos;applique sur le devis.
+          </p>
+        </aside>
 
         <section className="mx-auto mt-20 max-w-3xl">
           <h2 className="font-display text-3xl font-bold">Les options à la carte</h2>

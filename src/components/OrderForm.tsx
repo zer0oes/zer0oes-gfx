@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { createCheckout } from "@/app/actions";
-import { depositAmount, formatOfferPrice, formatPrice, type Pack, type PaymentType } from "@/data/packs";
+import { depositAmount, formatOfferPrice, formatPrice, orderPrice, type Pack, type PaymentType } from "@/data/packs";
 import { site } from "@/data/site";
 
 // Choix de la formule et du mode de paiement. Les montants affichés ici sont
@@ -12,7 +12,9 @@ export function OrderForm({ pack, buttonClass }: { pack: Pack; buttonClass: stri
   const formulas = pack.formulas ?? [];
   const [formulaId, setFormulaId] = useState(formulas[0]?.id);
   const [payment, setPayment] = useState<PaymentType>("total");
-  const price = formulas.find((f) => f.id === formulaId)?.price ?? pack.price;
+  const [hasLogo, setHasLogo] = useState(false);
+  const listPrice = formulas.find((f) => f.id === formulaId)?.price ?? pack.price;
+  const price = orderPrice(listPrice, hasLogo);
   const deposit = depositAmount(price);
 
   const choiceClass =
@@ -42,6 +44,20 @@ export function OrderForm({ pack, buttonClass }: { pack: Pack; buttonClass: stri
           ))}
         </fieldset>
       )}
+      <label className={choiceClass}>
+        <span className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="logo"
+            value="1"
+            checked={hasLogo}
+            onChange={(e) => setHasLogo(e.target.checked)}
+            className="accent-[var(--accent)]"
+          />
+          J&apos;ai déjà mon logo
+        </span>
+        <span className="shrink-0 font-semibold">−{formatPrice(site.logoDiscount)} HT</span>
+      </label>
       <fieldset className="space-y-2">
         <legend className="mb-2 text-xs font-semibold uppercase tracking-widest text-accent">Paiement</legend>
         <label className={choiceClass}>

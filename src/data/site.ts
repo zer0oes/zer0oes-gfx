@@ -17,6 +17,8 @@ export const site = {
   // Acompte proposé à la commande (en %). Le solde est dû à la livraison,
   // avant remise des fichiers définitifs (facture ou lien de paiement Stripe envoyé à la main).
   depositPercent: 30,
+  // Remise « logo déjà existant » sur Premier look et Identité signature, en centimes HT (15000 = 150 €).
+  logoDiscount: 15000,
 };
 
 // Informations légales — obligatoires pour les mentions légales et les CGV.

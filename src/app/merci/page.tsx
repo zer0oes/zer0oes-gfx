@@ -2,7 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BriefForm } from "@/components/BriefForm";
 import { PageHeader } from "@/components/ui";
-import { formulaName, getFormula, getPack, parsePaymentType, paymentLabel } from "@/data/packs";
+import {
+  formulaName,
+  getFormula,
+  getPack,
+  logoDiscountLabel,
+  orderPrice,
+  parsePaymentType,
+  paymentLabel,
+} from "@/data/packs";
 import { getStripe } from "@/lib/stripe";
 
 export const metadata: Metadata = {
@@ -18,6 +26,7 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
   let packId = typeof params.pack === "string" ? params.pack : undefined;
   let formulaId = typeof params.formule === "string" ? params.formule : undefined;
   let payment = parsePaymentType(params.paiement);
+  let hasLogo = params.logo === "1";
   let email: string | undefined;
   let paid = false;
 
@@ -28,6 +37,7 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
       packId = session.metadata?.packId ?? packId;
       formulaId = session.metadata?.formulaId ?? formulaId;
       payment = parsePaymentType(session.metadata?.paymentType);
+      hasLogo = session.metadata?.logoProvided === "oui";
       email = session.customer_details?.email ?? undefined;
       paid = session.payment_status === "paid";
     } catch {
@@ -74,7 +84,13 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
               payment === "acompte" ? "border-accent/50 bg-accent/10 text-foreground" : "border-border bg-surface text-muted"
             }`}
           >
-            {paymentLabel(formula.price, payment)}
+            {hasLogo && (
+              <>
+                {logoDiscountLabel(formula.price)}
+                <br />
+              </>
+            )}
+            {paymentLabel(orderPrice(formula.price, hasLogo), payment)}
             {payment === "acompte" && <>, avant la remise des fichiers définitifs. Je vous enverrai une facture ou un lien de paiement pour le solde.</>}
           </p>
         )}
@@ -85,7 +101,7 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
         )}
         <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
           <h2 className="mb-6 font-display text-2xl font-bold">Votre brief</h2>
-          <BriefForm sessionId={sessionId} packId={pack?.id} formulaId={formula?.id} payment={payment} email={email} overlayHint={overlayHint} />
+          <BriefForm sessionId={sessionId} packId={pack?.id} formulaId={formula?.id} payment={payment} hasLogo={hasLogo} email={email} overlayHint={overlayHint} />
         </div>
       </div>
     </>

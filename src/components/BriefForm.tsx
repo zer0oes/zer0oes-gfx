@@ -10,6 +10,7 @@ export function BriefForm({
   packId,
   formulaId,
   payment,
+  hasLogo,
   email,
   overlayHint,
 }: {
@@ -17,6 +18,7 @@ export function BriefForm({
   packId?: string;
   formulaId?: string;
   payment?: string;
+  hasLogo?: boolean;
   email?: string;
   overlayHint?: string;
 }) {
@@ -30,6 +32,7 @@ export function BriefForm({
       <input type="hidden" name="packId" value={packId ?? ""} />
       <input type="hidden" name="formulaId" value={formulaId ?? ""} />
       <input type="hidden" name="payment" value={payment ?? ""} />
+      <input type="hidden" name="hasLogo" value={hasLogo ? "1" : ""} />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="E-mail *">
           <input name="email" type="email" required defaultValue={email} className={inputClass} />
@@ -52,6 +55,14 @@ export function BriefForm({
           </select>
         </Field>
       </div>
+      {hasLogo && (
+        <Field
+          label="Ton logo existant *"
+          hint="Lien de téléchargement (Drive, WeTransfer…). Format vectoriel conseillé (SVG, AI, EPS ou PDF), sinon PNG en haute définition."
+        >
+          <input name="logoLink" required placeholder="https://…" className={inputClass} />
+        </Field>
+      )}
       <Field label="Univers et ambiance *" hint="Jeux streamés, thème, mots qui décrivent votre chaîne…">
         <textarea name="universe" required rows={4} className={inputClass} />
       </Field>
