@@ -153,6 +153,14 @@ Dans **Authentication > URL Configuration** :
 
 Seuls les e-mails listés dans `ADMIN_EMAILS` peuvent entrer dans l'admin.
 
+Le lien ne fonctionne que dans le navigateur qui l'a demandé, et une seule fois.
+
+**Limite d'envoi** : l'envoi d'e-mails intégré à Supabase est limité à quelques e-mails par heure
+(message « Trop de liens demandés »). Pour la lever, une fois le domaine vérifié dans Resend :
+Supabase > **Authentication > Emails > SMTP Settings** > activer le SMTP personnalisé avec
+hôte `smtp.resend.com`, port `465`, utilisateur `resend`, mot de passe = ta clé API Resend,
+expéditeur = une adresse de ton domaine. La limite se règle ensuite dans **Authentication > Rate Limits**.
+
 ## Stripe
 
 1. Commencer avec les clés de **test** (`sk_test_…`) ; passer en `sk_live_…` une fois le site validé.

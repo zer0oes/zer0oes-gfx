@@ -26,6 +26,13 @@ export async function sendMagicLink(_prev: AdminFormState, formData: FormData): 
   });
   if (error) {
     console.error(error);
+    if (error.status === 429) {
+      return {
+        ok: false,
+        message:
+          "Trop de liens demandés : l'envoi d'e-mails intégré à Supabase est limité à quelques e-mails par heure. Réessaie plus tard (ou configure l'envoi via Resend, voir README).",
+      };
+    }
     return { ok: false, message: "L'envoi du lien a échoué, réessaie dans quelques instants." };
   }
   return done;

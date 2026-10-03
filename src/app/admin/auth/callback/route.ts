@@ -6,6 +6,11 @@ import { isAdminEmail } from "@/lib/env";
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const login = new URL("/admin/connexion", request.url);
+  // Lien refusé par Supabase (expiré, déjà utilisé…)
+  if (request.nextUrl.searchParams.get("error")) {
+    login.searchParams.set("erreur", "expire");
+    return NextResponse.redirect(login);
+  }
   if (!code) return NextResponse.redirect(login);
 
   const supabase = await supabaseAuthClient();

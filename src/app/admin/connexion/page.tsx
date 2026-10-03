@@ -17,7 +17,9 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
         <h1 className="font-display text-2xl font-bold">Admin zer0oes gfx</h1>
         {erreur && (
           <p role="alert" className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-            Lien invalide, expiré ou adresse non autorisée.
+            {erreur === "expire"
+              ? "Ce lien a expiré ou a déjà servi. Demande un nouveau lien, et ouvre-le dans le même navigateur."
+              : "Lien invalide, expiré ou adresse non autorisée."}
           </p>
         )}
         {supabaseAuthConfigured() ? (
