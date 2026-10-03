@@ -19,6 +19,8 @@ async function siteUrl() {
 export async function createCheckout(formData: FormData) {
   const pack = getPack(formData.get("packId")?.toString());
   if (!pack) redirect("/offres");
+  // Offre sur devis (prix « à partir de ») : pas de paiement direct.
+  if (!pack.checkout) redirect(`/contact?offre=${pack.id}`);
 
   const stripe = getStripe();
   if (!stripe) {
@@ -53,6 +55,14 @@ function field(formData: FormData, name: string, max = 5000) {
   return (formData.get(name)?.toString() ?? "").trim().slice(0, max);
 }
 
+function selectedOptions(formData: FormData) {
+  return formData
+    .getAll("options")
+    .map((o) => o.toString().slice(0, 200))
+    .slice(0, 20)
+    .join(", ");
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function sendContact(
@@ -81,6 +91,7 @@ export async function sendContact(
         Chaîne: field(formData, "channel", 300),
         "Type de demande": field(formData, "type", 100),
         Budget: field(formData, "budget", 100),
+        Options: selectedOptions(formData),
         Message: message,
       },
     });
@@ -129,6 +140,7 @@ export async function sendBrief(
         Couleurs: field(formData, "colors", 500),
         Références: field(formData, "references"),
         "Éléments à inclure": field(formData, "elements"),
+        Options: selectedOptions(formData),
         "Date souhaitée": field(formData, "deadline", 100),
         Remarques: field(formData, "notes"),
       },

@@ -2,9 +2,10 @@
 
 import { useActionState } from "react";
 import { sendContact } from "@/app/actions";
-import { Field, FormStatus, inputClass } from "./ui";
+import { optionChoices } from "@/data/packs";
+import { Field, FormStatus, OptionsField, inputClass } from "./ui";
 
-export function ContactForm() {
+export function ContactForm({ defaultType = "Projet sur mesure" }: { defaultType?: string }) {
   const [state, action, pending] = useActionState(sendContact, null);
 
   if (state?.ok) return <FormStatus state={state} />;
@@ -26,8 +27,9 @@ export function ContactForm() {
           <input name="channel" type="url" placeholder="https://twitch.tv/…" className={inputClass} />
         </Field>
         <Field label="Type de demande">
-          <select name="type" className={inputClass} defaultValue="Projet sur mesure">
+          <select name="type" className={inputClass} defaultValue={defaultType}>
             <option>Projet sur mesure</option>
+            <option>Devis Univers complet</option>
             <option>Question sur une offre</option>
             <option>Collaboration / partenariat</option>
             <option>Autre</option>
@@ -37,12 +39,13 @@ export function ContactForm() {
       <Field label="Budget indicatif">
         <select name="budget" className={inputClass} defaultValue="">
           <option value="">Je ne sais pas encore</option>
-          <option>Moins de 100 €</option>
-          <option>100 à 250 €</option>
-          <option>250 à 500 €</option>
-          <option>Plus de 500 €</option>
+          <option>Moins de 400 €</option>
+          <option>400 à 900 €</option>
+          <option>900 à 1 600 €</option>
+          <option>Plus de 1 600 €</option>
         </select>
       </Field>
+      <OptionsField options={optionChoices} />
       <Field label="Votre projet *">
         <textarea
           name="message"

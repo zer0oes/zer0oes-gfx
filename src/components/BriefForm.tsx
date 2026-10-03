@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 import { sendBrief } from "@/app/actions";
-import { Field, FormStatus, inputClass } from "./ui";
+import { optionChoices } from "@/data/packs";
+import { Field, FormStatus, OptionsField, inputClass } from "./ui";
 
 export function BriefForm({
   sessionId,
@@ -55,6 +56,7 @@ export function BriefForm({
       <Field label="Éléments à inclure" hint="Textes des écrans, réseaux sociaux à afficher, emplacement caméra…">
         <textarea name="elements" rows={3} className={inputClass} />
       </Field>
+      <OptionsField options={optionChoices} />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Date souhaitée">
           <input name="deadline" type="date" className={inputClass} />

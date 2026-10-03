@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { createCheckout } from "@/app/actions";
-import { formatPrice, type Pack } from "@/data/packs";
+import { formatOfferPrice, type Pack } from "@/data/packs";
 
 export function PackCard({ pack, order = false }: { pack: Pack; order?: boolean }) {
+  const buttonClass = `w-full rounded-full px-5 py-3 text-center font-semibold transition hover:brightness-110 ${
+    pack.highlight ? "bg-accent text-background" : "bg-foreground text-background"
+  }`;
+
   return (
     <div
       className={`relative flex flex-col rounded-2xl border p-6 ${
@@ -12,14 +16,7 @@ export function PackCard({ pack, order = false }: { pack: Pack; order?: boolean 
       <h3 className="font-display text-xl font-bold">{pack.name}</h3>
       <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-accent">Pour qui</p>
       <p className="mt-1 text-sm text-muted">{pack.audience}</p>
-      <p className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="font-display text-4xl font-bold">{formatPrice(pack.price)}</span>
-        {pack.provisionalPrice && (
-          <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-200">
-            Prix provisoire
-          </span>
-        )}
-      </p>
+      <p className="mt-6 font-display text-3xl font-bold">{formatOfferPrice(pack)}</p>
       <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-accent">Livrables</p>
       <ul className="mt-3 space-y-3 text-sm">
         {pack.deliverables.map((f) => (
@@ -34,7 +31,14 @@ export function PackCard({ pack, order = false }: { pack: Pack; order?: boolean 
         <p className="mt-1 text-sm font-medium">{pack.benefit}</p>
       </div>
 
-      {order ? (
+      {!order ? (
+        <Link
+          href="/offres"
+          className="mt-8 rounded-full border border-border px-5 py-3 text-center font-semibold transition hover:border-accent"
+        >
+          Voir le détail
+        </Link>
+      ) : pack.checkout ? (
         <form action={createCheckout} className="mt-8 space-y-3">
           <input type="hidden" name="packId" value={pack.id} />
           <label className="flex items-start gap-2 text-xs text-muted">
@@ -44,22 +48,16 @@ export function PackCard({ pack, order = false }: { pack: Pack; order?: boolean 
               le démarrage de la création dès le paiement.
             </span>
           </label>
-          <button
-            type="submit"
-            className={`w-full rounded-full px-5 py-3 font-semibold transition hover:brightness-110 ${
-              pack.highlight ? "bg-accent text-background" : "bg-foreground text-background"
-            }`}
-          >
+          <button type="submit" className={buttonClass}>
             Commander
           </button>
         </form>
       ) : (
-        <Link
-          href="/offres"
-          className="mt-8 rounded-full border border-border px-5 py-3 text-center font-semibold transition hover:border-accent"
-        >
-          Voir le détail
-        </Link>
+        <div className="mt-8">
+          <Link href={`/contact?offre=${pack.id}`} className={`block ${buttonClass}`}>
+            Demander un devis
+          </Link>
+        </div>
       )}
     </div>
   );

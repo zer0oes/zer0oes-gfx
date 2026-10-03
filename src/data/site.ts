@@ -23,7 +23,10 @@ export const legal = {
   status: "Entrepreneur individuel (micro-entreprise)", // À COMPLÉTER
   siret: "000 000 000 00000", // À COMPLÉTER
   address: "Adresse à compléter, 00000 Ville, France", // À COMPLÉTER
-  vatNote: "TVA non applicable, art. 293 B du CGI", // À vérifier selon votre régime
+  // Mention TVA affichée sous les prix (page Offres) et dans les CGV.
+  // À CONFIRMER selon votre régime. Si vous facturez la TVA, remplacez par
+  // exemple par "TVA 20 % en sus" et pensez à l'activer dans Stripe (Stripe Tax).
+  vatNote: "TVA non applicable, art. 293 B du CGI",
   publicationDirector: "Aurore [NOM À COMPLÉTER]",
   host: {
     name: "Vercel Inc.",

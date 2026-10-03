@@ -23,13 +23,16 @@ export default function CgvPage() {
           Trois offres sont proposées : « Premier look », « Identité signature » et « Univers complet ». Chacune
           correspond à une création réalisée sur mesure, selon l&apos;échange de cadrage et le brief transmis par le
           client après la commande. Les livrables de chaque offre sont décrits sur la page Offres au moment de la
-          commande. Les demandes hors offre font l&apos;objet d&apos;un devis.
+          commande. Les offres « Premier look » et « Identité signature » se commandent et se règlent directement en ligne.
+          L&apos;offre « Univers complet », dont le prix est indiqué « à partir de », ainsi que les options et les
+          demandes hors offre, font l&apos;objet d&apos;un devis préalable.
         </p>
 
         <h2>3. Prix et paiement</h2>
         <p>
-          Les prix sont indiqués en euros, toutes taxes comprises ({legal.vatNote}). Le paiement s&apos;effectue en
-          totalité à la commande, par carte bancaire via la plateforme sécurisée Stripe.
+          Les prix sont indiqués en euros hors taxes (HT). {legal.vatNote}. Pour les offres commandées en ligne, le
+          paiement s&apos;effectue en totalité à la commande, par carte bancaire via la plateforme sécurisée Stripe.
+          Pour les prestations sur devis, les modalités de paiement sont précisées dans le devis.
         </p>
 
         <h2>4. Déroulement et délais</h2>
@@ -40,9 +43,8 @@ export default function CgvPage() {
             brief complet.
           </li>
           <li>
-            {/* À COMPLÉTER : préciser le nombre de corrections incluses par offre. */}
-            Les corrections incluses sont précisées lors de l&apos;échange de cadrage. Les modifications
-            supplémentaires ou les changements de direction après validation peuvent être facturés.
+            Chaque offre inclut deux séries de corrections. Les modifications supplémentaires ou les changements de
+            direction après validation peuvent être facturés.
           </li>
           <li>Les fichiers finaux sont livrés par lien de téléchargement.</li>
         </ul>

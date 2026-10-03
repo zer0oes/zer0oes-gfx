@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/ContactForm";
 import { PageHeader } from "@/components/ui";
+import { getPack } from "@/data/packs";
 import { site } from "@/data/site";
 
 export const metadata: Metadata = {
@@ -8,7 +9,10 @@ export const metadata: Metadata = {
   description: "Un projet d'overlay, d'alertes ou de widget sur mesure ? Demandez un devis.",
 };
 
-export default function ContactPage() {
+export default async function ContactPage({ searchParams }: PageProps<"/contact">) {
+  const { offre } = await searchParams;
+  const quote = getPack(typeof offre === "string" ? offre : undefined)?.checkout === false;
+
   return (
     <>
       <PageHeader eyebrow="Sur-mesure" title="Parlons de votre projet">
@@ -35,7 +39,7 @@ export default function ContactPage() {
           </div>
         </aside>
         <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-          <ContactForm />
+          <ContactForm defaultType={quote ? "Devis Univers complet" : undefined} />
         </div>
       </div>
     </>

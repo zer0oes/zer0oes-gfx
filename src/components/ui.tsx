@@ -21,6 +21,22 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   );
 }
 
+export function OptionsField({ options }: { options: { id: string; label: string }[] }) {
+  return (
+    <fieldset>
+      <legend className="mb-1.5 block text-sm font-medium">Options souhaitées</legend>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {options.map((o) => (
+          <label key={o.id} className="flex items-start gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
+            <input type="checkbox" name="options" value={o.label} className="mt-0.5 accent-[var(--accent)]" />
+            <span>{o.label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 export function FormStatus({ state }: { state: { ok: boolean; message: string } | null }) {
   if (!state) return null;
   return (

@@ -1,6 +1,9 @@
-// Offres vendues via Stripe Checkout (textes fournis par Aurore).
-// PRIX PROVISOIRES : aucun prix n'a encore été fixé. Remplacer `price`
-// (en centimes d'euro, 4900 = 49,00 €) puis passer `provisionalPrice` à false.
+// Offres et options (textes et tarifs fournis par Aurore).
+// Les prix sont en centimes d'euro HT (39000 = 390 € HT).
+// La mention TVA affichée à côté des prix se règle dans src/data/site.ts (legal.vatNote).
+//
+// `checkout: true`  → bouton « Commander » vers Stripe Checkout au prix indiqué.
+// `checkout: false` → bouton « Demander un devis » vers la page contact (prix « à partir de »).
 // Optionnel : renseigner `stripePriceId` (price_...) pour utiliser un prix
 // créé dans le Dashboard Stripe au lieu du prix ci-dessous.
 
@@ -8,7 +11,8 @@ export type Pack = {
   id: string;
   name: string;
   price: number;
-  provisionalPrice?: boolean;
+  priceFrom?: boolean;
+  checkout: boolean;
   stripePriceId?: string;
   audience: string;
   deliverables: string[];
@@ -20,50 +24,60 @@ export const packs: Pack[] = [
   {
     id: "premier-look",
     name: "Premier look",
-    price: 10000, // PROVISOIRE
-    provisionalPrice: true,
+    price: 39000,
+    checkout: true,
     audience: "Le créateur qui démarre ou veut une image propre.",
     deliverables: [
-      "Un échange de cadrage",
-      "Un avatar ou logo simple",
-      "Une palette de couleurs",
-      "Une sélection de typographies",
-      "Une bannière pour sa plateforme principale",
+      "Logo simple ou avatar graphique",
+      "Couleurs",
+      "Typographies",
+      "Une bannière",
+      "Deux séries de corrections",
     ],
     benefit: "Une première identité cohérente pour se lancer.",
   },
   {
     id: "identite-signature",
     name: "Identité signature",
-    price: 20000, // PROVISOIRE
-    provisionalPrice: true,
+    price: 89000,
+    checkout: true,
     highlight: true,
     audience: "Le créateur régulier qui veut être reconnu.",
     deliverables: [
-      "Un cadrage de sa personnalité et de son audience",
-      "Une direction visuelle",
-      "Un logo et ses déclinaisons",
-      "Couleurs et typographies",
+      "Direction visuelle",
+      "Logo et déclinaisons",
       "Avatars et bannières pour trois plateformes",
-      "Trois modèles de publications ou miniatures",
-      "Un guide d'utilisation",
+      "Trois modèles de contenus",
+      "Mini-guide",
+      "Deux séries de corrections",
     ],
     benefit: "Une image distinctive et cohérente sur tous ses contenus.",
   },
   {
     id: "univers-complet",
     name: "Univers complet",
-    price: 30000, // PROVISOIRE
-    provisionalPrice: true,
+    price: 159000,
+    priceFrom: true,
+    checkout: false,
     audience: "Le créateur qui veut faire de son activité une marque.",
     deliverables: [
       "Tout le contenu de l'offre Identité signature",
-      "Un système graphique étendu",
-      "Un kit adapté à son activité : habillage de stream OU modèles de contenus supplémentaires",
-      "Une séance de prise en main",
+      "Habillage de stream statique : trois écrans, cadre webcam, six panneaux",
+      "Prise en main",
     ],
     benefit: "Un univers prêt à déployer au quotidien.",
   },
+];
+
+// Options : non vendues via Stripe, elles se cochent dans le brief ou la demande de devis.
+export type Option = { id: string; name: string; price: number; priceFrom?: boolean };
+
+export const options: Option[] = [
+  { id: "banniere", name: "Bannière supplémentaire", price: 7000 },
+  { id: "miniatures", name: "Trois modèles de miniatures", price: 15000 },
+  { id: "emotes", name: "Trois emotes simples", price: 12000 },
+  { id: "mascotte", name: "Mascotte illustrée", price: 30000, priceFrom: true },
+  { id: "animation-logo", name: "Animation du logo", price: 25000, priceFrom: true },
 ];
 
 export function getPack(id: string | undefined | null) {
@@ -77,3 +91,11 @@ export function formatPrice(cents: number) {
     maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
   }).format(cents / 100);
 }
+
+// « 390 € HT » ou « À partir de 1 590 € HT »
+export function formatOfferPrice({ price, priceFrom }: { price: number; priceFrom?: boolean }) {
+  return `${priceFrom ? "À partir de " : ""}${formatPrice(price)} HT`;
+}
+
+// Libellés des options pour les cases à cocher des formulaires.
+export const optionChoices = options.map((o) => ({ id: o.id, label: `${o.name} (${formatOfferPrice(o)})` }));
