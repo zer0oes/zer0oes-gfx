@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
-import { getPack, formatPrice } from "@/data/packs";
+import { formatPrice, formulaName, getFormula, getPack } from "@/data/packs";
 import { notify } from "@/lib/notify";
 
 // Webhook Stripe : prévient Aurore à chaque paiement confirmé.
@@ -27,11 +27,12 @@ export async function POST(request: Request) {
   if (event.type === "checkout.session.completed") {
     const s = event.data.object;
     const pack = getPack(s.metadata?.packId);
+    const offer = pack ? formulaName(pack, getFormula(pack, s.metadata?.formulaId)) : s.metadata?.packId ?? "?";
     await notify({
-      subject: `[Commande] ${pack?.name ?? "Pack"} — ${s.customer_details?.email ?? ""}`,
+      subject: `[Commande] ${offer} — ${s.customer_details?.email ?? ""}`,
       replyTo: s.customer_details?.email ?? undefined,
       fields: {
-        Pack: pack?.name ?? s.metadata?.packId ?? "?",
+        Offre: offer,
         Montant: s.amount_total != null ? formatPrice(s.amount_total) : "?",
         Client: s.customer_details?.name ?? "",
         "E-mail": s.customer_details?.email ?? "",

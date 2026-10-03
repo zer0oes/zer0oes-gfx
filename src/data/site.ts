@@ -2,9 +2,9 @@
 
 export const site = {
   name: "zer0oes gfx",
-  tagline: "Overlays, alertes et widgets sur mesure pour streameurs",
+  tagline: "Identité visuelle et overlays de stream sur mesure",
   description:
-    "Création d'overlays, d'alertes et de widgets personnalisés pour Twitch, YouTube et Kick. Une identité visuelle de stream qui vous ressemble.",
+    "Logo, overlays, bannière, avatar et emotes sur mesure pour Twitch, YouTube et Kick. Une identité visuelle de stream qui vous ressemble.",
   email: "zer0oes.pro@gmail.com",
   socials: [
     { label: "Twitch", href: "https://www.twitch.tv/zer0oes" },

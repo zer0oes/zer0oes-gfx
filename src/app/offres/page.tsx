@@ -7,29 +7,30 @@ import { legal, site } from "@/data/site";
 
 export const metadata: Metadata = {
   title: "Offres",
-  description: "Premier look, Identité signature, Univers complet : trois offres d'identité visuelle sur mesure pour créateurs de contenu.",
+  description:
+    "Premier look, Identité signature, Univers complet : logo, overlays, bannière, avatar et emotes sur mesure pour ta chaîne.",
 };
 
 const faq = [
   {
     q: "Comment se passe la création après la commande ?",
-    a: "Juste après le paiement, vous remplissez un court brief (univers, couleurs, références). On fait ensuite l'échange de cadrage, puis je vous présente une première proposition que l'on ajuste ensemble : deux séries de corrections sont incluses.",
+    a: "Juste après le paiement, vous remplissez un court brief : univers, couleurs, références et overlays souhaités (démarrage, pause, fin, discussion ou gameplay). Je vous présente ensuite une première proposition que l'on ajuste ensemble : deux séries de corrections regroupées sont incluses.",
   },
   {
     q: "Comment commander l'offre Univers complet ?",
-    a: "Son prix dépend de votre activité : demandez un devis via la page contact, je vous réponds avec une proposition chiffrée.",
+    a: "Elle est proposée à partir de 1 990 € HT, animations légères comprises. Demandez un devis via la page contact : les animations complexes sont chiffrées selon votre projet.",
   },
   {
     q: "Comment ajouter une option ?",
-    a: "Cochez les options souhaitées dans votre brief après la commande, ou dans votre demande de devis. Je vous confirme le montant avant de les réaliser.",
+    a: "Les emotes et l'animation des overlays se choisissent directement dans les formules des offres. Les autres options à la carte se cochent dans votre brief après la commande, ou dans votre demande de devis ; je vous confirme le montant avant de les réaliser.",
   },
   {
     q: "Quel est le délai de livraison ?",
     a: `Comptez ${site.deliveryDays} jours ouvrés après réception du brief complet, selon l'offre choisie.`,
   },
   {
-    q: "Sous quelle forme sont livrés les fichiers ?",
-    a: "Des fichiers prêts à l'emploi, aux formats adaptés à vos plateformes, livrés par lien de téléchargement. L'offre Identité signature inclut un mini-guide, et l'offre Univers complet une prise en main.",
+    q: "Sous quelle forme sont livrés les visuels ?",
+    a: "Les visuels sont livrés prêts à utiliser, avec fond transparent lorsque nécessaire. L'installation dans OBS peut être chiffrée séparément.",
   },
   {
     q: "Aucune offre ne correspond à mon projet.",
@@ -42,8 +43,8 @@ export default async function OffresPage({ searchParams }: PageProps<"/offres">)
 
   return (
     <>
-      <PageHeader eyebrow="Offres" title="Choisissez votre offre">
-        Chaque offre est une création sur mesure, réalisée pour vous après la commande.
+      <PageHeader eyebrow="Offres" title="Les offres zeroes gfx">
+        Compose ton pack selon tes besoins. Choisis tes overlays : démarrage, pause, fin, discussion ou gameplay.
       </PageHeader>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -63,19 +64,24 @@ export default async function OffresPage({ searchParams }: PageProps<"/offres">)
         </p>
 
         <section className="mx-auto mt-20 max-w-3xl">
-          <h2 className="font-display text-3xl font-bold">Options</h2>
+          <h2 className="font-display text-3xl font-bold">Les options à la carte</h2>
           <p className="mt-2 text-muted">
-            À ajouter à n&apos;importe quelle offre : cochez-les dans votre brief après la commande, ou dans votre
-            demande de devis.
+            Prix HT. Les emotes sont créées dans le style défini ensemble ; les illustrations complexes font l&apos;objet
+            d&apos;un devis adapté.
           </p>
           <ul className="mt-6 divide-y divide-border rounded-2xl border border-border bg-surface">
             {options.map((o) => (
               <li key={o.id} className="flex items-center justify-between gap-4 p-5">
                 <span>{o.name}</span>
-                <span className="shrink-0 font-semibold">{formatOfferPrice(o)}</span>
+                <span className="shrink-0 text-right font-semibold">{formatOfferPrice(o)}</span>
               </li>
             ))}
           </ul>
+          <p className="mt-4 text-sm text-muted">
+            Livraison des visuels prêts à utiliser, avec fond transparent lorsque nécessaire. L&apos;installation dans
+            OBS peut être chiffrée séparément. Les options se cochent dans votre brief après la commande, ou dans votre
+            demande de devis.
+          </p>
         </section>
 
         <section className="mx-auto mt-20 max-w-3xl">

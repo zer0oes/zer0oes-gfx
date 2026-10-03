@@ -8,9 +8,9 @@ import { site } from "@/data/site";
 
 const steps = [
   { title: "Vous choisissez", text: "Une offre prête à commander, ou une demande sur mesure." },
-  { title: "Vous briefez", text: "Univers, couleurs, références : un formulaire simple juste après la commande." },
+  { title: "Vous briefez", text: "Univers, couleurs, références et overlays choisis : un formulaire simple juste après la commande." },
   { title: "Je crée", text: `Premières maquettes, retours, ajustements. Livraison en ${site.deliveryDays} jours ouvrés.` },
-  { title: "Vous vous lancez", text: "Une identité prête à déployer sur vos plateformes et vos contenus." },
+  { title: "Vous streamez", text: "Des visuels prêts à utiliser, avec fond transparent lorsque nécessaire." },
 ];
 
 export default function Home() {

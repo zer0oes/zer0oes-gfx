@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BriefForm } from "@/components/BriefForm";
 import { PageHeader } from "@/components/ui";
-import { getPack } from "@/data/packs";
+import { formulaName, getFormula, getPack } from "@/data/packs";
 import { getStripe } from "@/lib/stripe";
 
 export const metadata: Metadata = {
@@ -16,6 +16,7 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
   const demo = params.demo === "1";
 
   let packId = typeof params.pack === "string" ? params.pack : undefined;
+  let formulaId = typeof params.formule === "string" ? params.formule : undefined;
   let email: string | undefined;
   let paid = false;
 
@@ -24,6 +25,7 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
     try {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       packId = session.metadata?.packId ?? packId;
+      formulaId = session.metadata?.formulaId ?? formulaId;
       email = session.customer_details?.email ?? undefined;
       paid = session.payment_status === "paid";
     } catch {
@@ -43,13 +45,20 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
   }
 
   const pack = getPack(packId);
+  const formula = pack ? getFormula(pack, formulaId) : undefined;
+  const overlayHint =
+    pack?.id === "premier-look"
+      ? "Ton offre comprend 2 overlays au choix."
+      : pack
+        ? "Ton offre comprend 5 overlays au choix."
+        : undefined;
 
   return (
     <>
       <PageHeader eyebrow={paid || demo ? "Commande confirmée" : "Commande reçue"} title="Merci !">
         {pack ? (
           <>
-            Votre offre <strong className="text-foreground">« {pack.name} »</strong> est réservée.
+            Votre offre <strong className="text-foreground">« {formulaName(pack, formula)} »</strong> est réservée.
           </>
         ) : (
           "Votre commande est enregistrée."
@@ -64,7 +73,7 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
         )}
         <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
           <h2 className="mb-6 font-display text-2xl font-bold">Votre brief</h2>
-          <BriefForm sessionId={sessionId} packId={pack?.id} email={email} />
+          <BriefForm sessionId={sessionId} packId={pack?.id} formulaId={formula?.id} email={email} overlayHint={overlayHint} />
         </div>
       </div>
     </>

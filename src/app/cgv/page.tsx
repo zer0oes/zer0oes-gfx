@@ -14,7 +14,7 @@ export default function CgvPage() {
         <h2>1. Objet</h2>
         <p>
           Les présentes conditions régissent la vente des prestations de création graphique proposées sur le site{" "}
-          {site.name} (identité visuelle, logos, bannières, habillage de stream et éléments visuels pour créateurs de contenu), par {legal.ownerName},{" "}
+          {site.name} (logos, overlays de stream, bannières, avatars, emotes et autres éléments visuels pour créateurs de contenu), par {legal.ownerName},{" "}
           {legal.status} (nom commercial {legal.commercialName}), SIRET {legal.siret}, {legal.address}.
         </p>
 
@@ -23,9 +23,10 @@ export default function CgvPage() {
           Trois offres sont proposées : « Premier look », « Identité signature » et « Univers complet ». Chacune
           correspond à une création réalisée sur mesure, selon l&apos;échange de cadrage et le brief transmis par le
           client après la commande. Les livrables de chaque offre sont décrits sur la page Offres au moment de la
-          commande. Les offres « Premier look » et « Identité signature » se commandent et se règlent directement en ligne.
-          L&apos;offre « Univers complet », dont le prix est indiqué « à partir de », ainsi que les options et les
-          demandes hors offre, font l&apos;objet d&apos;un devis préalable.
+          commande. Les offres « Premier look » et « Identité signature », dans la formule choisie, se commandent et se
+          règlent directement en ligne. L&apos;offre « Univers complet », dont le prix est indiqué « à partir de », les
+          options à la carte, les animations complexes, les illustrations complexes et les demandes hors offre font
+          l&apos;objet d&apos;un devis préalable.
         </p>
 
         <h2>3. Prix et paiement</h2>
@@ -43,10 +44,13 @@ export default function CgvPage() {
             brief complet.
           </li>
           <li>
-            Chaque offre inclut deux séries de corrections. Les modifications supplémentaires ou les changements de
-            direction après validation peuvent être facturés.
+            Chaque offre inclut deux séries de corrections regroupées. Les modifications supplémentaires ou les
+            changements de direction après validation peuvent être facturés.
           </li>
-          <li>Les fichiers finaux sont livrés par lien de téléchargement.</li>
+          <li>
+            Les visuels sont livrés prêts à utiliser, avec fond transparent lorsque nécessaire, par lien de
+            téléchargement. L&apos;installation dans OBS n&apos;est pas incluse et peut être chiffrée séparément.
+          </li>
         </ul>
 
         <h2>5. Droit de rétractation</h2>

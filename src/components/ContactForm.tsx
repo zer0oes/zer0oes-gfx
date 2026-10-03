@@ -39,13 +39,13 @@ export function ContactForm({ defaultType = "Projet sur mesure" }: { defaultType
       <Field label="Budget indicatif">
         <select name="budget" className={inputClass} defaultValue="">
           <option value="">Je ne sais pas encore</option>
-          <option>Moins de 400 €</option>
-          <option>400 à 900 €</option>
-          <option>900 à 1 600 €</option>
-          <option>Plus de 1 600 €</option>
+          <option>Moins de 500 €</option>
+          <option>500 à 1 000 €</option>
+          <option>1 000 à 2 000 €</option>
+          <option>Plus de 2 000 €</option>
         </select>
       </Field>
-      <OptionsField options={optionChoices} />
+      <OptionsField legend="Options à la carte" options={optionChoices} />
       <Field label="Votre projet *">
         <textarea
           name="message"

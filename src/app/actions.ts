@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getPack } from "@/data/packs";
+import { formulaName, getFormula, getPack } from "@/data/packs";
 import { getStripe } from "@/lib/stripe";
 import { notify } from "@/lib/notify";
 
@@ -21,29 +21,32 @@ export async function createCheckout(formData: FormData) {
   if (!pack) redirect("/offres");
   // Offre sur devis (prix « à partir de ») : pas de paiement direct.
   if (!pack.checkout) redirect(`/contact?offre=${pack.id}`);
+  // Formule relue côté serveur : le navigateur n'envoie que son identifiant.
+  const formula = getFormula(pack, formData.get("formulaId")?.toString());
+  if (!formula) redirect("/offres");
 
   const stripe = getStripe();
   if (!stripe) {
     // Mode démo : pas de clé Stripe configurée.
-    redirect(`/merci?pack=${pack.id}&demo=1`);
+    redirect(`/merci?pack=${pack.id}&formule=${formula.id}&demo=1`);
   }
 
   const base = await siteUrl();
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [
-      pack.stripePriceId
-        ? { price: pack.stripePriceId, quantity: 1 }
+      formula.stripePriceId
+        ? { price: formula.stripePriceId, quantity: 1 }
         : {
             quantity: 1,
             price_data: {
               currency: "eur",
-              unit_amount: pack.price,
-              product_data: { name: `zer0oes gfx — ${pack.name}` },
+              unit_amount: formula.price,
+              product_data: { name: `zer0oes gfx — ${formulaName(pack, formula)}` },
             },
           },
     ],
-    metadata: { packId: pack.id },
+    metadata: { packId: pack.id, formulaId: formula.id },
     success_url: `${base}/merci?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${base}/offres?annule=1`,
   });
@@ -55,9 +58,9 @@ function field(formData: FormData, name: string, max = 5000) {
   return (formData.get(name)?.toString() ?? "").trim().slice(0, max);
 }
 
-function selectedOptions(formData: FormData) {
+function checked(formData: FormData, name: string) {
   return formData
-    .getAll("options")
+    .getAll(name)
     .map((o) => o.toString().slice(0, 200))
     .slice(0, 20)
     .join(", ");
@@ -91,7 +94,7 @@ export async function sendContact(
         Chaîne: field(formData, "channel", 300),
         "Type de demande": field(formData, "type", 100),
         Budget: field(formData, "budget", 100),
-        Options: selectedOptions(formData),
+        Options: checked(formData, "options"),
         Message: message,
       },
     });
@@ -115,12 +118,12 @@ export async function sendBrief(
 
   // Vérifie côté serveur la commande Stripe associée, si présente.
   const sessionId = field(formData, "sessionId", 300);
-  let order = field(formData, "packId", 50) || "inconnu";
+  let order = [field(formData, "packId", 50) || "inconnu", field(formData, "formulaId", 50)].filter(Boolean).join(" / ");
   const stripe = getStripe();
   if (stripe && sessionId) {
     try {
       const s = await stripe.checkout.sessions.retrieve(sessionId);
-      order = `${s.metadata?.packId ?? "?"} — ${s.payment_status} — ${s.id}`;
+      order = `${s.metadata?.packId ?? "?"} / ${s.metadata?.formulaId ?? "?"} — ${s.payment_status} — ${s.id}`;
     } catch {
       order = `session invalide (${sessionId})`;
     }
@@ -139,8 +142,9 @@ export async function sendBrief(
         "Univers / ambiance": universe,
         Couleurs: field(formData, "colors", 500),
         Références: field(formData, "references"),
+        "Overlays choisis": checked(formData, "overlays"),
         "Éléments à inclure": field(formData, "elements"),
-        Options: selectedOptions(formData),
+        Options: checked(formData, "options"),
         "Date souhaitée": field(formData, "deadline", 100),
         Remarques: field(formData, "notes"),
       },

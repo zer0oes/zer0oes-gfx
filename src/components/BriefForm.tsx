@@ -2,17 +2,21 @@
 
 import { useActionState } from "react";
 import { sendBrief } from "@/app/actions";
-import { optionChoices } from "@/data/packs";
+import { optionChoices, overlayTypes } from "@/data/packs";
 import { Field, FormStatus, OptionsField, inputClass } from "./ui";
 
 export function BriefForm({
   sessionId,
   packId,
+  formulaId,
   email,
+  overlayHint,
 }: {
   sessionId?: string;
   packId?: string;
+  formulaId?: string;
   email?: string;
+  overlayHint?: string;
 }) {
   const [state, action, pending] = useActionState(sendBrief, null);
 
@@ -22,6 +26,7 @@ export function BriefForm({
     <form action={action} className="space-y-5">
       <input type="hidden" name="sessionId" value={sessionId ?? ""} />
       <input type="hidden" name="packId" value={packId ?? ""} />
+      <input type="hidden" name="formulaId" value={formulaId ?? ""} />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="E-mail *">
           <input name="email" type="email" required defaultValue={email} className={inputClass} />
@@ -56,7 +61,13 @@ export function BriefForm({
       <Field label="Éléments à inclure" hint="Textes des écrans, réseaux sociaux à afficher, emplacement caméra…">
         <textarea name="elements" rows={3} className={inputClass} />
       </Field>
-      <OptionsField options={optionChoices} />
+      <OptionsField
+        name="overlays"
+        legend="Overlays souhaités"
+        hint={overlayHint}
+        options={overlayTypes.map((t) => ({ id: t, label: t }))}
+      />
+      <OptionsField legend="Options à la carte" options={optionChoices} />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Date souhaitée">
           <input name="deadline" type="date" className={inputClass} />
