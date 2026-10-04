@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkDeliveryLink, deliverablePath, deliveryEmail, formatBytes, isDeliveryToken, newDeliveryToken, safeFilename } from "./delivery";
+import { checkDeliveryLink, cleanNote, NOTE_MAX_CHARS, deliverablePath, deliveryEmail, formatBytes, isDeliveryToken, newDeliveryToken, safeFilename } from "./delivery";
 
 test("jeton de livraison : 48 caractères hexadécimaux, non répétable", () => {
   const a = newDeliveryToken();
@@ -33,4 +33,11 @@ test("tailles lisibles et e-mail de livraison", () => {
   assert.match(mail.subject, /Identité signature/);
   assert.match(mail.text, /1 lien d'import et 2 fichiers/);
   assert.match(mail.text, /https:\/\/www\.zer0oes-gfx\.com\/livraison\/x/);
+});
+
+test("remarque du client : nettoyée, vide refusée, longueur limitée", () => {
+  assert.equal(cleanNote("  Plus grand \r\nstp  "), "Plus grand \nstp");
+  assert.equal(cleanNote("   "), null);
+  assert.equal(cleanNote(undefined), null);
+  assert.equal(cleanNote("x".repeat(5000))?.length, NOTE_MAX_CHARS);
 });

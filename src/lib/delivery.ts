@@ -75,3 +75,13 @@ export function deliveryEmail({ offerName, url, links, files }: { offerName: str
     ].join("\n"),
   };
 }
+
+// Remarques du client sur un fichier livré (page /livraison/<jeton>)
+export const MAX_NOTES = 30;
+export const NOTE_MAX_CHARS = 2000;
+
+export function cleanNote(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const body = raw.replace(/\r/g, "").trim().slice(0, NOTE_MAX_CHARS);
+  return body || null;
+}

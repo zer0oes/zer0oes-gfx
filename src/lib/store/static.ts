@@ -53,6 +53,8 @@ export const staticStore: Store = {
   listDeliverables: async () => [],
   addDeliverable: readOnly,
   deleteDeliverable: readOnly,
+  addDeliverableNote: readOnly,
+  setDeliverableApproval: readOnly,
   getOrderByDeliveryToken: async () => null,
   listInvoices: async () => [],
   getInvoiceByKey: async () => null,

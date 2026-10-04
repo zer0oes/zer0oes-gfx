@@ -2,10 +2,11 @@ import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Emote, Streamer, Work } from "@/data/portfolio";
 import { supabaseSecretKey, supabaseUrl } from "@/lib/env";
+import { MAX_NOTES } from "@/lib/delivery";
 import { defaultFinance, isUrssafPeriodicity, type FinanceSettings } from "@/lib/finance";
 import { defaultProtection, isWatermarkLevel, type ProtectionSettings } from "@/lib/protection";
 import type { Option, Pack } from "@/lib/pricing";
-import type { Deliverable, Invoice, NewOrder, Order, OrderPatch, OrderStatus, Store } from "./types";
+import type { Deliverable, DeliverableNote, Invoice, NewOrder, Order, OrderPatch, OrderStatus, Store } from "./types";
 
 // Client avec la clé secrète : contourne la RLS, donc réservé au serveur
 // (pages publiques en lecture, et actions admin après contrôle de l'accès).
@@ -123,6 +124,8 @@ function toDeliverable(r: Row): Deliverable {
     storagePath: opt<string>(r.storage_path),
     sizeBytes: r.size_bytes == null ? undefined : Number(r.size_bytes),
     createdAt: r.created_at as string,
+    clientNotes: Array.isArray(r.client_notes) ? (r.client_notes as DeliverableNote[]) : [],
+    approvedAt: opt<string>(r.approved_at),
   };
 }
 
@@ -537,6 +540,17 @@ export const supabaseStore: Store = {
         .single(),
     ) as Row;
     return toDeliverable(row);
+  },
+
+  async addDeliverableNote(id, body) {
+    const r = check(await db().from("deliverables").select("client_notes").eq("id", id).maybeSingle()) as Row | null;
+    if (!r) return;
+    const notes = [...((r.client_notes as DeliverableNote[]) ?? []), { at: new Date().toISOString(), body }].slice(-MAX_NOTES);
+    check(await db().from("deliverables").update({ client_notes: notes }).eq("id", id));
+  },
+
+  async setDeliverableApproval(id, approved) {
+    check(await db().from("deliverables").update({ approved_at: approved ? new Date().toISOString() : null }).eq("id", id));
   },
 
   async deleteDeliverable(id) {

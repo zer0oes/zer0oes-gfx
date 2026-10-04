@@ -67,7 +67,12 @@ export type Deliverable = {
   storagePath?: string;
   sizeBytes?: number;
   createdAt: string;
+  // Retours du client sur sa page de livraison
+  clientNotes?: DeliverableNote[];
+  approvedAt?: string;
 };
+
+export type DeliverableNote = { at: string; body: string };
 
 export type Order = {
   id: string;
@@ -191,6 +196,8 @@ export interface Store {
   listDeliverables(orderId: string): Promise<Deliverable[]>;
   addDeliverable(d: Omit<Deliverable, "id" | "createdAt">): Promise<Deliverable>;
   deleteDeliverable(id: string): Promise<void>;
+  addDeliverableNote(id: string, body: string): Promise<void>;
+  setDeliverableApproval(id: string, approved: boolean): Promise<void>;
   getOrderByDeliveryToken(token: string): Promise<Order | null>;
   // Fichiers livrés : envoi direct du navigateur vers le stockage privé (Supabase),
   // lien de téléchargement temporaire, ou lecture directe (magasin local de développement).

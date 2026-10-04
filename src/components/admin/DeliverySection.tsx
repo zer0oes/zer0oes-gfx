@@ -31,19 +31,37 @@ export async function DeliverySection({ order, items, message }: { order: Order;
 
       <ul className="mt-4 divide-y divide-border">
         {items.map((d) => (
-          <li key={d.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-            <span className="min-w-0">
-              <span className="mr-2 rounded-full border border-border px-2 py-0.5 text-xs text-muted">{d.kind === "lien" ? "Lien" : "Fichier"}</span>
-              <span className="font-medium">{d.label}</span>
-              <span className="ml-2 text-xs text-muted">{d.kind === "lien" ? d.url : formatBytes(d.sizeBytes)}</span>
-            </span>
-            <form action={deleteDeliverableAction}>
-              <input type="hidden" name="orderId" value={order.id} />
-              <input type="hidden" name="id" value={d.id} />
-              <button className="text-xs text-muted hover:text-red-300" aria-label={`Retirer ${d.label}`}>
-                Retirer
-              </button>
-            </form>
+          <li key={d.id} className="py-2 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="min-w-0">
+                <span className="mr-2 rounded-full border border-border px-2 py-0.5 text-xs text-muted">{d.kind === "lien" ? "Lien" : "Fichier"}</span>
+                <span className="font-medium">{d.label}</span>
+                <span className="ml-2 text-xs text-muted">{d.kind === "lien" ? d.url : formatBytes(d.sizeBytes)}</span>
+                {d.approvedAt && (
+                  <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                    ✓ validé par le client le {dateFmt.format(new Date(d.approvedAt))}
+                  </span>
+                )}
+              </span>
+              <form action={deleteDeliverableAction}>
+                <input type="hidden" name="orderId" value={order.id} />
+                <input type="hidden" name="id" value={d.id} />
+                <button className="text-xs text-muted hover:text-red-300" aria-label={`Retirer ${d.label}`}>
+                  Retirer
+                </button>
+              </form>
+            </div>
+            {/* Remarques laissées par le client sur sa page de livraison */}
+            {d.clientNotes?.length ? (
+              <ul className="mt-2 space-y-1.5 border-l-2 border-amber-400/50 pl-3">
+                {d.clientNotes.map((n, i) => (
+                  <li key={i}>
+                    <span className="block text-xs text-amber-300">Remarque du client — {dateFmt.format(new Date(n.at))}</span>
+                    <span className="whitespace-pre-line">{n.body}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </li>
         ))}
         {items.length === 0 && <li className="py-2 text-sm text-muted">Rien à livrer pour l&apos;instant.</li>}

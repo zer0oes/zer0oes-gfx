@@ -5,6 +5,7 @@ import path from "node:path";
 import { defaultFinance, type FinanceSettings } from "@/lib/finance";
 import type { Catalog } from "@/lib/pricing";
 import { defaultProtection, type ProtectionSettings } from "@/lib/protection";
+import { MAX_NOTES } from "@/lib/delivery";
 import { assertNotProduction } from "@/lib/env";
 import type { StoredTexts } from "@/lib/case-study-texts";
 import { staticCatalog, staticPortfolio } from "./static";
@@ -161,6 +162,16 @@ export const localStore: Store = {
       if (item?.storagePath) await fs.rm(deliverableFile(item.storagePath), { force: true });
     }),
   getOrderByDeliveryToken: async (token) => (await load()).orders.find((o) => o.deliveryToken === token) ?? null,
+  addDeliverableNote: (id, body) =>
+    mutate((d) => {
+      const item = d.deliverables?.find((x) => x.id === id);
+      if (item) item.clientNotes = [...(item.clientNotes ?? []), { at: new Date().toISOString(), body }].slice(-MAX_NOTES);
+    }),
+  setDeliverableApproval: (id, approved) =>
+    mutate((d) => {
+      const item = d.deliverables?.find((x) => x.id === id);
+      if (item) item.approvedAt = approved ? new Date().toISOString() : undefined;
+    }),
   saveDeliverableFile: async (rel, data) => {
     assertNotProduction("Le magasin JSON local");
     const file = deliverableFile(rel);
