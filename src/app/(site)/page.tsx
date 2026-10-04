@@ -1,11 +1,27 @@
 import Image from "next/image";
 import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
-import { WorkGrid } from "@/components/WorkGrid";
+import { HoverVideo } from "@/components/HoverVideo";
+import { projectHref, type Work } from "@/data/portfolio";
 import { site } from "@/data/site";
 import { activePacks } from "@/lib/pricing";
 import { ProtectedMedia } from "@/components/protection";
 import { getStore } from "@/lib/store";
+
+const kickerClass = "text-xs font-semibold uppercase tracking-[0.2em] text-accent";
+const titleClass = "mt-3 font-display text-3xl font-bold leading-tight sm:text-4xl";
+
+// Grand visuel cliquable vers sa page projet (aperçu animé au survol s'il y en a un)
+function Showcase({ work, href, sizes }: { work: Work; href: string; sizes: string }) {
+  return (
+    <Link href={href} data-hover-root className="group block overflow-hidden rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent">
+      <ProtectedMedia className="aspect-video">
+        <Image src={work.image!} alt={work.title} fill draggable={false} sizes={sizes} className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+        {work.video && <HoverVideo src={work.video} />}
+      </ProtectedMedia>
+    </Link>
+  );
+}
 
 const steps = (deliveryDays: string) => [
   { title: "Tu choisis", text: "Une offre prête à commander, ou une demande sur mesure." },
@@ -24,6 +40,12 @@ export default async function Home() {
   // Visuel du hero : première réalisation mise en avant
   const hero = featured[0];
   const heroStreamer = hero && streamerNames[hero.streamer];
+  // Facettes montrées sous l'ouverture, sans répéter le visuel du hero
+  const byId = (id: string) => works.find((w) => w.id === id && w.image && w.id !== hero?.id);
+  const emotes = (byId("zer0oes-emotes")?.emotes ?? []).slice(0, 12);
+  const universe = byId("tomavega-starting-screen") ?? featured.find((w) => w.image && w.id !== hero?.id && w.streamer !== hero?.streamer);
+  const signature = byId("zer0oes-logo");
+  const portrait = byId("zer0oes-avatar");
 
   return (
     <>
@@ -82,21 +104,101 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="flex items-end justify-between gap-4">
-          <h2 className="font-display text-3xl font-bold">Réalisations phares</h2>
-          <Link href="/portfolio" className="text-sm text-accent hover:underline">Tout voir →</Link>
-        </div>
-        <div className="mt-8">
-          <WorkGrid works={featured} streamerNames={streamerNames} linkToProject />
+        {emotes.length > 0 && (
+          <div className="grid items-center gap-8 lg:grid-cols-12">
+            <div className="lg:col-span-4">
+              <p className={kickerClass}>Emotes</p>
+              <h2 className={titleClass}>
+                Toutes les émotions
+                <br />
+                du live.
+              </h2>
+              <Link href={projectHref("zer0oes", "emotes")} className="mt-4 inline-block text-sm text-accent hover:underline">
+                Voir la planche complète →
+              </Link>
+            </div>
+            <ProtectedMedia className="lg:col-span-8">
+              <ul className="grid grid-cols-4 gap-3 sm:grid-cols-6">
+                {emotes.map((e) => (
+                  <li key={e.name} className="relative aspect-square">
+                    <Image src={e.src} alt={e.name} fill sizes="120px" draggable={false} unoptimized={e.animated} className="object-contain" />
+                  </li>
+                ))}
+              </ul>
+            </ProtectedMedia>
+          </div>
+        )}
+
+        {universe && (
+          <div className="mt-16 grid items-center gap-8 lg:grid-cols-12">
+            <div className="lg:col-span-7">
+              <Showcase work={universe} href={projectHref(universe.streamer)} sizes="(min-width: 1024px) 660px, 100vw" />
+            </div>
+            <div className="lg:col-span-5">
+              <p className={kickerClass}>Univers · {streamerNames[universe.streamer]}</p>
+              <h2 className={titleClass}>
+                Chaque chaîne,
+                <br />
+                son caractère.
+              </h2>
+              <p className="mt-4 text-muted">Du minéral électrique au néon synthwave : chaque identité part de la personne qui streame.</p>
+              <Link href={projectHref(universe.streamer)} className="mt-4 inline-block text-sm text-accent hover:underline">
+                Découvrir le projet →
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {signature && (
+          <div className="mt-16 grid items-center gap-8 lg:grid-cols-12">
+            <div className="order-2 lg:order-1 lg:col-span-5">
+              <p className={kickerClass}>Logo · {streamerNames[signature.streamer]}</p>
+              <h2 className={titleClass}>
+                Un trait.
+                <br />
+                Toute une identité.
+              </h2>
+              <Link href="/portfolio" className="mt-4 inline-block text-sm text-accent hover:underline">
+                Tout le portfolio →
+              </Link>
+            </div>
+            <div className="order-1 lg:order-2 lg:col-span-7">
+              <Showcase work={signature} href={projectHref(signature.streamer)} sizes="(min-width: 1024px) 660px, 100vw" />
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-6 sm:pt-36">
+        <div className="grid items-center gap-10 lg:grid-cols-12">
+          {portrait?.image && (
+            <ProtectedMedia className="mx-auto w-56 overflow-hidden rounded-full sm:w-72 lg:col-span-4 lg:w-full">
+              <Image src={portrait.image} alt="Aurore, alias zer0oes" width={640} height={640} draggable={false} sizes="(min-width: 1024px) 360px, 288px" className="aspect-square h-auto w-full object-cover" />
+            </ProtectedMedia>
+          )}
+          <div className={portrait?.image ? "lg:col-span-7 lg:col-start-6" : "lg:col-span-8"}>
+            <p className={kickerClass}>Derrière l&apos;écran</p>
+            <h2 className={titleClass}>
+              {site.about.title[0]}
+              <br />
+              <span className="text-accent">{site.about.title[1]}</span>
+            </h2>
+            {site.about.paragraphs.map((t) => (
+              <p key={t} className="mt-4 text-lg text-muted">
+                {t}
+              </p>
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <h2 className="font-display text-3xl font-bold">Comment ça marche</h2>
-        <ol className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <p className={kickerClass}>Comment ça marche</p>
+        <h2 className={titleClass}>De ton idée à ton premier live.</h2>
+        <ol className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {steps(settings.deliveryDays).map((s, i) => (
-            <li key={s.title} className="rounded-2xl border border-border bg-surface p-6">
-              <span className="font-display text-3xl font-bold text-gradient">0{i + 1}</span>
+            <li key={s.title} className="border-t border-border pt-5">
+              <span className="font-display text-4xl font-bold text-gradient">0{i + 1}</span>
               <h3 className="mt-3 font-semibold">{s.title}</h3>
               <p className="mt-1 text-sm text-muted">{s.text}</p>
             </li>
@@ -105,13 +207,16 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="flex items-end justify-between gap-4">
-          <h2 className="font-display text-3xl font-bold">Les offres</h2>
-          <Link href="/offres" className="text-sm text-accent hover:underline">Détail des offres →</Link>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className={kickerClass}>Les offres</p>
+            <h2 className={titleClass}>Trois façons de commencer.</h2>
+          </div>
+          <Link href="/offres" className="text-sm text-accent hover:underline">Options et détail des offres →</Link>
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {packs.map((p) => (
-            <PackCard key={p.id} pack={p} settings={settings} />
+            <PackCard key={p.id} pack={p} settings={settings} compact />
           ))}
         </div>
       </section>

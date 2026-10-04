@@ -19,6 +19,14 @@ export const site = {
   depositPercent: 30,
   // Remise « logo déjà existant » sur Premier look et Identité signature, en centimes HT (15000 = 150 €).
   logoDiscount: 15000,
+  // Présentation affichée sur la page d'accueil (« Derrière l'écran »). À ajuster librement.
+  about: {
+    title: ["Je stream aussi.", "Je sais ce que ton écran doit raconter."],
+    paragraphs: [
+      "Moi, c'est Aurore. Graphiste, et streameuse sous le nom zer0oes.",
+      "Je connais l'envers du décor : les scènes qu'on enchaîne, les alertes qui doivent rester lisibles en plein jeu, l'identité qu'on veut reconnaître d'un coup d'œil. Chaque univers que je crée, je le pense comme si c'était le mien.",
+    ],
+  },
 };
 
 // Informations légales — obligatoires pour les mentions légales et les CGV.

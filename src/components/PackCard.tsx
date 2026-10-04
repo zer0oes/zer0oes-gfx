@@ -6,10 +6,13 @@ export function PackCard({
   pack,
   settings,
   order = false,
+  compact = false,
 }: {
   pack: Pack;
   settings: PricingSettings;
   order?: boolean;
+  // Version courte (accueil) : prix, promesse et livrables, sans options ni notes
+  compact?: boolean;
 }) {
   const buttonClass = `w-full rounded-full px-5 py-3 text-center font-semibold transition hover:brightness-110 ${
     pack.highlight ? "bg-accent text-background" : "bg-foreground text-background"
@@ -32,7 +35,7 @@ export function PackCard({
           </li>
         ))}
       </ul>
-      {pack.extras && (
+      {!compact && pack.extras && (
         <div className="mt-6">
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">
             {pack.extras.length > 1 ? "Options" : "Option"}
@@ -44,13 +47,13 @@ export function PackCard({
           </ul>
         </div>
       )}
-      {pack.note && <p className="mt-6 text-xs leading-relaxed text-muted">{pack.note}</p>}
-      <div className="flex-1" />
+      {!compact && pack.note && <p className="mt-6 text-xs leading-relaxed text-muted">{pack.note}</p>}
+      {!compact && <div className="flex-1" />}
 
       {!order ? (
         <Link
           href="/offres"
-          className="mt-8 rounded-full border border-border px-5 py-3 text-center font-semibold transition hover:border-accent"
+          className={`${compact ? "mt-auto" : "mt-8"} rounded-full border border-border px-5 py-3 text-center font-semibold transition hover:border-accent`}
         >
           Voir le détail
         </Link>
