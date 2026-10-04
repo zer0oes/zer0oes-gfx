@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { getStore } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "À propos",
@@ -91,9 +90,7 @@ const chapters = [
   },
 ];
 
-export default async function AboutPage() {
-  const { works } = await getStore().getPortfolio();
-  const portrait = works.find((w) => w.id === "zer0oes-avatar")?.image;
+export default function AboutPage() {
 
   return (
     <div className="relative overflow-hidden">
@@ -107,19 +104,34 @@ export default async function AboutPage() {
 
         <ol className="mt-10">
           {chapters.map(({ title, text, Detail }, i) => (
-            <li key={title} className={`border-t border-border/60 py-14 first:border-t-0 first:pt-0 sm:py-20 ${i % 2 ? "md:pl-[16%]" : "md:pr-[16%]"}`}>
+            <li key={title} className={`border-t border-border/60 py-14 first:border-t-0 first:pt-0 sm:py-20 ${i === 0 ? "" : i % 2 ? "md:pl-[16%]" : "md:pr-[16%]"}`}>
               <div className="grid items-start gap-6 md:grid-cols-[9rem_1fr] md:gap-10">
                 <div className="flex items-center gap-5 md:flex-col md:items-start">
                   <span className="font-display text-5xl font-bold text-gradient">0{i + 1}</span>
                   <Detail />
                 </div>
-                <div className={i === 0 && portrait ? "grid items-center gap-8 sm:grid-cols-[1fr_auto]" : ""}>
+                <div className={i === 0 ? "grid items-center gap-10 sm:grid-cols-[1fr_auto]" : ""}>
                   <div>
-                    <h2 className={`font-display font-bold leading-tight tracking-tight ${i === 0 ? "text-4xl sm:text-6xl" : "text-3xl sm:text-4xl"}`}>{title}</h2>
+                    <h2 className={`font-display font-bold leading-tight tracking-tight ${i === 0 ? "text-4xl sm:text-5xl lg:text-6xl" : "text-3xl sm:text-4xl"}`}>{title}</h2>
                     <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">{text}</p>
                   </div>
-                  {i === 0 && portrait && (
-                    <Image src={portrait} alt="Aurore, alias zer0oes" width={320} height={320} priority className="size-40 rounded-full border border-border object-cover shadow-[0_0_60px_-20px_var(--accent)] sm:size-48" />
+                  {i === 0 && (
+                    <figure className="relative w-56 sm:w-60">
+                      <div aria-hidden className="absolute -inset-3 rounded-[2rem] opacity-50 blur-2xl" style={{ background: "linear-gradient(135deg, var(--accent-3), var(--accent), var(--accent-2))" }} />
+                      <Image
+                        src="/a-propos/aurore.webp"
+                        alt="Aurore, alias zer0oes, à son poste de stream"
+                        width={800}
+                        height={1000}
+                        priority
+                        sizes="240px"
+                        className="relative aspect-[4/5] rounded-3xl border border-border object-cover"
+                      />
+                      <figcaption className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-background/80 px-3 py-1 text-xs font-semibold backdrop-blur">
+                        <span className="size-2 rounded-full bg-red-500" aria-hidden />
+                        En live
+                      </figcaption>
+                    </figure>
                   )}
                 </div>
               </div>
