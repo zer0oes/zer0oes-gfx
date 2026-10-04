@@ -107,3 +107,20 @@ export function parsePaymentType(value: unknown): PaymentType {
 
 // Types d'overlays proposés au choix dans le brief.
 export const overlayTypes = ["Démarrage", "Pause", "Fin", "Discussion", "Gameplay"];
+
+// Catégories des options à la carte (page Offres), déduites du nom de l'option
+export const optionCategories = [
+  { id: "overlays", label: "Overlays", hint: "Scènes et habillage du live" },
+  { id: "emotes", label: "Emotes", hint: "Pour ton tchat et tes abonnés" },
+  { id: "branding", label: "Branding", hint: "Ta chaîne sur toutes les plateformes" },
+  { id: "motion", label: "Motion", hint: "Pour donner vie à ton univers" },
+] as const;
+export type OptionCategory = (typeof optionCategories)[number]["id"];
+
+export function optionCategory(o: Pick<Option, "name">): OptionCategory {
+  const n = o.name.toLowerCase();
+  if (n.includes("emote")) return "emotes";
+  if (/anim|motion|transition|stinger/.test(n)) return "motion";
+  if (n.includes("overlay") || n.includes("scène") || n.includes("widget")) return "overlays";
+  return "branding";
+}

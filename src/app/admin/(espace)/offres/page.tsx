@@ -116,7 +116,7 @@ function PackForm({ pack }: { pack: Pack }) {
         <Field label="Livrables" hint="Un par ligne.">
           <textarea name="deliverables" rows={5} defaultValue={pack.deliverables.join("\n")} className={input} />
         </Field>
-        <Field label="Options de l'offre" hint="Une par ligne (affichées sous les livrables).">
+        <Field label="Options de l'offre" hint="Une par ligne, affichées sous les livrables. Offre sur devis : exemples de créations (« Par exemple »).">
           <textarea name="extras" rows={5} defaultValue={(pack.extras ?? []).join("\n")} className={input} />
         </Field>
       </div>

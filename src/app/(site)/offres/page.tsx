@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
 import { PageHeader } from "@/components/ui";
 import { legal } from "@/data/site";
-import { activePacks, formatOfferPrice, formatPrice, type PricingSettings } from "@/lib/pricing";
+import { activePacks, formatOfferPrice, formatPrice, optionCategories, optionCategory, type PricingSettings } from "@/lib/pricing";
 import { getStore } from "@/lib/store";
 
 export const metadata: Metadata = {
@@ -70,42 +70,55 @@ export default async function OffresPage({ searchParams }: PageProps<"/offres">)
             <PackCard key={p.id} pack={p} settings={site} order />
           ))}
         </div>
+        <aside className="mt-6 flex flex-col gap-4 rounded-2xl border border-accent/50 bg-accent/10 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div>
+            <h2 className="font-display text-xl font-bold">Tu as déjà ton logo ?</h2>
+            <p className="mt-1 text-sm">
+              <strong>{formatPrice(site.logoDiscount)} HT de réduction</strong> sur Premier look et Identité signature : coche
+              « J&apos;ai déjà mon logo » dans la formule. Pour Univers complet, la remise s&apos;applique sur le devis.
+            </p>
+            <p className="mt-2 text-xs text-muted">
+              Logo fourni en qualité suffisante, idéalement vectoriel. Toute retouche, reconstruction ou refonte est
+              chiffrée séparément.
+            </p>
+          </div>
+          <span className="shrink-0 self-start rounded-full bg-accent px-4 py-2 font-display text-lg font-bold text-background sm:self-center">
+            −{formatPrice(site.logoDiscount)} HT
+          </span>
+        </aside>
+
         <p className="mt-6 text-center text-sm text-muted">
           Prix en euros HT — {legal.vatNote}. Paiement sécurisé par Stripe, en une fois ou avec un acompte de{" "}
           {site.depositPercent} % (solde à la livraison). Besoin d&apos;autre chose ?{" "}
           <Link href="/contact" className="text-accent hover:underline">Demande un devis sur mesure</Link>.
         </p>
 
-        <aside className="mx-auto mt-16 max-w-3xl rounded-2xl border border-accent/50 bg-accent/10 p-6 sm:p-8">
-          <h2 className="font-display text-2xl font-bold">Tu as déjà ton logo ?</h2>
-          <p className="mt-3">
-            Profite de <strong>{formatPrice(site.logoDiscount)} HT de réduction sur ton pack</strong>. Je construis ton
-            habillage autour de ton identité existante.
-          </p>
-          <p className="mt-3 text-sm text-muted">
-            Le logo doit être fourni en qualité suffisante, idéalement en format vectoriel. Toute retouche,
-            reconstruction ou refonte éventuelle est chiffrée séparément.
-          </p>
-          <p className="mt-3 text-sm text-muted">
-            Coche « J&apos;ai déjà mon logo » sur Premier look ou Identité signature. Pour Univers complet, la remise
-            s&apos;applique sur le devis.
-          </p>
-        </aside>
-
-        <section className="mx-auto mt-20 max-w-3xl">
+        <section className="mx-auto mt-20 max-w-5xl">
           <h2 className="font-display text-3xl font-bold">Les options à la carte</h2>
           <p className="mt-2 text-muted">
             Prix HT. Les emotes sont créées dans le style défini ensemble ; les illustrations complexes font l&apos;objet
             d&apos;un devis adapté.
           </p>
-          <ul className="mt-6 divide-y divide-border rounded-2xl border border-border bg-surface">
-            {options.map((o) => (
-              <li key={o.id} className="flex items-center justify-between gap-4 p-5">
-                <span>{o.name}</span>
-                <span className="shrink-0 text-right font-semibold">{formatOfferPrice(o)}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {optionCategories.map((c) => {
+              const list = options.filter((o) => optionCategory(o) === c.id);
+              if (!list.length) return null;
+              return (
+                <div key={c.id} className="rounded-2xl border border-border bg-surface p-5">
+                  <h3 className="font-display text-lg font-bold">{c.label}</h3>
+                  <p className="text-xs text-muted">{c.hint}</p>
+                  <ul className="mt-4 space-y-3">
+                    {list.map((o) => (
+                      <li key={o.id} className="flex items-baseline justify-between gap-4 text-sm">
+                        <span>{o.name}</span>
+                        <span className="shrink-0 text-right font-semibold">{formatOfferPrice(o)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
           <p className="mt-4 text-sm text-muted">
             Livraison des visuels prêts à utiliser, avec fond transparent lorsque nécessaire. L&apos;installation dans
             OBS peut être chiffrée séparément. Les options se cochent dans ton brief après la commande, ou dans ta

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { defaultSettings, options, packs } from "@/data/packs";
-import { amountToPay, depositAmount, orderPrice } from "./pricing";
+import { amountToPay, depositAmount, optionCategory, orderPrice } from "./pricing";
 import { quote } from "./orders";
 
 const catalog = { settings: defaultSettings, packs, options };
@@ -36,4 +36,14 @@ test("helpers purs", () => {
   assert.equal(depositAmount(99000, defaultSettings), 29700);
   assert.equal(orderPrice(10000, true, defaultSettings), 0);
   assert.equal(amountToPay(49000, "total", defaultSettings), 49000);
+});
+
+test("catégories des options à la carte", () => {
+  const cat = (name: string) => optionCategory({ name });
+  assert.equal(cat("Overlay fixe supplémentaire"), "overlays");
+  assert.equal(cat("Animation légère d'un overlay existant"), "motion");
+  assert.equal(cat("Emote animée"), "emotes");
+  assert.equal(cat("Pack de 5 emotes statiques"), "emotes");
+  assert.equal(cat("Bannière pour une plateforme supplémentaire"), "branding");
+  assert.equal(cat("Animation du logo"), "motion");
 });
