@@ -6,6 +6,7 @@ import { defaultFinance, type FinanceSettings } from "@/lib/finance";
 import type { Catalog } from "@/lib/pricing";
 import { defaultProtection, type ProtectionSettings } from "@/lib/protection";
 import { assertNotProduction } from "@/lib/env";
+import type { StoredTexts } from "@/lib/case-study-texts";
 import { staticCatalog, staticPortfolio } from "./static";
 import type { Deliverable, Invoice, Order, Portfolio, Store } from "./types";
 
@@ -17,6 +18,7 @@ type Data = Catalog & Portfolio & {
   deliverables?: Deliverable[];
   finance?: FinanceSettings;
   protection?: ProtectionSettings;
+  caseStudyTexts?: Record<string, StoredTexts>;
 };
 
 const FILE = path.join(process.cwd(), ".data", "dev-store.json");
@@ -100,6 +102,13 @@ export const localStore: Store = {
     mutate((d) => {
       const rank = (id: string) => (ids.includes(id) ? ids.indexOf(id) : ids.length);
       d.streamers = [...d.streamers].sort((a, b) => rank(a.id) - rank(b.id));
+    }),
+  getCaseStudyTexts: async (id) => (await load()).caseStudyTexts?.[id] ?? null,
+  saveCaseStudyTexts: (id, texts) =>
+    mutate((d) => {
+      d.caseStudyTexts = { ...d.caseStudyTexts };
+      if (texts) d.caseStudyTexts[id] = texts;
+      else delete d.caseStudyTexts[id];
     }),
   reorderWorks: (ids) =>
     mutate((d) => {

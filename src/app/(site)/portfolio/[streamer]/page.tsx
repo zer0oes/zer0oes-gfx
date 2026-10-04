@@ -6,6 +6,7 @@ import { EditorialView } from "@/components/EditorialView";
 import { WorkGrid } from "@/components/WorkGrid";
 import { caseStudies } from "@/data/case-studies";
 import { categories, projectHref, type Category } from "@/data/portfolio";
+import { withStoredTexts } from "@/lib/case-study-texts";
 import { getStore } from "@/lib/store";
 
 export async function generateStaticParams() {
@@ -28,7 +29,9 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
   if (!streamer) notFound();
 
   const own = works.filter((w) => w.streamer === streamer.id);
-  const study = caseStudies[streamer.id];
+  const base = caseStudies[streamer.id];
+  // Textes modifiés dans l'admin, appliqués sur la mise en page du code
+  const study = base && "layout" in base ? withStoredTexts(base, await getStore().getCaseStudyTexts(streamer.id)) : base;
   if (study) {
     return (
       <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6">

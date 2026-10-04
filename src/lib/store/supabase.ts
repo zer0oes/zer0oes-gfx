@@ -423,6 +423,17 @@ export const supabaseStore: Store = {
     await Promise.all(ids.map(async (id, position) => check(await db().from("streamers").update({ position }).eq("id", id))));
   },
 
+  async getCaseStudyTexts(id) {
+    // Tolérant : avant la migration 0900, la colonne n'existe pas encore (textes d'origine).
+    const { data, error } = await db().from("streamers").select("case_study").eq("id", id).maybeSingle();
+    if (error) return null;
+    return (data as Row | null)?.case_study ?? null;
+  },
+
+  async saveCaseStudyTexts(id, texts) {
+    check(await db().from("streamers").update({ case_study: texts }).eq("id", id));
+  },
+
   async reorderWorks(ids) {
     await Promise.all(ids.map(async (id, position) => check(await db().from("works").update({ position }).eq("id", id))));
   },

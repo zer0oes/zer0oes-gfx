@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { caseStudies } from "@/data/case-studies";
 import { categories } from "@/data/portfolio";
 import { getStore } from "@/lib/store";
 import { deleteStreamerAction, moveStreamerAction, moveWorkAction, saveStreamerAction } from "../../portfolio-actions";
@@ -12,6 +13,7 @@ const card = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
 export default async function AdminPortfolioPage({ searchParams }: PageProps<"/admin/portfolio">) {
   const { enregistre, erreur } = await searchParams;
   const { streamers, works } = await getStore().getPortfolio();
+  const editable = new Set(Object.entries(caseStudies).filter(([, c]) => "layout" in c).map(([id]) => id));
 
   return (
     <>
@@ -103,9 +105,16 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps<"/a
               </div>
 
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap gap-2">
                 <Link href={`/admin/portfolio/nouveau?streamer=${s.id}`} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background hover:brightness-110">
                   + Ajouter une réalisation
                 </Link>
+                {editable.has(s.id) && (
+                  <Link href={`/admin/portfolio/textes/${s.id}`} className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">
+                    Textes de la page projet
+                  </Link>
+                )}
+                </div>
                 <form action={deleteStreamerAction} className="flex items-center gap-2 text-xs text-muted">
                   <input type="hidden" name="id" value={s.id} />
                   <label className="flex items-center gap-1">

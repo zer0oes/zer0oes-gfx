@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { caseStudies } from "@/data/case-studies";
 import type { Emote, Work } from "@/data/portfolio";
 import { requireAdmin } from "@/lib/auth";
+import { textsFromForm } from "@/lib/case-study-texts";
 import { getStore } from "@/lib/store";
 import { checkUpload, sniffType, storagePath, type MediaKind } from "@/lib/uploads";
 import { watermarkImage } from "@/lib/watermark";
@@ -215,4 +217,21 @@ export async function finalizeUpload(input: { path: string; kind: MediaKind; pub
   if (!wm) return { url: input.publicUrl };
   const url = await store.uploadAsset(input.path.replace(/\.[a-z0-9]+$/, ".webp"), wm.data, wm.type);
   return { url };
+}
+
+// --- Textes des pages projet ------------------------------------------------------
+
+export async function saveCaseStudyTextsAction(formData: FormData) {
+  await requireAdmin();
+  const id = text(formData, "streamer", 60);
+  const study = caseStudies[id];
+  const back = `/admin/portfolio/textes/${id}`;
+  if (!study || !("layout" in study)) done("/admin/portfolio", "Ce projet n'a pas de page à textes modifiables.");
+  if (formData.get("reset") === "1") {
+    if (formData.get("confirm") !== "on") done(back, "Coche la case de confirmation.");
+    await getStore().saveCaseStudyTexts(id, null);
+    done(back);
+  }
+  await getStore().saveCaseStudyTexts(id, textsFromForm(study, (path) => formData.get(`t:${path}`)?.toString()));
+  done(back);
 }

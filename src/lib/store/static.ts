@@ -39,6 +39,8 @@ export const staticStore: Store = {
   deleteWork: readOnly,
   reorderWorks: readOnly,
   reorderStreamers: readOnly,
+  getCaseStudyTexts: async () => null,
+  saveCaseStudyTexts: readOnly,
   uploadAsset: readOnly,
   recordPaidOrder: readOnly,
   getOrder: async () => null,

@@ -1,4 +1,5 @@
 import type { Streamer, Work } from "@/data/portfolio";
+import type { StoredTexts } from "@/lib/case-study-texts";
 import type { FinanceSettings } from "@/lib/finance";
 import type { Catalog, Option, Pack, PaymentType, PricingSettings } from "@/lib/pricing";
 import type { ProtectionSettings } from "@/lib/protection";
@@ -169,6 +170,9 @@ export interface Store {
   deleteWork(id: string): Promise<void>;
   reorderWorks(orderedIds: string[]): Promise<void>;
   reorderStreamers(orderedIds: string[]): Promise<void>;
+  // Textes des pages projet saisis dans l'admin (null : textes d'origine)
+  getCaseStudyTexts(streamerId: string): Promise<unknown>;
+  saveCaseStudyTexts(streamerId: string, texts: StoredTexts | null): Promise<void>;
   // Upload signé (Supabase) : le navigateur envoie le fichier directement au stockage.
   createSignedUpload?(path: string): Promise<{ token: string; publicUrl: string }>;
   downloadAsset?(path: string): Promise<Uint8Array>;
