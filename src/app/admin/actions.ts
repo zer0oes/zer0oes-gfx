@@ -118,3 +118,25 @@ export async function retryInvoiceAction(formData: FormData) {
   await retryInvoice(id);
   revalidatePath(`/admin/commandes/${orderId}`);
 }
+
+// Changement de statut de plusieurs commandes d'un coup (liste des commandes)
+export async function bulkUpdateStatus(formData: FormData) {
+  await requireAdmin();
+  const status = formData.get("status");
+  const ids = formData.getAll("ids").map((v) => v.toString().slice(0, 60)).filter(Boolean).slice(0, 200);
+  const raw = formData.get("back")?.toString() ?? "";
+  const back = raw.startsWith("/admin/commandes") && !raw.startsWith("//") ? raw : "/admin/commandes";
+  const sep = back.includes("?") ? "&" : "?";
+  if (!isOrderStatus(status)) redirect(`${back}${sep}erreur=${encodeURIComponent("Choisis un statut.")}`);
+  if (!ids.length) redirect(`${back}${sep}erreur=${encodeURIComponent("Sélectionne au moins une commande.")}`);
+  const store = getStore();
+  let n = 0;
+  for (const id of ids) {
+    if (await store.getOrder(id)) {
+      await store.updateOrder(id, { status });
+      n++;
+    }
+  }
+  revalidatePath("/admin/commandes");
+  redirect(`${back}${sep}maj=${n}`);
+}
