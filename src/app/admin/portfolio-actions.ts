@@ -7,7 +7,7 @@ import type { Emote, Work } from "@/data/portfolio";
 import { requireAdmin } from "@/lib/auth";
 import { textsFromForm } from "@/lib/case-study-texts";
 import { homeFromForm } from "@/lib/home-content";
-import { s3Configured, s3SignedUpload } from "@/lib/s3";
+import { s3Configured, s3Delete, s3SignedUpload } from "@/lib/s3";
 import { getStore } from "@/lib/store";
 import { checkUpload, sniffType, storagePath, type MediaKind } from "@/lib/uploads";
 import { watermarkImage } from "@/lib/watermark";
@@ -231,7 +231,10 @@ export async function finalizeUpload(input: { path: string; kind: MediaKind; pub
   if (error) return { url: "", error };
   const wm = await watermarkImage(bytes, (await store.getProtection()).watermark, input.kind);
   if (!wm) return { url: input.publicUrl };
-  const url = await store.uploadAsset(input.path.replace(/\.[a-z0-9]+$/, ".webp"), wm.data, wm.type);
+  const marked = input.path.replace(/\.[a-z0-9]+$/, ".webp");
+  const url = await store.uploadAsset(marked, wm.data, wm.type);
+  // L'original sans filigrane ne doit pas rester accessible publiquement
+  if (marked !== input.path && s3Configured()) await s3Delete(input.path).catch((e) => console.error(e));
   return { url };
 }
 
