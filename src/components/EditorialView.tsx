@@ -49,26 +49,29 @@ export function EditorialView({ study, works, streamerName }: { study: Editorial
 
   return (
     <>
-      <header className="mt-8 grid gap-8 lg:grid-cols-12 lg:items-end">
-        <div className="lg:col-span-7">
-          <p className={kickerClass}>{study.eyebrow}</p>
-          <h1 className="mt-4 font-display text-5xl font-bold leading-[1.05] sm:text-7xl">
-            {study.headline[0]}
-            <br />
-            <span className="text-accent">{study.headline[1]}</span>
-          </h1>
-        </div>
-        <div className="lg:col-span-5 lg:pb-3">
-          <p className="text-lg text-muted">{study.intro}</p>
-          <p className="mt-4 text-sm text-muted" aria-label="Ce que comprend le projet">
-            {study.tags.join(" / ")}
-          </p>
-          {headerLogo && (
-            <figure className="mt-6 max-w-sm">
-              <Media work={headerLogo} onOpen={() => openWork(headerLogo)} sizes="384px" />
-              <figcaption className="mt-2 text-sm text-muted">{study.headerLogo?.caption}</figcaption>
-            </figure>
-          )}
+      {/* Titre et présentation alignés en haut : l'asymétrie vient des largeurs de colonnes */}
+      <header className="mt-8">
+        <p className={kickerClass}>{study.eyebrow}</p>
+        <div className="mt-4 grid gap-8 lg:grid-cols-12 lg:items-start">
+          <div className="lg:col-span-7">
+            <h1 className="font-display text-5xl font-bold leading-[1.05] sm:text-7xl">
+              {study.headline[0]}
+              <br />
+              <span className="text-accent">{study.headline[1]}</span>
+            </h1>
+          </div>
+          <div className="lg:col-span-5 lg:pt-3">
+            <p className="text-lg text-muted">{study.intro}</p>
+            <p className="mt-4 text-sm text-muted" aria-label="Ce que comprend le projet">
+              {study.tags.join(" / ")}
+            </p>
+            {headerLogo && (
+              <figure className="mt-6 max-w-sm">
+                <Media work={headerLogo} onOpen={() => openWork(headerLogo)} sizes="384px" />
+                <figcaption className="mt-2 text-sm text-muted">{study.headerLogo?.caption}</figcaption>
+              </figure>
+            )}
+          </div>
         </div>
       </header>
 
