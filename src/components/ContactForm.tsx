@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { sendContact } from "@/app/actions";
-import { budgets, identityLevels, MAX_REFERENCES, platforms, providedAssets, requestTypes, styles } from "@/lib/contact-form";
+import { budgets, identityLevels, MAX_REFERENCES, platforms, providedAssets, referralSources, requestTypes, styles } from "@/lib/contact-form";
 import { Field, FormStatus, OptionsField, inputClass } from "./ui";
 
 // Choix rapides en pastilles (cases à cocher ou boutons radio stylés)
@@ -53,7 +53,7 @@ export function ContactForm({
       {/* Pot de miel anti-spam, invisible pour les humains */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
 
-      <Section step="01" title="Toi">
+      <Section step="01" title="Ton projet">
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Nom ou pseudo *">
             <input name="name" required autoComplete="nickname" className={inputClass} />
@@ -65,9 +65,6 @@ export function ContactForm({
         <Field label="Lien de ta chaîne">
           <input name="channel" type="url" placeholder="https://twitch.tv/…" className={inputClass} />
         </Field>
-      </Section>
-
-      <Section step="02" title="Ton projet">
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Type de demande">
             <select name="type" className={inputClass} defaultValue={defaultType}>
@@ -85,32 +82,39 @@ export function ContactForm({
             </select>
           </Field>
         </div>
-        <Chips legend="Plateforme(s) concernée(s)" name="platforms" choices={platforms} />
+        <Chips legend="Plateforme(s)" name="platforms" choices={platforms} />
         <Field label="Date souhaitée / deadline">
-          <input name="deadline" placeholder="Ex. avant le 15 novembre, pour mon anniversaire de chaîne…" maxLength={100} className={inputClass} />
+          <input name="deadline" placeholder="Ex. avant le 15 novembre, pour l'anniversaire de ma chaîne…" maxLength={100} className={inputClass} />
         </Field>
       </Section>
 
-      <Section step="03" title="Ton univers">
+      <Section step="02" title="Ton univers visuel">
         <Chips legend="As-tu déjà une identité visuelle ?" name="identity" choices={identityLevels} type="radio" />
-        <Chips legend="As-tu déjà des éléments à fournir ?" name="assets" choices={providedAssets} />
         <Chips legend="Style recherché" name="style" choices={styles} hint="Plusieurs choix possibles." />
         <Field label="Autre style (facultatif)">
           <input name="styleOther" placeholder="Ex. cyberpunk pastel, cosy, horreur…" maxLength={200} className={inputClass} />
         </Field>
-        <fieldset>
-          <legend className="mb-1.5 block text-sm font-medium">Références / inspirations</legend>
-          <p className="-mt-0.5 mb-2 text-xs text-muted">Jusqu&apos;à {MAX_REFERENCES} liens : chaînes, Pinterest, Behance, images…</p>
-          <div className="space-y-2">
-            {Array.from({ length: MAX_REFERENCES }, (_, i) => (
-              <input key={i} name="references" type="url" placeholder="https://…" aria-label={`Référence ${i + 1}`} className={inputClass} />
-            ))}
-          </div>
-        </fieldset>
+        <Field label="Couleurs à privilégier / éviter (facultatif)">
+          <input name="colors" placeholder="Ex. violet et bleu nuit, pas de jaune" maxLength={300} className={inputClass} />
+        </Field>
+        <Field label="Liens d'inspiration" hint={`Un lien par ligne, ${MAX_REFERENCES} maximum : chaînes, Pinterest, Behance, images…`}>
+          <textarea name="references" rows={3} placeholder={"https://…\nhttps://…"} className={inputClass} />
+        </Field>
       </Section>
 
-      {optionChoices.length > 0 && (
-        <section className="border-t border-border pt-6">
+      <Section step="03" title="Ce que tu as déjà">
+        <Chips legend="Éléments disponibles" name="assets" choices={providedAssets} />
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" name="filesLater" value="1" className="mt-0.5 accent-[var(--accent)]" />
+          <span>
+            Je pourrai envoyer mes fichiers après la prise de contact
+            <span className="block text-xs text-muted">Pas besoin de les joindre maintenant : on s&apos;organise ensemble ensuite.</span>
+          </span>
+        </label>
+      </Section>
+
+      <Section step="04" title="Besoin précis">
+        {optionChoices.length > 0 && (
           <details className="group rounded-xl border border-border bg-background/40 px-4 py-3">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm [&::-webkit-details-marker]:hidden">
               <span>
@@ -124,30 +128,37 @@ export function ContactForm({
               <OptionsField legend="Ce qui pourrait s'ajouter à ton projet" options={optionChoices} />
             </div>
           </details>
-        </section>
-      )}
-
-      <Section step="04" title="Parle-moi de ton projet">
-        <Field label="Ton projet *">
+        )}
+        <label className="block">
+          <span className="mb-1.5 block font-display text-lg font-bold">Dis-moi ce que tu as en tête *</span>
           <textarea
             name="message"
             required
             minLength={10}
-            rows={8}
-            placeholder="Ce dont tu as besoin, l'ambiance de ta chaîne, ce que tu aimes (ou pas)…"
+            rows={9}
+            placeholder="Décris-moi ce que tu imagines, l'ambiance recherchée, les éléments indispensables et tout ce qui peut m'aider à comprendre ton projet."
             className={inputClass}
           />
-        </Field>
+        </label>
       </Section>
 
+      <div className="border-t border-border pt-6">
+        <Chips legend="Comment m'as-tu trouvée ?" name="referral" choices={referralSources} type="radio" />
+      </div>
+
       <FormStatus state={state} />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110 disabled:opacity-60"
-      >
-        {pending ? "Envoi…" : "Envoyer ma demande"}
-      </button>
+      <div>
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110 disabled:opacity-60"
+        >
+          {pending ? "Envoi…" : "Envoyer"}
+        </button>
+        <p className="mt-3 text-sm text-muted">
+          Réponse sous 48 h ouvrées. Je reviendrai vers toi avec une première estimation ou quelques questions si besoin.
+        </p>
+      </div>
     </form>
   );
 }
