@@ -13,6 +13,7 @@ export function Footer() {
         <nav className="flex flex-col gap-2 text-sm text-muted" aria-label="Pied de page">
           <Link href="/portfolio" className="hover:text-foreground">Portfolio</Link>
           <Link href="/offres" className="hover:text-foreground">Offres</Link>
+          <Link href="/a-propos" className="hover:text-foreground">À propos</Link>
           <Link href="/contact" className="hover:text-foreground">Sur-mesure & contact</Link>
           <Link href="/mentions-legales" className="hover:text-foreground">Mentions légales</Link>
           <Link href="/cgv" className="hover:text-foreground">CGV</Link>

@@ -8,6 +8,7 @@ import { useState } from "react";
 const links = [
   { href: "/portfolio", label: "Portfolio" },
   { href: "/offres", label: "Offres" },
+  { href: "/a-propos", label: "À propos" },
 ];
 
 export function Header() {

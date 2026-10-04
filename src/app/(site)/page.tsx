@@ -225,6 +225,9 @@ export default async function Home() {
                 {t}
               </p>
             ))}
+            <Link href="/a-propos" className="mt-6 inline-block text-sm text-accent hover:underline">
+              En savoir plus sur moi →
+            </Link>
           </div>
         </div>
       </section>
