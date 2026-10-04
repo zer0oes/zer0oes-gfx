@@ -6,6 +6,7 @@ import { caseStudies } from "@/data/case-studies";
 import type { Emote, Work } from "@/data/portfolio";
 import { requireAdmin } from "@/lib/auth";
 import { textsFromForm } from "@/lib/case-study-texts";
+import { homeFromForm } from "@/lib/home-content";
 import { getStore } from "@/lib/store";
 import { checkUpload, sniffType, storagePath, type MediaKind } from "@/lib/uploads";
 import { watermarkImage } from "@/lib/watermark";
@@ -242,4 +243,17 @@ export async function saveCaseStudyTextsAction(formData: FormData) {
   }
   await getStore().saveCaseStudyTexts(id, textsFromForm(study, (path) => formData.get(`t:${path}`)?.toString()));
   done(back);
+}
+
+// --- Page d'accueil -----------------------------------------------------------------
+
+export async function saveHomeAction(formData: FormData) {
+  await requireAdmin();
+  if (formData.get("reset") === "1") {
+    if (formData.get("confirm") !== "on") done("/admin/accueil", "Coche la case de confirmation.");
+    await getStore().saveHomeContent(null);
+    done("/admin/accueil");
+  }
+  await getStore().saveHomeContent(homeFromForm((key) => formData.get(`h:${key}`)?.toString()));
+  done("/admin/accueil");
 }

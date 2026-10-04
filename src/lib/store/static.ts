@@ -41,6 +41,8 @@ export const staticStore: Store = {
   reorderStreamers: readOnly,
   getCaseStudyTexts: async () => null,
   saveCaseStudyTexts: readOnly,
+  getHomeContent: async () => null,
+  saveHomeContent: readOnly,
   uploadAsset: readOnly,
   recordPaidOrder: readOnly,
   getOrder: async () => null,

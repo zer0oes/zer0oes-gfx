@@ -19,6 +19,7 @@ type Data = Catalog & Portfolio & {
   finance?: FinanceSettings;
   protection?: ProtectionSettings;
   caseStudyTexts?: Record<string, StoredTexts>;
+  home?: Record<string, string>;
 };
 
 const FILE = path.join(process.cwd(), ".data", "dev-store.json");
@@ -110,6 +111,8 @@ export const localStore: Store = {
       if (texts) d.caseStudyTexts[id] = texts;
       else delete d.caseStudyTexts[id];
     }),
+  getHomeContent: async () => (await load()).home ?? null,
+  saveHomeContent: (content) => mutate((d) => void (d.home = content ?? undefined)),
   reorderWorks: (ids) =>
     mutate((d) => {
       const rank = (id: string) => (ids.includes(id) ? ids.indexOf(id) : ids.length);

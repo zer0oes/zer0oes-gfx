@@ -173,6 +173,9 @@ export interface Store {
   // Textes des pages projet saisis dans l'admin (null : textes d'origine)
   getCaseStudyTexts(streamerId: string): Promise<unknown>;
   saveCaseStudyTexts(streamerId: string, texts: StoredTexts | null): Promise<void>;
+  // Page d'accueil saisie dans l'admin (null : contenu d'origine)
+  getHomeContent(): Promise<unknown>;
+  saveHomeContent(content: Record<string, string> | null): Promise<void>;
   // Upload signé (Supabase) : le navigateur envoie le fichier directement au stockage.
   createSignedUpload?(path: string): Promise<{ token: string; publicUrl: string }>;
   downloadAsset?(path: string): Promise<Uint8Array>;

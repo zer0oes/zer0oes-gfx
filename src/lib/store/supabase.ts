@@ -434,6 +434,17 @@ export const supabaseStore: Store = {
     check(await db().from("streamers").update({ case_study: texts }).eq("id", id));
   },
 
+  async getHomeContent() {
+    // Tolérant : avant la migration 1000, la colonne n'existe pas encore (contenu d'origine).
+    const { data, error } = await db().from("settings").select("home").eq("id", 1).maybeSingle();
+    if (error) return null;
+    return (data as Row | null)?.home ?? null;
+  },
+
+  async saveHomeContent(content) {
+    check(await db().from("settings").update({ home: content }).eq("id", 1));
+  },
+
   async reorderWorks(ids) {
     await Promise.all(ids.map(async (id, position) => check(await db().from("works").update({ position }).eq("id", id))));
   },
