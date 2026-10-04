@@ -117,9 +117,11 @@ export type Order = {
   briefReceivedAt?: string;
   notes: OrderNote[];
   refunds?: Refund[];
-  // Lien privé de livraison (/livraison/<jeton>) et date d'envoi au client
+  // Lien privé de l'espace commande (/commande/<jeton>) et date d'envoi de la livraison
   deliveryToken?: string;
   deliveredAt?: string;
+  // Clôture du projet (statut « Terminée ») : point de départ de la conservation des fichiers
+  completedAt?: string;
 };
 
 export type NewOrder = Omit<
@@ -153,7 +155,7 @@ export type OrderPatch = Partial<
     | "deliveryToken"
     | "deliveredAt"
   >
->;
+> & { completedAt?: string | null };
 
 export function balanceDue(o: Pick<Order, "totalPrice" | "amountPaid">) {
   return Math.max(0, o.totalPrice - o.amountPaid);

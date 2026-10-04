@@ -104,7 +104,7 @@ export async function sendDeliveryAction(formData: FormData) {
   if (!items.length) back(orderId, { error: "Ajoute au moins un lien ou un fichier avant d'envoyer." });
 
   const token = order.deliveryToken ?? newDeliveryToken();
-  const url = `${await siteUrl()}/livraison/${token}`;
+  const url = `${await siteUrl()}/commande/${token}`;
   const mail = deliveryEmail({
     offerName: order.offerName,
     url,
@@ -153,4 +153,14 @@ export async function removeDeliverablePreviewAction(formData: FormData) {
   if (!(await getStore().listDeliverables(orderId)).some((d) => d.id === id)) back(orderId, { error: "Élément introuvable." });
   await getStore().updateDeliverable(id, { previewPath: null, previewType: null });
   back(orderId, { ok: "Aperçu retiré." });
+}
+
+// Lien de l'espace commande pour une commande qui n'en a pas encore (commandes antérieures)
+export async function createPortalLinkAction(formData: FormData) {
+  await requireAdmin();
+  const orderId = text(formData, "orderId", 60);
+  const order = await getStore().getOrder(orderId);
+  if (!order) back(orderId, { error: "Commande introuvable." });
+  if (!order.deliveryToken) await getStore().updateOrder(orderId, { deliveryToken: newDeliveryToken() });
+  back(orderId, { ok: "Lien de l'espace commande créé." });
 }

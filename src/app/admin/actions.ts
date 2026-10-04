@@ -7,6 +7,7 @@ import { devLogin, logout, requireAdmin, supabaseAuthClient } from "@/lib/auth";
 import { adminEmails, devLoginAllowed, isAdminEmail, supabaseAuthConfigured } from "@/lib/env";
 import { sendToCustomer } from "@/lib/notify";
 import { createBalanceLink, retryInvoice } from "@/lib/orders";
+import { completionPatch } from "@/lib/portal";
 import { formatPrice } from "@/lib/pricing";
 import { getStore, isOrderStatus } from "@/lib/store";
 
@@ -56,7 +57,10 @@ export async function updateStatus(formData: FormData) {
   const id = formData.get("id")?.toString() ?? "";
   const status = formData.get("status");
   if (!isOrderStatus(status)) return;
-  await getStore().updateOrder(id, { status });
+  const order = await getStore().getOrder(id);
+  if (!order) return;
+  // « Terminée » pose la date de clôture (départ des 90 jours de conservation des fichiers)
+  await getStore().updateOrder(id, { status, ...completionPatch(order, status) });
   revalidatePath(`/admin/commandes/${id}`);
   revalidatePath("/admin/commandes");
 }
@@ -132,8 +136,9 @@ export async function bulkUpdateStatus(formData: FormData) {
   const store = getStore();
   let n = 0;
   for (const id of ids) {
-    if (await store.getOrder(id)) {
-      await store.updateOrder(id, { status });
+    const order = await store.getOrder(id);
+    if (order) {
+      await store.updateOrder(id, { status, ...completionPatch(order, status) });
       n++;
     }
   }

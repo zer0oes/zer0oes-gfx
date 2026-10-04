@@ -46,6 +46,8 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
   // 1. Commande enregistrée (webhook Stripe ou démo)
   let view: View | null = null;
   const order = sessionId ? await store.getOrderBySession(sessionId).catch(() => null) : null;
+  // Espace commande privé : lien créé à l'enregistrement de la commande (webhook ou démo)
+  const portal = order?.deliveryToken ?? null;
   if (order) {
     view = { ...order, payment: order.paymentType, email: order.customerEmail || undefined, paid: true };
   }
@@ -107,6 +109,17 @@ export default async function MerciPage({ searchParams }: PageProps<"/merci">) {
         Pour lancer la création, raconte-moi ta chaîne en quelques minutes.
       </PageHeader>
       <div className="mx-auto max-w-2xl px-4 sm:px-6">
+        {portal && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-accent/50 bg-accent/10 p-4">
+            <p className="text-sm">
+              <strong>Ton espace commande</strong> : suis l&apos;avancement, valide tes aperçus et récupère tes fichiers.
+              <span className="block text-xs text-muted">Garde ce lien pour toi, il est aussi dans tes e-mails.</span>
+            </p>
+            <Link href={`/commande/${portal}`} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background hover:brightness-110">
+              Mon espace commande →
+            </Link>
+          </div>
+        )}
         {view && (
           <p
             className={`mb-6 rounded-lg border px-4 py-3 text-sm ${

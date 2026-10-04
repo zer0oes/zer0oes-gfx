@@ -145,7 +145,7 @@ export const localStore: Store = {
   updateOrder: (id, patch) =>
     mutate((d) => {
       const o = d.orders.find((x) => x.id === id);
-      if (o) Object.assign(o, patch, { updatedAt: new Date().toISOString() });
+      if (o) Object.assign(o, patch, { completedAt: patch.completedAt === null ? undefined : (patch.completedAt ?? o.completedAt) }, { updatedAt: new Date().toISOString() });
     }),
   listDeliverables: async (orderId) => ((await load()).deliverables ?? []).filter((d) => d.orderId === orderId),
   addDeliverable: (item) =>

@@ -23,13 +23,13 @@ async function target(formData: FormData) {
   const { store, order, token } = await orderFor(formData);
   const id = formData.get("id")?.toString().slice(0, 60) ?? "";
   const item = (await store.listDeliverables(order.id)).find((d) => d.id === id);
-  if (!item) redirect(`/livraison/${token}`);
+  if (!item) redirect(`/commande/${token}`);
   return { store, order, item, token };
 }
 
 function back(token: string, id: string, retour: string): never {
-  revalidatePath(`/livraison/${token}`);
-  redirect(`/livraison/${token}?retour=${retour}&f=${id}#f-${id}`);
+  revalidatePath(`/commande/${token}`);
+  redirect(`/commande/${token}?retour=${retour}&f=${id}#f-${id}`);
 }
 
 const who = (o: { offerName: string; customerEmail: string }) => `${o.offerName} (${o.customerEmail || "e-mail inconnu"})`;
@@ -65,13 +65,13 @@ export async function setClientApprovalAction(formData: FormData) {
 // Règlement du solde depuis la page de livraison (paiement Stripe, retour sur la page)
 export async function payBalanceAction(formData: FormData) {
   const { order, token } = await orderFor(formData);
-  if (balanceDue(order) <= 0) redirect(`/livraison/${token}`);
+  if (balanceDue(order) <= 0) redirect(`/commande/${token}`);
   let url: string;
   try {
-    ({ url } = await createBalanceLink(order.id, await siteUrl(), `/livraison/${token}`));
+    ({ url } = await createBalanceLink(order.id, await siteUrl(), `/commande/${token}`));
   } catch (e) {
     console.error(e);
-    redirect(`/livraison/${token}?retour=paiement-erreur#solde`);
+    redirect(`/commande/${token}?retour=paiement-erreur#solde`);
   }
   redirect(url);
 }

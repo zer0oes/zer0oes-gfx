@@ -62,7 +62,7 @@ export function deliveryEmail({ offerName, url, links, files }: { offerName: str
     text: [
       "Bonjour,",
       "",
-      `Ta commande « ${offerName} » est prête ! Tout est réuni sur ta page de livraison${parts.length ? ` (${parts.join(" et ")})` : ""} :`,
+      `Ta commande « ${offerName} » est prête ! Tout est réuni dans ton espace commande${parts.length ? ` (${parts.join(" et ")})` : ""} :`,
       url,
       "",
       "Regarde chaque aperçu, puis valide-le ou demande une modification. Les fichiers HD et liens d'import (StreamElements, Streamlabs, OBS) se débloquent après ta validation et le règlement du solde.",
@@ -136,4 +136,27 @@ export function canCancelApproval(order: { status: string }) {
 export function deliveryProgress(items: { approvedAt?: string }[]) {
   const done = items.filter((d) => d.approvedAt).length;
   return { done, total: items.length, percent: items.length ? Math.round((done / items.length) * 100) : 0, complete: items.length > 0 && done === items.length };
+}
+
+// E-mail de confirmation de commande avec le lien de l'espace commande
+export function portalEmail({ offerName, url }: { offerName: string; url: string }) {
+  return {
+    subject: `Ta commande zer0oes gfx est confirmée — ${offerName}`,
+    text: [
+      "Bonjour,",
+      "",
+      `Merci pour ta commande « ${offerName} » !`,
+      "",
+      "Tu peux suivre ton projet à tout moment depuis ton espace commande privé :",
+      url,
+      "",
+      "Tu y retrouveras les étapes (brief, création, validation, solde, livraison), tes paiements, puis les aperçus à valider et tes fichiers définitifs.",
+      "Garde ce lien pour toi : il donne accès à ta commande, sans mot de passe.",
+      "",
+      "Si ce n'est pas déjà fait, remplis ton brief pour que je puisse commencer.",
+      "",
+      "À très vite,",
+      "Aurore — zer0oes gfx",
+    ].join("\n"),
+  };
 }

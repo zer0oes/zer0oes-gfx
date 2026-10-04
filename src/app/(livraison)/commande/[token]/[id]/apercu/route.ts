@@ -7,7 +7,7 @@ import { applyWatermark } from "@/lib/watermark-core";
 // - image : redimensionnée (1280 px max) et filigranée en mosaïque légère, générée à chaque demande ;
 //   à défaut d'aperçu dédié, elle est tirée du visuel final (jamais servi tel quel) ;
 // - vidéo : l'aperçu basse résolution envoyé par Aurore (lien temporaire de 10 minutes).
-export async function GET(_request: Request, { params }: RouteContext<"/livraison/[token]/[id]/apercu">) {
+export async function GET(_request: Request, { params }: RouteContext<"/commande/[token]/[id]/apercu">) {
   const { token, id } = await params;
   const headers = { "X-Robots-Tag": "noindex", "Cache-Control": "private, no-store" };
   const notFound = () => new Response("Aperçu introuvable", { status: 404, headers });

@@ -1,5 +1,6 @@
 import {
   addDeliveryLinkAction,
+  createPortalLinkAction,
   deleteDeliverableAction,
   removeDeliverablePreviewAction,
   sendDeliveryAction,
@@ -17,7 +18,7 @@ const input = "w-full rounded-lg border border-border bg-background px-3 py-2 te
 // Livraison de la commande : liens d'import StreamElements, fichiers (Streamlabs, visuels,
 // guide), puis envoi au client d'un lien privé vers sa page de livraison.
 export async function DeliverySection({ order, items, message }: { order: Order; items: Deliverable[]; message?: { ok?: string; error?: string } }) {
-  const pageUrl = order.deliveryToken ? `${await siteUrl()}/livraison/${order.deliveryToken}` : null;
+  const pageUrl = order.deliveryToken ? `${await siteUrl()}/commande/${order.deliveryToken}` : null;
   return (
     <section id="livraison" className="scroll-mt-24 rounded-2xl border border-border bg-surface p-5 sm:p-6">
       <h2 className="font-semibold">Livraison</h2>
@@ -25,6 +26,19 @@ export async function DeliverySection({ order, items, message }: { order: Order;
         Liens d&apos;import StreamElements et fichiers (Streamlabs, visuels, guide). Le client les retrouve sur une page privée, sans compte :
         il voit d&apos;abord un aperçu protégé, puis le fichier final (ou le lien d&apos;import) une fois l&apos;élément validé et le solde réglé.
       </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm">
+        <span className="text-muted">Espace commande du client :</span>
+        {pageUrl ? (
+          <a href={pageUrl} target="_blank" rel="noopener noreferrer" className="break-all text-accent hover:underline">
+            {pageUrl} ↗
+          </a>
+        ) : (
+          <form action={createPortalLinkAction}>
+            <input type="hidden" name="orderId" value={order.id} />
+            <button className="rounded-full border border-border px-3 py-1 text-xs hover:border-accent">Créer le lien</button>
+          </form>
+        )}
+      </div>
       {message?.error && (
         <p role="alert" className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
           {message.error}

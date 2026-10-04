@@ -3,7 +3,9 @@ import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { abbyConfigured, createAbbyApi } from "@/lib/abby";
 import { invoicePayment, type InvoiceDeps, type PaymentInput } from "@/lib/invoicing";
+import { newDeliveryToken, portalEmail } from "@/lib/delivery";
 import { notify, sendToCustomer } from "@/lib/notify";
+import { siteUrl } from "@/lib/site-url";
 import {
   amountToPay,
   formatPrice,
@@ -217,6 +219,17 @@ async function realStripeFee(sessionId: string): Promise<number | undefined> {
 // Appelé pour checkout.session.completed et checkout.session.async_payment_succeeded :
 // rien n'est marqué payé tant que payment_status n'est pas « paid » (moyens de
 // paiement différés : virement, PayPal selon les cas…).
+// Espace commande du client : lien privé créé à l'enregistrement de la commande et envoyé par
+// e-mail une seule fois (un webhook rejoué trouve le lien existant et n'envoie rien).
+async function openPortal(order: Order) {
+  if (order.deliveryToken) return;
+  const token = newDeliveryToken();
+  await getStore().updateOrder(order.id, { deliveryToken: token });
+  if (!order.customerEmail) return;
+  const mail = portalEmail({ offerName: order.offerName, url: `${await siteUrl()}/commande/${token}` });
+  await sendToCustomer({ to: order.customerEmail, subject: mail.subject, text: mail.text }).catch((e) => console.error(e));
+}
+
 export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
   if (s.payment_status !== "paid") return;
   const store = getStore();
@@ -238,6 +251,7 @@ export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
       paymentIntentId: paymentIntentId(s),
       feesPaid: fee,
     });
+    await openPortal(order);
     // Une facture par paiement (clé = payment_intent : un webhook rejoué ne crée pas de doublon)
     await invoiceForPayment(order.id, {
       key: paymentIntentId(s) ?? s.id,
@@ -312,6 +326,7 @@ export async function recordDemoOrder(q: CheckoutQuote) {
   const store = getStore();
   if (store.kind !== "static") {
     const order = await store.recordPaidOrder(newOrderFrom(q, { sessionId, demo: true }));
+    await openPortal(order);
     await invoiceForPayment(order.id, {
       key: sessionId,
       kind: q.payment === "acompte" ? "acompte" : "complete",
