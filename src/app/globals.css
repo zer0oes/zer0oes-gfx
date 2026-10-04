@@ -22,7 +22,7 @@
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
   --color-accent-3: var(--accent-3);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-body);
   --font-display: var(--font-display);
 }
 

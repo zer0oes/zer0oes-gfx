@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Lexend } from "next/font/google";
+import { Lexend, Poppins } from "next/font/google";
 import { site } from "@/data/site";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Texte courant (choix d'Aurore) : graisses utilisées par le site, normale à grasse
+const body = Poppins({
+  variable: "--font-body",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 // Titres, prix et numéros (choix d'Aurore)
@@ -31,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="fr"
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${display.variable} h-full antialiased`}
+      className={`${body.variable} ${display.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
