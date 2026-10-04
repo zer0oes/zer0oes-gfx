@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Space_Grotesk } from "next/font/google";
+import { Geist, Lexend } from "next/font/google";
 import { site } from "@/data/site";
 import "./globals.css";
 
@@ -8,7 +8,8 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const display = Space_Grotesk({
+// Titres, prix et numéros (choix d'Aurore)
+const display = Lexend({
   variable: "--font-display",
   subsets: ["latin"],
 });
