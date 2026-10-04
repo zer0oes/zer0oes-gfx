@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { parseContact } from "@/lib/contact-form";
 import { notify } from "@/lib/notify";
 import { attachBrief, paymentSummary, quote, quoteMetadata, recordDemoOrder } from "@/lib/orders";
 import { getPack, logoDiscountLabel, paymentLabel } from "@/lib/pricing";
@@ -112,29 +113,18 @@ export async function sendContact(
 ): Promise<FormState> {
   if (field(formData, "website")) return { ok: true, message: "Merci !" }; // pot de miel anti-spam
 
-  const name = field(formData, "name", 200);
-  const email = field(formData, "email", 200);
-  const message = field(formData, "message");
-  if (!name || !EMAIL_RE.test(email) || message.length < 10) {
-    return {
-      ok: false,
-      message: "Merci d'indiquer ton nom, un e-mail valide et un message (10 caractères minimum).",
-    };
-  }
+  const parsed = parseContact(
+    (k) => formData.get(k)?.toString() ?? "",
+    (k) => formData.getAll(k).map((v) => v.toString()),
+  );
+  if (!parsed.ok) return parsed;
+  const { request } = parsed;
 
   try {
     await notify({
-      subject: `[Contact] ${field(formData, "type", 100) || "Demande"} — ${name}`,
-      replyTo: email,
-      fields: {
-        Nom: name,
-        "E-mail": email,
-        Chaîne: field(formData, "channel", 300),
-        "Type de demande": field(formData, "type", 100),
-        Budget: field(formData, "budget", 100),
-        Options: checked(formData, "options"),
-        Message: message,
-      },
+      subject: `[Contact] ${request.type} — ${request.name}`,
+      replyTo: request.email,
+      fields: request.fields,
     });
   } catch (e) {
     console.error(e);
