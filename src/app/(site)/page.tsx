@@ -130,7 +130,7 @@ export default async function Home() {
         )}
 
         {universe && (
-          <div className="mt-24 grid items-center gap-8 lg:grid-cols-12">
+          <div className="mt-16 grid items-center gap-8 lg:grid-cols-12">
             <div className="lg:col-span-7">
               <Showcase work={universe} href={projectHref(universe.streamer)} sizes="(min-width: 1024px) 660px, 100vw" />
             </div>
@@ -150,7 +150,7 @@ export default async function Home() {
         )}
 
         {signature && (
-          <div className="mt-24 grid items-center gap-8 lg:grid-cols-12">
+          <div className="mt-16 grid items-center gap-8 lg:grid-cols-12">
             <div className="order-2 lg:order-1 lg:col-span-5">
               <p className={kickerClass}>Logo · {streamerNames[signature.streamer]}</p>
               <h2 className={titleClass}>
@@ -169,7 +169,7 @@ export default async function Home() {
         )}
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <section className="mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-6 sm:pt-36">
         <div className="grid items-center gap-10 lg:grid-cols-12">
           {portrait?.image && (
             <ProtectedMedia className="mx-auto w-56 overflow-hidden rounded-full sm:w-72 lg:col-span-4 lg:w-full">
@@ -207,13 +207,16 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="flex items-end justify-between gap-4">
-          <h2 className="font-display text-3xl font-bold">Les offres</h2>
-          <Link href="/offres" className="text-sm text-accent hover:underline">Détail des offres →</Link>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className={kickerClass}>Les offres</p>
+            <h2 className={titleClass}>Trois façons de commencer.</h2>
+          </div>
+          <Link href="/offres" className="text-sm text-accent hover:underline">Options et détail des offres →</Link>
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {packs.map((p) => (
-            <PackCard key={p.id} pack={p} settings={settings} />
+            <PackCard key={p.id} pack={p} settings={settings} compact />
           ))}
         </div>
       </section>
