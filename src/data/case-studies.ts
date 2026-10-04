@@ -80,7 +80,7 @@ export const caseStudies: Record<string, CaseStudy | EditorialStudy> = {
         type: "detail",
         kicker: "Le live en détail",
         title: ["Une communauté", "au cœur du décor."],
-        main: { id: "tomavega-tchat", caption: "Le tchat, dans l'habillage de la chaîne.", image: "/portfolio/tomavega-tchat-haut.webp", aspect: "aspect-[4/5]" },
+        main: { id: "tomavega-tchat", caption: "Le tchat, dans l'habillage de la chaîne.", image: "/portfolio/tomavega-tchat-obs-haut.webp", aspect: "aspect-[4/5]" },
         sideTitle: ["Chaque événement", "a son éclat."],
         side: { id: "tomavega-alertes", caption: "Les alertes électriques." },
         small: [{ id: "tomavega-musique", label: "Le panneau « Le son »." , image: "/portfolio/tomavega-musique-bandeau.webp", aspect: "aspect-[10/3]" }],
