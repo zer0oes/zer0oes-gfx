@@ -33,7 +33,8 @@ export function PackCard({
 
   return (
     <div
-      className={`relative flex flex-col rounded-2xl border p-6 ${
+      id={order ? `offre-${pack.id}` : undefined}
+      className={`relative flex scroll-mt-28 flex-col rounded-2xl border p-6 ${
         pack.highlight
           ? "border-accent bg-surface-2 shadow-[0_0_40px_-12px_var(--accent)]"
           : quote
@@ -83,12 +84,16 @@ export function PackCard({
       {!compact && <div className="flex-1" />}
 
       {!order ? (
-        <Link
-          href="/offres"
-          className={`${compact ? "mt-auto pt-6" : "mt-8"} block rounded-full border border-border px-5 py-3 text-center font-semibold transition hover:border-accent`}
-        >
-          Voir le détail
-        </Link>
+        <div className={compact ? "mt-auto pt-6" : "mt-8"}>
+          <Link
+            href={`/offres#offre-${pack.id}`}
+            className={`block rounded-full px-5 py-3 text-center font-semibold transition ${
+              pack.highlight || quote ? "bg-accent text-background hover:brightness-110" : "border border-border hover:border-accent"
+            }`}
+          >
+            {quote ? "Découvrir l'offre" : "Voir le détail"}
+          </Link>
+        </div>
       ) : pack.checkout ? (
         <OrderForm pack={pack} settings={settings} buttonClass={buttonClass} />
       ) : (
