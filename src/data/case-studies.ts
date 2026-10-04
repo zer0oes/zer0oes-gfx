@@ -3,7 +3,8 @@
 // celles qui ne sont citées nulle part apparaissent dans « Les autres pièces du projet ».
 
 // Pièce citée avec un titre court (ex. « Pause ») au lieu de son titre complet
-export type CasePiece = { id: string; label: string };
+// image / aspect : visuel recadré pour la mise en page (ex. tchat en hauteur), la visionneuse garde l'original
+export type CasePiece = { id: string; label: string; image?: string; aspect?: string };
 
 export type CaseSection = {
   kicker: string; // ex. « La signature » (numéroté automatiquement)
@@ -40,13 +41,13 @@ export type EditorialBlock =
       type: "detail";
       kicker: string;
       title: string[];
-      main: { id: string; caption: string };
+      main: { id: string; caption: string; image?: string; aspect?: string };
       sideTitle: string[];
       side: { id: string; caption: string };
       small: CasePiece[];
     }
   | { type: "emotes"; kicker: string; title: string[]; text: string; work: string }
-  | { type: "beyond"; kicker: string; title: string[]; text: string; main: string; extra?: CasePiece[] };
+  | { type: "beyond"; kicker: string; title: string[]; text: string; main: string; extra?: CasePiece[]; wide?: boolean };
 
 export type EditorialStudy = {
   layout: "editorial";
@@ -56,6 +57,8 @@ export type EditorialStudy = {
   tags: string[];
   hero: string;
   heroCaption: string;
+  // Logo présenté dans l'en-tête, juste au-dessus de la scène d'ouverture
+  headerLogo?: { id: string; caption: string };
   blocks: EditorialBlock[];
   cta: { kicker: string; title: string[] };
   cover: string;
@@ -64,46 +67,34 @@ export type EditorialStudy = {
 
 export const caseStudies: Record<string, CaseStudy | EditorialStudy> = {
   tomavega: {
-    eyebrow: "Identité de stream · TomaVega",
-    headline: ["Un univers électrique.", "Une chaîne reconnaissable."],
-    intro:
-      "Une identité sur fond minéral, traversée de néons verts et violets. Du logo aux alertes, chaque élément parle le même langage.",
+    layout: "editorial",
+    eyebrow: "Identité de stream / TomaVega",
+    headline: ["Un univers", "électrique."],
+    intro: "Une identité sur fond minéral, traversée de néons verts et violets. Du logo aux alertes, chaque élément parle le même langage.",
     tags: ["Logo", "Overlay animé", "Widgets & alertes", "YouTube"],
     hero: "tomavega-starting-screen",
-    heroCaption: "La scène complète — écran de lancement",
-    pillars: [
+    heroCaption: "La scène de lancement — l'univers en un regard.",
+    headerLogo: { id: "tomavega-logo", caption: "Le logo, point de départ de l'univers." },
+    blocks: [
       {
-        kicker: "L'intention",
-        title: "Donner du caractère au live.",
-        text: "Une présence visuelle forte, avec un logo central et des zones dédiées aux échanges de la communauté.",
-      },
-      {
-        kicker: "La direction artistique",
-        title: "Minéral × néon.",
-        text: "Une texture sombre pour la profondeur. Des accents électriques pour guider le regard. Des panneaux de chat assortis pour relier l'ensemble.",
-      },
-    ],
-    sections: [
-      {
-        kicker: "La signature",
-        title: "Le logo, point de départ de l'univers.",
-        text: "Une forme expressive et des couleurs reprises dans les autres éléments de la chaîne.",
-        works: ["tomavega-logo"],
-      },
-      {
+        type: "detail",
         kicker: "Le live en détail",
-        title: "Une communauté au cœur du décor.",
-        text: "Deux éléments à regarder de près : le tchat et les alertes, dans la continuité de l'écran de lancement.",
-        works: ["tomavega-tchat", "tomavega-alertes"],
-        secondary: [{ id: "tomavega-musique", label: "Panneau « Le son »" }],
-        secondaryLayout: "pair",
+        title: ["Une communauté", "au cœur du décor."],
+        main: { id: "tomavega-tchat", caption: "Le tchat, dans l'habillage de la chaîne.", image: "/portfolio/tomavega-tchat-haut.webp", aspect: "aspect-[4/5]" },
+        sideTitle: ["Chaque événement", "a son éclat."],
+        side: { id: "tomavega-alertes", caption: "Les alertes électriques." },
+        small: [{ id: "tomavega-musique", label: "Le panneau « Le son »." , image: "/portfolio/tomavega-musique-bandeau.webp", aspect: "aspect-[10/3]" }],
       },
       {
+        type: "beyond",
         kicker: "Au-delà du stream",
-        title: "La même identité sur YouTube.",
-        works: ["tomavega-banniere-youtube"],
+        title: ["La même identité", "sur YouTube."],
+        text: "Une bannière qui prolonge l'univers minéral et électrique hors du live.",
+        main: "tomavega-banniere-youtube",
+        wide: true,
       },
     ],
+    cta: { kicker: "Ton prochain univers", title: ["Et si on imaginait", "l'identité de ta chaîne ?"] },
     cover: "tomavega-logo",
     coverVideo: "tomavega-starting-screen",
   },

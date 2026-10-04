@@ -181,19 +181,22 @@ export function Media({
   aspect = "aspect-video",
   sizes,
   priority = false,
+  image,
 }: {
   work: Work;
   onOpen: () => void;
   aspect?: string;
   sizes: string;
   priority?: boolean;
+  // Visuel recadré pour la mise en page (la visionneuse affiche l'original)
+  image?: string;
 }) {
   return (
     <div data-hover-root className={`group relative overflow-hidden rounded-2xl border border-border bg-background ${aspect}`}>
-      {work.image && (
+      {(image ?? work.image) && (
         <ProtectedMedia className="absolute inset-0">
           <Image
-            src={work.image}
+            src={(image ?? work.image)!}
             alt={work.title}
             fill
             priority={priority}

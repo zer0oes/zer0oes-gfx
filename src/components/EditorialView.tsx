@@ -31,7 +31,7 @@ export function EditorialView({ study, works, streamerName }: { study: Editorial
   const get = (id?: string) => (id ? byId.get(id) : undefined);
 
   // Ordre de la visionneuse : celui de la page
-  const ids: string[] = [study.hero];
+  const ids: string[] = [study.hero, ...(study.headerLogo ? [study.headerLogo.id] : [])];
   for (const b of study.blocks) {
     if (b.type === "signature") ids.push(b.main, ...(b.side ? [b.side.id] : []));
     if (b.type === "scenes") ids.push(...b.scenes.map((s) => s.id));
@@ -45,6 +45,7 @@ export function EditorialView({ study, works, streamerName }: { study: Editorial
   const [open, setOpen] = useState<number | null>(null);
   const openWork = (w: Work) => setOpen(ordered.indexOf(w));
   const hero = get(study.hero);
+  const headerLogo = get(study.headerLogo?.id);
 
   return (
     <>
@@ -62,6 +63,12 @@ export function EditorialView({ study, works, streamerName }: { study: Editorial
           <p className="mt-4 text-sm text-muted" aria-label="Ce que comprend le projet">
             {study.tags.join(" / ")}
           </p>
+          {headerLogo && (
+            <figure className="mt-6 max-w-sm">
+              <Media work={headerLogo} onOpen={() => openWork(headerLogo)} sizes="384px" />
+              <figcaption className="mt-2 text-sm text-muted">{study.headerLogo?.caption}</figcaption>
+            </figure>
+          )}
         </div>
       </header>
 
@@ -151,7 +158,7 @@ function Block({ block: b, get, openWork }: { block: EditorialBlock; get: (id?: 
     const side = get(b.side.id);
     const small = b.small.flatMap((p) => {
       const w = get(p.id);
-      return w ? [{ w, label: p.label }] : [];
+      return w ? [{ w, ...p }] : [];
     });
     return (
       <section className="mt-24">
@@ -161,12 +168,18 @@ function Block({ block: b, get, openWork }: { block: EditorialBlock; get: (id?: 
         </h2>
         <div className="mt-8 grid gap-8 lg:grid-cols-12">
           {main && (
-            <figure className="lg:col-span-7">
-              <Media work={main} onOpen={() => openWork(main)} sizes="(min-width: 1024px) 660px, 100vw" />
+            <figure className={b.main.aspect ? "lg:col-span-5" : "lg:col-span-7"}>
+              <Media
+                work={main}
+                onOpen={() => openWork(main)}
+                image={b.main.image}
+                aspect={b.main.aspect}
+                sizes="(min-width: 1024px) 660px, 100vw"
+              />
               <figcaption className="mt-3 text-sm text-muted">{b.main.caption}</figcaption>
             </figure>
           )}
-          <div className="lg:col-span-5">
+          <div className={b.main.aspect ? "lg:col-span-7" : "lg:col-span-5"}>
             <h3 className="font-display text-2xl font-bold leading-tight">
               <Lines lines={b.sideTitle} />
             </h3>
@@ -177,10 +190,10 @@ function Block({ block: b, get, openWork }: { block: EditorialBlock; get: (id?: 
               </figure>
             )}
             {small.length > 0 && (
-              <ul className="mt-6 grid grid-cols-2 gap-4">
-                {small.map(({ w, label }) => (
+              <ul className={`mt-6 grid gap-4 ${small.length > 1 ? "grid-cols-2" : ""}`}>
+                {small.map(({ w, label, image, aspect }) => (
                   <li key={w.id}>
-                    <Media work={w} onOpen={() => openWork(w)} sizes="(min-width: 1024px) 220px, 50vw" />
+                    <Media work={w} onOpen={() => openWork(w)} image={image} aspect={aspect} sizes="(min-width: 1024px) 460px, 50vw" />
                     <p className="mt-2 text-sm text-muted">{label}</p>
                   </li>
                 ))}
@@ -237,6 +250,25 @@ function Block({ block: b, get, openWork }: { block: EditorialBlock; get: (id?: 
     const w = get(p.id);
     return w ? [{ w, label: p.label }] : [];
   });
+  if (b.wide) {
+    // Conclusion visuelle : la bannière en très grand, le texte sur le côté
+    return (
+      <section className="mt-24 grid items-end gap-8 lg:grid-cols-12">
+        <div className="lg:col-span-3 lg:pb-6">
+          <p className={kickerClass}>{b.kicker}</p>
+          <h2 className={titleClass}>
+            <Lines lines={b.title} />
+          </h2>
+          <p className="mt-4 text-muted">{b.text}</p>
+        </div>
+        {main && (
+          <div className="lg:col-span-9">
+            <Media work={main} onOpen={() => openWork(main)} sizes="(min-width: 1024px) 860px, 100vw" />
+          </div>
+        )}
+      </section>
+    );
+  }
   return (
     <section className="mt-24 grid items-center gap-8 lg:grid-cols-12">
       {main && (
