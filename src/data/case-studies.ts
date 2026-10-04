@@ -2,11 +2,18 @@
 // Les réalisations sont référencées par leur id (src/data/portfolio.ts / base Supabase) ;
 // celles qui ne sont citées nulle part apparaissent dans « Les autres pièces du projet ».
 
+// Pièce citée avec un titre court (ex. « Pause ») au lieu de son titre complet
+export type CasePiece = { id: string; label: string };
+
 export type CaseSection = {
   kicker: string; // ex. « La signature » (numéroté automatiquement)
   title: string;
   text?: string;
   works: string[];
+  // Pièces complémentaires, plus discrètes, sous les pièces principales :
+  // « pair » = aperçus côte à côte ; « profil » = avatar en carré à gauche, panneaux en large à droite
+  secondary?: CasePiece[];
+  secondaryLayout?: "pair" | "profil";
 };
 
 export type CaseStudy = {
@@ -16,6 +23,8 @@ export type CaseStudy = {
   tags: string[];
   hero: string;
   heroCaption: string;
+  // Bloc « Les scènes du stream », juste après la scène d'ouverture
+  scenes?: CasePiece[];
   pillars: { kicker: string; title: string; text: string }[];
   sections: CaseSection[];
   // Couverture de la page Portfolio : image lisible en miniature (logo), et vidéo au survol
@@ -56,6 +65,8 @@ export const caseStudies: Record<string, CaseStudy> = {
         title: "Une communauté au cœur du décor.",
         text: "Deux éléments à regarder de près : le tchat et les alertes, dans la continuité de l'écran de lancement.",
         works: ["tomavega-tchat", "tomavega-alertes"],
+        secondary: [{ id: "tomavega-musique", label: "Panneau « Le son »" }],
+        secondaryLayout: "pair",
       },
       {
         kicker: "Au-delà du stream",
@@ -74,6 +85,12 @@ export const caseStudies: Record<string, CaseStudy> = {
     tags: ["Logo", "Overlays animés", "Widgets & alertes", "Emotes", "Twitch & YouTube"],
     hero: "zer0oes-starting-screen",
     heroCaption: "La scène complète — écran de lancement",
+    scenes: [
+      { id: "zer0oes-paused", label: "Pause" },
+      { id: "zer0oes-ending", label: "Fin de live" },
+      { id: "zer0oes-offline", label: "Hors ligne" },
+      { id: "zer0oes-gaming", label: "Gaming" },
+    ],
     pillars: [
       {
         kicker: "L'intention",
@@ -98,6 +115,11 @@ export const caseStudies: Record<string, CaseStudy> = {
         title: "Le chat et les alertes, en néon.",
         text: "Deux éléments à regarder de près : le chat et les alertes, dans les mêmes couleurs que l'écran de lancement.",
         works: ["zer0oes-chat", "zer0oes-alertes"],
+        secondary: [
+          { id: "zer0oes-objectif", label: "Barre d'objectif" },
+          { id: "zer0oes-musique", label: "Lecteur musique" },
+        ],
+        secondaryLayout: "pair",
       },
       {
         kicker: "La communauté",
@@ -109,6 +131,11 @@ export const caseStudies: Record<string, CaseStudy> = {
         kicker: "Au-delà du stream",
         title: "La même identité sur Twitch et YouTube.",
         works: ["zer0oes-bannieres"],
+        secondary: [
+          { id: "zer0oes-avatar", label: "Avatar" },
+          { id: "zer0oes-panneaux", label: "Panneaux Twitch" },
+        ],
+        secondaryLayout: "profil",
       },
     ],
     cover: "zer0oes-logo",
