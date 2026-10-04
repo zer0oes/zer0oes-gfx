@@ -39,7 +39,8 @@ export function demoOrders(today: string): Order[] {
     const balanceDay = addDays(day, 15 + Math.floor(rnd() * 30));
     const balancePaid = acompte && balanceDay <= today;
     const amountPaid = acompte ? (balancePaid ? offer.price : deposit) : offer.price;
-    const refunded = n % 17 === 0;
+    // Quelques remboursements d'exemple, jamais sur les deux derniers mois (pour ne pas fausser la période en cours)
+    const refunded = n % 17 === 0 && addDays(day, 60) < today;
     const createdAt = at(day);
     orders.push({
       id: `exemple-${n}`,
