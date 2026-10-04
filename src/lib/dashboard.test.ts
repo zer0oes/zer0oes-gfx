@@ -20,7 +20,7 @@ import { defaultFinance, type FinanceSettings } from "./finance";
 import { mergeRefunds } from "./refunds";
 import type { Order } from "./store/types";
 
-const f: FinanceSettings = { ...defaultFinance, urssafRate: 25.6, cfpRate: 0.2, vlEnabled: false, stripePercent: 1.5, stripeFixed: 25 };
+const f: FinanceSettings = { ...defaultFinance, urssafPeriodicity: "trimestrielle", urssafRate: 25.6, cfpRate: 0.2, vlEnabled: false, stripePercent: 1.5, stripeFixed: 25 };
 
 function order(o: Partial<Order>): Order {
   return {

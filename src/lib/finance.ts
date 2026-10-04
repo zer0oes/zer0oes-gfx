@@ -34,7 +34,7 @@ export const defaultFinance: FinanceSettings = {
   stripePercent: 1.5,
   stripeFixed: 25,
   abbySendInvoice: false,
-  urssafPeriodicity: "trimestrielle",
+  urssafPeriodicity: "mensuelle",
 };
 
 export type NetBreakdown = {
