@@ -218,8 +218,8 @@ export const works: Work[] = [
     streamer: "tomavega",
     category: "widgets",
     description: "Tchat au design de la chaîne, branché sur les vrais messages, avec badges VIP, abonnés et rôles.",
-    image: "/portfolio/tomavega-tchat-obs.webp",
-    video: "/portfolio/tomavega-tchat-obs.mp4",
+    image: "/portfolio/tomavega-tchat-169.webp",
+    video: "/portfolio/tomavega-tchat-169.mp4",
     colors: ["#14b8a6", "#6366f1"],
   },
   {
@@ -237,8 +237,8 @@ export const works: Work[] = [
     streamer: "tomavega",
     category: "alertes",
     description: "Follow, sub, raid, bits, don et sub offert, pour StreamElements et Streamlabs.",
-    image: "/portfolio/tomavega-alertes-obs.webp",
-    video: "/portfolio/tomavega-alertes-obs.mp4",
+    image: "/portfolio/tomavega-alertes-169.webp",
+    video: "/portfolio/tomavega-alertes-169.mp4",
     colors: ["#6366f1", "#0ea5e9"],
   },
   {
