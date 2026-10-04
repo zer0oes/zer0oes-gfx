@@ -52,5 +52,5 @@ export const legal = {
     phone: "+1 415 901 7000",
     website: "https://www.heroku.com",
   },
-  lastUpdate: "3 octobre 2026",
+  lastUpdate: "4 octobre 2026",
 };

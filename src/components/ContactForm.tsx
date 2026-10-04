@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { sendContact } from "@/app/actions";
 import { budgets, identityLevels, MAX_REFERENCES, platforms, providedAssets, referralSources, requestTypes, styles } from "@/lib/contact-form";
@@ -145,6 +146,16 @@ export function ContactForm({
       <div className="border-t border-border pt-6">
         <Chips legend="Comment m'as-tu trouvée ?" name="referral" choices={referralSources} type="radio" />
       </div>
+
+      <label className="flex items-start gap-2 text-sm text-muted">
+        <input type="checkbox" name="consent" value="1" required className="mt-1 accent-[var(--accent)]" />
+        <span>
+          J&apos;accepte que mes informations soient utilisées pour répondre à ma demande et préparer un devis. *{" "}
+          <Link href="/confidentialite" className="text-accent underline-offset-4 hover:underline">
+            Politique de confidentialité
+          </Link>
+        </span>
+      </label>
 
       <FormStatus state={state} />
       <div>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { sendBrief } from "@/app/actions";
 import { overlayTypes } from "@/lib/pricing";
@@ -100,6 +101,12 @@ export function BriefForm({
       >
         {pending ? "Envoi…" : "Envoyer mon brief"}
       </button>
+      <p className="text-xs text-muted">
+        Ces informations servent uniquement à réaliser ta commande.{" "}
+        <Link href="/confidentialite" className="underline hover:text-foreground">
+          Politique de confidentialité
+        </Link>
+      </p>
     </form>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHeader } from "@/components/ui";
 import { legal, site } from "@/data/site";
 
@@ -41,6 +42,8 @@ export default function MentionsLegalesPage() {
           Téléphone : {legal.host.phone}
           <br />
           <a href={legal.host.website}>{legal.host.website}</a>
+          <br />
+          Serveurs situés dans l&apos;Union européenne (Irlande).
         </p>
 
         <h2>Propriété intellectuelle</h2>
@@ -54,16 +57,13 @@ export default function MentionsLegalesPage() {
         <p>
           Les informations transmises via les formulaires de contact et de brief sont utilisées uniquement pour
           répondre à ta demande et réaliser ta commande. Elles ne sont ni vendues ni cédées à des tiers. Les
-          paiements sont traités par Stripe ; aucune donnée bancaire n&apos;est stockée sur ce site.
-        </p>
-        <p>
-          Conformément au RGPD, tu disposes d&apos;un droit d&apos;accès, de rectification et de suppression de tes
-          données en écrivant à <a href={`mailto:${site.email}`}>{site.email}</a>. Tu peux également introduire
-          une réclamation auprès de la CNIL.
+          paiements sont traités par Stripe ; aucune donnée bancaire n&apos;est stockée sur ce site. Le détail (données
+          collectées, durées de conservation, prestataires, tes droits) est dans la{" "}
+          <Link href="/confidentialite">politique de confidentialité</Link>.
         </p>
 
         <h2>Cookies</h2>
-        <p>Ce site n&apos;utilise pas de cookies publicitaires ni de mesure d&apos;audience.</p>
+        <p>Ce site ne dépose aucun cookie lors de ta visite : ni mesure d&apos;audience, ni publicité.</p>
 
         <p className="mt-8 text-xs">Dernière mise à jour : {legal.lastUpdate}</p>
       </article>

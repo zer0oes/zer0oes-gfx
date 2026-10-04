@@ -65,6 +65,25 @@ body {
   text-decoration: underline;
 }
 
+/* Tableaux des pages légales (durées de conservation, prestataires) */
+.prose-legal table {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.prose-legal th,
+.prose-legal td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 0.75rem 0.6rem 0;
+  text-align: left;
+  vertical-align: top;
+}
+.prose-legal th {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
 /* Protection du portfolio : flou des médias quand la fenêtre perd le focus */
 .protected-media {
   transition: filter 0.25s ease;

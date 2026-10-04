@@ -118,6 +118,12 @@ export function OrderForm({
         <button type="submit" className={buttonClass}>
           {payment === "acompte" ? `Payer l'acompte de ${formatPrice(deposit)} HT` : `Commander — ${formatPrice(price)} HT`}
         </button>
+        <p className="text-center text-[11px] text-muted">
+          Paiement sécurisé par Stripe.{" "}
+          <Link href="/confidentialite" className="underline hover:text-foreground">
+            Tes données
+          </Link>
+        </p>
       </div>
     </form>
   );

@@ -10,7 +10,7 @@ const form = (values: Record<string, string | string[]>) => {
   return [(k: string) => all(k)[0] ?? "", all] as const;
 };
 
-const base = { name: "Zoé", email: "zoe@exemple.fr", message: "Un overlay néon pour mes lives" };
+const base = { name: "Zoé", email: "zoe@exemple.fr", message: "Un overlay néon pour mes lives", consent: "1" };
 
 test("demande complète : choix filtrés et mis en forme", () => {
   const r = parseContact(
@@ -40,6 +40,7 @@ test("demande complète : choix filtrés et mis en forme", () => {
 });
 
 test("champs obligatoires, valeurs inconnues et liens invalides", () => {
+  assert.equal(parseContact(...form({ ...base, consent: "" })).ok, false); // sans accord : refusé
   assert.equal(parseContact(...form({ ...base, email: "pas-un-mail" })).ok, false);
   assert.equal(parseContact(...form({ ...base, references: "javascript:alert(1)" })).ok, false);
   assert.equal(parseContact(...form({ ...base, references: Array(6).fill("https://a.fr").join("\n") })).ok, false);

@@ -14,7 +14,8 @@
     "db:portfolio": "tsx scripts/db-portfolio.mts",
     "watermark:images": "tsx scripts/watermark-images.mts",
     "watermark:videos": "tsx scripts/watermark-videos.mts",
-    "media:s3": "tsx scripts/media-s3.mts"
+    "media:s3": "tsx scripts/media-s3.mts",
+    "purge:livrables": "node --conditions=react-server --import tsx scripts/purge-livrables.mts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1146.0",

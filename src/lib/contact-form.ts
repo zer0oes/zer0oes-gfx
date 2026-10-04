@@ -38,6 +38,10 @@ export function parseContact(get: Get, getAll: GetAll): { ok: true; request: Con
   if (!name || !EMAIL_RE.test(email) || message.length < 10) {
     return { ok: false, message: "Merci d'indiquer ton nom, un e-mail valide et quelques mots sur ce que tu as en tête (10 caractères minimum)." };
   }
+  // Consentement explicite (RGPD) : vérifié ici, pas seulement par le navigateur
+  if (get("consent") !== "1") {
+    return { ok: false, message: "Coche la case d'accord pour que je puisse utiliser tes informations et te répondre." };
+  }
   // Liens d'inspiration : un par ligne (ou séparés par des espaces)
   const rawRefs = get("references").split(/\s+/).filter(Boolean);
   if (rawRefs.length > MAX_REFERENCES) return { ok: false, message: `${MAX_REFERENCES} liens d'inspiration maximum.` };

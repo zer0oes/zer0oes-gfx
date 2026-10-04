@@ -16,6 +16,7 @@ export function Footer() {
           <Link href="/a-propos" className="hover:text-foreground">À propos</Link>
           <Link href="/contact" className="hover:text-foreground">Sur-mesure & contact</Link>
           <Link href="/mentions-legales" className="hover:text-foreground">Mentions légales</Link>
+          <Link href="/confidentialite" className="hover:text-foreground">Confidentialité</Link>
           <Link href="/cgv" className="hover:text-foreground">CGV</Link>
         </nav>
         <div className="flex flex-col gap-2 text-sm text-muted">

@@ -186,6 +186,11 @@ dans le bucket, dans le dossier privé `livrables/` : jamais lisibles publiqueme
 signés de 10 minutes après les contrôles de l'espace commande (validation + solde), pendant 6 mois
 après la clôture du projet (statut « Terminée »). Retirer un élément le supprime du bucket.
 
+**Purge automatique (RGPD)** : `npm run purge:livrables` (simulation) puis `-- --yes` supprime les
+fichiers et éléments livrés des projets clôturés depuis plus de 6 mois. En production, l'ajouter dans
+**Heroku Scheduler** (module gratuit) : tâche quotidienne `npm run purge:livrables -- --yes`. Les durées de
+conservation sont décrites sur la page `/confidentialite`.
+
 ## Stripe
 
 1. Commencer avec les clés de **test** (`sk_test_…`) ; passer en `sk_live_…` une fois le site validé.
