@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkDeliveryLink, cleanNote, NOTE_MAX_CHARS, deliverablePath, deliveryEmail, formatBytes, isDeliveryToken, newDeliveryToken, safeFilename } from "./delivery";
+import { canCancelApproval, checkDeliveryLink, cleanNote, deliveryProgress, itemType, unlockState, NOTE_MAX_CHARS, deliverablePath, deliveryEmail, formatBytes, isDeliveryToken, newDeliveryToken, safeFilename } from "./delivery";
 
 test("jeton de livraison : 48 caractères hexadécimaux, non répétable", () => {
   const a = newDeliveryToken();
@@ -40,4 +40,23 @@ test("remarque du client : nettoyée, vide refusée, longueur limitée", () => {
   assert.equal(cleanNote("   "), null);
   assert.equal(cleanNote(undefined), null);
   assert.equal(cleanNote("x".repeat(5000))?.length, NOTE_MAX_CHARS);
+});
+
+test("déblocage : validé + solde réglé, sinon aperçu seulement", () => {
+  const paid = { totalPrice: 49000, amountPaid: 49000 };
+  const deposit = { totalPrice: 49000, amountPaid: 14700 };
+  assert.equal(unlockState(paid, {}), "a_valider");
+  assert.equal(unlockState(deposit, { approvedAt: "2026-10-04" }), "solde_a_regler");
+  assert.equal(unlockState(paid, { approvedAt: "2026-10-04" }), "debloque");
+  assert.equal(canCancelApproval({ status: "livree" }), true);
+  assert.equal(canCancelApproval({ status: "terminee" }), false);
+});
+
+test("type d'élément et progression", () => {
+  assert.equal(itemType({ kind: "lien" }), "overlay");
+  assert.equal(itemType({ kind: "fichier", storagePath: "o/x-ecran.MP4" }), "video");
+  assert.equal(itemType({ kind: "fichier", storagePath: "o/x-pack.zip" }), "fichier");
+  assert.equal(itemType({ kind: "fichier", itemType: "guide", storagePath: "o/x.png" }), "guide");
+  assert.deepEqual(deliveryProgress([{ approvedAt: "x" }, {}, {}]), { done: 1, total: 3, percent: 33, complete: false });
+  assert.equal(deliveryProgress([]).complete, false);
 });

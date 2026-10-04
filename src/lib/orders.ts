@@ -364,7 +364,8 @@ export async function markBalancePaid(orderId: string, amount: number, fee?: num
 }
 
 // Crée le lien de paiement du solde (montant recalculé ici depuis la commande).
-export async function createBalanceLink(orderId: string, baseUrl: string) {
+// returnPath : page où revenir après paiement ou abandon (ex. la page de livraison du client)
+export async function createBalanceLink(orderId: string, baseUrl: string, returnPath?: string) {
   const store = getStore();
   const order = await store.getOrder(orderId);
   if (!order) throw new Error("Commande introuvable.");
@@ -392,8 +393,8 @@ export async function createBalanceLink(orderId: string, baseUrl: string) {
         },
       ],
       metadata: { kind: "solde", orderId: order.id, amount: String(due) },
-      success_url: `${baseUrl}/merci/solde`,
-      cancel_url: `${baseUrl}/`,
+      success_url: `${baseUrl}${returnPath ? `${returnPath}?retour=solde` : "/merci/solde"}`,
+      cancel_url: `${baseUrl}${returnPath ?? "/"}`,
     });
     sessionId = session.id;
     url = session.url!;

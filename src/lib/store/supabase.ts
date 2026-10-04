@@ -126,6 +126,9 @@ function toDeliverable(r: Row): Deliverable {
     createdAt: r.created_at as string,
     clientNotes: Array.isArray(r.client_notes) ? (r.client_notes as DeliverableNote[]) : [],
     approvedAt: opt<string>(r.approved_at),
+    itemType: opt<string>(r.item_type),
+    previewPath: opt<string>(r.preview_path),
+    previewType: opt<Deliverable["previewType"]>(r.preview_type),
   };
 }
 
@@ -535,7 +538,7 @@ export const supabaseStore: Store = {
     const row = check(
       await db()
         .from("deliverables")
-        .insert({ order_id: d.orderId, kind: d.kind, label: d.label, url: d.url ?? null, storage_path: d.storagePath ?? null, size_bytes: d.sizeBytes ?? null })
+        .insert({ order_id: d.orderId, kind: d.kind, item_type: d.itemType ?? null, label: d.label, url: d.url ?? null, storage_path: d.storagePath ?? null, size_bytes: d.sizeBytes ?? null })
         .select("*")
         .single(),
     ) as Row;
@@ -549,14 +552,32 @@ export const supabaseStore: Store = {
     check(await db().from("deliverables").update({ client_notes: notes }).eq("id", id));
   },
 
+  async updateDeliverable(id, patch) {
+    const row: Row = {};
+    if (patch.itemType !== undefined) row.item_type = patch.itemType;
+    if (patch.previewType !== undefined) row.preview_type = patch.previewType;
+    if (patch.previewPath !== undefined) {
+      const r = check(await db().from("deliverables").select("preview_path").eq("id", id).maybeSingle()) as Row | null;
+      if (r?.preview_path && r.preview_path !== patch.previewPath) await db().storage.from("livrables").remove([r.preview_path as string]);
+      row.preview_path = patch.previewPath;
+    }
+    check(await db().from("deliverables").update(row).eq("id", id));
+  },
+
+  async readDeliverableFile(path) {
+    const blob = check(await db().storage.from("livrables").download(path)) as Blob;
+    return new Uint8Array(await blob.arrayBuffer());
+  },
+
   async setDeliverableApproval(id, approved) {
     check(await db().from("deliverables").update({ approved_at: approved ? new Date().toISOString() : null }).eq("id", id));
   },
 
   async deleteDeliverable(id) {
-    const r = check(await db().from("deliverables").select("storage_path").eq("id", id).maybeSingle()) as Row | null;
+    const r = check(await db().from("deliverables").select("storage_path, preview_path").eq("id", id).maybeSingle()) as Row | null;
     check(await db().from("deliverables").delete().eq("id", id));
-    if (r?.storage_path) await db().storage.from("livrables").remove([r.storage_path as string]);
+    const files = [r?.storage_path, r?.preview_path].filter(Boolean) as string[];
+    if (files.length) await db().storage.from("livrables").remove(files);
   },
 
   async getOrderByDeliveryToken(token) {
@@ -571,7 +592,7 @@ export const supabaseStore: Store = {
 
   async deliverableDownloadUrl(path, filename) {
     // Lien valable 10 minutes, généré à chaque clic depuis la page de livraison
-    const data = check(await db().storage.from("livrables").createSignedUrl(path, 600, { download: filename })) as { signedUrl: string };
+    const data = check(await db().storage.from("livrables").createSignedUrl(path, 600, filename ? { download: filename } : undefined)) as { signedUrl: string };
     return data.signedUrl;
   },
 

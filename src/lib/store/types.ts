@@ -70,7 +70,13 @@ export type Deliverable = {
   // Retours du client sur sa page de livraison
   clientNotes?: DeliverableNote[];
   approvedAt?: string;
+  // Badge (overlay, fichier, vidéo…) et aperçu protégé montré avant validation
+  itemType?: string;
+  previewPath?: string;
+  previewType?: "image" | "video";
 };
+
+export type DeliverablePatch = { itemType?: string | null; previewPath?: string | null; previewType?: "image" | "video" | null };
 
 export type DeliverableNote = { at: string; body: string };
 
@@ -194,15 +200,17 @@ export interface Store {
   addNote(orderId: string, body: string): Promise<void>;
   // Livraison
   listDeliverables(orderId: string): Promise<Deliverable[]>;
-  addDeliverable(d: Omit<Deliverable, "id" | "createdAt">): Promise<Deliverable>;
+  addDeliverable(d: Omit<Deliverable, "id" | "createdAt" | "clientNotes" | "approvedAt" | "previewPath" | "previewType">): Promise<Deliverable>;
   deleteDeliverable(id: string): Promise<void>;
   addDeliverableNote(id: string, body: string): Promise<void>;
+  updateDeliverable(id: string, patch: DeliverablePatch): Promise<void>;
   setDeliverableApproval(id: string, approved: boolean): Promise<void>;
   getOrderByDeliveryToken(token: string): Promise<Order | null>;
   // Fichiers livrés : envoi direct du navigateur vers le stockage privé (Supabase),
   // lien de téléchargement temporaire, ou lecture directe (magasin local de développement).
   createDeliverableUpload?(path: string): Promise<{ token: string }>;
-  deliverableDownloadUrl?(path: string, filename: string): Promise<string>;
+  // filename : téléchargement (pièce jointe) ; sans : lecture dans la page (aperçu vidéo)
+  deliverableDownloadUrl?(path: string, filename?: string): Promise<string>;
   saveDeliverableFile?(path: string, data: Uint8Array): Promise<void>;
   readDeliverableFile?(path: string): Promise<Uint8Array>;
   // Factures

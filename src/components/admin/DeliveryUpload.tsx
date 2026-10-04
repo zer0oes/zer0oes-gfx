@@ -3,12 +3,23 @@
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { finalizeDeliverable, prepareDeliverableUpload, uploadDeliverableDirect } from "@/app/admin/livraison-actions";
+import { attachDeliverablePreview, finalizeDeliverable, prepareDeliverableUpload, uploadDeliverableDirect } from "@/app/admin/livraison-actions";
 import { formatBytes } from "@/lib/delivery";
 
 // Envoi d'un fichier livré (zip Streamlabs, visuels, guide…) : directement du navigateur
 // vers le stockage privé « livrables » via une URL signée (jusqu'à 500 Mo).
-export function DeliveryUpload({ orderId, supabaseUrl, supabaseKey }: { orderId: string; supabaseUrl?: string; supabaseKey?: string }) {
+// previewFor : envoi de l'aperçu protégé (image ou vidéo basse résolution) d'un élément existant.
+export function DeliveryUpload({
+  orderId,
+  supabaseUrl,
+  supabaseKey,
+  previewFor,
+}: {
+  orderId: string;
+  supabaseUrl?: string;
+  supabaseKey?: string;
+  previewFor?: string;
+}) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [label, setLabel] = useState("");
@@ -28,19 +39,22 @@ export function DeliveryUpload({ orderId, supabaseUrl, supabaseKey }: { orderId:
           .storage.from("livrables")
           .uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type || "application/octet-stream" });
         if (error) throw new Error(error.message);
-        const done = await finalizeDeliverable({ orderId, label: label || file.name, path: ticket.path, size: file.size });
+        const done = previewFor
+          ? await attachDeliverablePreview({ orderId, id: previewFor, path: ticket.path })
+          : await finalizeDeliverable({ orderId, label: label || file.name, path: ticket.path, size: file.size });
         if ("error" in done && done.error) throw new Error(done.error);
       } else {
         const fd = new FormData();
         fd.set("orderId", orderId);
         fd.set("label", label || file.name);
+        if (previewFor) fd.set("previewFor", previewFor);
         fd.set("file", file);
         const res = await uploadDeliverableDirect(fd);
         if ("error" in res && res.error) throw new Error(res.error);
       }
       setFile(null);
       setLabel("");
-      setStatus("Fichier ajouté.");
+      setStatus(previewFor ? "Aperçu ajouté." : "Fichier ajouté.");
       router.refresh();
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Échec de l'envoi.");
@@ -50,6 +64,31 @@ export function DeliveryUpload({ orderId, supabaseUrl, supabaseKey }: { orderId:
   }
 
   const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
+  const fileInput =
+    "block w-full text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-surface-2 file:px-4 file:py-2 file:text-sm file:text-foreground";
+
+  if (previewFor) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"
+          aria-label="Aperçu (image ou vidéo basse résolution)"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className={`${fileInput} max-w-xs text-xs`}
+        />
+        <button type="button" onClick={send} disabled={!file || busy} className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40">
+          {busy ? "Envoi…" : "Envoyer l'aperçu"}
+        </button>
+        {status && (
+          <span role="status" className="text-xs text-muted">
+            {status}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">Ajouter un fichier</p>
@@ -61,7 +100,7 @@ export function DeliveryUpload({ orderId, supabaseUrl, supabaseKey }: { orderId:
           setFile(f);
           if (f && !label) setLabel(f.name.replace(/\.[^.]+$/, ""));
         }}
-        className="block w-full text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-surface-2 file:px-4 file:py-2 file:text-sm file:text-foreground"
+        className={fileInput}
       />
       <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nom affiché au client (ex. Pack Streamlabs)" aria-label="Nom du fichier affiché au client" className={input} />
       <button type="button" onClick={send} disabled={!file || busy} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background disabled:opacity-40">

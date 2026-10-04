@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { checkDeliveryLink, DELIVERABLE_MAX_BYTES, deliverablePath, deliveryEmail, newDeliveryToken } from "@/lib/delivery";
+import { checkDeliveryLink, DELIVERABLE_MAX_BYTES, deliverablePath, deliveryEmail, isDeliverableType, mediaKind, newDeliveryToken } from "@/lib/delivery";
 import { notify, sendToCustomer } from "@/lib/notify";
 import { siteUrl } from "@/lib/site-url";
 import { getStore } from "@/lib/store";
@@ -73,7 +73,10 @@ export async function uploadDeliverableDirect(formData: FormData) {
   if (!store.saveDeliverableFile) return { error: "Envoi direct indisponible." };
   if (!(file instanceof File) || file.size <= 0 || file.size > DELIVERABLE_MAX_BYTES) return { error: "Fichier vide ou trop lourd." };
   const path = deliverablePath(orderId, file.name, randomUUID().slice(0, 8));
+  const previewFor = text(formData, "previewFor", 60);
+  if (previewFor && !mediaKind(path)) return { error: "L'aperçu doit être une image ou une vidéo." };
   await store.saveDeliverableFile(path, new Uint8Array(await file.arrayBuffer()));
+  if (previewFor) return attachDeliverablePreview({ orderId, id: previewFor, path });
   await store.addDeliverable({ orderId, kind: "fichier", label: text(formData, "label", 120) || file.name, storagePath: path, sizeBytes: file.size });
   revalidatePath(`/admin/commandes/${orderId}`);
   return { ok: true };
@@ -116,4 +119,38 @@ export async function sendDeliveryAction(formData: FormData) {
   });
   await notify({ subject: `[Livraison envoyée] ${order.offerName} — ${order.customerEmail}`, fields: { Commande: order.id, Lien: url } });
   back(orderId, { ok: sent.sent ? "Livraison envoyée au client." : "Lien de livraison créé (e-mail affiché dans les logs : Resend n'est pas configuré)." });
+}
+
+// --- Type d'élément et aperçu protégé (page de livraison) --------------------------------
+
+export async function setDeliverableTypeAction(formData: FormData) {
+  await requireAdmin();
+  const orderId = text(formData, "orderId", 60);
+  const id = text(formData, "id", 60);
+  const type = formData.get("type");
+  if (!isDeliverableType(type)) back(orderId, { error: "Type d'élément invalide." });
+  if (!(await getStore().listDeliverables(orderId)).some((d) => d.id === id)) back(orderId, { error: "Élément introuvable." });
+  await getStore().updateDeliverable(id, { itemType: type });
+  back(orderId, { ok: "Type enregistré." });
+}
+
+// Aperçu envoyé (image ou vidéo basse résolution) : rattaché à l'élément livré
+export async function attachDeliverablePreview(input: { orderId: string; id: string; path: string }) {
+  await requireAdmin();
+  if (!input.path.startsWith(`${input.orderId}/`)) return { error: "Chemin de fichier invalide." };
+  const kind = mediaKind(input.path);
+  if (!kind) return { error: "L'aperçu doit être une image (PNG, JPG, WEBP) ou une vidéo (MP4, WEBM)." };
+  if (!(await getStore().listDeliverables(input.orderId)).some((d) => d.id === input.id)) return { error: "Élément introuvable." };
+  await getStore().updateDeliverable(input.id, { previewPath: input.path, previewType: kind });
+  revalidatePath(`/admin/commandes/${input.orderId}`);
+  return { ok: true };
+}
+
+export async function removeDeliverablePreviewAction(formData: FormData) {
+  await requireAdmin();
+  const orderId = text(formData, "orderId", 60);
+  const id = text(formData, "id", 60);
+  if (!(await getStore().listDeliverables(orderId)).some((d) => d.id === id)) back(orderId, { error: "Élément introuvable." });
+  await getStore().updateDeliverable(id, { previewPath: null, previewType: null });
+  back(orderId, { ok: "Aperçu retiré." });
 }

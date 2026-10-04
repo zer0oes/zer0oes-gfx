@@ -160,12 +160,21 @@ export const localStore: Store = {
       const item = d.deliverables?.find((x) => x.id === id);
       d.deliverables = (d.deliverables ?? []).filter((x) => x.id !== id);
       if (item?.storagePath) await fs.rm(deliverableFile(item.storagePath), { force: true });
+      if (item?.previewPath) await fs.rm(deliverableFile(item.previewPath), { force: true });
     }),
   getOrderByDeliveryToken: async (token) => (await load()).orders.find((o) => o.deliveryToken === token) ?? null,
   addDeliverableNote: (id, body) =>
     mutate((d) => {
       const item = d.deliverables?.find((x) => x.id === id);
       if (item) item.clientNotes = [...(item.clientNotes ?? []), { at: new Date().toISOString(), body }].slice(-MAX_NOTES);
+    }),
+  updateDeliverable: (id, patch) =>
+    mutate(async (d) => {
+      const item = d.deliverables?.find((x) => x.id === id);
+      if (!item) return;
+      if (patch.previewPath !== undefined && item.previewPath && item.previewPath !== patch.previewPath)
+        await fs.rm(deliverableFile(item.previewPath), { force: true });
+      for (const [k, v] of Object.entries(patch)) (item as Record<string, unknown>)[k] = v ?? undefined;
     }),
   setDeliverableApproval: (id, approved) =>
     mutate((d) => {

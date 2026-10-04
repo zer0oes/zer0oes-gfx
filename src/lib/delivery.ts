@@ -65,7 +65,7 @@ export function deliveryEmail({ offerName, url, links, files }: { offerName: str
       `Ta commande « ${offerName} » est prête ! Tout est réuni sur ta page de livraison${parts.length ? ` (${parts.join(" et ")})` : ""} :`,
       url,
       "",
-      "Tu y trouveras les liens pour importer tes overlays sur StreamElements en un clic, et les fichiers pour Streamlabs et OBS.",
+      "Regarde chaque aperçu, puis valide-le ou demande une modification. Les fichiers HD et liens d'import (StreamElements, Streamlabs, OBS) se débloquent après ta validation et le règlement du solde.",
       "Garde ce lien pour toi : il donne accès à tes fichiers.",
       "",
       "Une question, une correction ? Réponds simplement à cet e-mail.",
@@ -84,4 +84,56 @@ export function cleanNote(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const body = raw.replace(/\r/g, "").trim().slice(0, NOTE_MAX_CHARS);
   return body || null;
+}
+
+// --- Validation et déblocage -----------------------------------------------------------
+
+export const deliverableTypes = [
+  { id: "overlay", label: "Overlay" },
+  { id: "widget", label: "Widget" },
+  { id: "alerte", label: "Alertes" },
+  { id: "visuel", label: "Visuel" },
+  { id: "video", label: "Vidéo" },
+  { id: "fichier", label: "Fichier" },
+  { id: "guide", label: "Guide" },
+] as const;
+export type DeliverableType = (typeof deliverableTypes)[number]["id"];
+
+export function isDeliverableType(v: unknown): v is DeliverableType {
+  return deliverableTypes.some((t) => t.id === v);
+}
+
+const VIDEO_EXT = /\.(mp4|webm|mov|m4v)$/i;
+const IMAGE_EXT = /\.(png|jpe?g|webp|gif|avif)$/i;
+
+export function mediaKind(path?: string): "image" | "video" | null {
+  if (!path) return null;
+  return VIDEO_EXT.test(path) ? "video" : IMAGE_EXT.test(path) ? "image" : null;
+}
+
+// Type affiché en badge : celui choisi dans l'admin, sinon déduit (lien d'import → overlay)
+export function itemType(d: { itemType?: string; kind: "lien" | "fichier"; storagePath?: string }): DeliverableType {
+  if (isDeliverableType(d.itemType)) return d.itemType;
+  if (d.kind === "lien") return "overlay";
+  const k = mediaKind(d.storagePath);
+  return k === "video" ? "video" : k === "image" ? "visuel" : "fichier";
+}
+
+// Un fichier final (ou un lien d'import) n'est servi qu'une fois l'élément validé par le
+// client ET le solde de la commande réglé. Avant : seulement l'aperçu protégé.
+export type UnlockState = "a_valider" | "solde_a_regler" | "debloque";
+
+export function unlockState(order: { totalPrice: number; amountPaid: number }, d: { approvedAt?: string }): UnlockState {
+  if (!d.approvedAt) return "a_valider";
+  return order.totalPrice - order.amountPaid > 0 ? "solde_a_regler" : "debloque";
+}
+
+// Le client peut revenir sur sa validation tant que la commande n'est pas terminée
+export function canCancelApproval(order: { status: string }) {
+  return order.status !== "terminee";
+}
+
+export function deliveryProgress(items: { approvedAt?: string }[]) {
+  const done = items.filter((d) => d.approvedAt).length;
+  return { done, total: items.length, percent: items.length ? Math.round((done / items.length) * 100) : 0, complete: items.length > 0 && done === items.length };
 }
