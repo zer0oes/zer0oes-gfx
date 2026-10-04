@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { NetTable, priceCases } from "@/components/admin/NetTable";
-import { chargesRate, formatRate } from "@/lib/finance";
-import { formatPrice, type Pack } from "@/lib/pricing";
+import { chargesRate, formatRate, netBreakdown, type FinanceSettings } from "@/lib/finance";
+import { formatPrice, type Pack, type PricingSettings } from "@/lib/pricing";
 import { watermarkLevels } from "@/lib/protection";
 import { getStore } from "@/lib/store";
 import {
@@ -23,6 +24,16 @@ const input = "w-full rounded-lg border border-border bg-background px-3 py-2 te
 const card = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
 const save = "rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110";
 
+// La page est découpée en onglets : on n'affiche qu'une partie à la fois.
+const tabs = [
+  { id: "offres", label: "Offres" },
+  { id: "options", label: "Options à la carte" },
+  { id: "reglages", label: "Réglages" },
+  { id: "cotisations", label: "Frais et cotisations" },
+  { id: "simulateur", label: "Simulateur de revenus" },
+] as const;
+type Tab = (typeof tabs)[number]["id"];
+
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block">
@@ -42,10 +53,14 @@ function Check({ name, label, defaultChecked }: { name: string; label: string; d
   );
 }
 
+function Intro({ children }: { children: React.ReactNode }) {
+  return <p className="mb-4 max-w-2xl text-sm text-muted">{children}</p>;
+}
+
 function PackControls({ pack, first, last }: { pack: Pack; first: boolean; last: boolean }) {
   const small = "rounded-full border border-border px-3 py-1 text-xs hover:border-accent disabled:opacity-30";
   return (
-    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+    <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4 text-xs">
       <form action={movePackAction} className="flex gap-1">
         <input type="hidden" name="id" value={pack.id} />
         <button name="dir" value="up" disabled={first} aria-label={`Monter ${pack.name}`} className={small}>
@@ -79,12 +94,8 @@ function PackForm({ pack }: { pack: Pack }) {
   // Formules existantes + 2 lignes vides pour en ajouter
   const rows = [...(pack.formulas ?? []), undefined, undefined];
   return (
-    <form action={savePackAction} className={`${card} space-y-4 ${pack.archived ? "opacity-70" : ""}`}>
+    <form action={savePackAction} className="space-y-4">
       <input type="hidden" name="id" value={pack.id} />
-      <h3 className="font-display text-xl font-bold">
-        {pack.name}
-        {pack.archived && <span className="ml-2 align-middle text-xs font-normal text-amber-300">archivée</span>}
-      </h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nom">
           <input name="name" defaultValue={pack.name} required className={input} />
@@ -137,8 +148,40 @@ function PackForm({ pack }: { pack: Pack }) {
   );
 }
 
+// Résumé d'une offre fermée : « Actif • 4 formules • acompte activé »
+function packSummary(p: Pack, s: PricingSettings) {
+  const n = p.formulas?.length ?? 0;
+  return [
+    p.archived ? "Archivée" : "Active",
+    p.checkout ? `${n} formule${n > 1 ? "s" : ""}` : "Sur devis",
+    p.checkout && s.depositPercent > 0 ? `acompte ${s.depositPercent} %` : null,
+    p.highlight ? "mise en avant" : null,
+  ].filter(Boolean);
+}
+
+// Ventes simulées : prix de base, payé en une fois
+function simulate(packs: Pack[], qty: (id: string) => number, finance: FinanceSettings) {
+  let gross = 0;
+  let net = 0;
+  let sales = 0;
+  for (const p of packs) {
+    const n = qty(p.id);
+    if (!n) continue;
+    const r = netBreakdown([p.formulas?.[0]?.price ?? p.price], finance);
+    gross += r.gross * n;
+    net += r.net * n;
+    sales += n;
+  }
+  return { gross, net, charges: gross - net, sales };
+}
+
 export default async function AdminOffersPage({ searchParams }: PageProps<"/admin/offres">) {
-  const { enregistre, erreur } = await searchParams;
+  const sp = await searchParams;
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const { enregistre, erreur } = sp;
+  const openPack = one(sp.offre);
+  const tab: Tab = tabs.some((t) => t.id === one(sp.onglet)) ? (one(sp.onglet) as Tab) : "offres";
+
   const store = getStore();
   const [{ settings, packs, options }, finance, protection] = await Promise.all([
     store.getCatalog(),
@@ -147,11 +190,32 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   ]);
   const euro = (cents: number) => formatPrice(cents);
   const optionRows = [...options, undefined, undefined, undefined];
+  const active = packs.filter((p) => !p.archived);
+
+  // Simulateur : ventes par mois saisies (paramètres v_<offre>)
+  const qty = (id: string) => Math.min(99, Math.max(0, Math.floor(Number(one(sp[`v_${id}`]) ?? 0) || 0)));
+  const sim = simulate(active, qty, finance);
 
   return (
     <>
       <h1 className="font-display text-3xl font-bold">Offres et réglages</h1>
       <p className="mt-2 text-sm text-muted">Les modifications sont visibles sur le site dès l&apos;enregistrement.</p>
+
+      <nav aria-label="Parties de la page" className="mt-6 flex flex-wrap gap-2 border-b border-border pb-4">
+        {tabs.map((t) => (
+          <Link
+            key={t.id}
+            href={t.id === "offres" ? "/admin/offres" : `/admin/offres?onglet=${t.id}`}
+            aria-current={tab === t.id ? "page" : undefined}
+            className={`whitespace-nowrap rounded-full border px-4 py-1.5 text-sm transition ${
+              tab === t.id ? "border-accent bg-accent font-semibold text-background" : "border-border text-muted hover:text-foreground"
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+
       {enregistre && (
         <p role="status" className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">
           Enregistré.
@@ -163,186 +227,275 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
         </p>
       )}
 
-      <section className="mt-8">
-        <h2 className="mb-4 font-display text-xl font-bold">Réglages</h2>
-        <form action={saveSettingsAction} className={`${card} grid gap-4 sm:grid-cols-3`}>
-          <Field label="Acompte (%)" hint="Proposé à la commande en ligne.">
-            <input name="depositPercent" type="number" min={0} max={100} defaultValue={settings.depositPercent} required className={input} />
-          </Field>
-          <Field label="Remise « logo existant » (€ HT)">
-            <input name="logoDiscount" defaultValue={euros(settings.logoDiscount)} inputMode="decimal" required className={input} />
-          </Field>
-          <Field label="Délai de livraison (jours ouvrés)" hint="Ex. « 7 à 14 ».">
-            <input name="deliveryDays" defaultValue={settings.deliveryDays} required className={input} />
-          </Field>
-          <div className="sm:col-span-3">
-            <button type="submit" className={save}>
-              Enregistrer les réglages
-            </button>
+      {tab === "offres" && (
+        <section className="mt-6">
+          <Intro>Clique sur une offre pour la modifier. L&apos;ordre ici est celui du site.</Intro>
+          <div className="space-y-3">
+            {packs.map((p, i) => (
+              <details key={p.id} id={`offre-${p.id}`} open={openPack === p.id} className={`group ${card} p-0 sm:p-0 ${p.archived ? "opacity-70" : ""}`}>
+                <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5 sm:px-6 [&::-webkit-details-marker]:hidden">
+                  <span>
+                    <span className="font-display text-lg font-bold">
+                      {p.name} — {p.priceFrom ? "à partir de " : ""}
+                      {euro(p.price)}
+                    </span>
+                    <span className="mt-1 block text-xs text-muted">{packSummary(p, settings).join(" • ")}</span>
+                  </span>
+                  <span className="text-sm text-accent">
+                    <span className="group-open:hidden">Modifier ↓</span>
+                    <span className="hidden group-open:inline">Fermer ↑</span>
+                  </span>
+                </summary>
+                <div className="space-y-4 px-5 pb-5 sm:px-6 sm:pb-6">
+                  <PackForm pack={p} />
+                  <PackControls pack={p} first={i === 0} last={i === packs.length - 1} />
+                </div>
+              </details>
+            ))}
+            <details className={`${card} p-0 sm:p-0`}>
+              <summary className="cursor-pointer list-none p-5 font-semibold text-accent sm:px-6 [&::-webkit-details-marker]:hidden">+ Nouvelle offre</summary>
+              <form action={createPackAction} className="grid gap-3 px-5 pb-5 sm:grid-cols-[2fr_1fr_auto_auto] sm:items-end sm:px-6 sm:pb-6">
+                <Field label="Nom">
+                  <input name="name" required className={input} />
+                </Field>
+                <Field label="Prix (€ HT)">
+                  <input name="price" required inputMode="decimal" className={input} />
+                </Field>
+                <label className="flex items-center gap-2 pb-2 text-sm">
+                  <input type="checkbox" name="checkout" defaultChecked className="accent-[var(--accent)]" /> Commandable en ligne
+                </label>
+                <button type="submit" className={save}>
+                  Créer
+                </button>
+              </form>
+            </details>
           </div>
-        </form>
-      </section>
+        </section>
+      )}
 
-      <section className="mt-10">
-        <h2 className="mb-2 font-display text-xl font-bold">Protection du portfolio</h2>
-        <p className="mb-4 text-sm text-muted">
-          Mesures dissuasives : aucun site ne peut empêcher totalement une capture d&apos;écran, mais elles compliquent la
-          récupération des fichiers et signent chaque visuel.
-        </p>
-        <form action={saveProtectionAction} className={`${card} grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end`}>
-          <Field label="Filigrane « zer0oes gfx »" hint="Affiché sur les images et vidéos du portfolio (et sur l'accueil).">
-            <select name="watermark" defaultValue={protection.watermark} className={input}>
-              {watermarkLevels.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <div className="pb-2">
-            <Check name="blur" label="Flouter les médias quand la fenêtre perd le focus ou qu'une capture est détectée" defaultChecked={protection.blur} />
-          </div>
-          <button type="submit" className={save}>
-            Enregistrer
-          </button>
-        </form>
-      </section>
-
-      <section className="mt-10">
-        <h2 className="mb-4 font-display text-xl font-bold">Offres</h2>
-        <div className="space-y-6">
-          {packs.map((p, i) => (
-            <div key={p.id}>
-              <PackControls pack={p} first={i === 0} last={i === packs.length - 1} />
-              <PackForm pack={p} />
-            </div>
-          ))}
-          <form action={createPackAction} className={`${card} grid gap-3 sm:grid-cols-[2fr_1fr_auto_auto] sm:items-end`}>
-            <h3 className="font-semibold sm:col-span-4">Nouvelle offre</h3>
-            <Field label="Nom">
-              <input name="name" required className={input} />
-            </Field>
-            <Field label="Prix (€ HT)">
-              <input name="price" required inputMode="decimal" className={input} />
-            </Field>
-            <label className="flex items-center gap-2 pb-2 text-sm">
-              <input type="checkbox" name="checkout" defaultChecked className="accent-[var(--accent)]" /> Commandable en ligne
-            </label>
+      {tab === "options" && (
+        <section className="mt-6">
+          <Intro>Options proposées en plus des offres (page Offres et commande).</Intro>
+          <form action={saveOptionsAction} className={`${card} space-y-3`}>
+            <p className="text-xs text-muted">Lignes vides ignorées. Cocher « Supprimer » pour retirer une option.</p>
+            {optionRows.map((o, i) => (
+              <div key={i} className="grid items-center gap-2 sm:grid-cols-[1fr_7rem_7rem_auto_auto]">
+                <input type="hidden" name={`id_${i}`} defaultValue={o?.id} />
+                <input name={`name_${i}`} defaultValue={o?.name} placeholder="Nouvelle option" aria-label="Nom de l'option" className={input} />
+                <input name={`price_${i}`} defaultValue={o ? euros(o.price) : ""} placeholder="€ HT" inputMode="decimal" aria-label="Prix" className={input} />
+                <input name={`unit_${i}`} defaultValue={o?.unit} placeholder="unité (opt.)" aria-label="Unité" className={input} />
+                <Check name={`from_${i}`} label="À partir de" defaultChecked={o?.priceFrom} />
+                {o ? <Check name={`delete_${i}`} label="Supprimer" /> : <span />}
+              </div>
+            ))}
             <button type="submit" className={save}>
-              Créer
+              Enregistrer les options
             </button>
           </form>
-        </div>
-      </section>
+        </section>
+      )}
 
-      <section className="mt-10">
-        <h2 className="mb-2 font-display text-xl font-bold">Revenu net</h2>
-        <p className="mb-4 text-sm text-muted">
-          Ce qu&apos;il te reste réellement sur chaque vente, après frais de paiement et cotisations.
-        </p>
-        <form action={saveFinanceAction} className={`${card} grid gap-4 sm:grid-cols-3`}>
-          <Field label="Cotisations URSSAF (%)" hint="Micro-entreprise, activité libérale non réglementée (BNC). Taux 2026, à mettre à jour si l'URSSAF change.">
-            <input name="urssafRate" defaultValue={finance.urssafRate} inputMode="decimal" required className={input} />
-          </Field>
-          <Field label="Formation professionnelle, CFP (%)" hint="Taux 2026.">
-            <input name="cfpRate" defaultValue={finance.cfpRate} inputMode="decimal" required className={input} />
-          </Field>
-          <div className="space-y-2">
-            <Field label="Versement libératoire (%)" hint="Impôt sur le revenu prélevé avec les cotisations, si tu as opté pour ce régime.">
-              <input name="vlRate" defaultValue={finance.vlRate} inputMode="decimal" required className={input} />
+      {tab === "reglages" && (
+        <div className="mt-6 space-y-8">
+          <section>
+            <h2 className="mb-4 font-display text-xl font-bold">Commande</h2>
+            <form action={saveSettingsAction} className={`${card} grid gap-4 sm:grid-cols-3`}>
+              <Field label="Acompte (%)" hint="Proposé à la commande en ligne.">
+                <input name="depositPercent" type="number" min={0} max={100} defaultValue={settings.depositPercent} required className={input} />
+              </Field>
+              <Field label="Remise « logo existant » (€ HT)">
+                <input name="logoDiscount" defaultValue={euros(settings.logoDiscount)} inputMode="decimal" required className={input} />
+              </Field>
+              <Field label="Délai de livraison (jours ouvrés)" hint="Ex. « 7 à 14 ».">
+                <input name="deliveryDays" defaultValue={settings.deliveryDays} required className={input} />
+              </Field>
+              <div className="sm:col-span-3">
+                <button type="submit" className={save}>
+                  Enregistrer les réglages
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section>
+            <h2 className="mb-2 font-display text-xl font-bold">Protection du portfolio</h2>
+            <Intro>
+              Mesures dissuasives : aucun site ne peut empêcher totalement une capture d&apos;écran, mais elles compliquent la
+              récupération des fichiers et signent chaque visuel.
+            </Intro>
+            <form action={saveProtectionAction} className={`${card} grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end`}>
+              <Field label="Filigrane « zer0oes gfx »" hint="Affiché sur les images et vidéos du portfolio (et sur l'accueil).">
+                <select name="watermark" defaultValue={protection.watermark} className={input}>
+                  {watermarkLevels.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="pb-2">
+                <Check name="blur" label="Flouter les médias quand la fenêtre perd le focus ou qu'une capture est détectée" defaultChecked={protection.blur} />
+              </div>
+              <button type="submit" className={save}>
+                Enregistrer
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {tab === "cotisations" && (
+        <section className="mt-6">
+          <Intro>Taux utilisés pour le tableau de bord, la déclaration URSSAF et le simulateur de revenus.</Intro>
+          <form action={saveFinanceAction} className={`${card} grid gap-4 sm:grid-cols-3`}>
+            <Field label="Cotisations URSSAF (%)" hint="Micro-entreprise, activité libérale non réglementée (BNC). Taux 2026, à mettre à jour si l'URSSAF change.">
+              <input name="urssafRate" defaultValue={finance.urssafRate} inputMode="decimal" required className={input} />
             </Field>
-            <Check name="vlEnabled" label="J'ai opté pour le versement libératoire" defaultChecked={finance.vlEnabled} />
-          </div>
-          <Field label="Frais Stripe (%)" hint="Cartes européennes standard ; vérifie dans ton tableau de bord Stripe.">
-            <input name="stripePercent" defaultValue={finance.stripePercent} inputMode="decimal" required className={input} />
-          </Field>
-          <Field label="Frais Stripe fixes par paiement (€)">
-            <input name="stripeFixed" defaultValue={euros(finance.stripeFixed)} inputMode="decimal" required className={input} />
-          </Field>
-          <Field label="Déclaration URSSAF" hint="Rythme choisi à la création de ta micro-entreprise (visible dans ton espace autoentrepreneur.urssaf.fr).">
-            <select name="urssafPeriodicity" defaultValue={finance.urssafPeriodicity} className={input}>
-              <option value="mensuelle">Mensuelle</option>
-              <option value="trimestrielle">Trimestrielle</option>
-            </select>
-          </Field>
-          <div className="sm:col-span-3">
-            <Check
-              name="abbySendInvoice"
-              label="Factures Abby : envoyer aussi le PDF de la facture au client par e-mail"
-              defaultChecked={finance.abbySendInvoice}
-            />
-          </div>
-          <div className="flex items-end">
-            <button type="submit" className={save}>
-              Enregistrer les taux
-            </button>
-          </div>
-        </form>
-
-        <details className={`${card} mt-4 text-sm`} open>
-          <summary className="cursor-pointer font-semibold">Comment lire les tableaux</summary>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-muted">
-            <li><strong className="text-foreground">Encaissé HT</strong> : ce que paie le client (pas de TVA en franchise en base).</li>
-            <li>
-              <strong className="text-foreground">Frais Stripe</strong> : {formatRate(finance.stripePercent)} + {euro(finance.stripeFixed)} par paiement. Un
-              acompte puis un solde font deux paiements, donc deux frais fixes. Sur une commande réelle, les frais réels
-              Stripe remplacent cette estimation quand ils sont connus.
-            </li>
-            <li>
-              <strong className="text-foreground">URSSAF</strong> : {formatRate(finance.urssafRate)} du montant encaissé. Les frais Stripe ne
-              sont pas déductibles en micro-entreprise.
-            </li>
-            <li><strong className="text-foreground">CFP</strong> : {formatRate(finance.cfpRate)} du montant encaissé.</li>
-            {finance.vlEnabled && (
-              <li><strong className="text-foreground">Versement libératoire</strong> : {formatRate(finance.vlRate)} du montant encaissé.</li>
-            )}
-            <li>
-              <strong className="text-foreground">Net pour toi</strong> : ce qui reste, soit environ {formatRate(Math.round((100 - chargesRate(finance)) * 10) / 10)}
-              du prix moins les frais Stripe{finance.vlEnabled ? "" : ", avant impôt sur le revenu"}.
-            </li>
-          </ul>
-        </details>
-
-        <div className="mt-6 space-y-4">
-          {packs
-            .filter((p) => !p.archived)
-            .flatMap((p) =>
-              (p.formulas?.length ? p.formulas : [{ id: "base", label: p.name, price: p.price }]).map((f) => (
-                <NetTable
-                  key={`${p.id}-${f.id}`}
-                  title={`${f.id === p.formulas?.[0]?.id || !p.formulas ? p.name : `${p.name} — ${f.label}`} · ${p.priceFrom ? "à partir de " : ""}${euro(f.price)} HT`}
-                  cases={priceCases(f.price, settings, p.checkout)}
-                  finance={finance}
-                />
-              )),
-            )}
-          <NetTable
-            title="Options à la carte (payées en une fois)"
-            cases={options.map((o) => ({ label: `${o.name}${o.priceFrom ? " (à partir de)" : ""}`, payments: [o.price] }))}
-            finance={finance}
-          />
-        </div>
-      </section>
-
-      <section className="mt-10">
-        <h2 className="mb-4 font-display text-xl font-bold">Options à la carte</h2>
-        <form action={saveOptionsAction} className={`${card} space-y-3`}>
-          <p className="text-xs text-muted">Lignes vides ignorées. Cocher « Supprimer » pour retirer une option.</p>
-          {optionRows.map((o, i) => (
-            <div key={i} className="grid items-center gap-2 sm:grid-cols-[1fr_7rem_7rem_auto_auto]">
-              <input type="hidden" name={`id_${i}`} defaultValue={o?.id} />
-              <input name={`name_${i}`} defaultValue={o?.name} placeholder="Nouvelle option" aria-label="Nom de l'option" className={input} />
-              <input name={`price_${i}`} defaultValue={o ? euros(o.price) : ""} placeholder="€ HT" inputMode="decimal" aria-label="Prix" className={input} />
-              <input name={`unit_${i}`} defaultValue={o?.unit} placeholder="unité (opt.)" aria-label="Unité" className={input} />
-              <Check name={`from_${i}`} label="À partir de" defaultChecked={o?.priceFrom} />
-              {o ? <Check name={`delete_${i}`} label="Supprimer" /> : <span />}
+            <Field label="Formation professionnelle, CFP (%)" hint="Taux 2026.">
+              <input name="cfpRate" defaultValue={finance.cfpRate} inputMode="decimal" required className={input} />
+            </Field>
+            <div className="space-y-2">
+              <Field label="Versement libératoire (%)" hint="Impôt sur le revenu prélevé avec les cotisations, si tu as opté pour ce régime.">
+                <input name="vlRate" defaultValue={finance.vlRate} inputMode="decimal" required className={input} />
+              </Field>
+              <Check name="vlEnabled" label="J'ai opté pour le versement libératoire" defaultChecked={finance.vlEnabled} />
             </div>
-          ))}
-          <button type="submit" className={save}>
-            Enregistrer les options
-          </button>
-        </form>
-      </section>
+            <Field label="Frais Stripe (%)" hint="Cartes européennes standard ; vérifie dans ton tableau de bord Stripe.">
+              <input name="stripePercent" defaultValue={finance.stripePercent} inputMode="decimal" required className={input} />
+            </Field>
+            <Field label="Frais Stripe fixes par paiement (€)">
+              <input name="stripeFixed" defaultValue={euros(finance.stripeFixed)} inputMode="decimal" required className={input} />
+            </Field>
+            <Field label="Déclaration URSSAF" hint="Rythme choisi à la création de ta micro-entreprise (visible dans ton espace autoentrepreneur.urssaf.fr).">
+              <select name="urssafPeriodicity" defaultValue={finance.urssafPeriodicity} className={input}>
+                <option value="mensuelle">Mensuelle</option>
+                <option value="trimestrielle">Trimestrielle</option>
+              </select>
+            </Field>
+            <div className="sm:col-span-3">
+              <Check name="abbySendInvoice" label="Factures Abby : envoyer aussi le PDF de la facture au client par e-mail" defaultChecked={finance.abbySendInvoice} />
+            </div>
+            <div className="flex items-end">
+              <button type="submit" className={save}>
+                Enregistrer les taux
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
+      {tab === "simulateur" && (
+        <section className="mt-6 space-y-6">
+          <Intro>
+            Ce qu&apos;il te reste réellement après frais de paiement et cotisations (taux de l&apos;onglet{" "}
+            <Link href="/admin/offres?onglet=cotisations" className="text-accent hover:underline">
+              Frais et cotisations
+            </Link>
+            ).
+          </Intro>
+
+          {/* Projection : ventes par mois → net mensuel et annuel */}
+          <form method="get" action="/admin/offres" className={card}>
+            <input type="hidden" name="onglet" value="simulateur" />
+            <h2 className="font-semibold">Combien je gagne si je vends…</h2>
+            <p className="mt-1 text-xs text-muted">Ventes par mois, au prix de base payé en une fois.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {active.map((p) => (
+                <Field key={p.id} label={`${p.name} (${euro(p.formulas?.[0]?.price ?? p.price)})`}>
+                  <input name={`v_${p.id}`} type="number" min={0} max={99} defaultValue={qty(p.id) || ""} placeholder="0" className={input} />
+                </Field>
+              ))}
+            </div>
+            <button type="submit" className={`${save} mt-4`}>
+              Calculer
+            </button>
+            {sim.sales > 0 && (
+              <dl className="mt-5 grid gap-3 border-t border-border pt-5 sm:grid-cols-4">
+                {[
+                  ["Encaissé / mois", euro(sim.gross)],
+                  ["Frais et cotisations", `−${euro(sim.charges)}`],
+                  ["Net / mois", euro(sim.net)],
+                  ["Net / an", euro(sim.net * 12)],
+                ].map(([k, v], i) => (
+                  <div key={k} className="rounded-xl bg-background p-3">
+                    <dt className="text-xs text-muted">{k}</dt>
+                    <dd className={`mt-1 font-display text-xl font-bold ${i === 2 ? "text-gradient" : ""}`}>{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </form>
+
+          <details className={`${card} text-sm`}>
+            <summary className="cursor-pointer font-semibold">Comment lire les tableaux</summary>
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-muted">
+              <li><strong className="text-foreground">Encaissé HT</strong> : ce que paie le client (pas de TVA en franchise en base).</li>
+              <li>
+                <strong className="text-foreground">Frais Stripe</strong> : {formatRate(finance.stripePercent)} + {euro(finance.stripeFixed)} par paiement. Un
+                acompte puis un solde font deux paiements, donc deux frais fixes. Sur une commande réelle, les frais réels
+                Stripe remplacent cette estimation quand ils sont connus.
+              </li>
+              <li>
+                <strong className="text-foreground">URSSAF</strong> : {formatRate(finance.urssafRate)} du montant encaissé. Les frais Stripe ne
+                sont pas déductibles en micro-entreprise.
+              </li>
+              <li><strong className="text-foreground">CFP</strong> : {formatRate(finance.cfpRate)} du montant encaissé.</li>
+              {finance.vlEnabled && (
+                <li><strong className="text-foreground">Versement libératoire</strong> : {formatRate(finance.vlRate)} du montant encaissé.</li>
+              )}
+              <li>
+                <strong className="text-foreground">Net pour toi</strong> : ce qui reste, soit environ {formatRate(Math.round((100 - chargesRate(finance)) * 10) / 10)}
+                du prix moins les frais Stripe{finance.vlEnabled ? "" : ", avant impôt sur le revenu"}.
+              </li>
+            </ul>
+          </details>
+
+          <div>
+            <h2 className="mb-3 font-semibold">Détail par offre</h2>
+            <div className="space-y-3">
+              {active.map((p) => {
+                const formulas = p.formulas?.length ? p.formulas : [{ id: "base", label: p.name, price: p.price }];
+                const base = netBreakdown([formulas[0].price], finance);
+                return (
+                  <details key={p.id} className={`${card} p-0 sm:p-0`}>
+                    <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5 sm:px-6 [&::-webkit-details-marker]:hidden">
+                      <span className="font-semibold">{p.name}</span>
+                      <span className="text-sm text-muted">
+                        {euro(base.gross)} → <strong className="text-foreground">{euro(base.net)} net</strong> en une fois · détail ↓
+                      </span>
+                    </summary>
+                    <div className="space-y-4 px-5 pb-5 sm:px-6 sm:pb-6">
+                      {formulas.map((f) => (
+                        <NetTable
+                          key={f.id}
+                          title={`${f.id === formulas[0].id ? p.name : `${p.name} — ${f.label}`} · ${p.priceFrom ? "à partir de " : ""}${euro(f.price)} HT`}
+                          cases={priceCases(f.price, settings, p.checkout)}
+                          finance={finance}
+                        />
+                      ))}
+                    </div>
+                  </details>
+                );
+              })}
+              {options.length > 0 && (
+                <details className={`${card} p-0 sm:p-0`}>
+                  <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5 sm:px-6 [&::-webkit-details-marker]:hidden">
+                    <span className="font-semibold">Options à la carte</span>
+                    <span className="text-sm text-muted">payées en une fois · détail ↓</span>
+                  </summary>
+                  <div className="px-5 pb-5 sm:px-6 sm:pb-6">
+                    <NetTable
+                      title="Options à la carte (payées en une fois)"
+                      cases={options.map((o) => ({ label: `${o.name}${o.priceFrom ? " (à partir de)" : ""}`, payments: [o.price] }))}
+                      finance={finance}
+                    />
+                  </div>
+                </details>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
     </>
   );
 }

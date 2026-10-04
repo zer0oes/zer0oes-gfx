@@ -30,10 +30,18 @@ const slug = (s: string) =>
     .replace(/^-|-$/g, "")
     .slice(0, 60);
 
+// Onglets de la page Offres et réglages : on revient sur celui de l'action
+const TAB = {
+  offres: "/admin/offres",
+  options: "/admin/offres?onglet=options",
+  reglages: "/admin/offres?onglet=reglages",
+  cotisations: "/admin/offres?onglet=cotisations",
+} as const;
+
 function done(path: string, error?: string): never {
   // Le site public relit le catalogue (pages pré-rendues comprises).
   revalidatePath("/", "layout");
-  redirect(`${path}?${error ? `erreur=${encodeURIComponent(error)}` : "enregistre=1"}`);
+  redirect(`${path}${path.includes("?") ? "&" : "?"}${error ? `erreur=${encodeURIComponent(error)}` : "enregistre=1"}`);
 }
 
 export async function saveSettingsAction(formData: FormData) {
@@ -42,12 +50,12 @@ export async function saveSettingsAction(formData: FormData) {
   const logoDiscount = parseEuros(formData.get("logoDiscount"));
   const deliveryDays = text(formData, "deliveryDays", 50);
   if (!Number.isInteger(depositPercent) || depositPercent < 0 || depositPercent > 100) {
-    done("/admin/offres", "L'acompte doit être un nombre entier entre 0 et 100.");
+    done(TAB.reglages, "L'acompte doit être un nombre entier entre 0 et 100.");
   }
-  if (logoDiscount === null) done("/admin/offres", "Montant de remise invalide.");
-  if (!deliveryDays) done("/admin/offres", "Le délai de livraison est obligatoire.");
+  if (logoDiscount === null) done(TAB.reglages, "Montant de remise invalide.");
+  if (!deliveryDays) done(TAB.reglages, "Le délai de livraison est obligatoire.");
   await getStore().saveSettings({ depositPercent, logoDiscount, deliveryDays });
-  done("/admin/offres");
+  done(TAB.reglages);
 }
 
 export async function savePackAction(formData: FormData) {
@@ -55,11 +63,11 @@ export async function savePackAction(formData: FormData) {
   const store = getStore();
   const id = text(formData, "id", 60);
   const current = (await store.getCatalog()).packs.find((p) => p.id === id);
-  if (!current) done("/admin/offres", "Offre introuvable.");
+  if (!current) done(`/admin/offres?offre=${encodeURIComponent(id)}`, "Offre introuvable.");
 
   const price = parseEuros(formData.get("price"));
   const name = text(formData, "name", 120);
-  if (price === null || !name) done("/admin/offres", `« ${current.name} » : nom et prix obligatoires.`);
+  if (price === null || !name) done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${current.name} » : nom et prix obligatoires.`);
 
   // Formules : lignes formula_label_N / formula_price_N / formula_id_N / formula_stripe_N
   const formulas: Formula[] = [];
@@ -67,15 +75,15 @@ export async function savePackAction(formData: FormData) {
     const label = text(formData, `formula_label_${i}`, 120);
     if (!label) continue;
     const fPrice = parseEuros(formData.get(`formula_price_${i}`));
-    if (fPrice === null) done("/admin/offres", `« ${name} » : prix de formule invalide (${label}).`);
+    if (fPrice === null) done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${name} » : prix de formule invalide (${label}).`);
     const fid = slug(text(formData, `formula_id_${i}`, 60) || (formulas.length === 0 ? "base" : label));
-    if (formulas.some((f) => f.id === fid)) done("/admin/offres", `« ${name} » : deux formules ont le même identifiant (${fid}).`);
+    if (formulas.some((f) => f.id === fid)) done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${name} » : deux formules ont le même identifiant (${fid}).`);
     const stripePriceId = text(formData, `formula_stripe_${i}`, 100) || undefined;
     formulas.push({ id: fid, label, price: fPrice, stripePriceId });
   }
   const checkout = formData.get("checkout") === "on";
   if (checkout && formulas.length === 0) {
-    done("/admin/offres", `« ${name} » : une offre commandable en ligne doit avoir au moins une formule.`);
+    done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${name} » : une offre commandable en ligne doit avoir au moins une formule.`);
   }
 
   const pack: Pack = {
@@ -93,7 +101,7 @@ export async function savePackAction(formData: FormData) {
     archived: current.archived,
   };
   await store.savePack(pack);
-  done("/admin/offres");
+  done(`/admin/offres?offre=${encodeURIComponent(id)}`);
 }
 
 export async function saveOptionsAction(formData: FormData) {
@@ -103,7 +111,7 @@ export async function saveOptionsAction(formData: FormData) {
     const name = text(formData, `name_${i}`, 200);
     if (!name || formData.get(`delete_${i}`) === "on") continue;
     const price = parseEuros(formData.get(`price_${i}`));
-    if (price === null) done("/admin/offres", `Option « ${name} » : prix invalide.`);
+    if (price === null) done(TAB.options, `Option « ${name} » : prix invalide.`);
     let id = slug(text(formData, `id_${i}`, 60) || name);
     while (options.some((o) => o.id === id)) id = `${id}-2`;
     options.push({
@@ -115,7 +123,7 @@ export async function saveOptionsAction(formData: FormData) {
     });
   }
   await getStore().saveOptions(options);
-  done("/admin/offres");
+  done(TAB.options);
 }
 
 // --- Revenu net : taux et frais ------------------------------------------------
@@ -133,9 +141,9 @@ export async function saveFinanceAction(formData: FormData) {
   const stripePercent = percent(formData, "stripePercent");
   const stripeFixed = parseEuros(formData.get("stripeFixed"));
   if (urssafRate === null || cfpRate === null || vlRate === null || stripePercent === null) {
-    done("/admin/offres", "Les taux doivent être des pourcentages entre 0 et 100.");
+    done(TAB.cotisations, "Les taux doivent être des pourcentages entre 0 et 100.");
   }
-  if (stripeFixed === null) done("/admin/offres", "Frais fixe Stripe invalide.");
+  if (stripeFixed === null) done(TAB.cotisations, "Frais fixe Stripe invalide.");
   const periodicity = formData.get("urssafPeriodicity");
   await getStore().saveFinance({
     urssafRate,
@@ -147,7 +155,7 @@ export async function saveFinanceAction(formData: FormData) {
     abbySendInvoice: formData.get("abbySendInvoice") === "on",
     urssafPeriodicity: isUrssafPeriodicity(periodicity) ? periodicity : "trimestrielle",
   });
-  done("/admin/offres");
+  done(TAB.cotisations);
 }
 
 // --- Protection du portfolio ------------------------------------------------------
@@ -155,9 +163,9 @@ export async function saveFinanceAction(formData: FormData) {
 export async function saveProtectionAction(formData: FormData) {
   await requireAdmin();
   const watermark = text(formData, "watermark", 20);
-  if (!isWatermarkLevel(watermark)) done("/admin/offres", "Niveau de filigrane invalide.");
+  if (!isWatermarkLevel(watermark)) done(TAB.reglages, "Niveau de filigrane invalide.");
   await getStore().saveProtection({ blur: formData.get("blur") === "on", watermark });
-  done("/admin/offres");
+  done(TAB.reglages);
 }
 
 // --- Offres : ajout, ordre, archivage, suppression ------------------------------
@@ -167,7 +175,7 @@ export async function createPackAction(formData: FormData) {
   const store = getStore();
   const name = text(formData, "name", 120);
   const price = parseEuros(formData.get("price"));
-  if (!name || price === null) done("/admin/offres", "Nom et prix obligatoires pour une nouvelle offre.");
+  if (!name || price === null) done(TAB.offres, "Nom et prix obligatoires pour une nouvelle offre.");
   const { packs } = await store.getCatalog();
   let id = slug(name) || "offre";
   while (packs.some((p) => p.id === id)) id = `${id}-2`;
@@ -181,7 +189,7 @@ export async function createPackAction(formData: FormData) {
     deliverables: [],
     formulas: checkout ? [{ id: "base", label: name, price }] : undefined,
   });
-  done("/admin/offres");
+  done(`/admin/offres?offre=${encodeURIComponent(id)}`);
 }
 
 export async function movePackAction(formData: FormData) {
@@ -190,19 +198,19 @@ export async function movePackAction(formData: FormData) {
   const ids = (await store.getCatalog()).packs.map((p) => p.id);
   const i = ids.indexOf(text(formData, "id", 60));
   const j = i + (formData.get("dir") === "up" ? -1 : 1);
-  if (i < 0 || j < 0 || j >= ids.length) done("/admin/offres");
+  if (i < 0 || j < 0 || j >= ids.length) done(TAB.offres);
   [ids[i], ids[j]] = [ids[j], ids[i]];
   await store.reorderPacks(ids);
-  done("/admin/offres");
+  done(`/admin/offres?offre=${encodeURIComponent(ids[j])}`);
 }
 
 export async function archivePackAction(formData: FormData) {
   await requireAdmin();
   const store = getStore();
   const pack = (await store.getCatalog()).packs.find((p) => p.id === text(formData, "id", 60));
-  if (!pack) done("/admin/offres", "Offre introuvable.");
+  if (!pack) done(TAB.offres, "Offre introuvable.");
   await store.savePack({ ...pack, archived: formData.get("restore") === "1" ? undefined : true });
-  done("/admin/offres");
+  done(`/admin/offres?offre=${encodeURIComponent(pack.id)}`);
 }
 
 // Suppression définitive, sauf si des commandes existent : l'offre est alors archivée.
@@ -210,14 +218,14 @@ export async function deletePackAction(formData: FormData) {
   await requireAdmin();
   const store = getStore();
   const id = text(formData, "id", 60);
-  if (formData.get("confirm") !== "on") done("/admin/offres", "Coche la case de confirmation pour supprimer.");
+  if (formData.get("confirm") !== "on") done(TAB.offres, "Coche la case de confirmation pour supprimer.");
   const pack = (await store.getCatalog()).packs.find((p) => p.id === id);
-  if (!pack) done("/admin/offres", "Offre introuvable.");
+  if (!pack) done(TAB.offres, "Offre introuvable.");
   const hasOrders = (await store.listOrders()).some((o) => o.packId === id);
   if (hasOrders) {
     await store.savePack({ ...pack, archived: true });
-    done("/admin/offres", `« ${pack.name} » a des commandes : elle a été archivée (masquée du site) plutôt que supprimée.`);
+    done(TAB.offres, `« ${pack.name} » a des commandes : elle a été archivée (masquée du site) plutôt que supprimée.`);
   }
   await store.deletePack(id);
-  done("/admin/offres");
+  done(TAB.offres);
 }
