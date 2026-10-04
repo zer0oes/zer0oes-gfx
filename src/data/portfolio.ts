@@ -144,12 +144,12 @@ export const works: Work[] = [
   },
   {
     id: "zer0oes-gaming",
-    title: "Scène « Gaming »",
+    title: "Scènes « Gaming » et « Just Chatting »",
     streamer: "zer0oes",
     category: "overlays",
-    description: "Scène de jeu : bandeau d'infos animé en haut (date, derniers événements, réseaux) et objectif discret, pour laisser toute la place au jeu.",
-    image: "/portfolio/zer0oes-gaming-anime.webp",
-    video: "/portfolio/zer0oes-gaming-anime.mp4",
+    description: "Les scènes de jeu et de discussion : webcam en incrustation ou en plein écran, bandeau d'infos animé, musique et objectif.",
+    image: "/portfolio/zer0oes-gaming-talk.webp",
+    video: "/portfolio/zer0oes-gaming-talk.mp4",
     colors: ["#0ea5e9", "#7c3aed"],
   },
   {

@@ -120,7 +120,7 @@ export const caseStudies: Record<string, CaseStudy | EditorialStudy> = {
         title: ["Un décor qui", "suit le stream."],
         text: "Une identité commune, déclinée pour chaque moment du live.",
         scenes: [
-          { id: "zer0oes-gaming", label: "Gaming" },
+          { id: "zer0oes-gaming", label: "Gaming & Just Chatting" },
           { id: "zer0oes-paused", label: "Pause" },
           { id: "zer0oes-ending", label: "Fin de live" },
           { id: "zer0oes-offline", label: "Hors ligne" },
