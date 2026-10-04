@@ -31,9 +31,16 @@ export function DeliveryUpload({
     setBusy(true);
     setStatus(`Envoi de ${file.name} (${formatBytes(file.size)})…`);
     try {
-      const ticket = await prepareDeliverableUpload({ orderId, filename: file.name, size: file.size });
+      const ticket = await prepareDeliverableUpload({ orderId, filename: file.name, size: file.size, type: file.type });
       if (ticket.mode === "error") throw new Error(ticket.message);
-      if (ticket.mode === "signed") {
+      if (ticket.mode === "s3") {
+        const put = await fetch(ticket.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": ticket.contentType } });
+        if (!put.ok) throw new Error(`Envoi vers S3 refusé (${put.status}).`);
+        const done = previewFor
+          ? await attachDeliverablePreview({ orderId, id: previewFor, path: ticket.path })
+          : await finalizeDeliverable({ orderId, label: label || file.name, path: ticket.path, size: file.size });
+        if ("error" in done && done.error) throw new Error(done.error);
+      } else if (ticket.mode === "signed") {
         if (!supabaseUrl || !supabaseKey) throw new Error("Configuration Supabase manquante.");
         const { error } = await createClient(supabaseUrl, supabaseKey)
           .storage.from("livrables")

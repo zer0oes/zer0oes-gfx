@@ -16,11 +16,11 @@ test("étapes : du brief à la livraison", () => {
   assert.match(statusMessage(paid), /terminé/);
 });
 
-test("conservation des fichiers : 90 jours après la clôture", () => {
+test("conservation des fichiers : 6 mois après la clôture", () => {
   const done = { completedAt: "2026-01-01T00:00:00Z" };
   assert.equal(filesExpired({}), false);
-  assert.equal(filesExpired(done, new Date("2026-03-15T00:00:00Z")), false);
-  assert.equal(filesExpired(done, new Date("2026-04-02T00:00:00Z")), true);
+  assert.equal(filesExpired(done, new Date("2026-06-30T00:00:00Z")), false);
+  assert.equal(filesExpired(done, new Date("2026-07-02T00:00:00Z")), true);
 });
 
 test("date de clôture posée et retirée selon le statut", () => {

@@ -2,8 +2,8 @@
 // conservation des fichiers. Logique pure, testée (portal.test.ts).
 import type { OrderStatus } from "@/lib/store/types";
 
-// Fichiers définitifs disponibles pendant 90 jours après la clôture du projet
-export const FILES_RETENTION_DAYS = 90;
+// Fichiers définitifs disponibles pendant 6 mois après la clôture du projet
+export const FILES_RETENTION_MONTHS = 6;
 
 export type StepState = "fait" | "en_cours" | "a_venir";
 export type Step = { id: "brief" | "creation" | "validation" | "solde" | "livraison"; label: string; state: StepState; detail?: string };
@@ -21,7 +21,9 @@ const rank: Record<OrderStatus, number> = { payee: 0, brief_recu: 1, en_cours: 2
 
 export function filesExpireAt(order: Pick<PortalOrder, "completedAt">) {
   if (!order.completedAt) return null;
-  return new Date(new Date(order.completedAt).getTime() + FILES_RETENTION_DAYS * 86_400_000);
+  const at = new Date(order.completedAt);
+  at.setUTCMonth(at.getUTCMonth() + FILES_RETENTION_MONTHS);
+  return at;
 }
 
 export function filesExpired(order: Pick<PortalOrder, "completedAt">, now = new Date()) {

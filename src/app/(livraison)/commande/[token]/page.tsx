@@ -21,7 +21,7 @@ import { addClientNoteAction, payBalanceAction, setClientApprovalAction } from "
 // Espace commande privé du client (accès par lien, sans compte) : statut et étapes du projet,
 // paiement, aperçus protégés à valider, puis fichiers définitifs. Ceux-ci sont servis par
 // /commande/<jeton>/<id> une fois l'élément validé et le solde réglé (contrôle serveur),
-// pendant 90 jours après la clôture du projet.
+// pendant 6 mois après la clôture du projet.
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Ta commande", robots: { index: false, follow: false } };
 
@@ -343,7 +343,7 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
                 </div>
                 <p className="mt-3 text-xs text-muted">
                   {expired
-                    ? "Projet clôturé depuis plus de 90 jours : les fichiers ne sont plus disponibles ici. Écris-moi pour les récupérer."
+                    ? "Projet clôturé depuis plus de 6 mois : les fichiers ne sont plus disponibles ici. Écris-moi pour les récupérer."
                     : expiresAt
                       ? `Projet terminé : tes fichiers définitifs restent disponibles ici jusqu'au ${dateFmt.format(expiresAt)}. Pense à les enregistrer.`
                       : "🔒 Les aperçus sont protégés jusqu'à validation. Les fichiers HD et liens d'import seront débloqués après validation et règlement du solde."}

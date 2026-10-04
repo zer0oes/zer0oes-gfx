@@ -181,6 +181,11 @@ depuis l'admin vont directement dans le bucket (lien signé), avec le filigrane 
 
 `NEXT_PUBLIC_MEDIA_URL` est lue à la compilation : après l'avoir ajoutée sur Heroku, redéployer.
 
+Les **fichiers livrés aux clients** (fichiers définitifs et aperçus de l'espace commande) vont aussi
+dans le bucket, dans le dossier privé `livrables/` : jamais lisibles publiquement, servis par des liens
+signés de 10 minutes après les contrôles de l'espace commande (validation + solde), pendant 6 mois
+après la clôture du projet (statut « Terminée »). Retirer un élément le supprime du bucket.
+
 ## Stripe
 
 1. Commencer avec les clés de **test** (`sk_test_…`) ; passer en `sk_live_…` une fois le site validé.

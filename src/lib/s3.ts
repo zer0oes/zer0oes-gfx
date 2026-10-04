@@ -48,3 +48,38 @@ export async function s3Upload(path: string, data: Uint8Array, contentType: stri
 export async function s3Delete(path: string) {
   await s3().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key(path) }));
 }
+
+// --- Fichiers livrés aux clients : dossier privé « livrables/ » (jamais lisible publiquement) ---
+// Accès uniquement par liens signés de courte durée, après les contrôles de l'espace commande.
+
+const privateKey = (path: string) => `livrables/${path.replace(/^\/+/, "")}`;
+
+export async function s3DeliverableUpload(path: string, contentType: string) {
+  return getSignedUrl(s3(), new PutObjectCommand({ Bucket: bucket(), Key: privateKey(path), ContentType: contentType }), { expiresIn: 3600 });
+}
+
+// filename : téléchargement en pièce jointe ; sans : lecture dans la page (aperçu vidéo). Lien de 10 minutes.
+export async function s3DeliverableUrl(path: string, filename?: string) {
+  return getSignedUrl(
+    s3(),
+    new GetObjectCommand({
+      Bucket: bucket(),
+      Key: privateKey(path),
+      ...(filename ? { ResponseContentDisposition: `attachment; filename="${filename.replace(/"/g, "")}"` } : {}),
+    }),
+    { expiresIn: 600 },
+  );
+}
+
+export async function s3DeliverableRead(path: string) {
+  const res = await s3().send(new GetObjectCommand({ Bucket: bucket(), Key: privateKey(path) }));
+  return new Uint8Array(await res.Body!.transformToByteArray());
+}
+
+export async function s3DeliverableWrite(path: string, data: Uint8Array, contentType = "application/octet-stream") {
+  await s3().send(new PutObjectCommand({ Bucket: bucket(), Key: privateKey(path), Body: data, ContentType: contentType }));
+}
+
+export async function s3DeliverableDelete(path: string) {
+  await s3().send(new DeleteObjectCommand({ Bucket: bucket(), Key: privateKey(path) }));
+}

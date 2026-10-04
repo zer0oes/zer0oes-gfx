@@ -7,7 +7,14 @@ import { requireAdmin } from "@/lib/auth";
 import { checkDeliveryLink, DELIVERABLE_MAX_BYTES, deliverablePath, deliveryEmail, isDeliverableType, mediaKind, newDeliveryToken } from "@/lib/delivery";
 import { notify, sendToCustomer } from "@/lib/notify";
 import { siteUrl } from "@/lib/site-url";
+import { s3Configured, s3DeliverableDelete, s3DeliverableUpload } from "@/lib/s3";
 import { getStore } from "@/lib/store";
+
+// Fichiers livrés stockés dans S3 : supprimés du bucket avec l'élément (ou à son remplacement)
+async function removeFromBucket(...paths: (string | undefined)[]) {
+  if (!s3Configured()) return;
+  for (const p of paths) if (p) await s3DeliverableDelete(p).catch((e) => console.error(e));
+}
 
 function back(orderId: string, message?: { error?: string; ok?: string }): never {
   revalidatePath(`/admin/commandes/${orderId}`);
@@ -32,14 +39,24 @@ export async function addDeliveryLinkAction(formData: FormData) {
   back(orderId, { ok: "Lien ajouté." });
 }
 
-export type DeliveryUploadTicket = { mode: "signed"; path: string; token: string } | { mode: "direct" } | { mode: "error"; message: string };
+export type DeliveryUploadTicket =
+  | { mode: "signed"; path: string; token: string }
+  | { mode: "s3"; path: string; uploadUrl: string; contentType: string }
+  | { mode: "direct" }
+  | { mode: "error"; message: string };
 
 // Étape 1 d'un envoi de fichier : contrôle puis URL d'envoi signée vers le stockage privé
-export async function prepareDeliverableUpload(input: { orderId: string; filename: string; size: number }): Promise<DeliveryUploadTicket> {
+export async function prepareDeliverableUpload(input: { orderId: string; filename: string; size: number; type?: string }): Promise<DeliveryUploadTicket> {
   await requireAdmin();
   const store = getStore();
   if (!(await store.getOrder(input.orderId))) return { mode: "error", message: "Commande introuvable." };
   if (input.size <= 0 || input.size > DELIVERABLE_MAX_BYTES) return { mode: "error", message: "Fichier vide ou trop lourd (500 Mo maximum)." };
+  // Bucket S3 : le navigateur envoie le fichier directement dans le dossier privé (lien signé)
+  if (s3Configured()) {
+    const path = deliverablePath(input.orderId, input.filename, randomUUID().slice(0, 8));
+    const contentType = /^[\w.+-]+\/[\w.+-]+$/.test(input.type ?? "") ? input.type! : "application/octet-stream";
+    return { mode: "s3", path, uploadUrl: await s3DeliverableUpload(path, contentType), contentType };
+  }
   if (store.createDeliverableUpload) {
     const path = deliverablePath(input.orderId, input.filename, randomUUID().slice(0, 8));
     const { token } = await store.createDeliverableUpload(path);
@@ -87,8 +104,10 @@ export async function deleteDeliverableAction(formData: FormData) {
   const orderId = text(formData, "orderId", 60);
   const id = text(formData, "id", 60);
   const items = await getStore().listDeliverables(orderId);
-  if (!items.some((d) => d.id === id)) back(orderId, { error: "Élément introuvable." });
+  const item = items.find((d) => d.id === id);
+  if (!item) back(orderId, { error: "Élément introuvable." });
   await getStore().deleteDeliverable(id);
+  await removeFromBucket(item.storagePath, item.previewPath);
   back(orderId, { ok: "Élément retiré." });
 }
 
@@ -140,8 +159,10 @@ export async function attachDeliverablePreview(input: { orderId: string; id: str
   if (!input.path.startsWith(`${input.orderId}/`)) return { error: "Chemin de fichier invalide." };
   const kind = mediaKind(input.path);
   if (!kind) return { error: "L'aperçu doit être une image (PNG, JPG, WEBP) ou une vidéo (MP4, WEBM)." };
-  if (!(await getStore().listDeliverables(input.orderId)).some((d) => d.id === input.id)) return { error: "Élément introuvable." };
+  const item = (await getStore().listDeliverables(input.orderId)).find((d) => d.id === input.id);
+  if (!item) return { error: "Élément introuvable." };
   await getStore().updateDeliverable(input.id, { previewPath: input.path, previewType: kind });
+  if (item.previewPath !== input.path) await removeFromBucket(item.previewPath);
   revalidatePath(`/admin/commandes/${input.orderId}`);
   return { ok: true };
 }
@@ -150,8 +171,10 @@ export async function removeDeliverablePreviewAction(formData: FormData) {
   await requireAdmin();
   const orderId = text(formData, "orderId", 60);
   const id = text(formData, "id", 60);
-  if (!(await getStore().listDeliverables(orderId)).some((d) => d.id === id)) back(orderId, { error: "Élément introuvable." });
+  const item = (await getStore().listDeliverables(orderId)).find((d) => d.id === id);
+  if (!item) back(orderId, { error: "Élément introuvable." });
   await getStore().updateDeliverable(id, { previewPath: null, previewType: null });
+  await removeFromBucket(item.previewPath);
   back(orderId, { ok: "Aperçu retiré." });
 }
 

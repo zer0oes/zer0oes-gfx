@@ -1,7 +1,7 @@
 import "server-only";
 import { localStoreAllowed, supabaseConfigured } from "@/lib/env";
 import { mediaBaseUrl, mediaUrl } from "@/lib/media";
-import { s3Configured, s3Download, s3Upload } from "@/lib/s3";
+import { s3Configured, s3DeliverableRead, s3DeliverableUrl, s3DeliverableWrite, s3Download, s3Upload } from "@/lib/s3";
 import { localStore } from "./local";
 import { staticStore } from "./static";
 import { supabaseStore } from "./supabase";
@@ -36,8 +36,19 @@ export function getStore(): Store {
   return {
     ...store,
     getPortfolio: async () => withMediaUrls(await store.getPortfolio()),
-    // Envois de l'admin : stockés dans S3 (au lieu de Supabase Storage) dès que les clés sont là
-    ...(s3Configured() ? { createSignedUpload: undefined, downloadAsset: s3Download, uploadAsset: s3Upload } : {}),
+    // Dès que les clés sont là, S3 remplace Supabase Storage : médias du portfolio (dossier public)
+    // et fichiers livrés aux clients (dossier privé « livrables/ », liens signés uniquement)
+    ...(s3Configured()
+      ? {
+          createSignedUpload: undefined,
+          downloadAsset: s3Download,
+          uploadAsset: s3Upload,
+          createDeliverableUpload: undefined,
+          deliverableDownloadUrl: s3DeliverableUrl,
+          readDeliverableFile: s3DeliverableRead,
+          saveDeliverableFile: (path: string, data: Uint8Array) => s3DeliverableWrite(path, data),
+        }
+      : {}),
   };
 }
 

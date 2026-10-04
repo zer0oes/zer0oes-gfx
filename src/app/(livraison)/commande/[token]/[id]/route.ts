@@ -15,7 +15,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/commande
   const item = (await store.listDeliverables(order.id)).find((d) => d.id === id);
   if (!item) return notFound();
   if (filesExpired(order)) {
-    return new Response("Ce projet est clôturé depuis plus de 90 jours : écris-moi pour récupérer tes fichiers.", { status: 410, headers });
+    return new Response("Ce projet est clôturé depuis plus de 6 mois : écris-moi pour récupérer tes fichiers.", { status: 410, headers });
   }
   if (unlockState(order, item) !== "debloque") {
     return new Response("Cet élément sera disponible après ta validation et le règlement du solde.", { status: 403, headers });
