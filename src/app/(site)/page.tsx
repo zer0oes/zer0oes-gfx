@@ -23,6 +23,14 @@ function Showcase({ work, href, sizes }: { work: Work; href: string; sizes: stri
   );
 }
 
+// Emplacements des emotes autour du visuel du hero (légèrement en dehors du cadre)
+const emoteSpots = [
+  "-left-6 -top-8 h-20 w-20 -rotate-12 sm:-left-10 sm:h-28 sm:w-28",
+  "-right-4 -top-10 h-16 w-16 rotate-12 sm:h-24 sm:w-24",
+  "-bottom-8 -left-4 h-16 w-16 rotate-6 sm:h-24 sm:w-24",
+  "-bottom-10 right-10 h-20 w-20 -rotate-6 sm:h-28 sm:w-28",
+];
+
 const steps = (deliveryDays: string) => [
   { title: "Tu choisis", text: "Une offre prête à commander, ou une demande sur mesure." },
   { title: "Tu briefes", text: "Univers, couleurs, références et overlays choisis : un formulaire simple juste après la commande." },
@@ -43,6 +51,9 @@ export default async function Home() {
   // Facettes montrées sous l'ouverture, sans répéter le visuel du hero
   const byId = (id: string) => works.find((w) => w.id === id && w.image && w.id !== hero?.id);
   const emotes = (byId("zer0oes-emotes")?.emotes ?? []).slice(0, 12);
+  // Quelques emotes qui débordent autour de la création du hero
+  const allEmotes = works.find((w) => w.id === "zer0oes-emotes")?.emotes ?? [];
+  const heroEmotes = ["HYPE", "LOVE", "ACOOL", "GG"].flatMap((n) => allEmotes.filter((e) => e.name === n)).slice(0, 4);
   const universe = byId("tomavega-starting-screen") ?? featured.find((w) => w.image && w.id !== hero?.id && w.streamer !== hero?.streamer);
   const signature = byId("zer0oes-logo");
   const portrait = byId("zer0oes-avatar");
@@ -58,47 +69,57 @@ export default async function Home() {
               "radial-gradient(40% 50% at 20% 30%, var(--accent-3), transparent), radial-gradient(40% 50% at 80% 20%, var(--accent-2), transparent), radial-gradient(50% 50% at 50% 90%, var(--accent), transparent)",
           }}
         />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.05fr_1fr]">
-          <div className="text-center lg:text-left">
-            <p className="text-sm font-semibold uppercase tracking-widest text-accent">Logo · Overlays · Emotes</p>
-            <h1 className="mt-4 font-display text-5xl font-bold leading-tight tracking-tight sm:text-6xl xl:text-7xl">
-              Un stream qui <span className="text-gradient">te ressemble</span>
+        <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-12 lg:gap-10">
+          <div className="text-center lg:col-span-6 lg:text-left">
+            <h1 className="font-display text-6xl font-bold leading-[0.95] tracking-tight sm:text-7xl xl:text-[5.5rem]">
+              <span className="whitespace-nowrap">Ton stream.</span>
+              <br />
+              <span className="text-gradient whitespace-nowrap">Ton univers.</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-xl text-lg text-muted lg:mx-0">{site.description}</p>
-            <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
-              <Link href="/offres" className="rounded-full bg-accent px-7 py-3 text-center font-semibold text-background transition hover:brightness-110">
-                Voir les offres
+            <p className="mx-auto mt-8 max-w-md text-lg text-muted lg:mx-0">Identités visuelles sur mesure pour les créateurs de live.</p>
+            <div className="mt-10 flex flex-col items-center gap-5 sm:flex-row lg:items-center">
+              <Link href="/portfolio" className="rounded-full bg-accent px-8 py-3.5 text-center font-semibold text-background transition hover:brightness-110">
+                Découvrir les projets
               </Link>
-              <Link href="/portfolio" className="rounded-full border border-border bg-background/40 px-7 py-3 text-center font-semibold transition hover:border-accent">
-                Découvrir le portfolio
+              <Link href="/offres" className="text-sm text-muted underline-offset-4 transition hover:text-foreground hover:underline">
+                Voir les offres →
               </Link>
             </div>
           </div>
           {hero?.image && (
-            <Link href="/portfolio" className="group relative block">
-              <div
-                aria-hidden
-                className="absolute -inset-3 rounded-3xl opacity-60 blur-2xl transition group-hover:opacity-80"
-                style={{ background: "linear-gradient(135deg, var(--accent-3), var(--accent), var(--accent-2))" }}
-              />
-              <div className="relative overflow-hidden rounded-2xl border border-border bg-surface">
-                <ProtectedMedia>
-                <Image
-                  draggable={false}
-                  src={hero.image}
-                  alt={`${hero.title} — ${heroStreamer}`}
-                  width={1600}
-                  height={900}
-                  priority
-                  sizes="(min-width: 1024px) 560px, 100vw"
-                  className="h-auto w-full"
+            // Création en grand, décalée vers la droite, avec quelques emotes qui débordent autour
+            <div className="relative lg:col-span-6 lg:-mr-6 xl:-mr-14">
+              <Link href={projectHref(hero.streamer)} data-hover-root className="group relative block">
+                <div
+                  aria-hidden
+                  className="absolute -inset-4 rounded-3xl opacity-50 blur-2xl transition group-hover:opacity-70"
+                  style={{ background: "linear-gradient(135deg, var(--accent-3), var(--accent), var(--accent-2))" }}
                 />
-                </ProtectedMedia>
-              </div>
-              <p className="relative mt-3 text-center text-xs text-muted lg:text-right">
-                {hero.title} · {heroStreamer}
-              </p>
-            </Link>
+                <div className="relative overflow-hidden rounded-2xl border border-border bg-surface">
+                  <ProtectedMedia className="aspect-video">
+                    <Image
+                      draggable={false}
+                      src={hero.image}
+                      alt={`${hero.title} — ${heroStreamer}`}
+                      fill
+                      priority
+                      sizes="(min-width: 1280px) 760px, (min-width: 1024px) 60vw, 100vw"
+                      className="object-cover"
+                    />
+                    {hero.video && <HoverVideo src={hero.video} />}
+                  </ProtectedMedia>
+                </div>
+              </Link>
+              {heroEmotes.map((e, i) => (
+                <div
+                  key={e.name}
+                  aria-hidden
+                  className={`pointer-events-none absolute drop-shadow-[0_8px_24px_rgba(0,0,0,0.6)] ${emoteSpots[i]}`}
+                >
+                  <Image src={e.src} alt="" width={128} height={128} draggable={false} unoptimized={e.animated} className="h-full w-full object-contain" />
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </section>

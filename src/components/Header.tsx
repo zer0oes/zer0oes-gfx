@@ -8,7 +8,7 @@ import { useState } from "react";
 const links = [
   { href: "/portfolio", label: "Portfolio" },
   { href: "/offres", label: "Offres" },
-  { href: "/contact", label: "Sur-mesure & contact" },
+  { href: "/contact", label: "Sur-mesure" },
 ];
 
 export function Header() {
@@ -17,7 +17,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="shrink-0" onClick={() => setOpen(false)}>
           <Image src="/logo-zeroes-gfx.png" alt="zer0oes gfx" width={1400} height={250} priority className="h-9 w-auto sm:h-10" />
         </Link>
@@ -35,10 +35,10 @@ export function Header() {
             </Link>
           ))}
           <Link
-            href="/offres"
-            className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background transition hover:brightness-110"
+            href="/contact"
+            className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
           >
-            Commander
+            Parlons de ton projet ↗
           </Link>
         </nav>
 
@@ -67,6 +67,13 @@ export function Header() {
               {l.label}
             </Link>
           ))}
+          <Link
+            href="/contact"
+            onClick={() => setOpen(false)}
+            className="mt-2 inline-block rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background"
+          >
+            Parlons de ton projet ↗
+          </Link>
         </nav>
       )}
     </header>
