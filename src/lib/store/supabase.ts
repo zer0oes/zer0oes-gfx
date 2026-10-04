@@ -402,6 +402,10 @@ export const supabaseStore: Store = {
     check(await db().from("works").delete().eq("id", id));
   },
 
+  async reorderStreamers(ids) {
+    await Promise.all(ids.map(async (id, position) => check(await db().from("streamers").update({ position }).eq("id", id))));
+  },
+
   async reorderWorks(ids) {
     await Promise.all(ids.map(async (id, position) => check(await db().from("works").update({ position }).eq("id", id))));
   },

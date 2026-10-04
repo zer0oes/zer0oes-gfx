@@ -150,6 +150,7 @@ export interface Store {
   saveWork(work: Work, position?: number): Promise<void>;
   deleteWork(id: string): Promise<void>;
   reorderWorks(orderedIds: string[]): Promise<void>;
+  reorderStreamers(orderedIds: string[]): Promise<void>;
   // Upload signé (Supabase) : le navigateur envoie le fichier directement au stockage.
   createSignedUpload?(path: string): Promise<{ token: string; publicUrl: string }>;
   downloadAsset?(path: string): Promise<Uint8Array>;

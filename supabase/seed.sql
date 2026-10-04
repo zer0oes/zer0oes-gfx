@@ -31,8 +31,8 @@ insert into public.options (id, position, name, price, price_from, unit) values
   ('animation-logo', 9, 'Animation du logo', 18000, true, null)
 on conflict (id) do update set position = excluded.position, name = excluded.name, price = excluded.price, price_from = excluded.price_from, unit = excluded.unit;
 insert into public.streamers (id, position, name, description, url) values
-  ('zer0oes', 0, 'zer0oes', 'Ma propre chaîne : univers néon violet, du cadre de stream aux emotes.', 'https://www.twitch.tv/zer0oes'),
-  ('tomavega', 1, 'TomaVega', 'Identité électrique sur fond minéral : écran de lancement, tchat et alertes.', null)
+  ('tomavega', 0, 'TomaVega', 'Identité électrique sur fond minéral : écran de lancement, tchat et alertes.', null),
+  ('zer0oes', 1, 'zer0oes', 'Ma propre chaîne : univers néon violet, du cadre de stream aux emotes.', 'https://www.twitch.tv/zer0oes')
 on conflict (id) do update set position = excluded.position, name = excluded.name, description = excluded.description, url = excluded.url;
 insert into public.works (id, streamer_id, category, position, title, description, image, video, colors, featured) values
   ('zer0oes-logo', 'zer0oes', 'logo', 0, 'Logo zer0oes', 'Logo manuscrit tracé d''un seul trait, décliné en blanc et en violet pour le stream et les réseaux.', '/portfolio/zer0oes-logo.webp', null, array['#5b21b6', '#2e1065']::text[], false),

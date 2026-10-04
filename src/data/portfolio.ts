@@ -21,16 +21,17 @@ export const categories: { id: Category; label: string }[] = [
 export type Streamer = { id: string; name: string; description: string; url?: string };
 
 export const streamers: Streamer[] = [
+  // Du plus récent au plus ancien (ordre d'affichage du portfolio)
+  {
+    id: "tomavega",
+    name: "TomaVega",
+    description: "Identité électrique sur fond minéral : écran de lancement, tchat et alertes.",
+  },
   {
     id: "zer0oes",
     name: "zer0oes",
     description: "Ma propre chaîne : univers néon violet, du cadre de stream aux emotes.",
     url: "https://www.twitch.tv/zer0oes",
-  },
-  {
-    id: "tomavega",
-    name: "TomaVega",
-    description: "Identité électrique sur fond minéral : écran de lancement, tchat et alertes.",
   },
 ];
 

@@ -87,6 +87,11 @@ export const localStore: Store = {
     }),
   saveWork: (w, position) => mutate((d) => upsertAt(d.works, w, position)),
   deleteWork: (id) => mutate((d) => void (d.works = d.works.filter((w) => w.id !== id))),
+  reorderStreamers: (ids) =>
+    mutate((d) => {
+      const rank = (id: string) => (ids.includes(id) ? ids.indexOf(id) : ids.length);
+      d.streamers = [...d.streamers].sort((a, b) => rank(a.id) - rank(b.id));
+    }),
   reorderWorks: (ids) =>
     mutate((d) => {
       const rank = (id: string) => (ids.includes(id) ? ids.indexOf(id) : ids.length);

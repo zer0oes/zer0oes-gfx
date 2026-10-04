@@ -121,6 +121,21 @@ export async function deleteWorkAction(formData: FormData) {
   done("/admin/portfolio");
 }
 
+// Ordre des projets sur la page Portfolio (du plus récent au plus ancien, par exemple)
+export async function moveStreamerAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const id = text(formData, "id", 60);
+  const dir = formData.get("dir") === "up" ? -1 : 1;
+  const ids = (await store.getPortfolio()).streamers.map((s) => s.id);
+  const i = ids.indexOf(id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= ids.length) done("/admin/portfolio");
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  await store.reorderStreamers(ids);
+  done("/admin/portfolio");
+}
+
 export async function moveWorkAction(formData: FormData) {
   await requireAdmin();
   const store = getStore();

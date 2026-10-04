@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { categories } from "@/data/portfolio";
 import { getStore } from "@/lib/store";
-import { deleteStreamerAction, moveWorkAction, saveStreamerAction } from "../../portfolio-actions";
+import { deleteStreamerAction, moveStreamerAction, moveWorkAction, saveStreamerAction } from "../../portfolio-actions";
 
 export const metadata: Metadata = { title: "Portfolio" };
 
@@ -28,10 +28,22 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps<"/a
       )}
 
       <div className="mt-8 space-y-8">
-        {streamers.map((s) => {
+        {streamers.map((s, si) => {
           const own = works.filter((w) => w.streamer === s.id);
           return (
             <section key={s.id} className={card}>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <span className="text-xs text-muted">Projet {si + 1} sur {streamers.length} dans le portfolio</span>
+                <form action={moveStreamerAction} className="flex gap-1">
+                  <input type="hidden" name="id" value={s.id} />
+                  <button name="dir" value="up" disabled={si === 0} aria-label={`Monter le projet ${s.name}`} className="rounded-md border border-border px-2 py-1 text-xs disabled:opacity-30">
+                    ↑
+                  </button>
+                  <button name="dir" value="down" disabled={si === streamers.length - 1} aria-label={`Descendre le projet ${s.name}`} className="rounded-md border border-border px-2 py-1 text-xs disabled:opacity-30">
+                    ↓
+                  </button>
+                </form>
+              </div>
               <form action={saveStreamerAction} className="grid gap-3 sm:grid-cols-[1fr_2fr_1.4fr_auto] sm:items-end">
                 <input type="hidden" name="id" value={s.id} />
                 <label className="block">
