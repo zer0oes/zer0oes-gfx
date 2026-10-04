@@ -13,7 +13,8 @@ export async function loadDashboard(params: PeriodParams) {
   const sample = real.length === 0;
   const source = sample ? demoOrders(today) : real;
   const movs = movements(source, sample ? [] : invoices, finance);
-  const period = resolvePeriod(params, today);
+  // Sans période demandée : le mois en cours si la déclaration URSSAF est mensuelle, sinon le trimestre
+  const period = resolvePeriod(params.periode ? params : { ...params, periode: finance.urssafPeriodicity === "mensuelle" ? "mois" : "trimestre" }, today);
   return { today, sample, finance, period, orders: source, movs, inPeriod: movs.filter((m) => within(m, period.start, period.end)) };
 }
 
