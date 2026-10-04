@@ -55,6 +55,19 @@ export type Invoice = {
   updatedAt: string;
 };
 
+// Élément livré au client : lien d'import (overlay StreamElements partagé…) ou fichier
+// du stockage privé « livrables ».
+export type Deliverable = {
+  id: string;
+  orderId: string;
+  kind: "lien" | "fichier";
+  label: string;
+  url?: string;
+  storagePath?: string;
+  sizeBytes?: number;
+  createdAt: string;
+};
+
 export type Order = {
   id: string;
   createdAt: string;
@@ -92,6 +105,9 @@ export type Order = {
   briefReceivedAt?: string;
   notes: OrderNote[];
   refunds?: Refund[];
+  // Lien privé de livraison (/livraison/<jeton>) et date d'envoi au client
+  deliveryToken?: string;
+  deliveredAt?: string;
 };
 
 export type NewOrder = Omit<
@@ -122,6 +138,8 @@ export type OrderPatch = Partial<
     | "feesPaid"
     | "balancePaymentIntentId"
     | "refunds"
+    | "deliveryToken"
+    | "deliveredAt"
   >
 >;
 
@@ -162,6 +180,17 @@ export interface Store {
   listOrders(status?: OrderStatus): Promise<Order[]>;
   updateOrder(id: string, patch: OrderPatch): Promise<void>;
   addNote(orderId: string, body: string): Promise<void>;
+  // Livraison
+  listDeliverables(orderId: string): Promise<Deliverable[]>;
+  addDeliverable(d: Omit<Deliverable, "id" | "createdAt">): Promise<Deliverable>;
+  deleteDeliverable(id: string): Promise<void>;
+  getOrderByDeliveryToken(token: string): Promise<Order | null>;
+  // Fichiers livrés : envoi direct du navigateur vers le stockage privé (Supabase),
+  // lien de téléchargement temporaire, ou lecture directe (magasin local de développement).
+  createDeliverableUpload?(path: string): Promise<{ token: string }>;
+  deliverableDownloadUrl?(path: string, filename: string): Promise<string>;
+  saveDeliverableFile?(path: string, data: Uint8Array): Promise<void>;
+  readDeliverableFile?(path: string): Promise<Uint8Array>;
   // Factures
   listInvoices(orderId?: string): Promise<Invoice[]>;
   getInvoiceByKey(paymentKey: string): Promise<Invoice | null>;

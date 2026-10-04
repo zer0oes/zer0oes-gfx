@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BalanceLinkForm } from "@/components/admin/BalanceLinkForm";
+import { DeliverySection } from "@/components/admin/DeliverySection";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { formatRate, netBreakdown } from "@/lib/finance";
 import { paymentSummary } from "@/lib/orders";
@@ -24,10 +25,12 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 const card = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
 
-export default async function OrderPage({ params }: PageProps<"/admin/commandes/[id]">) {
+export default async function OrderPage({ params, searchParams }: PageProps<"/admin/commandes/[id]">) {
   const { id } = await params;
+  const sp = await searchParams;
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.slice(0, 300);
   const store = getStore();
-  const [order, finance, invoices] = await Promise.all([store.getOrder(id), store.getFinance(), store.listInvoices(id)]);
+  const [order, finance, invoices, deliverables] = await Promise.all([store.getOrder(id), store.getFinance(), store.listInvoices(id), store.listDeliverables(id)]);
   if (!order) notFound();
   const due = balanceDue(order);
 
@@ -153,6 +156,8 @@ export default async function OrderPage({ params }: PageProps<"/admin/commandes/
               <p className="mt-2 text-sm text-muted">Pas encore reçu.</p>
             )}
           </section>
+
+          <DeliverySection order={order} items={deliverables} message={{ ok: one(sp.enregistre), error: one(sp.erreur) }} />
         </div>
 
         <div className="space-y-6">

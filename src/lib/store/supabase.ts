@@ -5,7 +5,7 @@ import { supabaseSecretKey, supabaseUrl } from "@/lib/env";
 import { defaultFinance, isUrssafPeriodicity, type FinanceSettings } from "@/lib/finance";
 import { defaultProtection, isWatermarkLevel, type ProtectionSettings } from "@/lib/protection";
 import type { Option, Pack } from "@/lib/pricing";
-import type { Invoice, NewOrder, Order, OrderPatch, OrderStatus, Store } from "./types";
+import type { Deliverable, Invoice, NewOrder, Order, OrderPatch, OrderStatus, Store } from "./types";
 
 // Client avec la clé secrète : contourne la RLS, donc réservé au serveur
 // (pages publiques en lecture, et actions admin après contrôle de l'accès).
@@ -108,6 +108,21 @@ function toOrder(r: Row, notes: Row[]): Order {
       .filter((n) => n.order_id === r.id)
       .map((n) => ({ id: n.id as string, createdAt: n.created_at as string, body: n.body as string })),
     refunds: (r.refunds as Order["refunds"]) ?? [],
+    deliveryToken: opt<string>(r.delivery_token),
+    deliveredAt: opt<string>(r.delivered_at),
+  };
+}
+
+function toDeliverable(r: Row): Deliverable {
+  return {
+    id: r.id as string,
+    orderId: r.order_id as string,
+    kind: r.kind as Deliverable["kind"],
+    label: r.label as string,
+    url: opt<string>(r.url),
+    storagePath: opt<string>(r.storage_path),
+    sizeBytes: r.size_bytes == null ? undefined : Number(r.size_bytes),
+    createdAt: r.created_at as string,
   };
 }
 
@@ -147,6 +162,8 @@ const orderColumns: Record<keyof OrderPatch, string> = {
   feesPaid: "fees_paid",
   balancePaymentIntentId: "balance_payment_intent_id",
   refunds: "refunds",
+  deliveryToken: "delivery_token",
+  deliveredAt: "delivered_at",
 };
 
 const selectOrders = () => db().from("orders").select("*");
@@ -482,6 +499,44 @@ export const supabaseStore: Store = {
     const row: Row = { updated_at: new Date().toISOString() };
     for (const [k, v] of Object.entries(patch)) row[orderColumns[k as keyof OrderPatch]] = v ?? null;
     check(await db().from("orders").update(row).eq("id", id));
+  },
+
+  async listDeliverables(orderId) {
+    const rows = check(await db().from("deliverables").select("*").eq("order_id", orderId).order("created_at")) as Row[];
+    return rows.map(toDeliverable);
+  },
+
+  async addDeliverable(d) {
+    const row = check(
+      await db()
+        .from("deliverables")
+        .insert({ order_id: d.orderId, kind: d.kind, label: d.label, url: d.url ?? null, storage_path: d.storagePath ?? null, size_bytes: d.sizeBytes ?? null })
+        .select("*")
+        .single(),
+    ) as Row;
+    return toDeliverable(row);
+  },
+
+  async deleteDeliverable(id) {
+    const r = check(await db().from("deliverables").select("storage_path").eq("id", id).maybeSingle()) as Row | null;
+    check(await db().from("deliverables").delete().eq("id", id));
+    if (r?.storage_path) await db().storage.from("livrables").remove([r.storage_path as string]);
+  },
+
+  async getOrderByDeliveryToken(token) {
+    const rows = await fetchOrders((q) => q.eq("delivery_token", token));
+    return rows[0] ?? null;
+  },
+
+  async createDeliverableUpload(path) {
+    const data = check(await db().storage.from("livrables").createSignedUploadUrl(path)) as { token: string };
+    return { token: data.token };
+  },
+
+  async deliverableDownloadUrl(path, filename) {
+    // Lien valable 10 minutes, généré à chaque clic depuis la page de livraison
+    const data = check(await db().storage.from("livrables").createSignedUrl(path, 600, { download: filename })) as { signedUrl: string };
+    return data.signedUrl;
   },
 
   async listInvoices(orderId) {

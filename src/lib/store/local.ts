@@ -7,19 +7,28 @@ import type { Catalog } from "@/lib/pricing";
 import { defaultProtection, type ProtectionSettings } from "@/lib/protection";
 import { assertNotProduction } from "@/lib/env";
 import { staticCatalog, staticPortfolio } from "./static";
-import type { Invoice, Order, Portfolio, Store } from "./types";
+import type { Deliverable, Invoice, Order, Portfolio, Store } from "./types";
 
 // Magasin JSON local, pour développer et tester l'admin sans Supabase.
 // Fichier .data/dev-store.json (ignoré par git). Interdit en production.
 type Data = Catalog & Portfolio & {
   orders: Order[];
   invoices?: Invoice[];
+  deliverables?: Deliverable[];
   finance?: FinanceSettings;
   protection?: ProtectionSettings;
 };
 
 const FILE = path.join(process.cwd(), ".data", "dev-store.json");
 const UPLOADS = path.join(process.cwd(), "public", "uploads");
+// Fichiers livrés en développement : hors de public/, servis par la route de livraison
+const DELIVERABLES = path.join(process.cwd(), ".data", "livrables");
+
+function deliverableFile(rel: string) {
+  const file = path.resolve(DELIVERABLES, rel);
+  if (!file.startsWith(DELIVERABLES + path.sep)) throw new Error("Chemin de fichier invalide.");
+  return file;
+}
 
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -125,6 +134,31 @@ export const localStore: Store = {
       const o = d.orders.find((x) => x.id === id);
       if (o) Object.assign(o, patch, { updatedAt: new Date().toISOString() });
     }),
+  listDeliverables: async (orderId) => ((await load()).deliverables ?? []).filter((d) => d.orderId === orderId),
+  addDeliverable: (item) =>
+    mutate((d) => {
+      d.deliverables ??= [];
+      const created: Deliverable = { ...item, id: randomUUID(), createdAt: new Date().toISOString() };
+      d.deliverables.push(created);
+      return created;
+    }),
+  deleteDeliverable: (id) =>
+    mutate(async (d) => {
+      const item = d.deliverables?.find((x) => x.id === id);
+      d.deliverables = (d.deliverables ?? []).filter((x) => x.id !== id);
+      if (item?.storagePath) await fs.rm(deliverableFile(item.storagePath), { force: true });
+    }),
+  getOrderByDeliveryToken: async (token) => (await load()).orders.find((o) => o.deliveryToken === token) ?? null,
+  saveDeliverableFile: async (rel, data) => {
+    assertNotProduction("Le magasin JSON local");
+    const file = deliverableFile(rel);
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, data);
+  },
+  readDeliverableFile: async (rel) => {
+    assertNotProduction("Le magasin JSON local");
+    return new Uint8Array(await fs.readFile(deliverableFile(rel)));
+  },
   listInvoices: async (orderId) => ((await load()).invoices ?? []).filter((i) => !orderId || i.orderId === orderId),
   getInvoiceByKey: async (key) => ((await load()).invoices ?? []).find((i) => i.paymentKey === key) ?? null,
   saveInvoice: (inv) =>

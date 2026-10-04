@@ -259,6 +259,11 @@ Adresse : `/admin`. Saisir ton e-mail, puis cliquer sur le lien reçu.
   Tant qu'il n'y a aucune vente réelle, des chiffres d'exemple sont affichés avec un bandeau.
 - **Commandes** : paiements reçus, brief du client, revenu net estimé (frais Stripe, URSSAF),
   envoi du lien de paiement du solde, notes, factures Abby (téléchargement, relance en cas d'échec).
+  Section **Livraison** : liens d'import (overlays StreamElements partagés, en https) et fichiers
+  (zip Streamlabs, visuels, guide ; 500 Mo max, stockés dans le bucket privé `livrables`), puis
+  « Envoyer la livraison au client » : le client reçoit par e-mail le lien d'une page privée
+  `/livraison/<jeton>` (non indexée) où il importe ses overlays et télécharge ses fichiers
+  (liens de téléchargement valables 10 minutes, régénérés à chaque clic).
 - **Offres** : prix, formules, options, acompte, remise logo, ordre d'affichage, archivage.
   On y trouve aussi les réglages financiers (taux URSSAF, versement libératoire…) et la protection
   du portfolio (flou, niveau de filigrane).
