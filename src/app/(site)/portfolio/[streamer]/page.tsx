@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaseStudyView } from "@/components/CaseStudyView";
+import { EditorialView } from "@/components/EditorialView";
 import { WorkGrid } from "@/components/WorkGrid";
 import { caseStudies } from "@/data/case-studies";
 import { categories, projectHref, type Category } from "@/data/portfolio";
@@ -34,7 +35,11 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
         <Link href="/portfolio" className="text-sm text-muted hover:text-foreground">
           ← Tous les projets
         </Link>
-        <CaseStudyView study={study} works={own} streamerName={streamer.name} />
+        {"layout" in study ? (
+          <EditorialView study={study} works={own} streamerName={streamer.name} />
+        ) : (
+          <CaseStudyView study={study} works={own} streamerName={streamer.name} />
+        )}
       </div>
     );
   }

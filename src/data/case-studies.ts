@@ -32,7 +32,37 @@ export type CaseStudy = {
   coverVideo?: string;
 };
 
-export const caseStudies: Record<string, CaseStudy> = {
+// Mise en page « éditoriale » (maquette zer0oes) : blocs asymétriques, texte et visuels alternés.
+export type EditorialBlock =
+  | { type: "signature"; kicker: string; title: string[]; main: string; side?: { id: string; caption: string } }
+  | { type: "scenes"; kicker: string; title: string[]; text: string; scenes: CasePiece[] }
+  | {
+      type: "detail";
+      kicker: string;
+      title: string[];
+      main: { id: string; caption: string };
+      sideTitle: string[];
+      side: { id: string; caption: string };
+      small: CasePiece[];
+    }
+  | { type: "emotes"; kicker: string; title: string[]; text: string; work: string }
+  | { type: "beyond"; kicker: string; title: string[]; text: string; main: string; extra?: CasePiece[] };
+
+export type EditorialStudy = {
+  layout: "editorial";
+  eyebrow: string;
+  headline: [string, string]; // la 2e ligne est mise en couleur
+  intro: string;
+  tags: string[];
+  hero: string;
+  heroCaption: string;
+  blocks: EditorialBlock[];
+  cta: { kicker: string; title: string[] };
+  cover: string;
+  coverVideo?: string;
+};
+
+export const caseStudies: Record<string, CaseStudy | EditorialStudy> = {
   tomavega: {
     eyebrow: "Identité de stream · TomaVega",
     headline: ["Un univers électrique.", "Une chaîne reconnaissable."],
@@ -78,66 +108,62 @@ export const caseStudies: Record<string, CaseStudy> = {
     coverVideo: "tomavega-starting-screen",
   },
   zer0oes: {
-    eyebrow: "Identité de stream · zer0oes",
-    headline: ["Une nuit synthwave.", "Une signature à la main."],
-    intro:
-      "Ma propre chaîne : un horizon néon rose et violet, un logo tracé d'un seul trait et un portrait qui accueille la communauté. Des écrans d'attente aux emotes, tout part du même univers.",
-    tags: ["Logo", "Overlays animés", "Widgets & alertes", "Emotes", "Twitch & YouTube"],
+    layout: "editorial",
+    eyebrow: "Identité de stream / zer0oes",
+    headline: ["Une nuit", "synthwave."],
+    intro: "Un horizon néon, une signature à la main et un univers qui relie toutes les scènes du stream.",
+    tags: ["Logo", "Overlays", "Widgets", "Emotes"],
     hero: "zer0oes-starting-screen",
-    heroCaption: "La scène complète — écran de lancement",
-    scenes: [
-      { id: "zer0oes-paused", label: "Pause" },
-      { id: "zer0oes-ending", label: "Fin de live" },
-      { id: "zer0oes-offline", label: "Hors ligne" },
-      { id: "zer0oes-gaming", label: "Gaming" },
-    ],
-    pillars: [
+    heroCaption: "La scène de lancement — l'univers en un regard.",
+    blocks: [
       {
-        kicker: "L'intention",
-        title: "Accueillir comme à la maison.",
-        text: "Un portrait au centre, le chat bien visible et des infos claires : on sait tout de suite où l'on est et qui on vient voir.",
-      },
-      {
-        kicker: "La direction artistique",
-        title: "Synthwave × écriture.",
-        text: "Un horizon rétro rose et cyan pour l'énergie, un logo manuscrit pour la touche personnelle, et un cadre animé qui donne le ton de chaque moment du live.",
-      },
-    ],
-    sections: [
-      {
+        type: "signature",
         kicker: "La signature",
-        title: "Un logo tracé d'un seul trait.",
-        text: "Une écriture souple, déclinée en blanc et en violet, qui signe chaque écran.",
-        works: ["zer0oes-logo"],
+        title: ["Un trait.", "Toute une identité."],
+        main: "zer0oes-logo",
+        side: { id: "zer0oes-avatar", caption: "Le même univers, jusque dans l'avatar." },
       },
       {
+        type: "scenes",
+        kicker: "Les scènes du live",
+        title: ["Un décor qui", "suit le stream."],
+        text: "Une identité commune, déclinée pour chaque moment du live.",
+        scenes: [
+          { id: "zer0oes-gaming", label: "Gaming" },
+          { id: "zer0oes-paused", label: "Pause" },
+          { id: "zer0oes-ending", label: "Fin de live" },
+          { id: "zer0oes-offline", label: "Hors ligne" },
+        ],
+      },
+      {
+        type: "detail",
         kicker: "Le live en détail",
-        title: "Le chat et les alertes, en néon.",
-        text: "Deux éléments à regarder de près : le chat et les alertes, dans les mêmes couleurs que l'écran de lancement.",
-        works: ["zer0oes-chat", "zer0oes-alertes"],
-        secondary: [
-          { id: "zer0oes-objectif", label: "Barre d'objectif" },
-          { id: "zer0oes-musique", label: "Lecteur musique" },
+        title: ["La communauté", "entre dans le décor."],
+        main: { id: "zer0oes-chat", caption: "Le tchat, aux couleurs de la chaîne." },
+        sideTitle: ["Les petits détails", "font l'ensemble."],
+        side: { id: "zer0oes-alertes", caption: "Les alertes animées." },
+        small: [
+          { id: "zer0oes-musique", label: "La musique." },
+          { id: "zer0oes-objectif", label: "L'objectif." },
         ],
-        secondaryLayout: "pair",
       },
       {
-        kicker: "La communauté",
-        title: "Des emotes à son image.",
-        text: "19 emotes de follower et d'abonné, et 6 emotes animées, dans le style de la chaîne.",
-        works: ["zer0oes-emotes"],
+        type: "emotes",
+        kicker: "Les réactions",
+        title: ["Toutes les", "émotions", "du live."],
+        text: "Une famille d'emotes dans le style de la chaîne.",
+        work: "zer0oes-emotes",
       },
       {
+        type: "beyond",
         kicker: "Au-delà du stream",
-        title: "La même identité sur Twitch et YouTube.",
-        works: ["zer0oes-bannieres"],
-        secondary: [
-          { id: "zer0oes-avatar", label: "Avatar" },
-          { id: "zer0oes-panneaux", label: "Panneaux Twitch" },
-        ],
-        secondaryLayout: "profil",
+        title: ["Reconnaissable.", "Partout."],
+        text: "La même identité sur Twitch, YouTube et les réseaux.",
+        main: "zer0oes-bannieres",
+        extra: [{ id: "zer0oes-panneaux", label: "Les panneaux Twitch." }],
       },
     ],
+    cta: { kicker: "Ton prochain univers", title: ["Et si on imaginait", "l'identité de ta chaîne ?"] },
     cover: "zer0oes-logo",
     coverVideo: "zer0oes-starting-screen",
   },

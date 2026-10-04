@@ -175,7 +175,7 @@ export function CaseStudyView({ study, works, streamerName }: { study: CaseStudy
 }
 
 // Média cliquable (agrandissement), avec la vidéo au survol s'il y en a une.
-function Media({
+export function Media({
   work,
   onOpen,
   aspect = "aspect-video",
