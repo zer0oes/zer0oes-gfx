@@ -35,8 +35,8 @@ export default async function WorkEditPage({ params, searchParams }: PageProps<"
 
   return (
     <>
-      <Link href="/admin/portfolio" className="text-sm text-muted hover:text-foreground">
-        ← Portfolio
+      <Link href={`/admin/portfolio/projet/${work.streamer}`} className="text-sm text-muted hover:text-foreground">
+        ← {streamers.find((s) => s.id === work.streamer)?.name ?? "Portfolio"}
       </Link>
       <h1 className="mt-4 font-display text-3xl font-bold">{isNew ? "Nouvelle réalisation" : work.title}</h1>
       {enregistre && (

@@ -27,8 +27,8 @@ export default async function CaseStudyTextsPage({ params, searchParams }: PageP
 
   return (
     <>
-      <Link href="/admin/portfolio" className="text-sm text-muted hover:text-foreground">
-        ← Portfolio
+      <Link href={`/admin/portfolio/projet/${id}`} className="text-sm text-muted hover:text-foreground">
+        ← {streamer.name}
       </Link>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-display text-3xl font-bold">Textes — {streamer.name}</h1>

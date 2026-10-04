@@ -39,23 +39,30 @@ function done(path: string, error?: string): never {
   redirect(`${path}${path.includes("?") ? "&" : "?"}${error ? `erreur=${encodeURIComponent(error)}` : "enregistre=1"}`);
 }
 
+// Fiche d'un projet dans l'admin (infos, réalisations, textes)
+const projectAdmin = (id: string) => `/admin/portfolio/projet/${encodeURIComponent(id)}`;
+
 // --- Streameurs ----------------------------------------------------------------
 
 export async function saveStreamerAction(formData: FormData) {
   await requireAdmin();
   const name = text(formData, "name", 80);
-  if (!name) done("/admin/portfolio", "Le nom du streameur est obligatoire.");
-  const id = text(formData, "id", 60) || slug(name);
+  const existing = text(formData, "id", 60);
+  const back = existing ? projectAdmin(existing) : "/admin/portfolio";
+  if (!name) done(back, "Le nom du projet est obligatoire.");
+  const id = existing || slug(name);
   const url = text(formData, "url", 300);
-  if (url && !mediaUrl(url)) done("/admin/portfolio", "Le lien de la chaîne doit commencer par https://.");
+  if (url && !mediaUrl(url)) done(back, "Le lien de la chaîne doit commencer par https://.");
   await getStore().saveStreamer({ id, name, description: text(formData, "description", 300), url: url || undefined });
-  done("/admin/portfolio");
+  // Nouveau projet : on ouvre directement sa fiche
+  done(projectAdmin(id));
 }
 
 export async function deleteStreamerAction(formData: FormData) {
   await requireAdmin();
-  if (formData.get("confirm") !== "on") done("/admin/portfolio", "Coche la case de confirmation pour supprimer.");
-  await getStore().deleteStreamer(text(formData, "id", 60));
+  const id = text(formData, "id", 60);
+  if (formData.get("confirm") !== "on") done(projectAdmin(id), "Coche la case de confirmation pour supprimer.");
+  await getStore().deleteStreamer(id);
   done("/admin/portfolio");
 }
 
@@ -119,8 +126,9 @@ export async function deleteWorkAction(formData: FormData) {
   await requireAdmin();
   const id = text(formData, "id", 60);
   if (formData.get("confirm") !== "on") done(`/admin/portfolio/${id}`, "Coche la case de confirmation pour supprimer.");
+  const work = (await getStore().getPortfolio()).works.find((w) => w.id === id);
   await getStore().deleteWork(id);
-  done("/admin/portfolio");
+  done(work ? projectAdmin(work.streamer) : "/admin/portfolio");
 }
 
 // Ordre des projets sur la page Portfolio (du plus récent au plus ancien, par exemple)
@@ -150,11 +158,11 @@ export async function moveWorkAction(formData: FormData) {
   const siblings = works.filter((x) => x.streamer === w.streamer && x.category === w.category).map((x) => x.id);
   const i = siblings.indexOf(id);
   const j = i + dir;
-  if (j < 0 || j >= siblings.length) done("/admin/portfolio");
+  if (j < 0 || j >= siblings.length) done(projectAdmin(w.streamer));
   [siblings[i], siblings[j]] = [siblings[j], siblings[i]];
   const others = works.filter((x) => x.streamer === w.streamer && x.category !== w.category).map((x) => x.id);
   await store.reorderWorks([...siblings, ...others]);
-  done("/admin/portfolio");
+  done(projectAdmin(w.streamer));
 }
 
 // --- Envoi de médias ---------------------------------------------------------------
@@ -226,7 +234,7 @@ export async function saveCaseStudyTextsAction(formData: FormData) {
   const id = text(formData, "streamer", 60);
   const study = caseStudies[id];
   const back = `/admin/portfolio/textes/${id}`;
-  if (!study || !("layout" in study)) done("/admin/portfolio", "Ce projet n'a pas de page à textes modifiables.");
+  if (!study || !("layout" in study)) done(projectAdmin(id), "Ce projet n'a pas de page à textes modifiables.");
   if (formData.get("reset") === "1") {
     if (formData.get("confirm") !== "on") done(back, "Coche la case de confirmation.");
     await getStore().saveCaseStudyTexts(id, null);
