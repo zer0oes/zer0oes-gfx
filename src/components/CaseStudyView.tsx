@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { mediaUrl } from "@/lib/media";
 import type { CasePiece, CaseStudy } from "@/data/case-studies";
 import type { Work } from "@/data/portfolio";
 import { HoverVideo } from "./HoverVideo";
@@ -196,7 +197,7 @@ export function Media({
       {(image ?? work.image) && (
         <ProtectedMedia className="absolute inset-0">
           <Image
-            src={(image ?? work.image)!}
+            src={(mediaUrl(image) ?? work.image)!}
             alt={work.title}
             fill
             priority={priority}

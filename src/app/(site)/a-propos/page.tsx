@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { mediaUrl } from "@/lib/media";
 
 export const metadata: Metadata = {
   title: "À propos",
@@ -119,7 +120,7 @@ export default function AboutPage() {
                     <figure className="relative w-56 sm:w-60">
                       <div aria-hidden className="absolute -inset-3 rounded-[2rem] opacity-50 blur-2xl" style={{ background: "linear-gradient(135deg, var(--accent-3), var(--accent), var(--accent-2))" }} />
                       <Image
-                        src="/a-propos/aurore.webp"
+                        src={mediaUrl("/a-propos/aurore.webp")}
                         alt="Aurore, alias zer0oes, à son poste de stream"
                         width={800}
                         height={1000}

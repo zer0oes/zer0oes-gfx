@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
+// Médias servis par le bucket S3 (NEXT_PUBLIC_MEDIA_URL) : autorisés pour next/image
+const mediaHost = process.env.NEXT_PUBLIC_MEDIA_URL ? new URL(process.env.NEXT_PUBLIC_MEDIA_URL) : null;
+
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: mediaHost ? [{ protocol: "https", hostname: mediaHost.hostname, pathname: "/**" }] : [],
+  },
   experimental: {
     serverActions: {
       // Envoi de médias par l'admin en mode local (en production, les fichiers

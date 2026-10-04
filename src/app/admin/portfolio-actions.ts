@@ -7,6 +7,7 @@ import type { Emote, Work } from "@/data/portfolio";
 import { requireAdmin } from "@/lib/auth";
 import { textsFromForm } from "@/lib/case-study-texts";
 import { homeFromForm } from "@/lib/home-content";
+import { s3Configured, s3SignedUpload } from "@/lib/s3";
 import { getStore } from "@/lib/store";
 import { checkUpload, sniffType, storagePath, type MediaKind } from "@/lib/uploads";
 import { watermarkImage } from "@/lib/watermark";
@@ -170,6 +171,7 @@ export async function moveWorkAction(formData: FormData) {
 
 export type UploadTicket =
   | { mode: "signed"; path: string; token: string; publicUrl: string }
+  | { mode: "s3"; path: string; uploadUrl: string; publicUrl: string }
   | { mode: "direct" }
   | { mode: "error"; message: string };
 
@@ -180,6 +182,11 @@ export async function prepareUpload(input: { kind: MediaKind; folder: string; fi
   const error = checkUpload(input.kind, input.type, input.size);
   if (error) return { mode: "error", message: error };
   const store = getStore();
+  // Bucket S3 configuré : le navigateur envoie le fichier directement dans S3 (lien signé)
+  if (s3Configured()) {
+    const path = storagePath(input.folder, input.filename, input.type);
+    return { mode: "s3", path, ...(await s3SignedUpload(path, input.type)) };
+  }
   if (store.createSignedUpload) {
     const path = storagePath(input.folder, input.filename, input.type);
     const { token, publicUrl } = await store.createSignedUpload(path);

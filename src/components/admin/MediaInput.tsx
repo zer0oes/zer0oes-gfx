@@ -5,8 +5,8 @@ import { useState } from "react";
 import { finalizeUpload, prepareUpload, uploadDirect } from "@/app/admin/portfolio-actions";
 import type { MediaKind } from "@/lib/uploads";
 
-// Champ média : URL existante, ou envoi d'un fichier (directement vers Supabase
-// Storage via une URL signée, ou via le serveur en développement).
+// Champ média : URL existante, ou envoi d'un fichier directement vers le bucket S3 (ou, sans S3,
+// vers Supabase Storage) via une URL signée, ou via le serveur en développement.
 export function MediaInput({
   name,
   kind,
@@ -34,7 +34,14 @@ export function MediaInput({
     try {
       const ticket = await prepareUpload({ kind, folder, filename: file.name, type: file.type, size: file.size });
       if (ticket.mode === "error") throw new Error(ticket.message);
-      if (ticket.mode === "signed") {
+      if (ticket.mode === "s3") {
+        const put = await fetch(ticket.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+        if (!put.ok) throw new Error(`Envoi vers S3 refusé (${put.status}).`);
+        // Filigrane incrusté côté serveur (images)
+        const done = await finalizeUpload({ path: ticket.path, kind, publicUrl: ticket.publicUrl });
+        if (done.error) throw new Error(done.error);
+        setUrl(done.url);
+      } else if (ticket.mode === "signed") {
         if (!supabaseUrl || !supabaseKey) throw new Error("Configuration Supabase manquante.");
         const { error } = await createClient(supabaseUrl, supabaseKey)
           .storage.from("portfolio")

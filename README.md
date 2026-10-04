@@ -161,6 +161,26 @@ Supabase > **Authentication > Emails > SMTP Settings** > activer le SMTP personn
 hôte `smtp.resend.com`, port `465`, utilisateur `resend`, mot de passe = ta clé API Resend,
 expéditeur = une adresse de ton domaine. La limite se règle ensuite dans **Authentication > Rate Limits**.
 
+## Médias sur Amazon S3
+
+Les images et vidéos du portfolio (et la photo de la page À propos) sont servies depuis le bucket
+S3 `zer0oes-gfx` (Paris, `eu-west-3`) dès que `NEXT_PUBLIC_MEDIA_URL` est défini. Les chemins
+`/portfolio/…` enregistrés en base restent les mêmes : seule l'adresse de base change. Les envois
+depuis l'admin vont directement dans le bucket (lien signé), avec le filigrane ajouté côté serveur.
+
+1. **Utilisateur IAM** dédié (sans accès console), politique limitée au bucket :
+   `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` sur `arn:aws:s3:::zer0oes-gfx/*` et
+   `s3:ListBucket` sur `arn:aws:s3:::zer0oes-gfx`. Créer une clé d'accès.
+2. **Lecture publique** limitée aux dossiers `portfolio/` et `a-propos/` (stratégie du bucket,
+   `s3:GetObject`) ; le reste du bucket reste privé.
+3. **CORS** : `PUT`, `GET`, `HEAD` depuis `https://www.zer0oes-gfx.com` et `http://localhost:3000`.
+4. Variables (dans `.env.local` et les Config Vars Heroku) : `AWS_ACCESS_KEY_ID`,
+   `AWS_SECRET_ACCESS_KEY`, `AWS_REGION=eu-west-3`, `S3_BUCKET=zer0oes-gfx`,
+   `NEXT_PUBLIC_MEDIA_URL=https://zer0oes-gfx.s3.eu-west-3.amazonaws.com`.
+5. Copier les médias existants : `npm run media:s3` (simulation), puis `npm run media:s3 -- --yes`.
+
+`NEXT_PUBLIC_MEDIA_URL` est lue à la compilation : après l'avoir ajoutée sur Heroku, redéployer.
+
 ## Stripe
 
 1. Commencer avec les clés de **test** (`sk_test_…`) ; passer en `sk_live_…` une fois le site validé.
