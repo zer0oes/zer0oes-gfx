@@ -14,7 +14,8 @@ export function Footer() {
           <Link href="/portfolio" className="hover:text-foreground">Portfolio</Link>
           <Link href="/offres" className="hover:text-foreground">Offres</Link>
           <Link href="/a-propos" className="hover:text-foreground">À propos</Link>
-          <Link href="/contact" className="hover:text-foreground">Sur-mesure & contact</Link>
+          <Link href="/contact" className="hover:text-foreground">Demander un devis</Link>
+          <Link href="/contact?onglet=message" className="hover:text-foreground">Poser une question</Link>
           <Link href="/mentions-legales" className="hover:text-foreground">Mentions légales</Link>
           <Link href="/confidentialite" className="hover:text-foreground">Confidentialité</Link>
           <Link href="/cgv" className="hover:text-foreground">CGV</Link>

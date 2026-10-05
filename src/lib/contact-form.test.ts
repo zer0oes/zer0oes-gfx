@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseContact } from "./contact-form";
+import { parseContact, parseMessage } from "./contact-form";
 
 const form = (values: Record<string, string | string[]>) => {
   const all = (k: string) => {
@@ -47,4 +47,21 @@ test("champs obligatoires, valeurs inconnues et liens invalides", () => {
   const r = parseContact(...form({ ...base, type: "<script>", budget: "1 million", identity: "peut-être", referral: "Facebook" }));
   assert.ok(r.ok && r.request.type === "Projet sur mesure" && r.request.fields.Budget === "Je ne sais pas encore");
   assert.ok(r.ok && r.request.fields["Identité visuelle existante"] === "" && r.request.fields["M'a trouvée via"] === "");
+});
+
+test("projet : les sujets du message simple ne sont pas des types de projet", () => {
+  const r = parseContact(...form({ ...base, type: "Question sur une offre" }));
+  assert.ok(r.ok && r.request.type === "Projet sur mesure");
+});
+
+test("message simple : sujet filtré, champs obligatoires et consentement", () => {
+  const r = parseMessage(form({ ...base, subject: "Collaboration / partenariat" })[0]);
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.equal(r.request.subject, "Collaboration / partenariat");
+  assert.deepEqual(Object.keys(r.request.fields), ["Nom", "E-mail", "Sujet", "Message"]);
+  const other = parseMessage(form({ ...base, subject: "Projet sur mesure" })[0]);
+  assert.ok(other.ok && other.request.subject === "Autre");
+  assert.equal(parseMessage(form({ ...base, consent: "" })[0]).ok, false);
+  assert.equal(parseMessage(form({ ...base, message: "court" })[0]).ok, false);
 });

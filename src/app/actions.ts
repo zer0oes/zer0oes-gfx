@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { parseContact } from "@/lib/contact-form";
+import { parseContact, parseMessage } from "@/lib/contact-form";
 import { notify } from "@/lib/notify";
 import { attachBrief, paymentSummary, quote, quoteMetadata, recordDemoOrder } from "@/lib/orders";
 import { getPack, logoDiscountLabel, paymentLabel } from "@/lib/pricing";
@@ -122,10 +122,27 @@ export async function sendContact(
 
   try {
     await notify({
-      subject: `[Contact] ${request.type} — ${request.name}`,
+      subject: `[Projet] ${request.type} — ${request.name}`,
       replyTo: request.email,
       fields: request.fields,
     });
+  } catch (e) {
+    console.error(e);
+    return { ok: false, message: "L'envoi a échoué, réessaie ou écris-moi directement par e-mail." };
+  }
+  return { ok: true, message: "Message envoyé ! Je te réponds sous 48 h ouvrées." };
+}
+
+// Onglet « Message simple » de /contact
+export async function sendMessage(_prev: FormState, formData: FormData): Promise<FormState> {
+  if (field(formData, "website")) return { ok: true, message: "Merci !" }; // pot de miel anti-spam
+
+  const parsed = parseMessage((k) => formData.get(k)?.toString() ?? "");
+  if (!parsed.ok) return parsed;
+  const { request } = parsed;
+
+  try {
+    await notify({ subject: `[Message] ${request.subject} — ${request.name}`, replyTo: request.email, fields: request.fields });
   } catch (e) {
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou écris-moi directement par e-mail." };

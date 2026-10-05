@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { sendContact } from "@/app/actions";
-import { budgets, identityLevels, MAX_REFERENCES, platforms, providedAssets, referralSources, requestTypes, styles } from "@/lib/contact-form";
+import { sendContact, sendMessage } from "@/app/actions";
+import { budgets, identityLevels, MAX_REFERENCES, messageSubjects, platforms, providedAssets, referralSources, requestTypes, styles } from "@/lib/contact-form";
 import { Field, FormStatus, OptionsField, inputClass } from "./ui";
 
 // Choix rapides en pastilles (cases à cocher ou boutons radio stylés)
@@ -38,6 +38,41 @@ function Section({ step, title, children }: { step: string; title: string; child
   );
 }
 
+// Consentement RGPD, obligatoire sur les deux formulaires
+function Consent({ purpose }: { purpose: string }) {
+  return (
+    <label className="flex items-start gap-2 text-sm text-muted">
+      <input type="checkbox" name="consent" value="1" required className="mt-1 accent-[var(--accent)]" />
+      <span>
+        J&apos;accepte que mes informations soient utilisées pour {purpose}. *{" "}
+        <Link href="/confidentialite" className="text-accent underline-offset-4 hover:underline">
+          Politique de confidentialité
+        </Link>
+      </span>
+    </label>
+  );
+}
+
+function Submit({ pending, note }: { pending: boolean; note: string }) {
+  return (
+    <div>
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110 disabled:opacity-60"
+      >
+        {pending ? "Envoi…" : "Envoyer"}
+      </button>
+      <p className="mt-3 text-sm text-muted">{note}</p>
+    </div>
+  );
+}
+
+// Pot de miel anti-spam, invisible pour les humains
+function Honeypot() {
+  return <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />;
+}
+
 export function ContactForm({
   defaultType = "Projet sur mesure",
   optionChoices,
@@ -51,8 +86,7 @@ export function ContactForm({
 
   return (
     <form action={action} className="space-y-8">
-      {/* Pot de miel anti-spam, invisible pour les humains */}
-      <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
+      <Honeypot />
 
       <Section step="01" title="Ton projet">
         <div className="grid gap-5 sm:grid-cols-2">
@@ -67,7 +101,7 @@ export function ContactForm({
           <input name="channel" type="url" placeholder="https://twitch.tv/…" className={inputClass} />
         </Field>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Type de demande">
+          <Field label="Type de projet">
             <select name="type" className={inputClass} defaultValue={defaultType}>
               {requestTypes.map((t) => (
                 <option key={t}>{t}</option>
@@ -147,29 +181,43 @@ export function ContactForm({
         <Chips legend="Comment m'as-tu trouvée ?" name="referral" choices={referralSources} type="radio" />
       </div>
 
-      <label className="flex items-start gap-2 text-sm text-muted">
-        <input type="checkbox" name="consent" value="1" required className="mt-1 accent-[var(--accent)]" />
-        <span>
-          J&apos;accepte que mes informations soient utilisées pour répondre à ma demande et préparer un devis. *{" "}
-          <Link href="/confidentialite" className="text-accent underline-offset-4 hover:underline">
-            Politique de confidentialité
-          </Link>
-        </span>
-      </label>
-
+      <Consent purpose="répondre à ma demande et préparer un devis" />
       <FormStatus state={state} />
-      <div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110 disabled:opacity-60"
-        >
-          {pending ? "Envoi…" : "Envoyer"}
-        </button>
-        <p className="mt-3 text-sm text-muted">
-          Réponse sous 48 h ouvrées. Je reviendrai vers toi avec une première estimation ou quelques questions si besoin.
-        </p>
+      <Submit pending={pending} note="Réponse sous 48 h ouvrées. Je reviendrai vers toi avec une première estimation ou quelques questions si besoin." />
+    </form>
+  );
+}
+
+// Onglet « Message simple » : question, collaboration…
+export function MessageForm() {
+  const [state, action, pending] = useActionState(sendMessage, null);
+
+  if (state?.ok) return <FormStatus state={state} />;
+
+  return (
+    <form action={action} className="space-y-5">
+      <Honeypot />
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field label="Nom ou pseudo *">
+          <input name="name" required autoComplete="nickname" className={inputClass} />
+        </Field>
+        <Field label="E-mail *">
+          <input name="email" type="email" required autoComplete="email" className={inputClass} />
+        </Field>
       </div>
+      <Field label="Sujet">
+        <select name="subject" className={inputClass} defaultValue={messageSubjects[0]}>
+          {messageSubjects.map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Message *">
+        <textarea name="message" required minLength={10} rows={7} className={inputClass} />
+      </Field>
+      <Consent purpose="répondre à mon message" />
+      <FormStatus state={state} />
+      <Submit pending={pending} note="Réponse sous 48 h ouvrées." />
     </form>
   );
 }

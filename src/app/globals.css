@@ -103,3 +103,29 @@ body {
   -webkit-user-drag: none;
   user-select: none;
 }
+
+/* Changement d'onglet sur /contact : le contenu glisse depuis le côté de l'onglet choisi */
+@keyframes slide-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+}
+@keyframes slide-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+}
+.slide-from-right {
+  animation: slide-from-right 0.35s ease-out;
+}
+.slide-from-left {
+  animation: slide-from-left 0.35s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide-from-right,
+  .slide-from-left {
+    animation: none;
+  }
+}
