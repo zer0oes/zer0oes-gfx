@@ -7,6 +7,7 @@ import { resolveHome } from "@/lib/home-content";
 import { activePacks } from "@/lib/pricing";
 import { ProtectedMedia } from "@/components/protection";
 import { getStore } from "@/lib/store";
+import { mediaUrl } from "@/lib/media";
 
 const kickerClass = "text-xs font-semibold uppercase tracking-[0.2em] text-accent";
 const titleClass = "mt-3 font-display text-3xl font-bold leading-tight sm:text-4xl";
@@ -74,7 +75,6 @@ export default async function Home() {
   const universe =
     universeId === null ? undefined : (byId(universeId) ?? featured.find((w) => w.image && w.id !== hero?.id && w.streamer !== hero?.streamer));
   const signature = byId(pick("signature.work"));
-  const portrait = byId(pick("about.work"));
 
   return (
     <>
@@ -208,12 +208,18 @@ export default async function Home() {
 
       <section className="mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-6 sm:pt-36">
         <div className="grid items-center gap-10 lg:grid-cols-12">
-          {portrait?.image && (
-            <ProtectedMedia className="mx-auto w-56 overflow-hidden rounded-full sm:w-72 lg:col-span-4 lg:w-full">
-              <Image src={portrait.image} alt="Aurore, alias zer0oes" width={640} height={640} draggable={false} sizes="(min-width: 1024px) 360px, 288px" className="aspect-square h-auto w-full object-cover" />
+          {/* Portrait cerclé de blanc, sur un halo violet */}
+          <div className="relative mx-auto w-44 sm:w-52 lg:col-span-4 lg:w-56">
+            <div
+              aria-hidden
+              className="absolute -inset-14 rounded-full blur-xl"
+              style={{ background: "radial-gradient(circle, rgba(219,39,160,0.95) 0%, rgba(124,58,237,0.85) 45%, rgba(76,29,149,0.5) 62%, transparent 72%)" }}
+            />
+            <ProtectedMedia className="relative overflow-hidden rounded-full border-[3px] border-white/90 shadow-[0_0_24px_rgba(255,255,255,0.25)]">
+              <Image src={mediaUrl("/a-propos/zer0oes-avatar.webp")} alt="Aurore, alias zer0oes" width={500} height={500} draggable={false} sizes="(min-width: 640px) 224px, 176px" className="aspect-square h-auto w-full object-cover" />
             </ProtectedMedia>
-          )}
-          <div className={portrait?.image ? "lg:col-span-7 lg:col-start-6" : "lg:col-span-8"}>
+          </div>
+          <div className="lg:col-span-7 lg:col-start-6">
             <p className={kickerClass}>{c.text("about.kicker")}</p>
             <h2 className={titleClass}>
               {c.text("about.title1")}

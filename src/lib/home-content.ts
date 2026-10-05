@@ -60,7 +60,6 @@ export const homeSections: HomeSection[] = [
       { key: "about.title1", label: "Titre — ligne 1", kind: "text", max: 80 },
       { key: "about.title2", label: "Titre — ligne 2 (en couleur)", kind: "text", max: 80 },
       { key: "about.paragraphs", label: "Texte (un paragraphe par ligne)", kind: "paragraphs" },
-      { key: "about.work", label: "Portrait", kind: "work" },
     ],
   },
   {
@@ -125,7 +124,6 @@ export const homeDefaults: Record<string, string> = {
   "about.title1": site.about.title[0],
   "about.title2": site.about.title[1],
   "about.paragraphs": site.about.paragraphs.join("\n"),
-  "about.work": "zer0oes-avatar",
   "steps.kicker": "Comment ça marche",
   "steps.title": "De ton idée à ton premier live.",
   "steps.s1title": "Tu choisis",
