@@ -105,7 +105,7 @@ export default function AboutPage() {
 
         <ol className="mt-10">
           {chapters.map(({ title, text, Detail }, i) => (
-            <li key={title} className={`border-t border-border/60 py-14 first:border-t-0 first:pt-0 sm:py-20 ${i === 0 ? "" : i % 2 ? "md:pl-[16%]" : "md:pr-[16%]"}`}>
+            <li key={title} data-reveal className={`border-t border-border/60 py-14 first:border-t-0 first:pt-0 sm:py-20 ${i === 0 ? "" : i % 2 ? "md:pl-[16%]" : "md:pr-[16%]"}`}>
               <div className="grid items-start gap-6 md:grid-cols-[9rem_1fr] md:gap-10">
                 <div className="flex items-center gap-5 md:flex-col md:items-start">
                   <span className="font-display text-5xl font-bold text-gradient">0{i + 1}</span>
@@ -140,7 +140,7 @@ export default function AboutPage() {
           ))}
         </ol>
 
-        <div className="mt-4 flex flex-col items-start gap-4 rounded-3xl border border-border bg-surface p-8 sm:flex-row sm:items-center sm:justify-between sm:p-10">
+        <div data-reveal className="mt-4 flex flex-col items-start gap-4 rounded-3xl border border-border bg-surface p-8 sm:flex-row sm:items-center sm:justify-between sm:p-10">
           <div>
             <h2 className="font-display text-2xl font-bold">On crée ton univers ?</h2>
             <p className="mt-1 text-muted">Raconte-moi ta chaîne, je te réponds sous 48 h ouvrées.</p>

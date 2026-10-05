@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { sendBrief } from "@/app/actions";
-import { overlayTypes } from "@/lib/pricing";
+import { overlayTypes, type OptionChoice } from "@/lib/pricing";
 import { Field, FormStatus, OptionsField, inputClass } from "./ui";
 
 export function BriefForm({
@@ -16,7 +16,7 @@ export function BriefForm({
   overlayHint,
   optionChoices,
 }: {
-  optionChoices: { id: string; label: string }[];
+  optionChoices: OptionChoice[];
   sessionId?: string;
   packId?: string;
   formulaId?: string;

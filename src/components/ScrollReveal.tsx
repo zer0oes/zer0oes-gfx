@@ -3,14 +3,14 @@
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
-// Animation des blocs des pages marquées .reveal-page (accueil et portfolio) : chaque section,
-// visuel (figure), encart ou élément data-reveal.
+// Animation des blocs des pages publiques (main.reveal-page) : chaque section,
+// visuel (figure), encart, élément data-reveal ou bloc de texte d'un article (pages légales).
 // - Au chargement, ce qui est à l'écran apparaît en fondu léger (pure CSS, voir globals.css :
 //   pas de clignotement en attendant le JavaScript).
 // - Au scroll, le reste glisse vers le haut en fondu quand il entre à l'écran.
 // Sans JavaScript, tout reste affiché.
 // Une section qui contient des blocs data-reveal n'est pas animée d'un bloc : ses blocs le sont
-const SELECTOR = ".reveal-page :is(header, figure, aside, [data-reveal], section:not(:has([data-reveal])))";
+const SELECTOR = ".reveal-page :is(header, figure, aside, [data-reveal], section:not(:has([data-reveal])), article > *)";
 
 export function ScrollReveal() {
   const pathname = usePathname();

@@ -117,7 +117,7 @@ body {
    (une section qui contient des blocs data-reveal laisse ces blocs s'animer un par un).
    :where() garde une spécificité faible, pour que .reveal-in (scroll) prenne le relais. */
 .reveal-page
-  :where(header, figure, aside, [data-reveal], section:not(:has([data-reveal]))):where(
+  :where(header, figure, aside, [data-reveal], section:not(:has([data-reveal])), article > *):where(
     :not(:is(header, figure, aside, [data-reveal], section:not(:has([data-reveal]))) *)
   ) {
   animation: reveal-load 0.6s ease-out var(--reveal-delay, 0ms) backwards;
@@ -188,4 +188,10 @@ body {
   .slide-from-left {
     animation: none;
   }
+}
+
+/* Changement d'onglet sur /contact : seul le glissement joue (pas l'apparition des blocs en plus) */
+.slide-from-left :where(header, section, figure, aside, [data-reveal]),
+.slide-from-right :where(header, section, figure, aside, [data-reveal]) {
+  animation: none;
 }

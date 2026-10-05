@@ -1,3 +1,5 @@
+import { formatPrice } from "@/lib/pricing";
+
 export function PageHeader({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: React.ReactNode }) {
   return (
     <header className="mx-auto max-w-3xl px-4 pt-16 pb-10 text-center sm:px-6">
@@ -27,7 +29,7 @@ export function OptionsField({
   legend = "Options souhaitées",
   hint,
 }: {
-  options: { id: string; label: string }[];
+  options: { id: string; label: string; main?: string; detail?: string; price?: string }[];
   name?: string;
   legend?: string;
   hint?: string;
@@ -40,7 +42,14 @@ export function OptionsField({
         {options.map((o) => (
           <label key={o.id} className="flex items-start gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
             <input type="checkbox" name={name} value={o.label} className="mt-0.5 accent-[var(--accent)]" />
-            <span>{o.label}</span>
+            {o.main ? (
+              <span>
+                {o.main} <span className="whitespace-nowrap text-muted">({o.price})</span>
+                {o.detail && <span className="block text-xs text-muted">{o.detail}</span>}
+              </span>
+            ) : (
+              <span>{o.label}</span>
+            )}
           </label>
         ))}
       </div>
@@ -59,5 +68,17 @@ export function FormStatus({ state }: { state: { ok: boolean; message: string } 
     >
       {state.message}
     </p>
+  );
+}
+
+// Prix d'une offre ou d'une option : seul le montant est en gras, « à partir de » et « HT » restent discrets
+// stacked : « à partir de » sur sa propre ligne (gros prix des cartes de formules)
+export function OfferPrice({ item, stacked }: { item: { price: number; priceFrom?: boolean; unit?: string }; stacked?: boolean }) {
+  return (
+    <>
+      {item.priceFrom && <span className={`font-normal text-muted ${stacked ? "block font-sans text-sm" : "mr-1 text-[0.7em]"}`}>à partir de </span>}
+      {formatPrice(item.price)}
+      <span className="font-normal text-muted"> HT{item.unit ? ` / ${item.unit}` : ""}</span>
+    </>
   );
 }

@@ -74,8 +74,18 @@ export function formatOfferPrice({ price, priceFrom, unit }: { price: number; pr
   return `${priceFrom ? "À partir de " : ""}${formatPrice(price)} HT${unit ? ` / ${unit}` : ""}`;
 }
 
-export function optionChoices(options: Option[]) {
-  return options.map((o) => ({ id: o.id, label: `${o.name} (${formatOfferPrice(o)})` }));
+// Nom d'option affiché en deux temps : « Widget personnalisé » + précision entre parenthèses
+// (« barre d'objectifs, tchat… ») montrée en plus petit.
+export function splitOptionName(name: string) {
+  const m = name.match(/^(.+?)\s*\(([^()]+)\)$/);
+  return m ? { main: m[1], detail: m[2] } : { main: name, detail: undefined };
+}
+
+export type OptionChoice = { id: string; label: string; main?: string; detail?: string; price?: string };
+
+// label : valeur envoyée avec le formulaire (nom et prix) ; le reste sert à l'affichage
+export function optionChoices(options: Option[]): OptionChoice[] {
+  return options.map((o) => ({ id: o.id, label: `${o.name} (${formatOfferPrice(o)})`, ...splitOptionName(o.name), price: formatOfferPrice(o) }));
 }
 
 export function depositAmount(price: number, s: PricingSettings) {
@@ -120,6 +130,8 @@ export type OptionCategory = (typeof optionCategories)[number]["id"];
 export function optionCategory(o: Pick<Option, "name">): OptionCategory {
   const n = o.name.toLowerCase();
   if (n.includes("emote")) return "emotes";
+  // Overlays, alertes et widgets (même animés) : habillage du live
+  if (/^overlay|alerte|widget/.test(n)) return "overlays";
   if (/anim|motion|transition|stinger/.test(n)) return "motion";
   if (n.includes("overlay") || n.includes("scène") || n.includes("widget")) return "overlays";
   return "branding";

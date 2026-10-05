@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { formatOfferPrice, type Pack, type PricingSettings } from "@/lib/pricing";
+import { type Pack, type PricingSettings } from "@/lib/pricing";
+import { OfferPrice } from "./ui";
 import { OrderForm } from "./OrderForm";
 
 // Titre de sous-section d'une carte (Inclus, Formule, Paiement…), séparé par un trait franc
@@ -33,6 +34,7 @@ export function PackCard({
 
   return (
     <div
+      data-reveal
       id={order ? `offre-${pack.id}` : undefined}
       className={`relative flex scroll-mt-28 flex-col rounded-2xl border p-6 ${
         pack.highlight
@@ -48,7 +50,9 @@ export function PackCard({
           <span className="rounded-full border border-accent-3/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-accent-3">Sur devis</span>
         )}
       </div>
-      <p className="mt-2 font-display text-3xl font-bold">{formatOfferPrice(pack)}</p>
+      <p className="mt-2 font-display text-3xl font-bold">
+        <OfferPrice item={pack} stacked />
+      </p>
       <p className={`mt-3 ${quote ? "text-base text-foreground" : "text-sm text-muted"}`}>{pack.tagline}</p>
 
       <CardSection title="Inclus">

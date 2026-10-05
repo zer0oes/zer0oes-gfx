@@ -16,7 +16,8 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <ProtectionProvider value={protection}>
       <Header />
-      <main className="flex-1">{children}</main>
+      {/* reveal-page : blocs animés au chargement et au scroll sur toutes les pages (voir ScrollReveal) */}
+      <main className="reveal-page flex-1">{children}</main>
       <Footer />
       <ScrollReveal />
       <Analytics />

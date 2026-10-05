@@ -78,8 +78,7 @@ export default async function Home() {
   const signature = byId(pick("signature.work"));
 
   return (
-    // reveal-page : blocs animés au chargement et au scroll (voir ScrollReveal)
-    <div className="reveal-page">
+    <>
       <section className="relative overflow-hidden">
         <div
           aria-hidden
@@ -282,6 +281,6 @@ export default async function Home() {
           </Link>
         </div>
       </section>
-    </div>
+    </>
   );
 }

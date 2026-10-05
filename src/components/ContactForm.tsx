@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { sendContact, sendMessage } from "@/app/actions";
+import type { OptionChoice } from "@/lib/pricing";
 import { budgets, identityLevels, MAX_REFERENCES, messageSubjects, platforms, providedAssets, referralSources, requestTypes, styles } from "@/lib/contact-form";
 import { Field, FormStatus, OptionsField, inputClass } from "./ui";
 
@@ -78,7 +79,7 @@ export function ContactForm({
   optionChoices,
 }: {
   defaultType?: string;
-  optionChoices: { id: string; label: string }[];
+  optionChoices: OptionChoice[];
 }) {
   const [state, action, pending] = useActionState(sendContact, null);
 

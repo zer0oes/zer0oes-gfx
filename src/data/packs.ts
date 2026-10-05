@@ -1,7 +1,7 @@
 // Contenu par défaut des offres et options (texte et tarifs fournis par Aurore).
 // Utilisé tel quel sans base de données, et pour remplir la base Supabase (npm run db:seed).
 // Une fois Supabase branché, ces données se modifient depuis l'admin (/admin/offres).
-// Les prix sont en centimes d'euro HT (49000 = 490 € HT).
+// Les prix sont en centimes d'euro HT (39000 = 390 € HT).
 //
 // `checkout: true`  → sélecteur de formule + bouton « Commander » vers Stripe Checkout.
 //                     Le prix payé est toujours relu côté serveur, jamais envoyé par le navigateur.
@@ -15,20 +15,20 @@ export const packs: Pack[] = [
     id: "premier-look",
     name: "Premier look",
     tagline: "L'essentiel pour lancer ta chaîne avec une identité cohérente.",
-    price: 49000,
+    price: 39000,
     checkout: true,
     deliverables: ["Logo", "2 overlays fixes au choix", "Bannière et avatar", "2 séries de corrections regroupées"],
     extras: ["Option : 5 emotes personnalisées pour 150 € HT"],
     formulas: [
-      { id: "base", label: "Premier look", price: 49000 },
-      { id: "emotes", label: "Pack avec emotes", price: 64000 },
+      { id: "base", label: "Premier look", price: 39000 },
+      { id: "emotes", label: "Pack avec emotes", price: 45000 },
     ],
   },
   {
     id: "identite-signature",
     name: "Identité signature",
     tagline: "Une identité complète pour affirmer ton style sur tes streams.",
-    price: 99000,
+    price: 69000,
     checkout: true,
     highlight: true,
     deliverables: [
@@ -39,16 +39,16 @@ export const packs: Pack[] = [
     ],
     extras: ["10 emotes personnalisées : 280 € HT", "Animation légère des 5 overlays : 450 € HT"],
     formulas: [
-      { id: "base", label: "Identité signature", price: 99000 },
-      { id: "emotes", label: "Pack avec emotes", price: 127000 },
-      { id: "emotes-animations", label: "Pack avec emotes et animations", price: 172000 },
+      { id: "base", label: "Identité signature", price: 69000 },
+      { id: "emotes", label: "Pack avec emotes", price: 79000 },
+      { id: "emotes-animations", label: "Pack avec emotes et animations", price: 99000 },
     ],
   },
   {
     id: "univers-complet",
     name: "Univers complet",
     tagline: "Un univers visuel complet et animé pour ta chaîne.",
-    price: 199000,
+    price: 149000,
     priceFrom: true,
     checkout: false,
     deliverables: [
@@ -65,14 +65,23 @@ export const packs: Pack[] = [
 // Options à la carte : non vendues via Stripe, elles se cochent dans le brief ou la demande de devis.
 
 export const options: Option[] = [
-  { id: "overlay-fixe", name: "Overlay fixe supplémentaire", price: 9000 },
-  { id: "animation-overlay", name: "Animation légère d'un overlay existant", price: 10000, priceFrom: true },
-  { id: "emote-statique", name: "Emote statique supplémentaire", price: 3500 },
-  { id: "emotes-5", name: "Pack de 5 emotes statiques", price: 15000 },
-  { id: "emotes-10", name: "Pack de 10 emotes statiques", price: 28000 },
-  { id: "emotes-15", name: "Pack de 15 emotes statiques", price: 39000 },
-  { id: "emote-animee", name: "Emote animée", price: 7000, priceFrom: true, unit: "unité" },
-  { id: "banniere", name: "Bannière pour une plateforme supplémentaire", price: 6000 },
+  { id: "overlay-fixe-unite", name: "Overlay fixe (unité)", price: 5000 },
+  { id: "overlay-anime-unite", name: "Overlay animé (unité)", price: 9000 },
+  { id: "alertes-fixes", name: "Pack d’alertes fixes", price: 8000 },
+  { id: "alertes-animees", name: "Pack d’alertes animées", price: 14000 },
+  { id: "widget-personnalise", name: "Widget personnalisé (barre d’objectifs, tchat, sponsor, partenariats)", price: 10000, priceFrom: true },
+  { id: "widget-avance", name: "Widget interactif avancé (sur devis)", price: 20000, priceFrom: true },
+  { id: "animation-overlay", name: "Animation légère d'un overlay existant", price: 4000, priceFrom: true },
+  { id: "emote-statique", name: "Emote statique (unité)", price: 1500 },
+  { id: "emotes-3", name: "Pack de 3 emotes statiques", price: 4000 },
+  { id: "emotes-5", name: "Pack de 5 emotes statiques", price: 6500 },
+  { id: "emotes-10", name: "Pack de 10 emotes statiques", price: 12000 },
+  { id: "emote-animee", name: "Emote animée (unité)", price: 3000 },
+  { id: "emotes-animees-3", name: "Pack de 3 emotes animées", price: 8000 },
+  { id: "emotes-animees-5", name: "Pack de 5 emotes animées", price: 12500 },
+  { id: "logo", name: "Logo", price: 15000, priceFrom: true },
+  { id: "banniere", name: "Bannière pour YouTube / Twitch", price: 7000 },
+  { id: "avatar", name: "Avatar", price: 2500 },
   { id: "panneaux-twitch", name: "Pack de 6 panneaux Twitch", price: 9000 },
   { id: "animation-logo", name: "Animation du logo", price: 18000, priceFrom: true },
 ];
