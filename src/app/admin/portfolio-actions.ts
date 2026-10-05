@@ -6,7 +6,7 @@ import { caseStudies } from "@/data/case-studies";
 import type { Emote, Work } from "@/data/portfolio";
 import { requireAdmin } from "@/lib/auth";
 import { textsFromForm } from "@/lib/case-study-texts";
-import { homeFromForm } from "@/lib/home-content";
+import { homeFromForm, resetGroup } from "@/lib/home-content";
 import { s3Configured, s3Delete, s3SignedUpload } from "@/lib/s3";
 import { getStore } from "@/lib/store";
 import { checkUpload, sniffType, storagePath, type MediaKind } from "@/lib/uploads";
@@ -257,13 +257,25 @@ export async function saveCaseStudyTextsAction(formData: FormData) {
 
 // --- Page d'accueil -----------------------------------------------------------------
 
-export async function saveHomeAction(formData: FormData) {
+// Page d'accueil et textes de la page Portfolio : enregistrés ensemble, chaque formulaire
+// ne remplace que les textes de sa page.
+async function saveContent(formData: FormData, group: "accueil" | "portfolio", back: string) {
   await requireAdmin();
+  const store = getStore();
+  const stored = await store.getHomeContent();
   if (formData.get("reset") === "1") {
-    if (formData.get("confirm") !== "on") done("/admin/accueil", "Coche la case de confirmation.");
-    await getStore().saveHomeContent(null);
-    done("/admin/accueil");
+    if (formData.get("confirm") !== "on") done(back, "Coche la case de confirmation.");
+    await store.saveHomeContent(resetGroup(stored, group));
+    done(back);
   }
-  await getStore().saveHomeContent(homeFromForm((key) => formData.get(`h:${key}`)?.toString()));
-  done("/admin/accueil");
+  await store.saveHomeContent(homeFromForm((key) => formData.get(`h:${key}`)?.toString(), stored, group));
+  done(back);
+}
+
+export async function saveHomeAction(formData: FormData) {
+  await saveContent(formData, "accueil", "/admin/accueil");
+}
+
+export async function savePortfolioPageAction(formData: FormData) {
+  await saveContent(formData, "portfolio", "/admin/portfolio");
 }

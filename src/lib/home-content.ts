@@ -1,4 +1,5 @@
-// Textes et visuels de la page d'accueil, modifiables dans l'admin.
+// Textes et visuels de la page d'accueil (Admin > Page d'accueil) et textes de la page
+// Portfolio (Admin > Portfolio), modifiables dans l'admin et enregistrés ensemble.
 // Les valeurs par défaut reprennent l'accueil actuel ; ce qui est saisi dans l'admin les remplace.
 // Les visuels sont choisis parmi les réalisations du portfolio (par leur id).
 import { site } from "@/data/site";
@@ -99,6 +100,14 @@ export const homeSections: HomeSection[] = [
   },
 ];
 
+// En-tête et cartes de la page Portfolio (modifiés dans Admin > Portfolio)
+export const portfolioPageFields: HomeField[] = [
+  { key: "portfolio.kicker", label: "Surtitre", kind: "text", max: 60 },
+  { key: "portfolio.title", label: "Titre", kind: "text", max: 120 },
+  { key: "portfolio.intro", label: "Texte d'introduction", kind: "long" },
+  { key: "portfolio.link", label: "Lien des cartes projet", kind: "text", max: 40 },
+];
+
 export const homeDefaults: Record<string, string> = {
   "hero.title1": "Ton stream.",
   "hero.title2": "Ton univers.",
@@ -140,9 +149,14 @@ export const homeDefaults: Record<string, string> = {
   "custom.title": "Un projet plus spécifique ?",
   "custom.text": "Widget interactif, refonte complète, identité pour un événement : parlons-en et je te fais un devis.",
   "custom.button": "Demander un devis",
+  "portfolio.kicker": "Portfolio",
+  "portfolio.title": "Des univers, pas juste des écrans.",
+  "portfolio.intro": "Chaque projet est pensé autour de la personnalité du créateur, de son contenu et de son identité.",
+  "portfolio.link": "Explorer l’univers →",
 };
 
-const fields = homeSections.flatMap((s) => s.fields);
+const homeFields = homeSections.flatMap((s) => s.fields);
+const fields = [...homeFields, ...portfolioPageFields];
 const LONG = 1200;
 
 function clean(f: HomeField, raw: string): string {
@@ -161,15 +175,39 @@ function clean(f: HomeField, raw: string): string {
 
 // Contenu enregistré : seules les clés connues, en texte ; un texte vidé reprend la valeur par défaut
 // (sauf pour un visuel, où « vide » a un sens : réglage automatique).
-export function homeFromForm(get: (key: string) => string | null | undefined): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const f of fields) {
+// group : champs du formulaire envoyé ; les textes de l'autre page déjà enregistrés sont conservés.
+export function homeFromForm(
+  get: (key: string) => string | null | undefined,
+  stored: unknown = null,
+  group: "accueil" | "portfolio" = "accueil",
+): Record<string, string> {
+  const edited = group === "portfolio" ? portfolioPageFields : homeFields;
+  const kept = resolveStored(stored, group === "portfolio" ? homeFields : portfolioPageFields);
+  const out: Record<string, string> = { ...kept };
+  for (const f of edited) {
     const v = get(f.key);
     if (v == null) continue;
     const c = clean(f, v);
     if (c !== homeDefaults[f.key] && (c || f.kind === "work")) out[f.key] = c;
   }
   return out;
+}
+
+// Valeurs enregistrées (vérifiées) pour une liste de champs, sans les valeurs par défaut
+function resolveStored(raw: unknown, list: HomeField[]) {
+  const stored = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const out: Record<string, string> = {};
+  for (const f of list) {
+    const v = stored[f.key];
+    if (typeof v === "string" && (v || f.kind === "work")) out[f.key] = clean(f, v);
+  }
+  return out;
+}
+
+// Retour au contenu d'origine d'une des deux pages, l'autre est conservée (null : plus rien d'enregistré)
+export function resetGroup(stored: unknown, group: "accueil" | "portfolio") {
+  const kept = resolveStored(stored, group === "portfolio" ? homeFields : portfolioPageFields);
+  return Object.keys(kept).length ? kept : null;
 }
 
 export type HomeContent = { values: Record<string, string>; text(key: string): string; lines(key: string): string[] };

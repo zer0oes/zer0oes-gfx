@@ -6,6 +6,7 @@ import { ProtectedMedia } from "@/components/protection";
 import { PageHeader } from "@/components/ui";
 import { caseStudies } from "@/data/case-studies";
 import { categories, projectHref } from "@/data/portfolio";
+import { resolveHome } from "@/lib/home-content";
 import { getStore } from "@/lib/store";
 
 export const metadata: Metadata = {
@@ -14,11 +15,14 @@ export const metadata: Metadata = {
 };
 
 export default async function PortfolioPage() {
-  const { streamers, works } = await getStore().getPortfolio();
+  const store = getStore();
+  const [{ streamers, works }, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
+  // Textes modifiables dans Admin > Portfolio
+  const texts = resolveHome(stored);
   return (
     <>
-      <PageHeader eyebrow="Portfolio" title="Projets">
-        Un projet par streameur : ouvre-le pour voir ses overlays, widgets, alertes et emotes.
+      <PageHeader eyebrow={texts.text("portfolio.kicker")} title={texts.text("portfolio.title")}>
+        {texts.text("portfolio.intro")}
       </PageHeader>
       <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-2">
         {streamers.map((s) => {
@@ -63,7 +67,7 @@ export default async function PortfolioPage() {
                 <div className="flex items-center justify-between gap-4">
                   <h2 className="font-display text-2xl font-bold">{s.name}</h2>
                   <span className="text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
-                    Voir le projet →
+                    {texts.text("portfolio.link")}
                   </span>
                 </div>
                 <p className="mt-2 text-muted">{s.description}</p>
