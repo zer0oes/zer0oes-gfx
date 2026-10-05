@@ -104,6 +104,66 @@ body {
   user-select: none;
 }
 
+/* Apparition au chargement et au scroll (pages .reveal-page, composant ScrollReveal) */
+/* Chargement : fondu léger de chaque bloc extérieur, en CSS pour jouer dès le premier affichage.
+   « backwards » seulement : une fois fini, le JavaScript peut masquer les blocs hors écran. */
+@keyframes reveal-load {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+/* Blocs animés : le plus extérieur parmi header, figure, aside, [data-reveal] et section
+   (une section qui contient des blocs data-reveal laisse ces blocs s'animer un par un).
+   :where() garde une spécificité faible, pour que .reveal-in (scroll) prenne le relais. */
+.reveal-page
+  :where(header, figure, aside, [data-reveal], section:not(:has([data-reveal]))):where(
+    :not(:is(header, figure, aside, [data-reveal], section:not(:has([data-reveal]))) *)
+  ) {
+  animation: reveal-load 0.6s ease-out var(--reveal-delay, 0ms) backwards;
+}
+/* Emotes autour du bandeau d'accueil : elles surgissent une à une (délai dans la page) */
+@keyframes emote-pop {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+  70% {
+    scale: 1.12;
+  }
+}
+.emote-pop {
+  animation: emote-pop 0.5s ease-out backwards;
+}
+/* Cartes d'une grille visibles au chargement : arrivée l'une après l'autre */
+.reveal-page [data-reveal]:nth-child(2) {
+  --reveal-delay: 90ms;
+}
+.reveal-page [data-reveal]:nth-child(3) {
+  --reveal-delay: 180ms;
+}
+.reveal-page [data-reveal]:nth-child(n + 4) {
+  --reveal-delay: 270ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-page :is(header, section, figure, aside, [data-reveal]),
+  .emote-pop {
+    animation: none !important;
+  }
+}
+.reveal-wait {
+  opacity: 0;
+}
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+}
+.reveal-in {
+  animation: reveal-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Changement d'onglet sur /contact : le contenu glisse depuis le côté de l'onglet choisi */
 @keyframes slide-from-right {
   from {

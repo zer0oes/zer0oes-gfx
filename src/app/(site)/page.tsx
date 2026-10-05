@@ -34,12 +34,13 @@ function Lines({ lines }: { lines: string[] }) {
   ));
 }
 
-// Emplacements des emotes autour du visuel du hero (légèrement en dehors du cadre)
+// Emplacements des emotes autour du visuel du hero (légèrement en dehors du cadre),
+// de tailles différentes ; elles surgissent une à une après le bandeau
 const emoteSpots = [
-  "-left-6 -top-8 h-20 w-20 -rotate-12 sm:-left-10 sm:h-28 sm:w-28",
-  "-right-4 -top-10 h-16 w-16 rotate-12 sm:h-24 sm:w-24",
-  "-bottom-8 -left-4 h-16 w-16 rotate-6 sm:h-24 sm:w-24",
-  "-bottom-10 right-10 h-20 w-20 -rotate-6 sm:h-28 sm:w-28",
+  "-left-5 -top-6 h-14 w-14 -rotate-12 sm:-left-8 sm:h-20 sm:w-20",
+  "-right-3 -top-5 h-9 w-9 rotate-12 sm:h-12 sm:w-12",
+  "-bottom-5 -left-3 h-12 w-12 rotate-6 sm:h-16 sm:w-16",
+  "-bottom-8 right-10 h-16 w-16 -rotate-6 sm:h-24 sm:w-24",
 ];
 
 export default async function Home() {
@@ -77,7 +78,8 @@ export default async function Home() {
   const signature = byId(pick("signature.work"));
 
   return (
-    <>
+    // reveal-page : blocs animés au chargement et au scroll (voir ScrollReveal)
+    <div className="reveal-page">
       <section className="relative overflow-hidden">
         <div
           aria-hidden
@@ -132,7 +134,8 @@ export default async function Home() {
                 <div
                   key={e.name}
                   aria-hidden
-                  className={`pointer-events-none absolute drop-shadow-[0_8px_24px_rgba(0,0,0,0.6)] ${emoteSpots[i]}`}
+                  className={`emote-pop pointer-events-none absolute drop-shadow-[0_8px_24px_rgba(0,0,0,0.6)] ${emoteSpots[i]}`}
+                  style={{ animationDelay: `${450 + i * 120}ms` }}
                 >
                   <Image src={e.src} alt="" width={128} height={128} draggable={false} unoptimized={e.animated} className="h-full w-full object-contain" />
                 </div>
@@ -143,8 +146,9 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        {/* Emotes, univers puis logo : chacun apparaît à son tour, après le bandeau */}
         {emoteWork && emotes.length > 0 && (
-          <div className="grid items-center gap-8 lg:grid-cols-12">
+          <div data-reveal style={{ "--reveal-delay": "900ms" } as React.CSSProperties} className="grid items-center gap-8 lg:grid-cols-12">
             <div className="lg:col-span-4">
               <p className={kickerClass}>{c.text("emotes.kicker")}</p>
               <h2 className={titleClass}>
@@ -167,7 +171,7 @@ export default async function Home() {
         )}
 
         {universe && (
-          <div className="mt-16 grid items-center gap-8 lg:grid-cols-12">
+          <div data-reveal style={{ "--reveal-delay": "1100ms" } as React.CSSProperties} className="mt-16 grid items-center gap-8 lg:grid-cols-12">
             <div className="lg:col-span-7">
               <Showcase work={universe} href={projectHref(universe.streamer)} sizes="(min-width: 1024px) 660px, 100vw" />
             </div>
@@ -187,7 +191,7 @@ export default async function Home() {
         )}
 
         {signature && (
-          <div className="mt-16 grid items-center gap-8 lg:grid-cols-12">
+          <div data-reveal style={{ "--reveal-delay": "1300ms" } as React.CSSProperties} className="mt-16 grid items-center gap-8 lg:grid-cols-12">
             <div className="order-2 lg:order-1 lg:col-span-5">
               <p className={kickerClass}>
                 {c.text("signature.kicker")} · {streamerNames[signature.streamer]}
@@ -278,6 +282,6 @@ export default async function Home() {
           </Link>
         </div>
       </section>
-    </>
+    </div>
   );
 }

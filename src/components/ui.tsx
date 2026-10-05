@@ -1,10 +1,10 @@
 export function PageHeader({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-3xl px-4 pt-16 pb-10 text-center sm:px-6">
+    <header className="mx-auto max-w-3xl px-4 pt-16 pb-10 text-center sm:px-6">
       {eyebrow && <p className="text-sm font-semibold uppercase tracking-widest text-accent">{eyebrow}</p>}
       <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">{title}</h1>
       {children && <div className="mt-4 text-lg text-muted">{children}</div>}
-    </div>
+    </header>
   );
 }
 

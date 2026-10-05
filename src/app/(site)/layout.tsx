@@ -1,6 +1,7 @@
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { ProtectionProvider } from "@/components/protection";
+import { ScrollReveal } from "@/components/ScrollReveal";
 import { getStore } from "@/lib/store";
 
 // Pages publiques régénérées au plus toutes les 5 minutes : une modification de la base faite
@@ -16,6 +17,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
+      <ScrollReveal />
     </ProtectionProvider>
   );
 }

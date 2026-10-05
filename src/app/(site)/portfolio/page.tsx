@@ -41,6 +41,7 @@ export default async function PortfolioPage() {
               key={s.id}
               href={projectHref(s.id)}
               data-hover-root
+              data-reveal
               className="group overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none"
             >
               <div className="relative aspect-video overflow-hidden bg-background">
