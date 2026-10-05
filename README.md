@@ -94,6 +94,7 @@ Le modèle complet et commenté est dans [`.env.example`](.env.example).
 | `ABBY_API_KEY` | pour les factures | Clé API Abby. Sans elle : factures simulées. |
 | `ABBY_VAT_CODE` | non | Code TVA des lignes (défaut `FR_00HT`, franchise en base de TVA) |
 | `ABBY_IN_TEST_MODE` | non | `1` pour créer de vraies factures même avec une clé Stripe de test (à éviter) |
+| `STATS_IN_DEV` | non | `1` pour enregistrer les statistiques de visite depuis localhost (à éviter) |
 
 Les variables `NEXT_PUBLIC_…` sont **figées au moment du build** : après les avoir modifiées, il faut redéployer.
 
@@ -286,7 +287,13 @@ Adresse : `/admin`. Saisir ton e-mail, puis cliquer sur le lien reçu.
   chiffre d'affaires encaissé (remboursements déduits), cotisations URSSAF estimées, frais Stripe, net,
   nouvelles commandes et soldes restant à encaisser ; prochaine échéance URSSAF (rythme mensuel ou
   trimestriel réglable dans Offres et réglages) ; graphiques avec tableaux de données ; export CSV.
-  Tant qu'il n'y a aucune vente réelle, des chiffres d'exemple sont affichés avec un bandeau.
+  En local uniquement, tant qu'il n'y a aucune vente réelle, des chiffres d'exemple sont affichés avec
+  un bandeau ; en production, jamais de chiffres fictifs.
+- **Statistiques** : visiteurs, pages vues, provenance (Twitch, Instagram, Google…), appareils,
+  clics sur les liens et boutons, formulaires envoyés et commandes payées, par période. Mesure maison
+  sans cookie ni adresse IP (empreinte anonyme qui change chaque jour), table `stats_events`,
+  conservée 13 mois. Les visites de l'admin connecté, les robots et localhost ne sont pas comptés
+  (sauf `STATS_IN_DEV=1` en local, à éviter : la base locale est celle du site en ligne).
 - **Commandes** : paiements reçus, brief du client, revenu net estimé (frais Stripe, URSSAF),
   envoi du lien de paiement du solde, notes, factures Abby (téléchargement, relance en cas d'échec).
   Section **Livraison** : liens d'import (overlays StreamElements partagés, en https) et fichiers

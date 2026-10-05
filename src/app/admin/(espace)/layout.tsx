@@ -5,6 +5,7 @@ import { logoutAction } from "../actions";
 
 const nav = [
   { href: "/admin", label: "Tableau de bord" },
+  { href: "/admin/statistiques", label: "Statistiques" },
   { href: "/admin/commandes", label: "Commandes" },
   { href: "/admin/offres", label: "Offres et réglages" },
   { href: "/admin/accueil", label: "Page d'accueil" },

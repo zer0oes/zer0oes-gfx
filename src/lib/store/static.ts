@@ -60,4 +60,8 @@ export const staticStore: Store = {
   listInvoices: async () => [],
   getInvoiceByKey: async () => null,
   saveInvoice: readOnly,
+  // Sans base : statistiques ignorées
+  addStatEvent: async () => {},
+  listStatEvents: async () => [],
+  purgeStatEvents: async () => {},
 };

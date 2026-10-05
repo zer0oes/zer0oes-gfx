@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { parseContact, parseMessage } from "@/lib/contact-form";
 import { notify } from "@/lib/notify";
+import { recordFormSent } from "@/lib/stats-server";
 import { attachBrief, paymentSummary, quote, quoteMetadata, recordDemoOrder } from "@/lib/orders";
 import { getPack, logoDiscountLabel, paymentLabel } from "@/lib/pricing";
 import { siteUrl } from "@/lib/site-url";
@@ -130,6 +131,7 @@ export async function sendContact(
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou écris-moi directement par e-mail." };
   }
+  await recordFormSent(`Projet : ${request.type}`, "/contact");
   return { ok: true, message: "Message envoyé ! Je te réponds sous 48 h ouvrées." };
 }
 
@@ -147,6 +149,7 @@ export async function sendMessage(_prev: FormState, formData: FormData): Promise
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou écris-moi directement par e-mail." };
   }
+  await recordFormSent(`Message : ${request.subject}`, "/contact?onglet=message");
   return { ok: true, message: "Message envoyé ! Je te réponds sous 48 h ouvrées." };
 }
 
@@ -207,5 +210,6 @@ export async function sendBrief(
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou envoie ton brief par e-mail." };
   }
+  await recordFormSent("Brief après commande", "/merci");
   return { ok: true, message: "Brief bien reçu ! Je reviens vers toi sous 48 h ouvrées pour démarrer." };
 }

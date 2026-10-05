@@ -3,6 +3,7 @@ import type { StoredTexts } from "@/lib/case-study-texts";
 import type { FinanceSettings } from "@/lib/finance";
 import type { Catalog, Option, Pack, PaymentType, PricingSettings } from "@/lib/pricing";
 import type { ProtectionSettings } from "@/lib/protection";
+import type { NewStatEvent, StatEvent } from "@/lib/stats";
 
 export type Portfolio = { streamers: Streamer[]; works: Work[] };
 
@@ -219,6 +220,10 @@ export interface Store {
   listInvoices(orderId?: string): Promise<Invoice[]>;
   getInvoiceByKey(paymentKey: string): Promise<Invoice | null>;
   saveInvoice(invoice: Omit<Invoice, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<Invoice>;
+  // Statistiques de visite (sans cookie ni adresse IP), du plus ancien au plus récent
+  addStatEvent(event: NewStatEvent): Promise<void>;
+  listStatEvents(from: string, to: string): Promise<StatEvent[]>;
+  purgeStatEvents(before: string): Promise<void>;
 }
 
 export class ReadOnlyStoreError extends Error {

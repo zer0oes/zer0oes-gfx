@@ -1,3 +1,4 @@
+import { Analytics } from "@/components/Analytics";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { ProtectionProvider } from "@/components/protection";
@@ -18,6 +19,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <main className="flex-1">{children}</main>
       <Footer />
       <ScrollReveal />
+      <Analytics />
     </ProtectionProvider>
   );
 }

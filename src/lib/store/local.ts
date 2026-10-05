@@ -9,6 +9,7 @@ import { MAX_NOTES } from "@/lib/delivery";
 import { assertNotProduction } from "@/lib/env";
 import type { StoredTexts } from "@/lib/case-study-texts";
 import { staticCatalog, staticPortfolio } from "./static";
+import type { StatEvent } from "@/lib/stats";
 import type { Deliverable, Invoice, Order, Portfolio, Store } from "./types";
 
 // Magasin JSON local, pour développer et tester l'admin sans Supabase.
@@ -21,6 +22,7 @@ type Data = Catalog & Portfolio & {
   protection?: ProtectionSettings;
   caseStudyTexts?: Record<string, StoredTexts>;
   home?: Record<string, string>;
+  stats?: StatEvent[];
 };
 
 const FILE = path.join(process.cwd(), ".data", "dev-store.json");
@@ -210,5 +212,14 @@ export const localStore: Store = {
     mutate((d) => {
       const o = d.orders.find((x) => x.id === orderId);
       if (o) o.notes.push({ id: randomUUID(), createdAt: new Date().toISOString(), body });
+    }),
+  addStatEvent: (event) =>
+    mutate((d) => {
+      (d.stats ??= []).push({ ...event, createdAt: new Date().toISOString() });
+    }),
+  listStatEvents: async (from, to) => ((await load()).stats ?? []).filter((e) => e.createdAt >= from && e.createdAt < to),
+  purgeStatEvents: (before) =>
+    mutate((d) => {
+      d.stats = (d.stats ?? []).filter((e) => e.createdAt >= before);
     }),
 };

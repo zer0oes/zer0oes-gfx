@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui";
 import { legal, site } from "@/data/site";
 import { FILES_RETENTION_MONTHS } from "@/lib/portal";
+import { STATS_RETENTION_MONTHS } from "@/lib/stats";
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
@@ -17,6 +18,7 @@ const retention = [
   ["Factures et données comptables", "10 ans (obligation légale, art. L123-22 du Code de commerce)"],
   ["Aperçus et fichiers livrés (espace commande)", `${FILES_RETENTION_MONTHS} mois après la clôture du projet, puis supprimés`],
   ["Journaux techniques du serveur (adresse IP, pages appelées)", "quelques jours, pour la sécurité du site"],
+  ["Statistiques de visite anonymes", `${STATS_RETENTION_MONTHS} mois, puis supprimées`],
 ];
 
 const processors = [
@@ -58,6 +60,13 @@ export default function PrivacyPage() {
           <li>
             <strong>Paiement</strong> : traité par Stripe sur ses propres pages sécurisées. Je ne reçois jamais ton numéro
             de carte.
+          </li>
+          <li>
+            <strong>Statistiques de visite</strong> : pages vues, boutons cliqués, site d&apos;où tu arrives et type
+            d&apos;appareil (mobile ou ordinateur). Mesure anonyme, faite par le site lui-même, sans cookie et sans
+            enregistrer ton adresse IP : un visiteur est reconnu seulement le temps d&apos;une journée, par une empreinte
+            anonyme qui change chaque jour. Pour savoir quelles pages t&apos;intéressent et améliorer le site (intérêt
+            légitime).
           </li>
         </ul>
         <p>Tes données ne sont ni vendues, ni louées, ni utilisées pour de la publicité.</p>
@@ -109,8 +118,8 @@ export default function PrivacyPage() {
 
         <h2>Cookies</h2>
         <p>
-          Ce site ne dépose aucun cookie lorsque tu le visites : pas de mesure d&apos;audience, pas de publicité, pas de
-          réseaux sociaux intégrés. C&apos;est pour ça qu&apos;il n&apos;y a pas de bandeau cookies. Le paiement se fait sur
+          Ce site ne dépose aucun cookie lorsque tu le visites : la mesure d&apos;audience est anonyme et sans cookie, et il
+          n&apos;y a ni publicité, ni réseaux sociaux intégrés. C&apos;est pour ça qu&apos;il n&apos;y a pas de bandeau cookies. Le paiement se fait sur
           les pages de Stripe, qui gère ses propres cookies, nécessaires à la sécurité du paiement.
         </p>
 

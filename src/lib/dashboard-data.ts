@@ -1,16 +1,18 @@
 import "server-only";
 import { movements, parisDay, resolvePeriod, within, type PeriodParams } from "@/lib/dashboard";
 import { demoOrders } from "@/lib/dashboard-demo";
+import { isProductionLike } from "@/lib/env";
 import { getStore } from "@/lib/store";
 
 // Données du tableau de bord (page et export CSV). Les commandes de démo (paiements simulés)
-// sont exclues ; tant qu'il n'y a aucune vente réelle, des ventes d'exemple sont affichées.
+// sont exclues. En local uniquement, tant qu'il n'y a aucune vente réelle, des ventes
+// d'exemple sont affichées ; en production, jamais de chiffres fictifs.
 export async function loadDashboard(params: PeriodParams) {
   const store = getStore();
   const [orders, invoices, finance] = await Promise.all([store.listOrders(), store.listInvoices(), store.getFinance()]);
   const today = parisDay(new Date());
   const real = orders.filter((o) => !o.demo);
-  const sample = real.length === 0;
+  const sample = real.length === 0 && !isProductionLike();
   const source = sample ? demoOrders(today) : real;
   const movs = movements(source, sample ? [] : invoices, finance);
   // Sans période demandée : le mois en cours si la déclaration URSSAF est mensuelle, sinon le trimestre

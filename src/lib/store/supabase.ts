@@ -6,6 +6,7 @@ import { MAX_NOTES } from "@/lib/delivery";
 import { defaultFinance, isUrssafPeriodicity, type FinanceSettings } from "@/lib/finance";
 import { defaultProtection, isWatermarkLevel, type ProtectionSettings } from "@/lib/protection";
 import type { Option, Pack } from "@/lib/pricing";
+import type { StatEvent } from "@/lib/stats";
 import type { Deliverable, DeliverableNote, Invoice, NewOrder, Order, OrderPatch, OrderStatus, Store } from "./types";
 
 // Client avec la clé secrète : contourne la RLS, donc réservé au serveur
@@ -634,5 +635,46 @@ export const supabaseStore: Store = {
 
   async addNote(orderId, body) {
     check(await db().from("order_notes").insert({ order_id: orderId, body }));
+  },
+
+  async addStatEvent(e) {
+    check(
+      await db()
+        .from("stats_events")
+        .insert({ kind: e.kind, path: e.path, label: e.label ?? null, source: e.source ?? null, device: e.device ?? null, visitor: e.visitor ?? null }),
+    );
+  },
+
+  async listStatEvents(from, to) {
+    // Par pages de 1000 lignes (limite de l'API Supabase)
+    const out: StatEvent[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const rows = check(
+        await db()
+          .from("stats_events")
+          .select("created_at, kind, path, label, source, device, visitor")
+          .gte("created_at", from)
+          .lt("created_at", to)
+          .order("created_at")
+          .order("id")
+          .range(offset, offset + 999),
+      ) as Row[];
+      for (const r of rows) {
+        out.push({
+          createdAt: r.created_at as string,
+          kind: r.kind as StatEvent["kind"],
+          path: r.path as string,
+          label: (r.label as string | null) ?? undefined,
+          source: (r.source as string | null) ?? undefined,
+          device: (r.device as StatEvent["device"] | null) ?? undefined,
+          visitor: (r.visitor as string | null) ?? undefined,
+        });
+      }
+      if (rows.length < 1000) return out;
+    }
+  },
+
+  async purgeStatEvents(before) {
+    check(await db().from("stats_events").delete().lt("created_at", before));
   },
 };
