@@ -34,7 +34,7 @@ export function AdminSidebar({ email, storeKind }: { email: string; storeKind: "
       )}
       <form action={logoutAction} className={`mt-auto shrink-0 border-t border-border ${collapsed ? "p-2" : "p-3"}`}>
         <button type="submit" title={collapsed ? "Déconnexion" : undefined}
-          className={`flex w-full items-center gap-3 whitespace-nowrap rounded-lg py-2.5 text-left text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent ${collapsed ? "justify-center px-2" : "px-3"}`}>
+          className={`flex items-center whitespace-nowrap rounded-lg text-left text-sm text-muted transition-colors hover:bg-surface-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent ${collapsed ? "mx-auto size-11 justify-center p-0" : "w-full gap-3 px-3 py-2.5"}`}>
           <MaterialIcon name="logout" /><span className={collapsed ? "sr-only" : undefined}>Déconnexion</span>
         </button>
       </form>
