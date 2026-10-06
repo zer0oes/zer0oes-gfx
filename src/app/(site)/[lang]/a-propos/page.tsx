@@ -5,6 +5,9 @@ import { asLocale, href, t, type Locale } from "@/lib/i18n";
 import { mediaUrl } from "@/lib/media";
 import { pageMetadata } from "@/lib/seo";
 
+// Rendu à la demande : éviter de servir une page 404 précompilée sur Heroku.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: PageProps<"/[lang]/a-propos">): Promise<Metadata> {
   return pageMetadata(asLocale((await params).lang), "/a-propos", {
     fr: {

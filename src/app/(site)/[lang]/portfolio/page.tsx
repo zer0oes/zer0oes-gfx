@@ -12,6 +12,9 @@ import { pageMetadata } from "@/lib/seo";
 import { getStore } from "@/lib/store";
 import { trDeep } from "@/lib/translations-en";
 
+// Rendu à la demande : éviter de servir une page 404 précompilée sur Heroku.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: PageProps<"/[lang]/portfolio">): Promise<Metadata> {
   return pageMetadata(asLocale((await params).lang), "/portfolio", {
     fr: { title: "Portfolio", description: "Les projets réalisés pour des streameurs : overlays, widgets, alertes et emotes." },

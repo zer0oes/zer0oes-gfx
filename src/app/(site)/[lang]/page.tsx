@@ -16,6 +16,9 @@ import { mediaUrl } from "@/lib/media";
 import { asLocale, href, t } from "@/lib/i18n";
 import { trDeep } from "@/lib/translations-en";
 
+// Rendu à la demande : éviter de servir une page 404 précompilée sur Heroku.
+export const dynamic = "force-dynamic";
+
 const kickerClass = "text-xs font-semibold uppercase tracking-[0.2em] text-accent";
 const titleClass = "mt-3 font-display text-3xl font-bold leading-tight sm:text-4xl";
 
