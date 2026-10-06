@@ -23,7 +23,7 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href={to("/")} className="shrink-0" onClick={() => setOpen(false)}>
-          <Image src="/logo-zeroes-gfx.png" alt="zer0oes gfx" width={1400} height={250} priority className="h-9 w-auto sm:h-10" />
+          <Image src="/logo-zeroes-gfx.png" alt="zer0oes gfx" width={1400} height={250} sizes="(min-width: 640px) 224px, 202px" preload className="h-9 w-auto sm:h-10" />
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex" aria-label={t(locale, { fr: "Navigation principale", en: "Main navigation" })}>

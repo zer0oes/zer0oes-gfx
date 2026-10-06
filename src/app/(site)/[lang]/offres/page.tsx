@@ -151,12 +151,12 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
   const lang = asLocale((await params).lang);
   const { annule, details } = await searchParams;
   const catalog = await getStore().getCatalog();
-  const { settings: site, options } = trDeep(lang, catalog);
+  const { settings: site } = catalog;
   const packs = activePacks(catalog.packs);
 
   return (
     <>
-      <PageHeader eyebrow={t(lang, { fr: "Offres", en: "Pricing" })} title={t(lang, { fr: "Les offres zeroes gfx", en: "zeroes gfx packages" })}>
+      <PageHeader eyebrow={t(lang, { fr: "Offres", en: "Pricing" })} title={t(lang, { fr: "Les offres zer0oes gfx", en: "zer0oes gfx packages" })}>
         {t(lang, {
           fr: "Compose ton pack selon tes besoins. Choisis tes overlays : démarrage, pause, fin, discussion ou gameplay.",
           en: "Build your package around your needs. Pick your overlays: starting, break, ending, just chatting or gameplay.",
@@ -177,6 +177,11 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
             <PackCard key={p.id} pack={p} settings={site} order locale={lang} openOptions={details === p.id} />
           ))}
         </div>
+        <section className="mt-6 rounded-2xl border border-border bg-surface p-6 text-sm leading-relaxed text-muted" aria-labelledby="pack-details">
+          <h2 id="pack-details" className="font-semibold text-foreground">{t(lang, { fr: "Pour tous les packs", en: "For every package" })}</h2>
+          <p className="mt-3">{t(lang, { fr: "Overlays au choix : démarrage, pause, fin, discussion ou gameplay. Visuels prêts à utiliser, avec fond transparent lorsque nécessaire ; installation OBS sur devis séparé.", en: "Choose starting, break, ending, chatting or gameplay overlays. Ready-to-use visuals, with transparent backgrounds where needed; OBS setup quoted separately." })}</p>
+          <p className="mt-3">{t(lang, { fr: `Tu as déjà ton logo ? ${formatPrice(site.logoDiscount, lang)} de réduction sur Premier look et Identité signature, et une réduction définie sur le devis pour Univers complet. Fournis un fichier de qualité, idéalement vectoriel ; les retouches et refontes sont chiffrées séparément.`, en: `Already have a logo? Get ${formatPrice(site.logoDiscount, lang)} off First Look and Signature Identity, with a discount agreed in the quote for Full Universe. Supply a quality file, ideally vector artwork; retouching and redesign are quoted separately.` })}</p>
+        </section>
         <OfferGuide locale={lang} />
 
         {lang === "en" ? (
@@ -201,7 +206,7 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
           </p>
           <div className="mt-8 grid gap-5 sm:grid-cols-2">
             {optionCategories.map((c) => {
-              const list = options.filter((o) => optionCategory(o) === c.id);
+              const list = catalog.options.filter((o) => optionCategory(o) === c.id).map((o) => trDeep(lang, o));
               if (!list.length) return null;
               const look = categoryLooks[c.id];
               const label = lang === "en" ? categoryEn[c.id] : c;

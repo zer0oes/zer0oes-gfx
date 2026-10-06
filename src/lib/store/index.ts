@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { withTranslations } from "@/lib/admin-translations";
 import { localStoreAllowed, supabaseConfigured } from "@/lib/env";
 import { mediaBaseUrl, mediaUrl } from "@/lib/media";
@@ -18,6 +19,9 @@ function baseStore(): Store {
   return staticStore;
 }
 
+// Une seule lecture des textes et traductions par rendu serveur, sans cache entre requêtes.
+const getHomeContentForRender = cache(() => baseStore().getHomeContent());
+
 // Médias « /portfolio/… » servis depuis le bucket S3 quand NEXT_PUBLIC_MEDIA_URL est défini
 function withMediaUrls(p: Portfolio): Portfolio {
   return {
@@ -35,8 +39,9 @@ export function getStore(): Store {
   const base = baseStore();
   const store: Store = {
     ...base,
+    getHomeContent: getHomeContentForRender,
     async getCatalog() {
-      const [catalog, raw] = await Promise.all([base.getCatalog(), base.getHomeContent()]);
+      const [catalog, raw] = await Promise.all([base.getCatalog(), getHomeContentForRender()]);
       return {
         settings: withTranslations(catalog.settings, raw, "settings", ["deliveryDays"]),
         packs: catalog.packs.map((pack) => withTranslations({ ...pack, formulas: pack.formulas?.map((formula) => withTranslations(formula, raw, `pack:${pack.id}:formula:${formula.id}`, ["label"])) }, raw, `pack:${pack.id}`, ["name", "tagline", "deliverables", "extras", "note"], ["deliverables", "extras"])),
@@ -44,14 +49,14 @@ export function getStore(): Store {
       };
     },
     async getPortfolio() {
-      const [portfolio, raw] = await Promise.all([base.getPortfolio(), base.getHomeContent()]);
+      const [portfolio, raw] = await Promise.all([base.getPortfolio(), getHomeContentForRender()]);
       return {
         streamers: portfolio.streamers.map((streamer) => withTranslations(streamer, raw, `streamer:${streamer.id}`, ["name", "description"])),
         works: portfolio.works.map((work) => withTranslations({ ...work, emotes: work.emotes?.map((emote) => withTranslations(emote, raw, `work:${work.id}:emote:${emote.name}`, ["name"])) }, raw, `work:${work.id}`, ["title", "description"])),
       };
     },
     async listTestimonials() {
-      const [reviews, raw] = await Promise.all([base.listTestimonials(), base.getHomeContent()]);
+      const [reviews, raw] = await Promise.all([base.listTestimonials(), getHomeContentForRender()]);
       return reviews.map((review) => withTranslations(review, raw, `review:${review.streamerId}`, ["author", "role"]));
     },
   };

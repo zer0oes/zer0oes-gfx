@@ -217,7 +217,7 @@ export const localStore: Store = {
   listTestimonials: async () => (await load()).testimonials ?? [],
   saveTestimonial: (t) =>
     mutate((d) => {
-      d.testimonials = [...(d.testimonials ?? []).filter((x) => x.streamerId !== t.streamerId), t];
+      d.testimonials = [...(d.testimonials ?? []).filter((x) => x.streamerId !== t.streamerId), { ...t, updatedAt: new Date().toISOString() }];
     }),
   deleteTestimonial: (id) =>
     mutate((d) => {

@@ -313,7 +313,8 @@ Les montants nets affichés sont des estimations, à vérifier avec ta déclarat
 
 | Commande | Rôle |
 | --- | --- |
-| `npm run dev` | Serveur de développement (http://localhost:3000) |
+| `npm run dev` | Serveur de développement avec Webpack (http://localhost:3000) |
+| `npm run dev:turbo` | Serveur de développement avec Turbopack (pour retester son rechargement à chaud) |
 | `npm run build` puis `npm start` | Version de production en local |
 | `npm run lint` | Vérification du code |
 | `npm test` | Tests |

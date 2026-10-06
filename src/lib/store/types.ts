@@ -9,6 +9,7 @@ export type Portfolio = { streamers: Streamer[]; works: Work[] };
 
 // Avis client d'un projet (facultatif), publié seulement avec l'accord du client
 export type Testimonial = {
+  updatedAt?: string;
   streamerId: string;
   author: string;
   role?: string;

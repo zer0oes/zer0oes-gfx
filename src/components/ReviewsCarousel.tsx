@@ -3,22 +3,23 @@
 import { Children, useEffect, useState } from "react";
 import { useLocale } from "./I18nProvider";
 
-// Carrousel des avis de l'accueil : un avis à la fois, en fondu. Points pour naviguer,
-// défilement automatique lent (7 s) qui s'arrête au survol ou au clavier, et jamais si le
+// Carrousel des avis de l'accueil : un avis à la fois, en glissement de droite à gauche avec fondu. Points pour naviguer,
+// défilement automatique lent (10 s) qui s'arrête au survol ou au clavier, et jamais si le
 // visiteur a demandé moins d'animations. Les avis sont superposés : la hauteur reste celle
 // du plus long, sans saut de mise en page.
-const DELAY = 7000;
+const DELAY = 10000;
 
 export function ReviewsCarousel({ children }: { children: React.ReactNode }) {
   const slides = Children.toArray(children);
   const locale = useLocale();
-  const [current, setCurrent] = useState(0);
+  const [{ current, previous }, setSlide] = useState<{ current: number; previous: number | null }>({ current: 0, previous: null });
+  const selectSlide = (index: number) => setSlide((slide) => index === slide.current ? slide : { current: index, previous: slide.current });
   const [paused, setPaused] = useState(false);
   const count = slides.length;
 
   useEffect(() => {
     if (count < 2 || paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = window.setTimeout(() => setCurrent((c) => (c + 1) % count), DELAY);
+    const timer = window.setTimeout(() => setSlide((slide) => ({ current: (slide.current + 1) % count, previous: slide.current })), DELAY);
     return () => window.clearTimeout(timer);
   }, [current, paused, count]);
 
@@ -34,7 +35,7 @@ export function ReviewsCarousel({ children }: { children: React.ReactNode }) {
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <div className="grid">
+      <div className="grid overflow-hidden">
         {slides.map((slide, i) => (
           <div
             key={i}
@@ -43,8 +44,8 @@ export function ReviewsCarousel({ children }: { children: React.ReactNode }) {
             aria-label={`${i + 1} / ${count}`}
             aria-hidden={i !== current}
             inert={i !== current}
-            className={`[grid-area:1/1] transition-all duration-700 ease-out motion-reduce:transition-none ${
-              i === current ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"
+            className={`[grid-area:1/1] ${
+              i === current ? (previous === null ? "" : "review-slide-in") : i === previous ? "pointer-events-none review-slide-out" : "pointer-events-none invisible"
             }`}
           >
             {slide}
@@ -57,7 +58,7 @@ export function ReviewsCarousel({ children }: { children: React.ReactNode }) {
             <button
               key={i}
               type="button"
-              onClick={() => setCurrent(i)}
+              onClick={() => selectSlide(i)}
               aria-label={locale === "en" ? `Review ${i + 1} of ${count}` : `Avis ${i + 1} sur ${count}`}
               aria-current={i === current ? "true" : undefined}
               className={`h-2.5 rounded-full transition-all duration-300 ${i === current ? "w-8" : "w-2.5 bg-border hover:bg-muted"}`}
