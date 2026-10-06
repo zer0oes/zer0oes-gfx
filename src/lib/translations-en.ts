@@ -4,6 +4,10 @@
 import type { Locale } from "@/lib/i18n";
 
 const en: Record<string, string> = {
+  "Identité électrique sur fond minéral : écran de lancement, tchat et alertes.":
+    "An electric identity over a mineral backdrop: starting screen, chat and alerts.",
+  "Ma propre chaîne : univers néon violet, du cadre de stream aux emotes.":
+    "My own channel: a purple neon universe, from the stream frame to the emotes.",
   // --- Offres --------------------------------------------------------------------------
   // Noms des formules (traduits à la demande d'Aurore)
   "Premier look": "First Look",

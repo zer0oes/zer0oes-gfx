@@ -6,6 +6,7 @@ import { asLocale, href, type Locale } from "@/lib/i18n";
 import { getPack, optionChoices } from "@/lib/pricing";
 import { languageAlternates } from "@/lib/seo";
 import { getStore } from "@/lib/store";
+import { tr } from "@/lib/translations-en";
 import { site } from "@/data/site";
 
 // Deux onglets : /contact (projet sur-mesure, par défaut) et /contact?onglet=message,
@@ -84,7 +85,8 @@ export default async function ContactPage({ params, searchParams }: PageProps<"/
   const current = currentTab(lang, onglet);
   const tab = current.id;
   const catalog = await getStore().getCatalog();
-  const quote = getPack(catalog.packs, typeof offre === "string" ? offre : undefined)?.checkout === false;
+  const selectedPack = getPack(catalog.packs, typeof offre === "string" ? offre : undefined);
+  const quote = selectedPack?.checkout === false;
   const aside = asideTexts[lang];
 
   return (
@@ -114,13 +116,13 @@ export default async function ContactPage({ params, searchParams }: PageProps<"/
         </aside>
         <div>
           {/* Onglets alignés sur le bord gauche du formulaire */}
-          <ContactTabs tabs={tabsByLocale[lang].map(({ id, label, path }) => ({ id, label, href: href(lang, path) }))} active={tab} />
+          <ContactTabs tabs={tabsByLocale[lang].map(({ id, label, path }) => ({ id, label, href: href(lang, selectedPack ? `${path}${path.includes("?") ? "&" : "?"}offre=${encodeURIComponent(selectedPack.id)}` : path) }))} active={tab} />
           <TabSlide tab={tab}>
             <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
               {tab === "message" ? (
                 <MessageForm />
               ) : (
-                <ContactForm defaultType={quote ? "Devis Univers complet" : undefined} optionChoices={optionChoices(catalog.options, lang)} />
+                <ContactForm selectedOffer={selectedPack ? tr(lang, selectedPack.name) : undefined} defaultType={quote ? "Devis Univers complet" : undefined} optionChoices={optionChoices(catalog.options, lang)} />
               )}
             </div>
           </TabSlide>

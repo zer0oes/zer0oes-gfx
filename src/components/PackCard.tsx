@@ -36,8 +36,8 @@ export function PackCard({
   const buttonClass = `w-full rounded-full px-5 py-3 text-center font-semibold transition hover:brightness-110 ${
     pack.highlight || quote ? "bg-accent text-background" : "bg-foreground text-background"
   }`;
-  // Les « options » d'une offre commandable décrivent ses formules : déjà visibles dans le choix de formule
-  const showExtras = !compact && pack.extras?.length && (quote || (pack.formulas?.length ?? 0) <= 1);
+  // Détails des ajouts, visibles en complément du sélecteur de formule.
+  const showExtras = !compact && pack.extras?.length;
 
   return (
     <div
@@ -101,6 +101,8 @@ export function PackCard({
           </ul>
         </CardSection>
       ) : null}
+      {order && <p className="mt-5 text-xs leading-relaxed text-muted">{t(locale, { fr: "Overlays au choix : démarrage, pause, fin, discussion ou gameplay. Visuels prêts à utiliser ; installation OBS sur devis séparé.", en: "Choose starting, break, ending, chatting or gameplay overlays. Ready-to-use visuals; OBS setup quoted separately." })}</p>}
+      {order && <Link href={to(`/contact?offre=${pack.id}`)} className="mt-4 text-sm text-accent underline underline-offset-4">{t(locale, { fr: "Poser une question sur ce pack", en: "Ask about this package" })}</Link>}
       {!compact && pack.note && <p className="mt-5 text-xs leading-relaxed text-muted">{pack.note}</p>}
       {!compact && <div className="flex-1" />}
 

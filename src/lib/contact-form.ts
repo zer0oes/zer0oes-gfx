@@ -127,6 +127,7 @@ export function parseContact(get: Get, getAll: GetAll): { ok: true; request: Con
         "E-mail": email,
         Chaîne: text("channel", 300),
         "Type de demande": type,
+        "Offre envisagée": text("offer", 200),
         Budget: one(get("budget"), budgets) || "Je ne sais pas encore",
         Plateformes: join(pick(getAll("platforms"), platforms)),
         "Date souhaitée": text("deadline", 100),

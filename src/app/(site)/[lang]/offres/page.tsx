@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { OfferGuide } from "@/components/OfferGuide";
 import { PackCard } from "@/components/PackCard";
 import { OfferPrice, PageHeader } from "@/components/ui";
 import { legal } from "@/data/site";
@@ -174,6 +175,7 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
             })}
           </p>
         )}
+        <OfferGuide packs={packs} locale={lang} />
         <div className="grid gap-6 pt-3 md:grid-cols-3">
           {packs.map((p) => (
             <PackCard key={p.id} pack={p} settings={site} order locale={lang} />

@@ -23,11 +23,13 @@ export function CaseStudyView({
   works,
   streamerName,
   quote,
+  overview,
 }: {
   study: CaseStudy;
   works: Work[];
   streamerName: string;
   quote?: React.ReactNode;
+  overview?: React.ReactNode;
 }) {
   const byId = new Map(works.map((w) => [w.id, w]));
   const pieces = (list: CasePiece[] = []): Piece[] =>
@@ -80,6 +82,7 @@ export function CaseStudyView({
           ))}
         </ul>
       </header>
+      {overview}
 
       {hero && (
         <Figure work={hero} onOpen={() => openWork(hero)} caption={study.heroCaption} aside={t(locale, { fr: "Vue d'ensemble", en: "Overview" })} priority className="mt-10" />

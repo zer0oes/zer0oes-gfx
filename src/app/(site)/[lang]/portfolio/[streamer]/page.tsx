@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ProjectOverview } from "@/components/ProjectOverview";
 import { CaseStudyView } from "@/components/CaseStudyView";
 import { EditorialView } from "@/components/EditorialView";
 import { TestimonialQuote, testimonialImage } from "@/components/TestimonialQuote";
@@ -56,9 +57,9 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
       <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
         {back}
         {"layout" in study ? (
-          <EditorialView study={study} works={own} streamerName={streamer.name} quote={quote} />
+          <EditorialView study={study} works={own} streamerName={streamer.name} overview={<ProjectOverview streamer={streamer} works={own} locale={lang} quote={quote} />} />
         ) : (
-          <CaseStudyView study={study} works={own} streamerName={streamer.name} quote={quote} />
+          <CaseStudyView study={study} works={own} streamerName={streamer.name} overview={<ProjectOverview streamer={streamer} works={own} locale={lang} quote={quote} />} />
         )}
       </div>
     );
@@ -88,6 +89,7 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
         )}
       </header>
 
+      <ProjectOverview streamer={streamer} works={own} locale={lang} quote={quote} />
       <nav aria-label={t(lang, { fr: "Types de réalisations", en: "Types of work" })} className="mt-10 border-b border-border">
         <ul className="-mb-px flex gap-1 overflow-x-auto">
           {tabs.map((tab) => {
@@ -115,7 +117,7 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
         {/* key : réinitialise la visionneuse au changement d'onglet */}
         <WorkGrid key={active.id} works={active.id === "tout" ? all : own.filter((w) => w.category === active.id)} showStreamer={false} />
       </div>
-      {quote && <div className="mt-16">{quote}</div>}
+
     </div>
   );
 }

@@ -196,8 +196,10 @@ function Hidden() {
 export function ContactForm({
   defaultType = "Projet sur mesure",
   optionChoices,
+  selectedOffer,
 }: {
   defaultType?: string;
+  selectedOffer?: string;
   optionChoices: OptionChoice[];
 }) {
   const [state, action, pending] = useActionState(sendContact, null);
@@ -210,6 +212,8 @@ export function ContactForm({
     <form action={action} className="space-y-8">
       <Hidden />
 
+      {selectedOffer && <><input type="hidden" name="offer" value={selectedOffer} /><p className="rounded-xl border border-accent/40 bg-accent/10 p-4 text-sm">{locale === "fr" ? "Offre envisagée : " : "Package you're considering: "}<strong>{selectedOffer}</strong></p></>}
+      <p className="text-sm text-muted">{locale === "fr" ? "Ton nom, ton e-mail et quelques mots suffisent pour commencer. Les détails peuvent attendre notre échange." : "Your name, email and a few words are enough to get started. We can discuss the details afterwards."}</p>
       <Section step="01" title={tx.project}>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label={tx.name}>
@@ -219,87 +223,95 @@ export function ContactForm({
             <input name="email" type="email" required autoComplete="email" className={inputClass} />
           </Field>
         </div>
-        <Field label={tx.channel}>
-          <input name="channel" type="url" placeholder="https://twitch.tv/…" className={inputClass} />
-        </Field>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label={tx.type}>
-            <select name="type" className={inputClass} defaultValue={defaultType}>
-              {requestTypes.map((v) => (
-                <option key={v} value={v}>
-                  {choiceLabel(locale, v)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={tx.budget}>
-            <select name="budget" className={inputClass} defaultValue="">
-              <option value="">{tx.budgetUnknown}</option>
-              {budgets.map((b) => (
-                <option key={b} value={b}>
-                  {choiceLabel(locale, b)}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        <Chips legend={tx.platforms} name="platforms" choices={platforms} />
-        <Field label={tx.deadline}>
-          <input name="deadline" placeholder={tx.deadlinePlaceholder} maxLength={100} className={inputClass} />
-        </Field>
-      </Section>
-
-      <Section step="02" title={tx.universe}>
-        <Chips legend={tx.identity} name="identity" choices={identityLevels} type="radio" />
-        <Chips legend={tx.style} name="style" choices={styles} hint={tx.styleHint} />
-        <Field label={tx.styleOther}>
-          <input name="styleOther" placeholder={tx.styleOtherPlaceholder} maxLength={200} className={inputClass} />
-        </Field>
-        <Field label={tx.colors}>
-          <input name="colors" placeholder={tx.colorsPlaceholder} maxLength={300} className={inputClass} />
-        </Field>
-        <Field label={tx.references} hint={tx.referencesHint}>
-          <textarea name="references" rows={3} placeholder={"https://…\nhttps://…"} className={inputClass} />
-        </Field>
-      </Section>
-
-      <Section step="03" title={tx.have}>
-        <Chips legend={tx.assets} name="assets" choices={providedAssets} />
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" name="filesLater" value="1" className="mt-0.5 accent-[var(--accent)]" />
-          <span>
-            {tx.filesLater}
-            <span className="block text-xs text-muted">{tx.filesLaterHint}</span>
-          </span>
-        </label>
-      </Section>
-
-      <Section step="04" title={tx.need}>
-        {optionChoices.length > 0 && (
-          <details className="group rounded-xl border border-border bg-background/40 px-4 py-3">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm [&::-webkit-details-marker]:hidden">
-              <span>
-                <span className="font-medium">{tx.options}</span>
-                <span className="ml-2 text-muted">{tx.optional}</span>
-              </span>
-              <span className="text-accent group-open:hidden">{tx.show}</span>
-              <span className="hidden text-accent group-open:inline">{tx.hide}</span>
-            </summary>
-            <div className="mt-4">
-              <OptionsField legend={tx.optionsLegend} options={optionChoices} />
-            </div>
-          </details>
-        )}
         <label className="block">
           <span className="mb-1.5 block font-display text-lg font-bold">{tx.message}</span>
-          <textarea name="message" required minLength={10} rows={9} placeholder={tx.messagePlaceholder} className={inputClass} />
+          <textarea name="message" required minLength={10} rows={4} placeholder={tx.messagePlaceholder} className={inputClass} />
         </label>
       </Section>
+      <details className="rounded-xl border border-border p-4">
+        <summary className="cursor-pointer font-semibold">{locale === "fr" ? "Préciser mon projet (facultatif)" : "Add project details (optional)"}</summary>
+        <div className="mt-6 space-y-6">
+          <Section step="02" title={tx.project}>
+            <Field label={tx.channel}>
+              <input name="channel" type="url" placeholder="https://twitch.tv/…" className={inputClass} />
+            </Field>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label={tx.type}>
+                <select name="type" className={inputClass} defaultValue={defaultType}>
+                  {requestTypes.map((v) => (
+                    <option key={v} value={v}>
+                      {choiceLabel(locale, v)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={tx.budget}>
+                <select name="budget" className={inputClass} defaultValue="">
+                  <option value="">{tx.budgetUnknown}</option>
+                  {budgets.map((b) => (
+                    <option key={b} value={b}>
+                      {choiceLabel(locale, b)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <Chips legend={tx.platforms} name="platforms" choices={platforms} />
+            <Field label={tx.deadline}>
+              <input name="deadline" placeholder={tx.deadlinePlaceholder} maxLength={100} className={inputClass} />
+            </Field>
+          </Section>
 
-      <div className="border-t border-border pt-6">
-        <Chips legend={tx.referral} name="referral" choices={referralSources} type="radio" />
-      </div>
+          <Section step="03" title={tx.universe}>
+            <Chips legend={tx.identity} name="identity" choices={identityLevels} type="radio" />
+            <Chips legend={tx.style} name="style" choices={styles} hint={tx.styleHint} />
+            <Field label={tx.styleOther}>
+              <input name="styleOther" placeholder={tx.styleOtherPlaceholder} maxLength={200} className={inputClass} />
+            </Field>
+            <Field label={tx.colors}>
+              <input name="colors" placeholder={tx.colorsPlaceholder} maxLength={300} className={inputClass} />
+            </Field>
+            <Field label={tx.references} hint={tx.referencesHint}>
+              <textarea name="references" rows={3} placeholder={"https://…\nhttps://…"} className={inputClass} />
+            </Field>
+          </Section>
 
+          <Section step="04" title={tx.have}>
+            <Chips legend={tx.assets} name="assets" choices={providedAssets} />
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" name="filesLater" value="1" className="mt-0.5 accent-[var(--accent)]" />
+              <span>
+                {tx.filesLater}
+                <span className="block text-xs text-muted">{tx.filesLaterHint}</span>
+              </span>
+            </label>
+          </Section>
+
+          <Section step="05" title={tx.need}>
+            {optionChoices.length > 0 && (
+              <details className="group rounded-xl border border-border bg-background/40 px-4 py-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm [&::-webkit-details-marker]:hidden">
+                  <span>
+                    <span className="font-medium">{tx.options}</span>
+                    <span className="ml-2 text-muted">{tx.optional}</span>
+                  </span>
+                  <span className="text-accent group-open:hidden">{tx.show}</span>
+                  <span className="hidden text-accent group-open:inline">{tx.hide}</span>
+                </summary>
+                <div className="mt-4">
+                  <OptionsField legend={tx.optionsLegend} options={optionChoices} />
+                </div>
+              </details>
+            )}
+
+          </Section>
+
+          <div className="border-t border-border pt-6">
+            <Chips legend={tx.referral} name="referral" choices={referralSources} type="radio" />
+          </div>
+
+        </div>
+      </details>
       <Consent purpose={tx.consentProject} />
       <FormStatus state={state} />
       <Submit pending={pending} note={tx.noteProject} />

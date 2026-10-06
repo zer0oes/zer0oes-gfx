@@ -34,11 +34,13 @@ export function EditorialView({
   works,
   streamerName,
   quote,
+  overview,
 }: {
   study: EditorialStudy;
   works: Work[];
   streamerName: string;
   quote?: React.ReactNode;
+  overview?: React.ReactNode;
 }) {
   const byId = new Map(works.map((w) => [w.id, w]));
   const get = (id?: string) => (id ? byId.get(id) : undefined);
@@ -88,6 +90,7 @@ export function EditorialView({
           </div>
         </div>
       </header>
+      {overview}
 
       {hero && (
         <figure className="mt-10">

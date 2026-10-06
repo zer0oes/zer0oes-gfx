@@ -65,3 +65,15 @@ test("message simple : sujet filtré, champs obligatoires et consentement", () =
   assert.equal(parseMessage(form({ ...base, consent: "" })[0]).ok, false);
   assert.equal(parseMessage(form({ ...base, message: "court" })[0]).ok, false);
 });
+
+
+test("premier contact : détails facultatifs et offre conservée", () => {
+  const r = parseContact(...form({ ...base, offer: "Identité signature" }));
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.equal(r.request.fields["Offre envisagée"], "Identité signature");
+  assert.equal(r.request.fields.Budget, "Je ne sais pas encore");
+  assert.equal(r.request.fields.Inspirations, "");
+  assert.equal(r.request.fields.Projet, base.message);
+  assert.equal(parseContact(...form({ ...base, consent: "", offer: "Identité signature" })).ok, false);
+});
