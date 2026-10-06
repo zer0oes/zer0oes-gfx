@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { OfferGuide } from "@/components/OfferGuide";
 import { PackCard } from "@/components/PackCard";
 import { OfferPrice, PageHeader } from "@/components/ui";
 import { legal } from "@/data/site";
-import { asLocale, href, t, type Locale } from "@/lib/i18n";
+import { asLocale, t, type Locale } from "@/lib/i18n";
 import {
   activePacks,
   formatPrice,
@@ -149,12 +149,10 @@ const categoryLooks: Record<OptionCategory, { color: string; gradient: string; i
 
 export default async function OffresPage({ params, searchParams }: PageProps<"/[lang]/offres">) {
   const lang = asLocale((await params).lang);
-  const to = (path: string) => href(lang, path);
-  const { annule } = await searchParams;
+  const { annule, details } = await searchParams;
   const catalog = await getStore().getCatalog();
   const { settings: site, options } = catalog;
   const packs = activePacks(catalog.packs);
-  const price = (cents: number) => formatPrice(cents, lang);
 
   return (
     <>
@@ -176,56 +174,20 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
         )}
         <div className="grid gap-6 pt-3 md:grid-cols-3">
           {packs.map((p) => (
-            <PackCard key={p.id} pack={p} settings={site} order locale={lang} />
+            <PackCard key={p.id} pack={p} settings={site} order locale={lang} openOptions={details === p.id} />
           ))}
         </div>
-        <aside className="mt-6 flex flex-col gap-4 rounded-2xl border border-accent/50 bg-accent/10 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          {lang === "en" ? (
-            <div>
-              <h2 className="font-display text-xl font-bold">Already have a logo?</h2>
-              <p className="mt-1 text-sm">
-                <strong>{price(site.logoDiscount)} off</strong> First Look and Signature Identity: tick “I already have my logo” in the
-                package. For Full Universe, the discount applies to the quote.
-              </p>
-              <p className="mt-2 text-xs text-muted">
-                Logo supplied in good enough quality, ideally as a vector file. Any retouching, rebuilding or redesign is quoted separately.
-              </p>
-            </div>
-          ) : (
-            <div>
-              <h2 className="font-display text-xl font-bold">Tu as déjà ton logo ?</h2>
-              <p className="mt-1 text-sm">
-                <strong>{price(site.logoDiscount)} de réduction</strong> sur Premier look et Identité signature : coche
-                « J&apos;ai déjà mon logo » dans la formule. Pour Univers complet, la remise s&apos;applique sur le devis.
-              </p>
-              <p className="mt-2 text-xs text-muted">
-                Logo fourni en qualité suffisante, idéalement vectoriel. Toute retouche, reconstruction ou refonte est
-                chiffrée séparément.
-              </p>
-            </div>
-          )}
-          <span className="shrink-0 self-start rounded-full bg-accent px-4 py-2 font-display text-lg font-bold text-background sm:self-center">
-            −{price(site.logoDiscount)}
-          </span>
-        </aside>
+        <OfferGuide locale={lang} />
 
         {lang === "en" ? (
           <p className="mt-6 text-center text-sm text-muted">
             Prices in euros — VAT not applicable, article 293 B of the French General Tax Code (sole trader exempt from VAT). Secure payment by Stripe, in
-            full or with a {site.depositPercent}% deposit (balance on delivery). Need something else?{" "}
-            <Link href={to("/contact")} className="text-accent hover:underline">
-              Request a custom quote
-            </Link>
-            .
+            full or with a {site.depositPercent}% deposit (balance on delivery).
           </p>
         ) : (
           <p className="mt-6 text-center text-sm text-muted">
             Prix en euros — {legal.vatNote} (entrepreneur individuel non soumis à la TVA). Paiement sécurisé par Stripe, en une fois ou avec un acompte de{" "}
             {site.depositPercent} % (solde à la livraison). Besoin d&apos;autre chose ?{" "}
-            <Link href="/contact" className="text-accent hover:underline">
-              Demande un devis sur mesure
-            </Link>
-            .
           </p>
         )}
 

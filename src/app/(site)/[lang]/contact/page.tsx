@@ -1,67 +1,35 @@
 import type { Metadata } from "next";
-import { ContactForm, MessageForm } from "@/components/ContactForm";
-import { ContactTabs, TabSlide } from "@/components/ContactTabs";
+import { ContactForm } from "@/components/ContactForm";
 import { PageHeader } from "@/components/ui";
-import { asLocale, href, type Locale } from "@/lib/i18n";
-import { getPack, optionChoices } from "@/lib/pricing";
+import { asLocale } from "@/lib/i18n";
+import { activePacks, getPack, optionChoices } from "@/lib/pricing";
 import { languageAlternates } from "@/lib/seo";
 import { getStore } from "@/lib/store";
+import { tr } from "@/lib/translations-en";
 import { site } from "@/data/site";
 
-// Deux onglets : /contact (projet sur-mesure, par défaut) et /contact?onglet=message,
-// chacun avec son titre de page
-const tabsByLocale = {
-  fr: [
-    {
-      id: "projet",
-      label: "Projet sur-mesure",
+const contactTexts = {
+  fr: {
       path: "/contact",
-      metaTitle: "Projet sur-mesure",
-      description: "Un projet d'overlay, d'alertes ou de widget sur mesure ? Demande un devis.",
-      eyebrow: "Sur-mesure",
-      title: "Parlons de ton projet",
-      intro: "Refonte complète, widget interactif, identité pour un événement : décris-moi ton projet, je te réponds sous 48 h ouvrées avec une première estimation.",
-    },
-    {
-      id: "message",
-      label: "Message simple",
-      path: "/contact?onglet=message",
       metaTitle: "Contact",
-      description: "Une question sur une offre ou une idée de collaboration ? Écris-moi.",
+      description: "Un projet sur mesure, une question ou une collaboration ? Contacte-moi, je te réponds sous 48 h ouvrées.",
       eyebrow: "Contact",
-      title: "Une question ?",
-      intro: "Une offre à préciser, une idée de collaboration ou autre chose : écris-moi, je réponds sous 48 h ouvrées.",
+      title: "Parlons de tes idées",
+      intro: "Un projet sur mesure, une question sur mes offres ou une idée de collaboration ? Choisis le sujet et écris-moi quelques mots. Je te réponds sous 48 h ouvrées.",
     },
-  ],
-  en: [
-    {
-      id: "projet",
-      label: "Custom project",
+  en: {
       path: "/contact",
-      metaTitle: "Custom project",
-      description: "A custom overlay, alerts or widget project? Request a quote.",
-      eyebrow: "Custom",
-      title: "Let's talk about your project",
-      intro: "Full redesign, interactive widget, identity for an event: tell me about your project and I'll reply within 2 business days with a first estimate.",
-    },
-    {
-      id: "message",
-      label: "Simple message",
-      path: "/contact?onglet=message",
       metaTitle: "Contact",
-      description: "A question about a package or an idea for a collaboration? Write to me.",
+      description: "A custom project, a question or a collaboration? Get in touch and I'll reply within 2 business days.",
       eyebrow: "Contact",
-      title: "A question?",
-      intro: "A package to clarify, a collaboration idea or something else: write to me, I reply within 2 business days.",
+      title: "Let's talk about your ideas",
+      intro: "A custom project, a question about my packages or a collaboration idea? Choose a subject and tell me a little about it. I'll reply within 2 business days.",
     },
-  ],
 } as const;
 
-const currentTab = (locale: Locale, onglet: string | string[] | undefined) => tabsByLocale[locale][onglet === "message" ? 1 : 0];
-
-export async function generateMetadata({ params, searchParams }: PageProps<"/[lang]/contact">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/[lang]/contact">): Promise<Metadata> {
   const lang = asLocale((await params).lang);
-  const tab = currentTab(lang, (await searchParams).onglet);
+  const tab = contactTexts[lang];
   return { title: tab.metaTitle, description: tab.description, alternates: languageAlternates(lang, tab.path) };
 }
 
@@ -80,21 +48,18 @@ const asideTexts = {
 
 export default async function ContactPage({ params, searchParams }: PageProps<"/[lang]/contact">) {
   const lang = asLocale((await params).lang);
-  const { offre, onglet } = await searchParams;
-  const current = currentTab(lang, onglet);
-  const tab = current.id;
+  const { offre, sujet } = await searchParams;
+  const current = contactTexts[lang];
   const catalog = await getStore().getCatalog();
-  const quote = getPack(catalog.packs, typeof offre === "string" ? offre : undefined)?.checkout === false;
+  const selectedPack = getPack(catalog.packs, typeof offre === "string" ? offre : undefined);
+  const quote = selectedPack?.checkout === false;
   const aside = asideTexts[lang];
 
   return (
     <>
-      {/* Le titre change avec l'onglet : même glissement que le formulaire */}
-      <TabSlide tab={tab}>
-        <PageHeader eyebrow={current.eyebrow} title={current.title}>
-          {current.intro}
-        </PageHeader>
-      </TabSlide>
+      <PageHeader eyebrow={current.eyebrow} title={current.title}>
+        {current.intro}
+      </PageHeader>
       <div className="mx-auto grid max-w-5xl gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_2fr]">
         <aside className="space-y-6 text-sm text-muted">
           <div>
@@ -112,18 +77,8 @@ export default async function ContactPage({ params, searchParams }: PageProps<"/
             </a>
           </div>
         </aside>
-        <div>
-          {/* Onglets alignés sur le bord gauche du formulaire */}
-          <ContactTabs tabs={tabsByLocale[lang].map(({ id, label, path }) => ({ id, label, href: href(lang, path) }))} active={tab} />
-          <TabSlide tab={tab}>
-            <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-              {tab === "message" ? (
-                <MessageForm />
-              ) : (
-                <ContactForm defaultType={quote ? "Devis Univers complet" : undefined} optionChoices={optionChoices(catalog.options, lang)} />
-              )}
-            </div>
-          </TabSlide>
+        <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
+          <ContactForm selectedOffer={selectedPack ? tr(lang, selectedPack.name) : undefined} defaultType={sujet === "offre" ? "Question sur une offre" : quote ? "Devis Univers complet" : undefined} offerChoices={activePacks(catalog.packs).map((pack) => tr(lang, pack.name))} optionChoices={optionChoices(catalog.options, lang)} />
         </div>
       </div>
     </>

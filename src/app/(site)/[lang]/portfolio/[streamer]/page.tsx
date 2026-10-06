@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ProjectOverview } from "@/components/ProjectOverview";
 import { CaseStudyView } from "@/components/CaseStudyView";
 import { EditorialView } from "@/components/EditorialView";
 import { TestimonialQuote, testimonialImage } from "@/components/TestimonialQuote";
@@ -79,7 +80,8 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
         <div>
           <p className="text-sm font-semibold uppercase tracking-widest text-accent">{t(lang, { fr: "Projet", en: "Project" })}</p>
           <h1 className="mt-1 font-display text-4xl font-bold sm:text-5xl">{streamer.name}</h1>
-          <p className="mt-3 max-w-2xl text-lg text-muted">{streamer.description}</p>
+          <ProjectOverview works={own} locale={lang} />
+          <p className="mt-5 max-w-2xl text-lg text-muted">{streamer.description}</p>
         </div>
         {streamer.url && (
           <a href={streamer.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-sm text-accent hover:underline">
@@ -115,6 +117,7 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
         {/* key : réinitialise la visionneuse au changement d'onglet */}
         <WorkGrid key={active.id} works={active.id === "tout" ? all : own.filter((w) => w.category === active.id)} showStreamer={false} />
       </div>
+
       {quote && <div className="mt-16">{quote}</div>}
     </div>
   );

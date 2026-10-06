@@ -8,7 +8,7 @@ import { OrderForm } from "./OrderForm";
 // Titre de sous-section d'une carte (Inclus, Formule, Paiement…), séparé par un trait franc
 export function CardSection({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`mt-6 border-t border-border pt-5 ${className}`}>
+    <div className={`mt-6 relative before:absolute before:-left-6 before:-right-6 before:top-0 before:border-t before:border-border pt-5 ${className}`}>
       <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-accent">{title}</p>
       {children}
     </div>
@@ -20,11 +20,13 @@ export function PackCard({
   settings,
   order = false,
   compact = false,
+  openOptions = false,
   locale = "fr",
 }: {
   pack: Pack;
   settings: PricingSettings;
   order?: boolean;
+  openOptions?: boolean;
   // Version courte (accueil) : prix, promesse et livrables, sans options ni notes
   compact?: boolean;
   locale?: Locale;
@@ -36,8 +38,8 @@ export function PackCard({
   const buttonClass = `w-full rounded-full px-5 py-3 text-center font-semibold transition hover:brightness-110 ${
     pack.highlight || quote ? "bg-accent text-background" : "bg-foreground text-background"
   }`;
-  // Les « options » d'une offre commandable décrivent ses formules : déjà visibles dans le choix de formule
-  const showExtras = !compact && pack.extras?.length && (quote || (pack.formulas?.length ?? 0) <= 1);
+  // Détails des ajouts, visibles en complément du sélecteur de formule.
+  const showExtras = !compact && pack.extras?.length;
 
   return (
     <div
@@ -62,7 +64,7 @@ export function PackCard({
       <p className="mt-2 font-display text-3xl font-bold">
         <OfferPrice item={pack} stacked locale={locale} />
       </p>
-      <p className={`mt-3 ${quote ? "text-base text-foreground" : "text-sm text-muted"}`}>{pack.tagline}</p>
+      <p className="mt-3 text-sm leading-relaxed text-muted">{pack.tagline}</p>
 
       <CardSection title={t(locale, { fr: "Inclus", en: "Included" })}>
         <ul className="space-y-2.5 text-sm">
@@ -101,13 +103,16 @@ export function PackCard({
           </ul>
         </CardSection>
       ) : null}
+      {order && <p className="mt-5 text-xs leading-relaxed text-muted">{t(locale, { fr: "Overlays au choix : démarrage, pause, fin, discussion ou gameplay. Visuels prêts à utiliser ; installation OBS sur devis séparé.", en: "Choose starting, break, ending, chatting or gameplay overlays. Ready-to-use visuals; OBS setup quoted separately." })}</p>}
+      {order && <p className="mt-3 text-xs leading-relaxed text-muted">{t(locale, { fr: "Tu as déjà ton logo ? La réduction s’applique dans la formule ou sur le devis. Fournis un fichier de qualité, idéalement vectoriel ; les retouches et refontes sont chiffrées séparément.", en: "Already have a logo? The discount applies in the package options or on the quote. Supply a quality file, ideally vector artwork; retouching and redesign are quoted separately." })}</p>}
+      {order && <Link href={to(`/contact?offre=${pack.id}&sujet=offre`)} className="mt-4 text-sm text-accent underline underline-offset-4">{t(locale, { fr: "Poser une question sur ce pack", en: "Ask about this package" })}</Link>}
       {!compact && pack.note && <p className="mt-5 text-xs leading-relaxed text-muted">{pack.note}</p>}
       {!compact && <div className="flex-1" />}
 
       {!order ? (
         <div className={compact ? "mt-auto pt-6" : "mt-8"}>
           <Link
-            href={to(`/offres#offre-${pack.id}`)}
+            href={to(`/offres?details=${encodeURIComponent(pack.id)}#offre-${pack.id}`)}
             className={`block rounded-full px-5 py-3 text-center font-semibold transition ${
               pack.highlight || quote ? "bg-accent text-background hover:brightness-110" : "border border-border hover:border-accent"
             }`}
@@ -116,7 +121,7 @@ export function PackCard({
           </Link>
         </div>
       ) : pack.checkout ? (
-        <OrderForm pack={pack} settings={settings} buttonClass={buttonClass} />
+        <OrderForm key={`${pack.id}-${openOptions}`} pack={pack} settings={settings} buttonClass={buttonClass} defaultOpen={openOptions} />
       ) : (
         <div className="mt-8 space-y-3">
           <Link href={to(`/contact?offre=${pack.id}`)} className={`block ${buttonClass} shadow-[0_0_30px_-10px_var(--accent)]`}>

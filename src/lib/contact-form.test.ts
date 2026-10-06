@@ -49,9 +49,9 @@ test("champs obligatoires, valeurs inconnues et liens invalides", () => {
   assert.ok(r.ok && r.request.fields["Identité visuelle existante"] === "" && r.request.fields["M'a trouvée via"] === "");
 });
 
-test("projet : les sujets du message simple ne sont pas des types de projet", () => {
-  const r = parseContact(...form({ ...base, type: "Question sur une offre" }));
-  assert.ok(r.ok && r.request.type === "Projet sur mesure");
+test("contact : une question sur une offre conserve son sujet", () => {
+  const result = parseContact(...form({ ...base, type: "Question sur une offre" }));
+  assert.ok(result.ok && result.request.type === "Question sur une offre");
 });
 
 test("message simple : sujet filtré, champs obligatoires et consentement", () => {
@@ -64,4 +64,43 @@ test("message simple : sujet filtré, champs obligatoires et consentement", () =
   assert.ok(other.ok && other.request.subject === "Autre");
   assert.equal(parseMessage(form({ ...base, consent: "" })[0]).ok, false);
   assert.equal(parseMessage(form({ ...base, message: "court" })[0]).ok, false);
+});
+
+
+test("premier contact : détails facultatifs et offre conservée", () => {
+  const r = parseContact(...form({ ...base, offer: "Identité signature" }));
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.equal(r.request.fields["Offre envisagée"], "Identité signature");
+  assert.equal(r.request.fields.Budget, "Je ne sais pas encore");
+  assert.equal(r.request.fields.Inspirations, "");
+  assert.equal(r.request.fields.Projet, base.message);
+  assert.equal(parseContact(...form({ ...base, consent: "", offer: "Identité signature" })).ok, false);
+});
+
+ test("contact : renseignement et collaboration conservent le sujet choisi", () => {
+  for (const type of ["Question sur une offre", "Suivi d'une commande", "Collaboration / partenariat", "Autre demande"]) {
+    const result = parseContact(...form({ ...base, type }));
+    assert.ok(result.ok);
+    if (result.ok) {
+      assert.equal(result.request.type, type);
+      assert.equal(result.request.fields["Type de demande"], type);
+    }
+  }
+});
+
+test("question sur une offre : l'offre choisie est transmise", () => {
+  const result = parseContact(...form({ ...base, type: "Question sur une offre", offer: "Premier look" }));
+  assert.ok(result.ok);
+  if (result.ok) assert.equal(result.request.fields["Offre envisagée"], "Premier look");
+});
+
+test("suivi : numero de commande facultatif et limite en longueur", () => {
+  const result = parseContact(...form({ ...base, type: "Suivi d'une commande", orderNumber: "  CMD-1234  " }));
+  assert.ok(result.ok);
+  if (result.ok) assert.equal(result.request.fields["Numéro de commande"], "CMD-1234");
+  const empty = parseContact(...form({ ...base, type: "Suivi d'une commande" }));
+  assert.ok(empty.ok && empty.request.fields["Numéro de commande"] === "");
+  const long = parseContact(...form({ ...base, type: "Suivi d'une commande", orderNumber: "a".repeat(150) }));
+  assert.ok(long.ok && long.request.fields["Numéro de commande"].length === 100);
 });

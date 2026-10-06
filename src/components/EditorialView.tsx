@@ -10,6 +10,7 @@ import { Media } from "./CaseStudyView";
 import { useLocale } from "./I18nProvider";
 import { Lightbox } from "./Lightbox";
 import { WorkCard } from "./WorkCard";
+import { ProjectOverview } from "./ProjectOverview";
 
 const kickerClass = "text-xs font-semibold uppercase tracking-[0.2em] text-accent";
 const titleClass = "mt-3 font-display text-3xl font-bold leading-tight sm:text-4xl";
@@ -66,26 +67,22 @@ export function EditorialView({
       {/* Titre et présentation alignés en haut : l'asymétrie vient des largeurs de colonnes */}
       <header className="mt-8">
         <p className={kickerClass}>{study.eyebrow}</p>
-        <div className="mt-4 grid gap-8 lg:grid-cols-12 lg:items-start">
-          <div className="lg:col-span-7">
-            <h1 className="font-display text-5xl font-bold leading-[1.05] sm:text-7xl">
-              {study.headline[0]}
-              <br />
-              <span className="text-accent">{study.headline[1]}</span>
-            </h1>
+        <div className="mt-4 grid gap-8 lg:grid-cols-12 lg:gap-x-8 lg:gap-y-0">
+          <h1 className="font-display text-5xl font-bold leading-[1.05] sm:text-7xl lg:contents">
+            <span className="lg:col-span-7 lg:col-start-1 lg:row-start-1 lg:[text-box-trim:trim-start]">{study.headline[0]}</span>
+            <br className="lg:hidden" />
+            <span className="text-accent lg:col-span-7 lg:col-start-1 lg:row-start-2 lg:[align-self:last_baseline]">{study.headline[1]}</span>
+          </h1>
+          <div className="lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:pb-4 lg:[&>ul]:mt-0">
+            <ProjectOverview works={works} locale={locale} />
           </div>
-          <div className="lg:col-span-5 lg:pt-3">
-            <p className="text-lg text-muted">{study.intro}</p>
-            <p className="mt-4 text-sm text-muted" aria-label={t(locale, { fr: "Ce que comprend le projet", en: "What the project includes" })}>
-              {study.tags.join(" / ")}
-            </p>
-            {headerLogo && (
-              <figure className="mt-6 max-w-sm">
-                <Media work={headerLogo} onOpen={() => openWork(headerLogo)} sizes="384px" />
-                <figcaption className="mt-2 text-sm text-muted">{study.headerLogo?.caption}</figcaption>
-              </figure>
-            )}
-          </div>
+          <p className="text-lg text-muted lg:col-span-5 lg:col-start-8 lg:row-start-2 lg:[align-self:last_baseline]">{study.intro}</p>
+          {headerLogo && (
+            <figure className="max-w-sm lg:col-span-5 lg:col-start-8 lg:row-start-3 lg:mt-6">
+              <Media work={headerLogo} onOpen={() => openWork(headerLogo)} sizes="384px" />
+              <figcaption className="mt-2 text-sm text-muted">{study.headerLogo?.caption}</figcaption>
+            </figure>
+          )}
         </div>
       </header>
 

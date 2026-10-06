@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { sendContact, sendMessage } from "@/app/actions";
 import { href, type Locale } from "@/lib/i18n";
 import type { OptionChoice } from "@/lib/pricing";
@@ -137,13 +137,13 @@ function Chips({ legend, name, choices, type = "checkbox", hint }: { legend: str
   );
 }
 
-function Section({ step, title, children }: { step: string; title: string; children: React.ReactNode }) {
+function Section({ step, title, children }: { step?: string; title?: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-5 border-t border-border pt-6 first-of-type:border-t-0 first-of-type:pt-0">
-      <h2 className="flex items-baseline gap-3 font-display text-lg font-bold">
-        <span className="text-sm text-gradient">{step}</span>
+    <section className="relative space-y-5 pt-6 before:absolute before:-left-6 before:-right-6 before:top-0 before:border-t before:border-border first-of-type:pt-0 first-of-type:before:hidden sm:before:-left-8 sm:before:-right-8">
+      {title && <h2 className="flex items-baseline gap-3 font-display text-lg font-bold">
+        {step && <span className="text-sm text-gradient">{step}</span>}
         {title}
-      </h2>
+      </h2>}
       {children}
     </section>
   );
@@ -196,13 +196,41 @@ function Hidden() {
 export function ContactForm({
   defaultType = "Projet sur mesure",
   optionChoices,
+  selectedOffer,
+  offerChoices,
 }: {
   defaultType?: string;
+  selectedOffer?: string;
+  offerChoices: string[];
   optionChoices: OptionChoice[];
 }) {
   const [state, action, pending] = useActionState(sendContact, null);
+  const [subject, setSubject] = useState(defaultType);
+  const [offer, setOffer] = useState(selectedOffer ?? "");
+  const isOfferQuestion = subject === "Question sur une offre";
+  const isProject = subject === "Projet sur mesure" || subject === "Devis Univers complet";
   const locale = useLocale();
   const tx = texts[locale];
+
+  const subjectCopy: Record<string, { fr: [string, string]; en: [string, string] }> = {
+    "Question sur une offre": {
+      fr: ["Ta question *", "Indique l'offre qui t'intéresse et ce que tu aimerais savoir. Si tu hésites entre plusieurs packs, dis-moi ce dont tu as besoin."],
+      en: ["Your question *", "Tell me which package interests you and what you would like to know. If you are choosing between packages, describe what you need."],
+    },
+    "Suivi d'une commande": {
+      fr: ["Ton message *", "Indique la référence de ta commande si tu l'as, puis explique ta question sur le projet en cours."],
+      en: ["Your message *", "Include your order reference if you have it, then tell me your question about the ongoing project."],
+    },
+    "Collaboration / partenariat": {
+      fr: ["Ton idée de collaboration *", "Présente-toi et décris ton idée de collaboration : concept, objectifs et calendrier envisagé."],
+      en: ["Your collaboration idea *", "Introduce yourself and describe your collaboration idea: concept, goals and proposed timeline."],
+    },
+    "Autre demande": {
+      fr: ["Ton message *", "Dis-moi ce qui t'amène et comment je peux t'aider."],
+      en: ["Your message *", "Tell me what brings you here and how I can help."],
+    },
+  };
+  const [messageLabel, messagePlaceholder] = subjectCopy[subject]?.[locale] ?? [tx.message, tx.messagePlaceholder];
 
   if (state?.ok) return <FormStatus state={state} />;
 
@@ -210,7 +238,31 @@ export function ContactForm({
     <form action={action} className="space-y-8">
       <Hidden />
 
-      <Section step="01" title={tx.project}>
+      {!isOfferQuestion && selectedOffer && <><input type="hidden" name="offer" value={selectedOffer} /><p className="rounded-xl border border-accent/40 bg-accent/10 p-4 text-sm">{locale === "fr" ? "Offre envisagée : " : "Package you're considering: "}<strong>{selectedOffer}</strong></p></>}
+      <p className="text-sm text-muted">{locale === "fr" ? "Ton nom, ton e-mail et quelques mots suffisent pour commencer. Les détails peuvent attendre notre échange." : "Your name, email and a few words are enough to get started. We can discuss the details afterwards."}</p>
+      <Field label={tx.subject}>
+        <select name="type" className={inputClass} value={subject} onChange={(event) => setSubject(event.target.value)}>
+          {requestTypes.filter((value) => value !== "Devis Univers complet" || defaultType === value).map((value) => (
+            <option key={value} value={value}>{choiceLabel(locale, value)}</option>
+          ))}
+        </select>
+      </Field>
+      {isOfferQuestion && (
+        <Field label={locale === "fr" ? "Offre concernée" : "Package you are asking about"}>
+          <select name="offer" className={inputClass} value={offer} onChange={(event) => setOffer(event.target.value)}>
+            <option value="">{locale === "fr" ? "Choisir une offre" : "Choose a package"}</option>
+            {Array.from(new Set([...offerChoices, ...(selectedOffer ? [selectedOffer] : [])])).map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        </Field>
+      )}
+      {subject === "Suivi d'une commande" && (
+        <Field label={locale === "fr" ? "Numéro de commande (facultatif)" : "Order number (optional)"}>
+          <input name="orderNumber" type="text" maxLength={100} autoComplete="off" placeholder={locale === "fr" ? "Le numéro indiqué dans ton e-mail de confirmation" : "The number in your confirmation email"} className={inputClass} />
+        </Field>
+      )}
+      <Section step={isProject ? "01" : undefined} title={isProject ? tx.project : undefined}>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label={tx.name}>
             <input name="name" required autoComplete="nickname" className={inputClass} />
@@ -219,90 +271,89 @@ export function ContactForm({
             <input name="email" type="email" required autoComplete="email" className={inputClass} />
           </Field>
         </div>
-        <Field label={tx.channel}>
-          <input name="channel" type="url" placeholder="https://twitch.tv/…" className={inputClass} />
-        </Field>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label={tx.type}>
-            <select name="type" className={inputClass} defaultValue={defaultType}>
-              {requestTypes.map((v) => (
-                <option key={v} value={v}>
-                  {choiceLabel(locale, v)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={tx.budget}>
-            <select name="budget" className={inputClass} defaultValue="">
-              <option value="">{tx.budgetUnknown}</option>
-              {budgets.map((b) => (
-                <option key={b} value={b}>
-                  {choiceLabel(locale, b)}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        <Chips legend={tx.platforms} name="platforms" choices={platforms} />
-        <Field label={tx.deadline}>
-          <input name="deadline" placeholder={tx.deadlinePlaceholder} maxLength={100} className={inputClass} />
-        </Field>
-      </Section>
-
-      <Section step="02" title={tx.universe}>
-        <Chips legend={tx.identity} name="identity" choices={identityLevels} type="radio" />
-        <Chips legend={tx.style} name="style" choices={styles} hint={tx.styleHint} />
-        <Field label={tx.styleOther}>
-          <input name="styleOther" placeholder={tx.styleOtherPlaceholder} maxLength={200} className={inputClass} />
-        </Field>
-        <Field label={tx.colors}>
-          <input name="colors" placeholder={tx.colorsPlaceholder} maxLength={300} className={inputClass} />
-        </Field>
-        <Field label={tx.references} hint={tx.referencesHint}>
-          <textarea name="references" rows={3} placeholder={"https://…\nhttps://…"} className={inputClass} />
-        </Field>
-      </Section>
-
-      <Section step="03" title={tx.have}>
-        <Chips legend={tx.assets} name="assets" choices={providedAssets} />
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" name="filesLater" value="1" className="mt-0.5 accent-[var(--accent)]" />
-          <span>
-            {tx.filesLater}
-            <span className="block text-xs text-muted">{tx.filesLaterHint}</span>
-          </span>
-        </label>
-      </Section>
-
-      <Section step="04" title={tx.need}>
-        {optionChoices.length > 0 && (
-          <details className="group rounded-xl border border-border bg-background/40 px-4 py-3">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm [&::-webkit-details-marker]:hidden">
-              <span>
-                <span className="font-medium">{tx.options}</span>
-                <span className="ml-2 text-muted">{tx.optional}</span>
-              </span>
-              <span className="text-accent group-open:hidden">{tx.show}</span>
-              <span className="hidden text-accent group-open:inline">{tx.hide}</span>
-            </summary>
-            <div className="mt-4">
-              <OptionsField legend={tx.optionsLegend} options={optionChoices} />
-            </div>
-          </details>
-        )}
         <label className="block">
-          <span className="mb-1.5 block font-display text-lg font-bold">{tx.message}</span>
-          <textarea name="message" required minLength={10} rows={9} placeholder={tx.messagePlaceholder} className={inputClass} />
+          <span className="mb-1.5 block font-display text-lg font-bold">{messageLabel}</span>
+          <textarea name="message" required minLength={10} rows={4} placeholder={messagePlaceholder} className={inputClass} />
         </label>
       </Section>
+      {isProject && <details className="relative pt-6 before:absolute before:-left-6 before:-right-6 before:top-0 before:border-t before:border-border sm:before:-left-8 sm:before:-right-8">
+        <summary className="cursor-pointer font-semibold">{locale === "fr" ? "Préciser mon projet (facultatif)" : "Add project details (optional)"}</summary>
+        <div className="mt-6 space-y-6">
+          <Section>
+            <Field label={tx.channel}>
+              <input name="channel" type="url" placeholder="https://twitch.tv/…" className={inputClass} />
+            </Field>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label={tx.budget}>
+                <select name="budget" className={inputClass} defaultValue="">
+                  <option value="">{tx.budgetUnknown}</option>
+                  {budgets.map((b) => (
+                    <option key={b} value={b}>
+                      {choiceLabel(locale, b)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <Chips legend={tx.platforms} name="platforms" choices={platforms} />
+            <Field label={tx.deadline}>
+              <input name="deadline" placeholder={tx.deadlinePlaceholder} maxLength={100} className={inputClass} />
+            </Field>
+          </Section>
 
-      <div className="border-t border-border pt-6">
-        <Chips legend={tx.referral} name="referral" choices={referralSources} type="radio" />
-      </div>
+          <Section step="02" title={tx.universe}>
+            <Chips legend={tx.identity} name="identity" choices={identityLevels} type="radio" />
+            <Chips legend={tx.style} name="style" choices={styles} hint={tx.styleHint} />
+            <Field label={tx.styleOther}>
+              <input name="styleOther" placeholder={tx.styleOtherPlaceholder} maxLength={200} className={inputClass} />
+            </Field>
+            <Field label={tx.colors}>
+              <input name="colors" placeholder={tx.colorsPlaceholder} maxLength={300} className={inputClass} />
+            </Field>
+            <Field label={tx.references} hint={tx.referencesHint}>
+              <textarea name="references" rows={3} placeholder={"https://…\nhttps://…"} className={inputClass} />
+            </Field>
+          </Section>
 
-      <Consent purpose={tx.consentProject} />
+          <Section step="03" title={tx.have}>
+            <Chips legend={tx.assets} name="assets" choices={providedAssets} />
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" name="filesLater" value="1" className="mt-0.5 accent-[var(--accent)]" />
+              <span>
+                {tx.filesLater}
+                <span className="block text-xs text-muted">{tx.filesLaterHint}</span>
+              </span>
+            </label>
+          </Section>
+
+          <Section step="04" title={tx.need}>
+            {optionChoices.length > 0 && (
+              <details className="group rounded-xl border border-border bg-background/40 px-4 py-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm [&::-webkit-details-marker]:hidden">
+                  <span>
+                    <span className="font-medium">{tx.options}</span>
+                    <span className="ml-2 text-muted">{tx.optional}</span>
+                  </span>
+                  <span className="text-accent group-open:hidden">{tx.show}</span>
+                  <span className="hidden text-accent group-open:inline">{tx.hide}</span>
+                </summary>
+                <div className="mt-4">
+                  <OptionsField legend={tx.optionsLegend} options={optionChoices} />
+                </div>
+              </details>
+            )}
+
+          </Section>
+
+          <div className="relative pt-6 before:absolute before:-left-6 before:-right-6 before:top-0 before:border-t before:border-border sm:before:-left-8 sm:before:-right-8">
+            <Chips legend={tx.referral} name="referral" choices={referralSources} type="radio" />
+          </div>
+
+        </div>
+      </details>}
+      <Consent purpose={isProject ? tx.consentProject : tx.consentMessage} />
       <FormStatus state={state} />
-      <Submit pending={pending} note={tx.noteProject} />
+      <Submit pending={pending} note={isProject ? tx.noteProject : tx.noteMessage} />
     </form>
   );
 }
