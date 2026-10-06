@@ -1,3 +1,5 @@
+import { MediaInput } from "@/components/admin/MediaInput";
+import { supabaseUrl, supabasePublishableKey } from "@/lib/env";
 import Link from "next/link";
 import { TranslationInput, TranslationTabs } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
@@ -30,19 +32,19 @@ export function PageContentEditor({ page, defaults, stored, action, formatted = 
             <h2 className="font-semibold">{section}</h2>
             <div className="mt-4 space-y-4">
               {sectionFields.map((field) => (
-                <label key={field.key} className="block">
+                <div key={field.key} className="block">
                   <span className="mb-1 block text-xs text-muted">{field.label}</span>
-                  <TranslationInput name={`p:${field.key}`} translationKey={documentKey(page, "en", field.key)}
+                  {field.image ? <MediaInput name={`p:${field.key}`} kind="portrait" folder="a-propos" label={field.label} defaultValue={typeof values[documentKey(page, "fr", field.key)] === "string" ? values[documentKey(page, "fr", field.key)] as string : field.value} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} /> : <TranslationInput name={`p:${field.key}`} translationKey={documentKey(page, "en", field.key)}
                     defaultValue={typeof values[documentKey(page, "fr", field.key)] === "string" ? values[documentKey(page, "fr", field.key)] as string : field.value}
                     englishDefault={english[field.key] ?? ""} multiline={field.multiline} rows={field.multiline ? 4 : undefined} maxLength={12000}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-                </label>
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />}
+                </div>
               ))}
             </div>
           </section>
         ))}
         <div className="sticky bottom-4 rounded-2xl border border-border bg-surface/95 p-4 backdrop-blur">
-          <button type="submit" className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110">Enregistrer les textes</button>
+          <button type="submit" className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110">Enregistrer {fields.some((field) => field.image) ? "le contenu" : "les textes"}</button>
         </div>
       </form>
       {customized && <form action={action} className="mt-6 flex flex-wrap items-center gap-2 text-xs text-muted">

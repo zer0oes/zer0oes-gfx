@@ -111,7 +111,7 @@ export default async function AboutPage({ params }: PageProps<"/[lang]/a-propos"
                     <figure className="relative w-56 sm:w-60">
                       <div aria-hidden className="absolute -inset-3 rounded-[2rem] opacity-50 blur-2xl" style={{ background: "linear-gradient(135deg, var(--accent-3), var(--accent), var(--accent-2))" }} />
                       <Image
-                        src={mediaUrl("/a-propos/aurore.webp")}
+                        src={mediaUrl(content.text("image.src"))}
                         alt={content.text("image.alt")}
                         width={800}
                         height={1000}

@@ -5,7 +5,24 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { aboutFields, resolveAbout } from "./about-content";
 import { documentKey, renderDocumentText, saveDocumentFields } from "./editable-document";
 import { legalDocument, legalPages } from "./legal-content";
-import { homeFromForm, resetGroup } from "./home-content";
+import { homeFromForm, resetGroup, resolveHome } from "./home-content";
+
+test("les portraits sont indépendants, communs aux langues et réinitialisables", () => {
+  const defaults = { fr: aboutFields("fr"), en: aboutFields("en") };
+  const form = new FormData();
+  form.set("p:image.src", "/portfolio/portrait.webp");
+  form.set("en:p:image.src", "/portfolio/ignored.webp");
+  const saved = saveDocumentFields({ "about.image": "/portfolio/avatar.webp" }, "a-propos", form, defaults);
+  for (const locale of ["fr", "en"] as const) {
+    assert.equal(resolveAbout(saved, locale).text("image.src"), "/portfolio/portrait.webp");
+    assert.equal(resolveHome(saved, locale).text("about.image"), "/portfolio/avatar.webp");
+  }
+  const home = homeFromForm((key) => key === "about.image" ? "" : undefined, saved);
+  assert.equal(resolveHome(home).text("about.image"), "/a-propos/zer0oes-avatar.webp");
+  assert.equal(resolveAbout(home, "en").text("image.src"), "/portfolio/portrait.webp");
+  form.set("p:image.src", "");
+  assert.equal(resolveAbout(saveDocumentFields(saved, "a-propos", form, defaults), "en").text("image.src"), "/a-propos/aurore.webp");
+});
 
 const settings = { depositPercent: 30, logoDiscount: 15000, deliveryDays: "7 à 14" };
 function text(node: ReactNode): string {

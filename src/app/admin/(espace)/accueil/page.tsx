@@ -2,6 +2,8 @@ import { TranslationTabs, TranslationInput } from "@/components/admin/Translatio
 import { translationValues } from "@/lib/admin-translations";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { MediaInput } from "@/components/admin/MediaInput";
+import { supabaseUrl, supabasePublishableKey } from "@/lib/env";
 import { categories } from "@/data/portfolio";
 import { homeSections, homeDefaultsEn, resolveHome, type HomeField } from "@/lib/home-content";
 import { getStore } from "@/lib/store";
@@ -28,6 +30,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
   const field = (f: HomeField) => {
     const value = content.text(f.key);
     const name = `h:${f.key}`;
+    if (f.kind === "image") return <MediaInput name={name} kind="portrait" folder="a-propos" label={f.label} defaultValue={value} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} />;
     if (f.key === "hero.emotes") return <input name={name} defaultValue={value} maxLength={f.max} className={input} />;
     if (f.kind === "work" || f.kind === "emotes") {
       const chosen = works.find((w) => w.id === value);
@@ -83,7 +86,8 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
         </Link>
       </div>
       <p className="mt-2 max-w-2xl text-sm text-muted">
-        Textes et visuels de l&apos;accueil. Les visuels se choisissent parmi les réalisations du portfolio : pour une
+        Textes et visuels de l&apos;accueil. Le portrait « Derrière l&apos;écran » peut être envoyé directement ici.
+        Les autres visuels se choisissent parmi les réalisations du portfolio : pour une
         nouvelle image, ajoute-la d&apos;abord comme réalisation dans <Link href="/admin/portfolio" className="text-accent hover:underline">Portfolio</Link>.
         Un texte vidé reprend sa version d&apos;origine.
         {customContent ? " Contenu personnalisé en place." : " Contenu d'origine en place."}
@@ -108,11 +112,11 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
             </h2>
             <div className="mt-4 space-y-4">
               {s.fields.map((f) => (
-                <label key={f.key} className="block">
+                <div key={f.key} className="block">
                   <span className="mb-1 block text-xs text-muted">{f.label}</span>
                   {field(f)}
                   {f.hint && <span className="mt-1 block text-xs text-muted">{f.hint}</span>}
-                </label>
+                </div>
               ))}
             </div>
           </section>

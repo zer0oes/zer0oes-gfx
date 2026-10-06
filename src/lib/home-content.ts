@@ -6,7 +6,7 @@ import { translationValues } from "@/lib/admin-translations";
 import { site } from "@/data/site";
 import type { Locale } from "@/lib/i18n";
 
-export type FieldKind = "text" | "long" | "lines" | "paragraphs" | "work" | "emotes";
+export type FieldKind = "text" | "long" | "lines" | "paragraphs" | "work" | "emotes" | "image";
 export type HomeField = { key: string; label: string; kind: FieldKind; max?: number; hint?: string };
 export type HomeSection = { id: string; title: string; fields: HomeField[] };
 
@@ -59,6 +59,7 @@ export const homeSections: HomeSection[] = [
     id: "about",
     title: "Derrière l'écran",
     fields: [
+      { key: "about.image", label: "Portrait", kind: "image", max: 2048 },
       { key: "about.kicker", label: "Surtitre", kind: "text", max: 60 },
       { key: "about.title1", label: "Titre — ligne 1", kind: "text", max: 80 },
       { key: "about.title2", label: "Titre — ligne 2 (en couleur)", kind: "text", max: 80 },
@@ -140,6 +141,7 @@ export const homeDefaults: Record<string, string> = {
   "signature.link": "Tout le portfolio →",
   "signature.work": "zer0oes-logo",
   "about.kicker": "Derrière l'écran",
+  "about.image": "/a-propos/zer0oes-avatar.webp",
   "about.title1": site.about.title[0],
   "about.title2": site.about.title[1],
   "about.paragraphs": site.about.paragraphs.join("\n"),
@@ -286,7 +288,7 @@ export function resetGroup(stored: unknown, group: "accueil" | "portfolio") {
 export type HomeContent = { values: Record<string, string>; text(key: string): string; lines(key: string): string[] };
 
 // Champs communs aux deux langues : visuels choisis et noms des emotes autour du visuel
-const shared = (f: HomeField) => f.kind === "work" || f.kind === "emotes" || f.key === "hero.emotes";
+const shared = (f: HomeField) => f.kind === "work" || f.kind === "emotes" || f.kind === "image" || f.key === "hero.emotes";
 
 // Contenu de l'accueil : valeurs enregistrées (vérifiées) par-dessus les valeurs par défaut.
 // En anglais : traductions enregistrées (« en:<clé> »), sinon textes anglais d'origine ;
