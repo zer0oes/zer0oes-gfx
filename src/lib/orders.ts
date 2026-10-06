@@ -21,6 +21,7 @@ import {
 import { balanceDue, getStore, type NewOrder, type Order } from "@/lib/store";
 import { mergeRefunds, refundedTotal } from "@/lib/refunds";
 import { getStripe } from "@/lib/stripe";
+import { trOfferName } from "@/lib/translations-en";
 
 // Commande calculée côté serveur à partir des identifiants envoyés par le formulaire.
 export type CheckoutQuote = {
@@ -266,7 +267,7 @@ export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
     replyTo: customerEmail || undefined,
     fields: {
       Offre: q?.offerName ?? m.packId ?? "?",
-      "Remise logo": q?.hasLogo ? `oui (−${formatPrice(q.logoDiscount)} HT, logo à fournir)` : "non",
+      "Remise logo": q?.hasLogo ? `oui (−${formatPrice(q.logoDiscount)}, logo à fournir)` : "non",
       Paiement: q ? paymentSummary({ totalPrice: q.totalPrice, paymentType: q.payment, depositPercent: q.depositPercent }) : "?",
       "Montant encaissé": s.amount_total != null ? formatPrice(s.amount_total) : "?",
       Client: customerName,
@@ -380,7 +381,8 @@ export async function markBalancePaid(orderId: string, amount: number, fee?: num
 
 // Crée le lien de paiement du solde (montant recalculé ici depuis la commande).
 // returnPath : page où revenir après paiement ou abandon (ex. la page de livraison du client)
-export async function createBalanceLink(orderId: string, baseUrl: string, returnPath?: string) {
+// locale : langue de la page de paiement Stripe (espace client consulté en anglais)
+export async function createBalanceLink(orderId: string, baseUrl: string, returnPath?: string, locale: "fr" | "en" = "fr") {
   const store = getStore();
   const order = await store.getOrder(orderId);
   if (!order) throw new Error("Commande introuvable.");
@@ -401,13 +403,17 @@ export async function createBalanceLink(orderId: string, baseUrl: string, return
             currency: "eur",
             unit_amount: due,
             product_data: {
-              name: `zer0oes gfx — ${order.offerName} — Solde`,
-              description: `Solde de la commande du ${new Date(order.createdAt).toLocaleDateString("fr-FR")}`,
+              name: locale === "en" ? `zer0oes gfx — ${trOfferName("en", order.offerName)} — Balance` : `zer0oes gfx — ${order.offerName} — Solde`,
+              description:
+                locale === "en"
+                  ? `Balance of the order of ${new Date(order.createdAt).toLocaleDateString("en-GB")}`
+                  : `Solde de la commande du ${new Date(order.createdAt).toLocaleDateString("fr-FR")}`,
             },
           },
         },
       ],
       metadata: { kind: "solde", orderId: order.id, amount: String(due) },
+      locale: locale === "en" ? "en" : "fr",
       success_url: `${baseUrl}${returnPath ? `${returnPath}?retour=solde` : "/merci/solde"}`,
       cancel_url: `${baseUrl}${returnPath ?? "/"}`,
     });

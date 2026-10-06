@@ -1,12 +1,22 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { asLocale, href, t, type Locale } from "@/lib/i18n";
 import { mediaUrl } from "@/lib/media";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "À propos",
-  description: "Aurore, Graphic & Web Designer : identités visuelles, overlays, emotes et animations pour streamers et créateurs de contenu.",
-};
+export async function generateMetadata({ params }: PageProps<"/[lang]/a-propos">): Promise<Metadata> {
+  return pageMetadata(asLocale((await params).lang), "/a-propos", {
+    fr: {
+      title: "À propos",
+      description: "Aurore, Graphic & Web Designer : identités visuelles, overlays, emotes et animations pour streamers et créateurs de contenu.",
+    },
+    en: {
+      title: "About",
+      description: "Aurore, Graphic & Web Designer: visual identities, overlays, emotes and animations for streamers and content creators.",
+    },
+  });
+}
 
 // Petit détail graphique propre à chaque chapitre (décoratif)
 function Pixels() {
@@ -63,7 +73,7 @@ function Rings() {
   );
 }
 
-const chapters = [
+const chaptersFr = [
   {
     title: "Moi, en quelques pixels",
     text: "Je suis Aurore, Graphic & Web Designer, passionnée par les univers visuels forts, cohérents et pensés pour vivre vraiment à l’écran.",
@@ -91,7 +101,38 @@ const chapters = [
   },
 ];
 
-export default function AboutPage() {
+const chaptersEn = [
+  {
+    title: "Me, in a few pixels",
+    text: "I'm Aurore, a Graphic & Web Designer with a passion for strong, consistent visual universes designed to truly live on screen.",
+    Detail: Pixels,
+  },
+  {
+    title: "From web to broadcast",
+    text: "My background blends graphic design, front-end development, web and broadcast. I care as much about the look as about how a creation will actually be used.",
+    Detail: WebToLive,
+  },
+  {
+    title: "Today, I create for creators",
+    text: "I mainly work with streamers, content creators and gaming projects on visual identities, overlays, interfaces, emotes and animations.",
+    Detail: LiveBadge,
+  },
+  {
+    title: "No ready-made recipe",
+    text: "Every project starts with your universe, your references and what you want to say. No stuck-on style, no copy-paste formula.",
+    Detail: NoCopyPaste,
+  },
+  {
+    title: "An identity that sticks",
+    text: "My goal: to create something recognisable, consistent and strong enough that people know it's you before they even read your name.",
+    Detail: Rings,
+  },
+];
+
+const chapters: Record<Locale, typeof chaptersFr> = { fr: chaptersFr, en: chaptersEn };
+
+export default async function AboutPage({ params }: PageProps<"/[lang]/a-propos">) {
+  const lang = asLocale((await params).lang);
 
   return (
     <div className="relative overflow-hidden">
@@ -101,10 +142,10 @@ export default function AboutPage() {
         style={{ background: "radial-gradient(40% 50% at 25% 30%, var(--accent-3), transparent), radial-gradient(40% 50% at 75% 20%, var(--accent-2), transparent)" }}
       />
       <div className="relative mx-auto max-w-5xl px-4 pb-8 pt-16 sm:px-6 sm:pt-24">
-        <p className="text-sm font-semibold uppercase tracking-widest text-accent">À propos</p>
+        <p className="text-sm font-semibold uppercase tracking-widest text-accent">{t(lang, { fr: "À propos", en: "About" })}</p>
 
         <ol className="mt-10">
-          {chapters.map(({ title, text, Detail }, i) => (
+          {chapters[lang].map(({ title, text, Detail }, i) => (
             <li key={title} data-reveal className={`border-t border-border/60 py-14 first:border-t-0 first:pt-0 sm:py-20 ${i === 0 ? "" : i % 2 ? "md:pl-[16%]" : "md:pr-[16%]"}`}>
               <div className="grid items-start gap-6 md:grid-cols-[9rem_1fr] md:gap-10">
                 <div className="flex items-center gap-5 md:flex-col md:items-start">
@@ -121,7 +162,7 @@ export default function AboutPage() {
                       <div aria-hidden className="absolute -inset-3 rounded-[2rem] opacity-50 blur-2xl" style={{ background: "linear-gradient(135deg, var(--accent-3), var(--accent), var(--accent-2))" }} />
                       <Image
                         src={mediaUrl("/a-propos/aurore.webp")}
-                        alt="Aurore, alias zer0oes, à son poste de stream"
+                        alt={t(lang, { fr: "Aurore, alias zer0oes, à son poste de stream", en: "Aurore, aka zer0oes, at her streaming setup" })}
                         width={800}
                         height={1000}
                         priority
@@ -130,7 +171,7 @@ export default function AboutPage() {
                       />
                       <figcaption className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-background/80 px-3 py-1 text-xs font-semibold backdrop-blur">
                         <span className="size-2 rounded-full bg-red-500" aria-hidden />
-                        En live
+                        {t(lang, { fr: "En live", en: "Live" })}
                       </figcaption>
                     </figure>
                   )}
@@ -142,15 +183,15 @@ export default function AboutPage() {
 
         <div data-reveal className="mt-4 flex flex-col items-start gap-4 rounded-3xl border border-border bg-surface p-8 sm:flex-row sm:items-center sm:justify-between sm:p-10">
           <div>
-            <h2 className="font-display text-2xl font-bold">On crée ton univers ?</h2>
-            <p className="mt-1 text-muted">Raconte-moi ta chaîne, je te réponds sous 48 h ouvrées.</p>
+            <h2 className="font-display text-2xl font-bold">{t(lang, { fr: "On crée ton univers ?", en: "Shall we create your universe?" })}</h2>
+            <p className="mt-1 text-muted">{t(lang, { fr: "Raconte-moi ta chaîne, je te réponds sous 48 h ouvrées.", en: "Tell me about your channel, I'll reply within 2 business days." })}</p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <Link href="/contact" className="rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110">
-              Parlons de ton projet
+            <Link href={href(lang, "/contact")} className="rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110">
+              {t(lang, { fr: "Parlons de ton projet", en: "Let's talk about your project" })}
             </Link>
-            <Link href="/portfolio" className="text-sm text-muted hover:text-foreground">
-              Voir le portfolio →
+            <Link href={href(lang, "/portfolio")} className="text-sm text-muted hover:text-foreground">
+              {t(lang, { fr: "Voir le portfolio →", en: "See the portfolio →" })}
             </Link>
           </div>
         </div>

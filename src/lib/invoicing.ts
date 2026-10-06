@@ -19,13 +19,13 @@ const date = (iso: string) => new Date(iso).toLocaleDateString("fr-FR");
 
 export function invoiceLines(order: Order, payment: PaymentInput, depositInvoice?: Invoice): AbbyLine[] {
   const logo = order.hasLogo
-    ? ` Prix catalogue ${formatPrice(order.listPrice)} HT, remise « logo déjà existant » −${formatPrice(order.logoDiscount)} HT.`
+    ? ` Prix catalogue ${formatPrice(order.listPrice)}, remise « logo déjà existant » −${formatPrice(order.logoDiscount)}.`
     : "";
   if (payment.kind === "acompte") {
     return [
       {
         designation: `Acompte de ${order.depositPercent} % — ${order.offerName}`,
-        description: `Acompte sur la commande du ${date(order.createdAt)} (total ${formatPrice(order.totalPrice)} HT).${logo} Le solde de ${formatPrice(order.totalPrice - payment.amount)} HT sera facturé à la livraison.`,
+        description: `Acompte sur la commande du ${date(order.createdAt)} (total ${formatPrice(order.totalPrice)}).${logo} Le solde de ${formatPrice(order.totalPrice - payment.amount)} sera facturé à la livraison.`,
         unitPrice: payment.amount,
       },
     ];
@@ -35,7 +35,7 @@ export function invoiceLines(order: Order, payment: PaymentInput, depositInvoice
     return [
       {
         designation: `Solde — ${order.offerName}`,
-        description: `Commande du ${date(order.createdAt)} : total ${formatPrice(order.totalPrice)} HT, dont acompte de ${formatPrice(deposit)} HT déjà facturé${depositInvoice?.number ? ` (facture n° ${depositInvoice.number})` : ""}.${logo}`,
+        description: `Commande du ${date(order.createdAt)} : total ${formatPrice(order.totalPrice)}, dont acompte de ${formatPrice(deposit)} déjà facturé${depositInvoice?.number ? ` (facture n° ${depositInvoice.number})` : ""}.${logo}`,
         unitPrice: payment.amount,
       },
     ];
@@ -74,7 +74,7 @@ export async function invoicePayment(deps: InvoiceDeps, order: Order, payment: P
   if (!api) {
     // Démo : aucune facture réelle, tout est simulé et journalisé
     const n = (await store.listInvoices()).filter((i) => i.demo && i.status === "emise").length + 1;
-    console.info(`[Abby démo] Facture ${payment.kind} de ${formatPrice(payment.amount)} HT pour ${order.customerEmail || order.id}`);
+    console.info(`[Abby démo] Facture ${payment.kind} de ${formatPrice(payment.amount)} pour ${order.customerEmail || order.id}`);
     return save({ status: "emise", number: `DEMO-${String(n).padStart(4, "0")}`, finalized: true, paidMarked: true, attempts: inv.attempts + 1 });
   }
 
@@ -111,7 +111,7 @@ export async function invoicePayment(deps: InvoiceDeps, order: Order, payment: P
       await deps.emailCustomer(
         order.customerEmail,
         `Ta facture zer0oes gfx${inv.number ? ` n° ${inv.number}` : ""}`,
-        `Bonjour,\n\nTu trouveras ci-joint la facture de ton paiement de ${formatPrice(payment.amount)} HT (${order.offerName}).\n\nMerci !\nAurore — zer0oes gfx`,
+        `Bonjour,\n\nTu trouveras ci-joint la facture de ton paiement de ${formatPrice(payment.amount)} (${order.offerName}).\n\nMerci !\nAurore — zer0oes gfx`,
         pdf,
         `facture-${inv.number ?? inv.id}.pdf`,
       );
@@ -124,7 +124,7 @@ export async function invoicePayment(deps: InvoiceDeps, order: Order, payment: P
     await deps
       .notifyAdmin(`[Facture en attente] ${order.offerName} — ${order.customerEmail}`, {
         Commande: order.id,
-        Paiement: `${payment.kind} de ${formatPrice(payment.amount)} HT`,
+        Paiement: `${payment.kind} de ${formatPrice(payment.amount)}`,
         Erreur: message,
         Action: "Ouvre la commande dans l'admin et clique sur « Réessayer ».",
       })

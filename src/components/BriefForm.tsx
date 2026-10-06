@@ -3,8 +3,66 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { sendBrief } from "@/app/actions";
+import { href, type Locale } from "@/lib/i18n";
 import { overlayTypes, type OptionChoice } from "@/lib/pricing";
+import { useLocale } from "./I18nProvider";
 import { Field, FormStatus, OptionsField, inputClass } from "./ui";
+
+// Types d'overlays en anglais (la valeur envoyée reste le nom français)
+const overlayEn: Record<string, string> = { Démarrage: "Starting", Pause: "Break", Fin: "Ending", Discussion: "Just chatting", Gameplay: "Gameplay" };
+
+const texts = {
+  fr: {
+    email: "E-mail *",
+    pseudo: "Pseudo de stream",
+    channel: "Lien de ta chaîne *",
+    platform: "Plateforme principale",
+    other: "Autre",
+    logo: "Ton logo existant *",
+    logoHint: "Lien de téléchargement (Drive, WeTransfer…). Format vectoriel conseillé (SVG, AI, EPS ou PDF), sinon PNG en haute définition.",
+    universe: "Univers et ambiance *",
+    universeHint: "Jeux streamés, thème, mots qui décrivent ta chaîne…",
+    colors: "Couleurs souhaitées",
+    colorsHint: "Codes couleur, logo existant, couleurs à éviter…",
+    references: "Références visuelles",
+    referencesHint: "Liens vers des overlays, chaînes ou images qui t'inspirent.",
+    elements: "Éléments à inclure",
+    elementsHint: "Textes des écrans, réseaux sociaux à afficher, emplacement caméra…",
+    overlays: "Overlays souhaités",
+    options: "Options à la carte",
+    deadline: "Date souhaitée",
+    notes: "Remarques",
+    sending: "Envoi…",
+    send: "Envoyer mon brief",
+    privacyNote: "Ces informations servent uniquement à réaliser ta commande.",
+    privacy: "Politique de confidentialité",
+  },
+  en: {
+    email: "Email *",
+    pseudo: "Stream name",
+    channel: "Link to your channel *",
+    platform: "Main platform",
+    other: "Other",
+    logo: "Your existing logo *",
+    logoHint: "Download link (Drive, WeTransfer…). Vector format recommended (SVG, AI, EPS or PDF), otherwise high-resolution PNG.",
+    universe: "Universe and mood *",
+    universeHint: "Games you stream, theme, words that describe your channel…",
+    colors: "Preferred colours",
+    colorsHint: "Colour codes, existing logo, colours to avoid…",
+    references: "Visual references",
+    referencesHint: "Links to overlays, channels or images that inspire you.",
+    elements: "Elements to include",
+    elementsHint: "Screen texts, social media to display, camera position…",
+    overlays: "Overlays you want",
+    options: "À la carte add-ons",
+    deadline: "Preferred date",
+    notes: "Notes",
+    sending: "Sending…",
+    send: "Send my brief",
+    privacyNote: "This information is only used to complete your order.",
+    privacy: "Privacy policy",
+  },
+} satisfies Record<Locale, Record<string, string>>;
 
 export function BriefForm({
   sessionId,
@@ -26,6 +84,8 @@ export function BriefForm({
   overlayHint?: string;
 }) {
   const [state, action, pending] = useActionState(sendBrief, null);
+  const locale = useLocale();
+  const tx = texts[locale];
 
   if (state?.ok) return <FormStatus state={state} />;
 
@@ -36,60 +96,58 @@ export function BriefForm({
       <input type="hidden" name="formulaId" value={formulaId ?? ""} />
       <input type="hidden" name="payment" value={payment ?? ""} />
       <input type="hidden" name="hasLogo" value={hasLogo ? "1" : ""} />
+      <input type="hidden" name="lang" value={locale} />
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="E-mail *">
+        <Field label={tx.email}>
           <input name="email" type="email" required defaultValue={email} className={inputClass} />
         </Field>
-        <Field label="Pseudo de stream">
+        <Field label={tx.pseudo}>
           <input name="pseudo" className={inputClass} />
         </Field>
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Lien de ta chaîne *">
+        <Field label={tx.channel}>
           <input name="channel" required placeholder="https://twitch.tv/…" className={inputClass} />
         </Field>
-        <Field label="Plateforme principale">
+        <Field label={tx.platform}>
           <select name="platform" className={inputClass} defaultValue="Twitch">
             <option>Twitch</option>
             <option>YouTube</option>
             <option>Kick</option>
             <option>TikTok Live</option>
-            <option>Autre</option>
+            <option value="Autre">{tx.other}</option>
           </select>
         </Field>
       </div>
       {hasLogo && (
-        <Field
-          label="Ton logo existant *"
-          hint="Lien de téléchargement (Drive, WeTransfer…). Format vectoriel conseillé (SVG, AI, EPS ou PDF), sinon PNG en haute définition."
-        >
+        <Field label={tx.logo} hint={tx.logoHint}>
           <input name="logoLink" required placeholder="https://…" className={inputClass} />
         </Field>
       )}
-      <Field label="Univers et ambiance *" hint="Jeux streamés, thème, mots qui décrivent ta chaîne…">
+      <Field label={tx.universe} hint={tx.universeHint}>
         <textarea name="universe" required rows={4} className={inputClass} />
       </Field>
-      <Field label="Couleurs souhaitées" hint="Codes couleur, logo existant, couleurs à éviter…">
+      <Field label={tx.colors} hint={tx.colorsHint}>
         <input name="colors" className={inputClass} />
       </Field>
-      <Field label="Références visuelles" hint="Liens vers des overlays, chaînes ou images qui t'inspirent.">
+      <Field label={tx.references} hint={tx.referencesHint}>
         <textarea name="references" rows={3} className={inputClass} />
       </Field>
-      <Field label="Éléments à inclure" hint="Textes des écrans, réseaux sociaux à afficher, emplacement caméra…">
+      <Field label={tx.elements} hint={tx.elementsHint}>
         <textarea name="elements" rows={3} className={inputClass} />
       </Field>
       <OptionsField
         name="overlays"
-        legend="Overlays souhaités"
+        legend={tx.overlays}
         hint={overlayHint}
-        options={overlayTypes.map((t) => ({ id: t, label: t }))}
+        options={overlayTypes.map((o) => ({ id: o, label: o, main: locale === "en" ? (overlayEn[o] ?? o) : o }))}
       />
-      <OptionsField legend="Options à la carte" options={optionChoices} />
+      <OptionsField legend={tx.options} options={optionChoices} />
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Date souhaitée">
+        <Field label={tx.deadline}>
           <input name="deadline" type="date" className={inputClass} />
         </Field>
-        <Field label="Remarques">
+        <Field label={tx.notes}>
           <input name="notes" className={inputClass} />
         </Field>
       </div>
@@ -99,12 +157,12 @@ export function BriefForm({
         disabled={pending}
         className="rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110 disabled:opacity-60"
       >
-        {pending ? "Envoi…" : "Envoyer mon brief"}
+        {pending ? tx.sending : tx.send}
       </button>
       <p className="text-xs text-muted">
-        Ces informations servent uniquement à réaliser ta commande.{" "}
-        <Link href="/confidentialite" className="underline hover:text-foreground">
-          Politique de confidentialité
+        {tx.privacyNote}{" "}
+        <Link href={href(locale, "/confidentialite")} className="underline hover:text-foreground">
+          {tx.privacy}
         </Link>
       </p>
     </form>

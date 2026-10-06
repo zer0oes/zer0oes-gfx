@@ -18,7 +18,7 @@ export const packs: Pack[] = [
     price: 39000,
     checkout: true,
     deliverables: ["Logo", "2 overlays fixes au choix", "Bannière et avatar", "2 séries de corrections regroupées"],
-    extras: ["Option : 5 emotes personnalisées pour 150 € HT"],
+    extras: ["Option : 5 emotes personnalisées pour 60 €"],
     formulas: [
       { id: "base", label: "Premier look", price: 39000 },
       { id: "emotes", label: "Pack avec emotes", price: 45000 },
@@ -37,7 +37,7 @@ export const packs: Pack[] = [
       "Bannière et avatar",
       "2 séries de corrections regroupées",
     ],
-    extras: ["10 emotes personnalisées : 280 € HT", "Animation légère des 5 overlays : 450 € HT"],
+    extras: ["10 emotes personnalisées : +100 €", "Animation légère des 5 overlays, en plus des emotes : +200 €"],
     formulas: [
       { id: "base", label: "Identité signature", price: 69000 },
       { id: "emotes", label: "Pack avec emotes", price: 79000 },

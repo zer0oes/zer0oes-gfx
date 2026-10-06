@@ -3,6 +3,7 @@
 // Les valeurs par défaut reprennent l'accueil actuel ; ce qui est saisi dans l'admin les remplace.
 // Les visuels sont choisis parmi les réalisations du portfolio (par leur id).
 import { site } from "@/data/site";
+import type { Locale } from "@/lib/i18n";
 
 export type FieldKind = "text" | "long" | "lines" | "paragraphs" | "work" | "emotes";
 export type HomeField = { key: string; label: string; kind: FieldKind; max?: number; hint?: string };
@@ -155,6 +156,51 @@ export const homeDefaults: Record<string, string> = {
   "portfolio.link": "Explorer l’univers →",
 };
 
+// Version anglaise des textes (/en). Les visuels et les noms d'emotes sont communs aux deux langues.
+// Une traduction saisie dans l'admin est enregistrée sous la clé « en:<clé> ».
+export const homeDefaultsEn: Record<string, string> = {
+  "hero.title1": "Your stream.",
+  "hero.title2": "Your universe.",
+  "hero.text": "Custom visual identities for live creators.",
+  "hero.cta": "Explore the projects",
+  "hero.link": "See pricing →",
+  "emotes.kicker": "Emotes",
+  "emotes.title": "Every emotion\nof the live.",
+  "emotes.link": "See the full sheet →",
+  "universe.kicker": "Universe",
+  "universe.title": "Every channel,\nits own character.",
+  "universe.text": "From electric mineral to synthwave neon: every identity starts with the person behind the stream.",
+  "universe.link": "Discover the project →",
+  "signature.kicker": "Logo",
+  "signature.title": "One line.\nA whole identity.",
+  "signature.link": "The full portfolio →",
+  "about.kicker": "Behind the screen",
+  "about.title1": "I stream too.",
+  "about.title2": "I know what your screen needs to say.",
+  "about.paragraphs":
+    "Hi, I'm Aurore. Graphic designer, and streamer under the name zer0oes.\nI know the backstage: the scenes you switch between, the alerts that must stay readable mid-game, the identity people should recognise at a glance. Every universe I create, I design as if it were my own.",
+  "steps.kicker": "How it works",
+  "steps.title": "From your idea to your first live.",
+  "steps.s1title": "You choose",
+  "steps.s1text": "A ready-to-order package, or a custom request.",
+  "steps.s2title": "You brief",
+  "steps.s2text": "Universe, colours, references and chosen overlays: a simple form right after your order.",
+  "steps.s3title": "I create",
+  "steps.s3text": "First mock-ups, feedback, adjustments. Delivery within {delai} business days.",
+  "steps.s4title": "You stream",
+  "steps.s4text": "Ready-to-use visuals, with transparent backgrounds where needed.",
+  "offers.kicker": "Pricing",
+  "offers.title": "Three ways to get started.",
+  "offers.link": "Add-ons and package details →",
+  "custom.title": "A more specific project?",
+  "custom.text": "Interactive widget, full redesign, identity for an event: let's talk and I'll send you a quote.",
+  "custom.button": "Request a quote",
+  "portfolio.kicker": "Portfolio",
+  "portfolio.title": "Universes, not just screens.",
+  "portfolio.intro": "Every project is built around the creator's personality, content and identity.",
+  "portfolio.link": "Explore the universe →",
+};
+
 const homeFields = homeSections.flatMap((s) => s.fields);
 const fields = [...homeFields, ...portfolioPageFields];
 const LONG = 1200;
@@ -183,7 +229,7 @@ export function homeFromForm(
 ): Record<string, string> {
   const edited = group === "portfolio" ? portfolioPageFields : homeFields;
   const kept = resolveStored(stored, group === "portfolio" ? homeFields : portfolioPageFields);
-  const out: Record<string, string> = { ...kept };
+  const out: Record<string, string> = { ...kept, ...storedTranslations(stored) };
   for (const f of edited) {
     const v = get(f.key);
     if (v == null) continue;
@@ -204,6 +250,17 @@ function resolveStored(raw: unknown, list: HomeField[]) {
   return out;
 }
 
+// Traductions anglaises enregistrées (« en:<clé> ») : conservées quand le français est enregistré
+function storedTranslations(raw: unknown) {
+  const stored = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const out: Record<string, string> = {};
+  for (const f of fields) {
+    const v = stored[`en:${f.key}`];
+    if (typeof v === "string" && v) out[`en:${f.key}`] = clean(f, v);
+  }
+  return out;
+}
+
 // Retour au contenu d'origine d'une des deux pages, l'autre est conservée (null : plus rien d'enregistré)
 export function resetGroup(stored: unknown, group: "accueil" | "portfolio") {
   const kept = resolveStored(stored, group === "portfolio" ? homeFields : portfolioPageFields);
@@ -212,12 +269,18 @@ export function resetGroup(stored: unknown, group: "accueil" | "portfolio") {
 
 export type HomeContent = { values: Record<string, string>; text(key: string): string; lines(key: string): string[] };
 
-// Contenu de l'accueil : valeurs enregistrées (vérifiées) par-dessus les valeurs par défaut
-export function resolveHome(raw: unknown): HomeContent {
+// Champs communs aux deux langues : visuels choisis et noms des emotes autour du visuel
+const shared = (f: HomeField) => f.kind === "work" || f.kind === "emotes" || f.key === "hero.emotes";
+
+// Contenu de l'accueil : valeurs enregistrées (vérifiées) par-dessus les valeurs par défaut.
+// En anglais : traductions enregistrées (« en:<clé> »), sinon textes anglais d'origine ;
+// les visuels restent ceux choisis pour le site français.
+export function resolveHome(raw: unknown, locale: Locale = "fr"): HomeContent {
   const stored = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-  const values: Record<string, string> = { ...homeDefaults };
+  const values: Record<string, string> = { ...homeDefaults, ...(locale === "en" ? homeDefaultsEn : {}) };
   for (const f of fields) {
-    const v = stored[f.key];
+    const key = locale === "en" && !shared(f) ? `en:${f.key}` : f.key;
+    const v = stored[key];
     if (typeof v === "string" && (v || f.kind === "work")) values[f.key] = clean(f, v);
   }
   return {

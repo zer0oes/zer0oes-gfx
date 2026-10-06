@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useState } from "react";
 import type { CasePiece, EditorialBlock, EditorialStudy } from "@/data/case-studies";
 import type { Work } from "@/data/portfolio";
+import { href, t } from "@/lib/i18n";
 import { Media } from "./CaseStudyView";
+import { useLocale } from "./I18nProvider";
 import { Lightbox } from "./Lightbox";
 import { WorkCard } from "./WorkCard";
 
@@ -43,6 +45,7 @@ export function EditorialView({ study, works, streamerName }: { study: Editorial
   const unplaced = works.filter((w) => !placed.includes(w));
   const ordered = [...placed, ...unplaced];
   const [open, setOpen] = useState<number | null>(null);
+  const locale = useLocale();
   const openWork = (w: Work) => setOpen(ordered.indexOf(w));
   const hero = get(study.hero);
   const headerLogo = get(study.headerLogo?.id);
@@ -62,7 +65,7 @@ export function EditorialView({ study, works, streamerName }: { study: Editorial
           </div>
           <div className="lg:col-span-5 lg:pt-3">
             <p className="text-lg text-muted">{study.intro}</p>
-            <p className="mt-4 text-sm text-muted" aria-label="Ce que comprend le projet">
+            <p className="mt-4 text-sm text-muted" aria-label={t(locale, { fr: "Ce que comprend le projet", en: "What the project includes" })}>
               {study.tags.join(" / ")}
             </p>
             {headerLogo && (
@@ -89,7 +92,7 @@ export function EditorialView({ study, works, streamerName }: { study: Editorial
       {unplaced.length > 0 && (
         <section aria-labelledby="aussi" className="mt-24">
           <h2 id="aussi" className="font-display text-2xl font-bold">
-            Aussi dans ce projet
+            {t(locale, { fr: "Aussi dans ce projet", en: "Also in this project" })}
           </h2>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {unplaced.map((w) => (
@@ -107,10 +110,10 @@ export function EditorialView({ study, works, streamerName }: { study: Editorial
           </h2>
         </div>
         <Link
-          href="/contact"
+          href={href(locale, "/contact")}
           className="inline-flex shrink-0 self-start rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110 sm:self-auto"
         >
-          Parlons de ton projet ↗
+          {t(locale, { fr: "Parlons de ton projet ↗", en: "Let's talk about your project ↗" })}
         </Link>
       </aside>
 
@@ -311,6 +314,7 @@ function ScenesBlock({
     return w ? [{ w, label: p.label }] : [];
   });
   const [current, setCurrent] = useState(0);
+  const locale = useLocale();
   if (!scenes.length) return null;
   const active = scenes[Math.min(current, scenes.length - 1)];
   return (
@@ -325,7 +329,7 @@ function ScenesBlock({
       <div className="lg:col-span-8">
         {/* key : relance l'aperçu vidéo au changement de scène */}
         <Media key={active.w.id} work={active.w} onOpen={() => openWork(active.w)} sizes="(min-width: 1024px) 760px, 100vw" />
-        <div role="tablist" aria-label="Scènes" className="mt-3 flex flex-wrap justify-between gap-2">
+        <div role="tablist" aria-label={t(locale, { fr: "Scènes", en: "Scenes" })} className="mt-3 flex flex-wrap justify-between gap-2">
           {scenes.map((s, i) => (
             <button
               key={s.w.id}

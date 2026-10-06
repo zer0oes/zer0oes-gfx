@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { categories, emoteGroups, type Work } from "@/data/portfolio";
+import { t } from "@/lib/i18n";
+import { useLocale } from "./I18nProvider";
 import { ProtectedMedia, Watermark } from "./protection";
 
 const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
@@ -39,6 +41,7 @@ export function Lightbox({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const reducedMotion = usePrefersReducedMotion();
+  const locale = useLocale();
   const open = index !== null && works.length > 0;
   const work = open ? works[index] : null;
 
@@ -146,7 +149,7 @@ export function Lightbox({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Fermer"
+            aria-label={t(locale, { fr: "Fermer", en: "Close" })}
             className="absolute right-3 top-3 rounded-full bg-surface/80 p-3 text-foreground transition hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent sm:right-6 sm:top-6"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -158,7 +161,7 @@ export function Lightbox({
               <button
                 type="button"
                 onClick={() => go(-1)}
-                aria-label="Réalisation précédente"
+                aria-label={t(locale, { fr: "Réalisation précédente", en: "Previous work" })}
                 className="absolute left-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-surface/80 p-3 transition hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent sm:block sm:left-5"
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -168,7 +171,7 @@ export function Lightbox({
               <button
                 type="button"
                 onClick={() => go(1)}
-                aria-label="Réalisation suivante"
+                aria-label={t(locale, { fr: "Réalisation suivante", en: "Next work" })}
                 className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-surface/80 p-3 transition hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent sm:block sm:right-5"
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -176,13 +179,13 @@ export function Lightbox({
                 </svg>
               </button>
               <div className="flex items-center gap-4 sm:hidden">
-                <button type="button" onClick={() => go(-1)} aria-label="Réalisation précédente" className="rounded-full bg-surface/80 p-3">
+                <button type="button" onClick={() => go(-1)} aria-label={t(locale, { fr: "Réalisation précédente", en: "Previous work" })} className="rounded-full bg-surface/80 p-3">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                     <path d="M15 6l-6 6 6 6" />
                   </svg>
                 </button>
                 <span className="text-xs text-muted/70">Glisse pour naviguer</span>
-                <button type="button" onClick={() => go(1)} aria-label="Réalisation suivante" className="rounded-full bg-surface/80 p-3">
+                <button type="button" onClick={() => go(1)} aria-label={t(locale, { fr: "Réalisation suivante", en: "Next work" })} className="rounded-full bg-surface/80 p-3">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                     <path d="M9 6l6 6-6 6" />
                   </svg>
@@ -198,6 +201,7 @@ export function Lightbox({
 
 // Planche d'emotes, groupées comme dans le tableau d'Aurore, sur le fond du site.
 function EmoteSheet({ work, reducedMotion }: { work: Work; reducedMotion: boolean }) {
+  const locale = useLocale();
   return (
     <div className="max-h-[68dvh] w-[min(100%,64rem)] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl">
       <div
@@ -218,7 +222,7 @@ function EmoteSheet({ work, reducedMotion }: { work: Work; reducedMotion: boolea
                   <ProtectedMedia watermark={false} className="h-20 w-20 sm:h-24 sm:w-24">
                     <Image
                       src={e.animated ? e.src.replace(/\.webp$/, "-still.webp") : e.src}
-                      alt={`Emote ${e.name}${e.animated ? " (animée)" : ""}`}
+                      alt={`Emote ${e.name}${e.animated ? t(locale, { fr: " (animée)", en: " (animated)" }) : ""}`}
                       width={112}
                       height={112}
                       unoptimized
@@ -255,6 +259,7 @@ function EmoteSheet({ work, reducedMotion }: { work: Work; reducedMotion: boolea
 function LightboxVideo({ src, poster, title, autoPlay }: { src: string; poster?: string; title: string; autoPlay: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(autoPlay);
+  const locale = useLocale();
   return (
     <>
       <video
@@ -279,10 +284,10 @@ function LightboxVideo({ src, poster, title, autoPlay }: { src: string; poster?:
       <button
         type="button"
         onClick={() => (ref.current?.paused ? ref.current.play() : ref.current?.pause())}
-        aria-label={playing ? "Mettre en pause l'animation" : "Lire l'animation"}
+        aria-label={playing ? t(locale, { fr: "Mettre en pause l'animation", en: "Pause the animation" }) : t(locale, { fr: "Lire l'animation", en: "Play the animation" })}
         className="absolute bottom-3 left-3 z-[3] rounded-full bg-background/80 px-3 py-1.5 text-xs backdrop-blur hover:bg-surface-2"
       >
-        {playing ? "❚❚ Pause" : "▶ Lire"}
+        {playing ? "❚❚ Pause" : t(locale, { fr: "▶ Lire", en: "▶ Play" })}
       </button>
     </>
   );

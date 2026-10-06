@@ -1,14 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { LOCALE_COOKIE, defaultLocale, isLocale, preferredLocale, splitLocale } from "@/lib/i18n";
+import { isBot } from "@/lib/stats";
 
 // Proxy :
 // - en production, force HTTPS et l'adresse canonique (NEXT_PUBLIC_SITE_URL, ex. www.)
 //   derrière un hébergeur qui transmet x-forwarded-proto (Heroku) ;
+// - pages publiques : langue (français sans préfixe, anglais sous /en), voir localeRouting ;
 // - sur /admin, rafraîchit la session Supabase et interdit l'indexation.
 // Le contrôle d'accès admin est fait côté serveur dans chaque page et action.
 export async function proxy(request: NextRequest) {
   const redirect = canonicalRedirect(request);
   if (redirect) return redirect;
+
+  const localized = localeRouting(request);
+  if (localized) return withSecurityHeaders(localized);
 
   let response = NextResponse.next({ request });
   if (!request.nextUrl.pathname.startsWith("/admin")) return withSecurityHeaders(response);
@@ -31,6 +37,42 @@ export async function proxy(request: NextRequest) {
 
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return withSecurityHeaders(response);
+}
+
+// Pages publiques du site (hors admin, API, espace client et fichiers)
+function isPublicPage(pathname: string) {
+  return !/^\/(admin|api|commande|livraison|_next)(\/|$)/.test(pathname) && !/\.[a-z0-9]+$/i.test(pathname);
+}
+
+// Langue des pages publiques :
+// - /fr/… redirige vers l'adresse sans préfixe (le français est la langue par défaut) ;
+// - /en/… est servi tel quel ;
+// - sans préfixe : un visiteur dont le navigateur n'est pas en français (ou qui a choisi l'anglais
+//   avec le sélecteur) est envoyé sur /en/… ; sinon la page française est servie (réécriture
+//   interne vers /fr/…, l'adresse ne change pas). Les robots et la navigation interne ne sont
+//   jamais redirigés.
+function localeRouting(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  if (!isPublicPage(pathname)) return null;
+  const { locale, path } = splitLocale(pathname);
+  const prefixed = pathname !== path;
+
+  if (prefixed && locale === defaultLocale) {
+    return NextResponse.redirect(new URL(path + search, request.url), 308);
+  }
+  if (prefixed) return NextResponse.next({ request });
+
+  const chosen = request.cookies.get(LOCALE_COOKIE)?.value;
+  const navigation = request.method === "GET" && !request.headers.has("rsc") && !request.headers.has("next-action");
+  const wanted = isLocale(chosen) ? chosen : navigation && !isBot(request.headers.get("user-agent")) ? preferredLocale(request.headers.get("accept-language")) : defaultLocale;
+  if (wanted !== defaultLocale && navigation) {
+    const res = NextResponse.redirect(new URL(`/${wanted}${path === "/" ? "" : path}${search}`, request.url), 307);
+    res.headers.set("Vary", "Accept-Language, Cookie");
+    return res;
+  }
+  const url = request.nextUrl.clone();
+  url.pathname = `/${defaultLocale}${pathname === "/" ? "" : pathname}`;
+  return NextResponse.rewrite(url, { request });
 }
 
 function canonicalRedirect(request: NextRequest) {

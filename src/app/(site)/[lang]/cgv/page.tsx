@@ -1,14 +1,28 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
 import { legal, site } from "@/data/site";
+import { asLocale } from "@/lib/i18n";
+import type { PricingSettings } from "@/lib/pricing";
+import { pageMetadata } from "@/lib/seo";
 import { getStore } from "@/lib/store";
+import { CgvEn } from "./cgv-en";
 
-export const metadata: Metadata = { title: "Conditions générales de vente" };
+export async function generateMetadata({ params }: PageProps<"/[lang]/cgv">): Promise<Metadata> {
+  return pageMetadata(asLocale((await params).lang), "/cgv", {
+    fr: { title: "Conditions générales de vente", description: "Conditions générales de vente des prestations de création graphique zer0oes gfx." },
+    en: { title: "Terms of sale", description: "Terms of sale for zer0oes gfx graphic design services." },
+  });
+}
+
+export default async function CgvPage({ params }: PageProps<"/[lang]/cgv">) {
+  const lang = asLocale((await params).lang);
+  const { settings } = await getStore().getCatalog();
+  return lang === "en" ? <CgvEn settings={settings} /> : <CgvFr settings={settings} />;
+}
 
 // MODÈLE PROVISOIRE : à relire et adapter (idéalement par un professionnel du droit)
 // avant la mise en ligne.
-export default async function CgvPage() {
-  const { settings } = await getStore().getCatalog();
+function CgvFr({ settings }: { settings: PricingSettings }) {
   return (
     <>
       <PageHeader title="Conditions générales de vente" />
@@ -33,7 +47,8 @@ export default async function CgvPage() {
 
         <h2>3. Prix et paiement</h2>
         <p>
-          Les prix sont indiqués en euros hors taxes (HT). {legal.vatNote}. Le paiement s&apos;effectue par carte
+          Les prix sont indiqués en euros, nets : le prestataire, entrepreneur individuel, bénéficie de la franchise en
+          base de TVA ({legal.vatNote}). Le paiement s&apos;effectue par carte
           bancaire via la plateforme sécurisée Stripe.
         </p>
         <ul>
@@ -51,7 +66,7 @@ export default async function CgvPage() {
           </li>
           <li>
             Remise « logo déjà existant » : lorsque le client fournit son propre logo, une remise de{" "}
-            {settings.logoDiscount / 100} € HT est appliquée sur les offres « Premier look » et « Identité signature », et
+            {settings.logoDiscount / 100} € est appliquée sur les offres « Premier look » et « Identité signature », et
             sur devis pour « Univers complet ». Le logo doit être fourni en qualité suffisante, idéalement en format
             vectoriel ; toute retouche, reconstruction ou refonte éventuelle est chiffrée séparément. Le client garantit
             détenir les droits sur ce logo.

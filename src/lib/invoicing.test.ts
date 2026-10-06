@@ -89,7 +89,7 @@ test("acompte puis solde : deux factures, le solde mentionne l'acompte", async (
   assert.equal(invoices.length, 2);
   assert.match(abby.created[0].lines[0].designation, /^Acompte de 30 %/);
   assert.equal(abby.created[0].lines[0].unitPrice, 25200);
-  assert.match(abby.created[1].lines[0].description!, /acompte de 252\s€\sHT déjà facturé \(facture n° F-1\)/);
+  assert.match(abby.created[1].lines[0].description!, /acompte de 252\s€ déjà facturé \(facture n° F-1\)/);
   assert.equal(abby.created[1].lines[0].unitPrice, 58800);
 });
 

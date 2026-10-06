@@ -31,6 +31,8 @@ test("noms de pages", () => {
   assert.equal(pageLabel("/contact?onglet=message"), "Contact : message simple");
   assert.equal(pageLabel("/contact"), "Contact : projet sur-mesure");
   assert.equal(pageLabel("/portfolio/tomavega"), "Projet : tomavega");
+  assert.equal(pageLabel("/en/offres"), "Offres (EN)");
+  assert.equal(pageLabel("/en"), "Accueil (EN)");
 });
 
 test("résumé : visiteurs par jour, provenance de la visite, période", () => {

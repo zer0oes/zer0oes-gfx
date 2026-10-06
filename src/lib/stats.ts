@@ -77,7 +77,9 @@ export function sourceOf(referrer: string | undefined, utmSource: string | undef
 }
 
 // Nom lisible d'une page du site
-export function pageLabel(path: string) {
+export function pageLabel(path: string): string {
+  // Version anglaise : même nom de page, suivi de (EN)
+  if (/^\/en(\/|\?|$)/.test(path)) return `${pageLabel(path.slice(3) || "/")} (EN)`;
   const [p, q] = path.split("?");
   const names: Record<string, string> = {
     "/": "Accueil",

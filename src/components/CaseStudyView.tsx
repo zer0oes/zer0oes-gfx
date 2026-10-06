@@ -8,6 +8,8 @@ import type { CasePiece, CaseStudy } from "@/data/case-studies";
 import type { Work } from "@/data/portfolio";
 import { HoverVideo } from "./HoverVideo";
 import { Lightbox } from "./Lightbox";
+import { href, t } from "@/lib/i18n";
+import { useLocale } from "./I18nProvider";
 import { ProtectedMedia } from "./protection";
 import { WorkCard } from "./WorkCard";
 
@@ -46,6 +48,7 @@ export function CaseStudyView({ study, works, streamerName }: { study: CaseStudy
     ...unplaced,
   ];
   const [open, setOpen] = useState<number | null>(null);
+  const locale = useLocale();
   const openWork = (w: Work) => setOpen(ordered.indexOf(w));
 
   return (
@@ -58,7 +61,7 @@ export function CaseStudyView({ study, works, streamerName }: { study: CaseStudy
           {study.headline[1]}
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-muted">{study.intro}</p>
-        <ul className="mt-5 flex flex-wrap gap-2" aria-label="Ce que comprend le projet">
+        <ul className="mt-5 flex flex-wrap gap-2" aria-label={t(locale, { fr: "Ce que comprend le projet", en: "What the project includes" })}>
           {study.tags.map((t) => (
             <li key={t} className="rounded-full border border-border px-3 py-1 text-xs text-muted">
               {t}
@@ -68,13 +71,13 @@ export function CaseStudyView({ study, works, streamerName }: { study: CaseStudy
       </header>
 
       {hero && (
-        <Figure work={hero} onOpen={() => openWork(hero)} caption={study.heroCaption} aside="Vue d'ensemble" priority className="mt-10" />
+        <Figure work={hero} onOpen={() => openWork(hero)} caption={study.heroCaption} aside={t(locale, { fr: "Vue d'ensemble", en: "Overview" })} priority className="mt-10" />
       )}
 
       {scenes.length > 0 && (
         <section aria-labelledby="scenes" className="mt-12">
           <h2 id="scenes" className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-            Les scènes du stream
+            {t(locale, { fr: "Les scènes du stream", en: "The stream scenes" })}
           </h2>
           <ul className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {scenes.map((p) => (
@@ -142,7 +145,7 @@ export function CaseStudyView({ study, works, streamerName }: { study: CaseStudy
       {unplaced.length > 0 && (
         <section aria-labelledby="autres" className="mt-16 border-t border-border pt-12">
           <h2 id="autres" className="font-display text-2xl font-bold">
-            Aussi dans ce projet
+            {t(locale, { fr: "Aussi dans ce projet", en: "Also in this project" })}
           </h2>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {unplaced.map((w) => (
@@ -153,14 +156,14 @@ export function CaseStudyView({ study, works, streamerName }: { study: CaseStudy
       )}
 
       <aside className="mt-20 rounded-3xl border border-border bg-surface px-6 py-12 text-center sm:px-12">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Ton prochain univers</p>
-        <h2 className="mt-3 font-display text-3xl font-bold">Et si on créait celui de ta chaîne ?</h2>
-        <p className="mx-auto mt-3 max-w-xl text-muted">Parle-moi de ton stream, de tes envies et de ce qui te rend unique.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">{t(locale, { fr: "Ton prochain univers", en: "Your next universe" })}</p>
+        <h2 className="mt-3 font-display text-3xl font-bold">{t(locale, { fr: "Et si on créait celui de ta chaîne ?", en: "What if we created your channel's?" })}</h2>
+        <p className="mx-auto mt-3 max-w-xl text-muted">{t(locale, { fr: "Parle-moi de ton stream, de tes envies et de ce qui te rend unique.", en: "Tell me about your stream, your ideas and what makes you unique." })}</p>
         <Link
-          href="/contact"
+          href={href(locale, "/contact")}
           className="mt-6 inline-flex rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110"
         >
-          Parlons de ton projet →
+          {t(locale, { fr: "Parlons de ton projet →", en: "Let's talk about your project →" })}
         </Link>
       </aside>
 

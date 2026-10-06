@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { categories, type Work } from "@/data/portfolio";
+import { t } from "@/lib/i18n";
+import { tr } from "@/lib/translations-en";
+import { useLocale } from "./I18nProvider";
 import { HoverVideo } from "./HoverVideo";
 import { ProtectedMedia } from "./protection";
 
@@ -18,7 +21,8 @@ export function WorkCard({
   href?: string;
   showStreamer?: boolean;
 }) {
-  const category = categories.find((c) => c.id === work.category)?.label;
+  const locale = useLocale();
+  const category = tr(locale, categories.find((c) => c.id === work.category)?.label);
   return (
     <article data-hover-root className="group relative overflow-hidden rounded-2xl border border-border bg-surface transition focus-within:border-accent hover:-translate-y-1 hover:border-accent/60">
       <div className="relative aspect-video overflow-hidden">
@@ -49,7 +53,7 @@ export function WorkCard({
         </span>
         {work.video && (
           <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-background/80 px-3 py-1 text-xs font-medium backdrop-blur">
-            <span aria-hidden>▶</span> Animé
+            <span aria-hidden>▶</span> {t(locale, { fr: "Animé", en: "Animated" })}
           </span>
         )}
       </div>
@@ -74,7 +78,7 @@ export function WorkCard({
           )}
         </h3>
         <p className="mt-1 text-sm text-muted">{work.description}</p>
-        {showStreamer && streamerName && <p className="mt-3 text-xs text-muted/70">Chaîne : {streamerName}</p>}
+        {showStreamer && streamerName && <p className="mt-3 text-xs text-muted/70">{t(locale, { fr: "Chaîne :", en: "Channel:" })} {streamerName}</p>}
       </div>
     </article>
   );

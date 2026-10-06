@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { useLocale } from "./I18nProvider";
 import { defaultProtection, type ProtectionSettings } from "@/lib/protection";
 
 // Mesures dissuasives sur les médias du portfolio. Rien n'empêche totalement une
@@ -87,6 +88,7 @@ export function ProtectedMedia({
 export function ScreenShield() {
   const { blur } = useContext(ProtectionContext);
   const [hidden, setHidden] = useState(false);
+  const locale = useLocale();
 
   useEffect(() => {
     if (!blur) return;
@@ -165,7 +167,7 @@ export function ScreenShield() {
         hidden ? "opacity-100" : "opacity-0"
       }`}
     >
-      {hidden ? "Contenu protégé" : ""}
+      {hidden ? (locale === "en" ? "Protected content" : "Contenu protégé") : ""}
     </div>
   );
 }

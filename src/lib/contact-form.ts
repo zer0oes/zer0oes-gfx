@@ -13,6 +13,60 @@ export const providedAssets = ["Logo", "Charte graphique", "Police(s)", "Mascott
 export const referralSources = ["Twitch", "Instagram", "TikTok", "Google", "Recommandation", "Autre"];
 export const MAX_REFERENCES = 5;
 
+// Affichage en anglais des choix (la valeur envoyée reste la valeur française ci-dessus)
+const choicesEn: Record<string, string> = {
+  "Projet sur mesure": "Custom project",
+  "Devis Univers complet": "Full Universe quote",
+  "Question sur une offre": "Question about a package",
+  "Collaboration / partenariat": "Collaboration / partnership",
+  Autre: "Other",
+  "Moins de 500 €": "Under €500",
+  "500 à 1 000 €": "€500 to €1,000",
+  "1 000 à 2 000 €": "€1,000 to €2,000",
+  "Plus de 2 000 €": "Over €2,000",
+  Oui: "Yes",
+  Partiellement: "Partly",
+  Non: "No",
+  Sombre: "Dark",
+  Néon: "Neon",
+  Minimaliste: "Minimalist",
+  Rétro: "Retro",
+  Coloré: "Colourful",
+  "Charte graphique": "Brand guidelines",
+  "Police(s)": "Font(s)",
+  "Mascotte / personnage": "Mascot / character",
+  "Images / illustrations": "Images / illustrations",
+  "Aucun élément pour l'instant": "Nothing yet",
+  Recommandation: "Recommendation",
+};
+
+export function choiceLabel(locale: "fr" | "en", value: string) {
+  return locale === "en" ? (choicesEn[value] ?? value) : value;
+}
+
+// Messages renvoyés au visiteur par les formulaires (contact, message, brief), en anglais sur /en
+const messagesEn: Record<string, string> = {
+  "Merci d'indiquer ton nom, un e-mail valide et quelques mots sur ce que tu as en tête (10 caractères minimum).":
+    "Please give your name, a valid email and a few words about what you have in mind (10 characters minimum).",
+  "Merci d'indiquer ton nom, un e-mail valide et ton message (10 caractères minimum).":
+    "Please give your name, a valid email and your message (10 characters minimum).",
+  "Coche la case d'accord pour que je puisse utiliser tes informations et te répondre.":
+    "Please tick the consent box so I can use your information and reply to you.",
+  [`${MAX_REFERENCES} liens d'inspiration maximum.`]: `${MAX_REFERENCES} inspiration links maximum.`,
+  "Les inspirations doivent être des liens (https://…), un par ligne.": "Inspirations must be links (https://…), one per line.",
+  "Merci !": "Thank you!",
+  "L'envoi a échoué, réessaie ou écris-moi directement par e-mail.": "Sending failed, please try again or email me directly.",
+  "Message envoyé ! Je te réponds sous 48 h ouvrées.": "Message sent! I'll reply within 2 business days.",
+  "Merci d'indiquer au minimum ton e-mail, ta chaîne et ton univers.": "Please give at least your email, your channel and your universe.",
+  "Merci d'indiquer le lien vers ton logo existant.": "Please give the link to your existing logo.",
+  "L'envoi a échoué, réessaie ou envoie ton brief par e-mail.": "Sending failed, please try again or send your brief by email.",
+  "Brief bien reçu ! Je reviens vers toi sous 48 h ouvrées pour démarrer.": "Brief received! I'll get back to you within 2 business days to get started.",
+};
+
+export function formMessage(locale: "fr" | "en", message: string) {
+  return locale === "en" ? (messagesEn[message] ?? message) : message;
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Get = (name: string) => string;

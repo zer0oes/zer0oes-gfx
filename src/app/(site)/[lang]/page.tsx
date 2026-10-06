@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import Image from "next/image";
+import { site } from "@/data/site";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
 import { HoverVideo } from "@/components/HoverVideo";
@@ -8,6 +11,8 @@ import { activePacks } from "@/lib/pricing";
 import { ProtectedMedia } from "@/components/protection";
 import { getStore } from "@/lib/store";
 import { mediaUrl } from "@/lib/media";
+import { asLocale, href, t } from "@/lib/i18n";
+import { trDeep } from "@/lib/translations-en";
 
 const kickerClass = "text-xs font-semibold uppercase tracking-[0.2em] text-accent";
 const titleClass = "mt-3 font-display text-3xl font-bold leading-tight sm:text-4xl";
@@ -34,6 +39,14 @@ function Lines({ lines }: { lines: string[] }) {
   ));
 }
 
+// Taille du grand titre : réduite quand une ligne dépasse 12 caractères, pour ne jamais passer sous le visuel
+function heroTitleSize(...lines: string[]) {
+  const longest = Math.max(...lines.map((l) => l.length));
+  if (longest <= 12) return "text-6xl sm:text-7xl xl:text-[5.5rem]";
+  if (longest <= 15) return "text-5xl sm:text-6xl xl:text-[4.5rem]";
+  return "text-4xl sm:text-5xl xl:text-6xl";
+}
+
 // Emplacements des emotes autour du visuel du hero (légèrement en dehors du cadre),
 // de tailles différentes ; elles surgissent une à une après le bandeau
 const emoteSpots = [
@@ -43,11 +56,25 @@ const emoteSpots = [
   "-bottom-8 right-10 h-16 w-16 -rotate-6 sm:h-24 sm:w-24",
 ];
 
-export default async function Home() {
+export async function generateMetadata({ params }: PageProps<"/[lang]">): Promise<Metadata> {
+  const lang = asLocale((await params).lang);
+  const meta = pageMetadata(lang, "/", {
+    fr: { description: site.description },
+    en: {
+      description: "Custom logo, overlays, banner, avatar and emotes for Twitch, YouTube and Kick. A stream identity that looks like you.",
+    },
+  });
+  return lang === "en" ? { ...meta, title: { absolute: `${site.name} — Custom visual identities and stream overlays` } } : meta;
+}
+
+export default async function Home({ params }: PageProps<"/[lang]">) {
+  const lang = asLocale((await params).lang);
+  const to = (path: string) => href(lang, path);
   const store = getStore();
-  const [catalog, { works, streamers }, stored] = await Promise.all([store.getCatalog(), store.getPortfolio(), store.getHomeContent()]);
+  const [catalog, portfolio, stored] = await Promise.all([store.getCatalog(), store.getPortfolio(), store.getHomeContent()]);
+  const { works, streamers } = trDeep(lang, portfolio);
   // Textes et visuels choisis dans l'admin (Admin > Accueil), sinon contenu d'origine
-  const c = resolveHome(stored);
+  const c = resolveHome(stored, lang);
   // Visuel choisi : « - » masque la partie, vide = choix automatique
   const pick = (key: string) => {
     const id = c.text(key);
@@ -90,17 +117,18 @@ export default async function Home() {
         />
         <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-12 lg:gap-10">
           <div className="text-center lg:col-span-6 lg:text-left">
-            <h1 className="font-display text-6xl font-bold leading-[0.95] tracking-tight sm:text-7xl xl:text-[5.5rem]">
+            {/* Taille adaptée à la longueur du titre (ex. « Your universe. », plus long que « Ton univers. ») */}
+            <h1 className={`relative z-10 font-display font-bold leading-[0.95] tracking-tight ${heroTitleSize(c.text("hero.title1"), c.text("hero.title2"))}`}>
               <span className="whitespace-nowrap">{c.text("hero.title1")}</span>
               <br />
               <span className="text-gradient whitespace-nowrap">{c.text("hero.title2")}</span>
             </h1>
             <p className="mx-auto mt-8 max-w-md text-lg text-muted lg:mx-0">{c.text("hero.text")}</p>
             <div className="mt-10 flex flex-col items-center gap-5 sm:flex-row lg:items-center">
-              <Link href="/portfolio" className="rounded-full bg-accent px-8 py-3.5 text-center font-semibold text-background transition hover:brightness-110">
+              <Link href={to("/portfolio")} className="rounded-full bg-accent px-8 py-3.5 text-center font-semibold text-background transition hover:brightness-110">
                 {c.text("hero.cta")}
               </Link>
-              <Link href="/offres" className="text-sm text-muted underline-offset-4 transition hover:text-foreground hover:underline">
+              <Link href={to("/offres")} className="text-sm text-muted underline-offset-4 transition hover:text-foreground hover:underline">
                 {c.text("hero.link")}
               </Link>
             </div>
@@ -108,7 +136,7 @@ export default async function Home() {
           {hero?.image && (
             // Création en grand, décalée vers la droite, avec quelques emotes qui débordent autour
             <div className="relative lg:col-span-6 lg:-mr-6 xl:-mr-14">
-              <Link href={projectHref(hero.streamer)} data-hover-root className="group relative block">
+              <Link href={to(projectHref(hero.streamer))} data-hover-root className="group relative block">
                 <div
                   aria-hidden
                   className="absolute -inset-4 rounded-3xl opacity-50 blur-2xl transition group-hover:opacity-70"
@@ -153,7 +181,7 @@ export default async function Home() {
               <h2 className={titleClass}>
                 <Lines lines={c.lines("emotes.title")} />
               </h2>
-              <Link href={projectHref(emoteWork.streamer, "emotes")} className="mt-4 inline-block text-sm text-accent hover:underline">
+              <Link href={to(projectHref(emoteWork.streamer, "emotes"))} className="mt-4 inline-block text-sm text-accent hover:underline">
                 {c.text("emotes.link")}
               </Link>
             </div>
@@ -172,7 +200,7 @@ export default async function Home() {
         {universe && (
           <div data-reveal style={{ "--reveal-delay": "1100ms" } as React.CSSProperties} className="mt-16 grid items-center gap-8 lg:grid-cols-12">
             <div className="lg:col-span-7">
-              <Showcase work={universe} href={projectHref(universe.streamer)} sizes="(min-width: 1024px) 660px, 100vw" />
+              <Showcase work={universe} href={to(projectHref(universe.streamer))} sizes="(min-width: 1024px) 660px, 100vw" />
             </div>
             <div className="lg:col-span-5">
               <p className={kickerClass}>
@@ -182,7 +210,7 @@ export default async function Home() {
                 <Lines lines={c.lines("universe.title")} />
               </h2>
               <p className="mt-4 text-muted">{c.text("universe.text")}</p>
-              <Link href={projectHref(universe.streamer)} className="mt-4 inline-block text-sm text-accent hover:underline">
+              <Link href={to(projectHref(universe.streamer))} className="mt-4 inline-block text-sm text-accent hover:underline">
                 {c.text("universe.link")}
               </Link>
             </div>
@@ -198,12 +226,12 @@ export default async function Home() {
               <h2 className={titleClass}>
                 <Lines lines={c.lines("signature.title")} />
               </h2>
-              <Link href="/portfolio" className="mt-4 inline-block text-sm text-accent hover:underline">
+              <Link href={to("/portfolio")} className="mt-4 inline-block text-sm text-accent hover:underline">
                 {c.text("signature.link")}
               </Link>
             </div>
             <div className="order-1 lg:order-2 lg:col-span-7">
-              <Showcase work={signature} href={projectHref(signature.streamer)} sizes="(min-width: 1024px) 660px, 100vw" />
+              <Showcase work={signature} href={to(projectHref(signature.streamer))} sizes="(min-width: 1024px) 660px, 100vw" />
             </div>
           </div>
         )}
@@ -219,7 +247,7 @@ export default async function Home() {
               style={{ background: "radial-gradient(circle, rgba(219,39,160,0.95) 0%, rgba(124,58,237,0.85) 45%, rgba(76,29,149,0.5) 62%, transparent 72%)" }}
             />
             <ProtectedMedia className="relative overflow-hidden rounded-full border-[3px] border-white/90 shadow-[0_0_24px_rgba(255,255,255,0.25)]">
-              <Image src={mediaUrl("/a-propos/zer0oes-avatar.webp")} alt="Aurore, alias zer0oes" width={500} height={500} draggable={false} sizes="(min-width: 640px) 224px, 176px" className="aspect-square h-auto w-full object-cover" />
+              <Image src={mediaUrl("/a-propos/zer0oes-avatar.webp")} alt={t(lang, { fr: "Aurore, alias zer0oes", en: "Aurore, aka zer0oes" })} width={500} height={500} draggable={false} sizes="(min-width: 640px) 224px, 176px" className="aspect-square h-auto w-full object-cover" />
             </ProtectedMedia>
           </div>
           <div className="lg:col-span-7 lg:col-start-6">
@@ -234,8 +262,8 @@ export default async function Home() {
                 {t}
               </p>
             ))}
-            <Link href="/a-propos" className="mt-6 inline-block text-sm text-accent hover:underline">
-              En savoir plus sur moi →
+            <Link href={to("/a-propos")} className="mt-6 inline-block text-sm text-accent hover:underline">
+              {t(lang, { fr: "En savoir plus sur moi →", en: "More about me →" })}
             </Link>
           </div>
         </div>
@@ -249,7 +277,7 @@ export default async function Home() {
             <li key={n} className="border-t border-border pt-5">
               <span className="font-display text-4xl font-bold text-gradient">0{n}</span>
               <h3 className="mt-3 font-semibold">{c.text(`steps.s${n}title`)}</h3>
-              <p className="mt-1 text-sm text-muted">{c.text(`steps.s${n}text`).replaceAll("{delai}", settings.deliveryDays)}</p>
+              <p className="mt-1 text-sm text-muted">{c.text(`steps.s${n}text`).replaceAll("{delai}", lang === "en" ? settings.deliveryDays.replace(" à ", " to ") : settings.deliveryDays)}</p>
             </li>
           ))}
         </ol>
@@ -261,13 +289,13 @@ export default async function Home() {
             <p className={kickerClass}>{c.text("offers.kicker")}</p>
             <h2 className={titleClass}>{c.text("offers.title")}</h2>
           </div>
-          <Link href="/offres" className="text-sm text-accent hover:underline">
+          <Link href={to("/offres")} className="text-sm text-accent hover:underline">
             {c.text("offers.link")}
           </Link>
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {packs.map((p) => (
-            <PackCard key={p.id} pack={p} settings={settings} compact />
+            <PackCard key={p.id} pack={p} settings={settings} compact locale={lang} />
           ))}
         </div>
       </section>
@@ -276,7 +304,7 @@ export default async function Home() {
         <div className="rounded-3xl border border-border bg-surface-2 p-10 text-center">
           <h2 className="font-display text-3xl font-bold">{c.text("custom.title")}</h2>
           <p className="mx-auto mt-3 max-w-xl text-muted">{c.text("custom.text")}</p>
-          <Link href="/contact" className="mt-8 inline-block rounded-full bg-foreground px-7 py-3 font-semibold text-background transition hover:brightness-90">
+          <Link href={to("/contact")} className="mt-8 inline-block rounded-full bg-foreground px-7 py-3 font-semibold text-background transition hover:brightness-90">
             {c.text("custom.button")}
           </Link>
         </div>

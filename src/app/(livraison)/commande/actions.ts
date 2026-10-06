@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { canCancelApproval, cleanNote, isDeliveryToken } from "@/lib/delivery";
 import { notify } from "@/lib/notify";
 import { createBalanceLink } from "@/lib/orders";
+import { requestLocale } from "@/lib/request-locale";
 import { siteUrl } from "@/lib/site-url";
 import { balanceDue, getStore } from "@/lib/store";
 
@@ -68,7 +69,7 @@ export async function payBalanceAction(formData: FormData) {
   if (balanceDue(order) <= 0) redirect(`/commande/${token}`);
   let url: string;
   try {
-    ({ url } = await createBalanceLink(order.id, await siteUrl(), `/commande/${token}`));
+    ({ url } = await createBalanceLink(order.id, await siteUrl(), `/commande/${token}`, await requestLocale()));
   } catch (e) {
     console.error(e);
     redirect(`/commande/${token}?retour=paiement-erreur#solde`);

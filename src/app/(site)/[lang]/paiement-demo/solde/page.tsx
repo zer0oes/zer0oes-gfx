@@ -19,7 +19,7 @@ async function simulate(formData: FormData) {
   redirect("/merci/solde?demo=1");
 }
 
-export default async function DemoBalancePage({ searchParams }: PageProps<"/paiement-demo/solde">) {
+export default async function DemoBalancePage({ searchParams }: PageProps<"/[lang]/paiement-demo/solde">) {
   if (isProductionLike()) notFound();
   const { commande } = await searchParams;
   const order = typeof commande === "string" ? await getStore().getOrder(commande) : null;
@@ -29,7 +29,7 @@ export default async function DemoBalancePage({ searchParams }: PageProps<"/paie
   return (
     <>
       <PageHeader eyebrow="Démo" title="Paiement du solde">
-        {order.offerName} — {due > 0 ? `${formatPrice(due)} HT à régler` : "rien à régler"}
+        {order.offerName} — {due > 0 ? `${formatPrice(due)} à régler` : "rien à régler"}
       </PageHeader>
       <div className="mx-auto max-w-md px-4 text-center">
         <p className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
@@ -39,7 +39,7 @@ export default async function DemoBalancePage({ searchParams }: PageProps<"/paie
           <form action={simulate}>
             <input type="hidden" name="id" value={order.id} />
             <button type="submit" className="rounded-full bg-accent px-6 py-3 font-semibold text-background hover:brightness-110">
-              Simuler le paiement de {formatPrice(due)} HT
+              Simuler le paiement de {formatPrice(due)}
             </button>
           </form>
         )}

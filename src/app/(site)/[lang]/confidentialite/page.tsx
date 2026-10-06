@@ -3,12 +3,23 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui";
 import { legal, site } from "@/data/site";
 import { FILES_RETENTION_MONTHS } from "@/lib/portal";
+import { asLocale } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/seo";
 import { STATS_RETENTION_MONTHS } from "@/lib/stats";
+import { PrivacyEn } from "./privacy-en";
 
-export const metadata: Metadata = {
-  title: "Politique de confidentialité",
-  description: "Quelles données sont collectées sur zer0oes gfx, pourquoi, combien de temps elles sont conservées et comment exercer tes droits.",
-};
+export async function generateMetadata({ params }: PageProps<"/[lang]/confidentialite">): Promise<Metadata> {
+  return pageMetadata(asLocale((await params).lang), "/confidentialite", {
+    fr: {
+      title: "Politique de confidentialité",
+      description: "Quelles données sont collectées sur zer0oes gfx, pourquoi, combien de temps elles sont conservées et comment exercer tes droits.",
+    },
+    en: {
+      title: "Privacy policy",
+      description: "What data zer0oes gfx collects, why, how long it is kept and how to exercise your rights.",
+    },
+  });
+}
 
 // Durées de conservation : à garder alignées avec le fonctionnement réel du site
 // (fichiers livrés : FILES_RETENTION_MONTHS dans src/lib/portal.ts, purge par npm run purge:livrables).
@@ -31,7 +42,8 @@ const processors = [
   ["Google (Gmail)", "messagerie professionnelle", "États-Unis*"],
 ];
 
-export default function PrivacyPage() {
+export default async function PrivacyPage({ params }: PageProps<"/[lang]/confidentialite">) {
+  if (asLocale((await params).lang) === "en") return <PrivacyEn />;
   return (
     <>
       <PageHeader title="Politique de confidentialité">Tes données, ce que j&apos;en fais, et combien de temps je les garde.</PageHeader>
@@ -118,8 +130,10 @@ export default function PrivacyPage() {
 
         <h2>Cookies</h2>
         <p>
-          Ce site ne dépose aucun cookie lorsque tu le visites : la mesure d&apos;audience est anonyme et sans cookie, et il
-          n&apos;y a ni publicité, ni réseaux sociaux intégrés. C&apos;est pour ça qu&apos;il n&apos;y a pas de bandeau cookies. Le paiement se fait sur
+          Ce site ne dépose aucun cookie de suivi : la mesure d&apos;audience est anonyme et sans cookie, et il n&apos;y a ni
+          publicité, ni réseaux sociaux intégrés. Seul ton choix de langue est mémorisé (cookie « zgfx_lang », 1 an) si tu
+          utilises le sélecteur FR / EN : c&apos;est un cookie de préférence, sans suivi. C&apos;est pour ça qu&apos;il n&apos;y a
+          pas de bandeau cookies. Le paiement se fait sur
           les pages de Stripe, qui gère ses propres cookies, nécessaires à la sécurité du paiement.
         </p>
 

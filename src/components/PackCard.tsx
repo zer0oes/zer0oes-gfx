@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { href, t, type Locale } from "@/lib/i18n";
 import { type Pack, type PricingSettings } from "@/lib/pricing";
+import { trDeep } from "@/lib/translations-en";
 import { OfferPrice } from "./ui";
 import { OrderForm } from "./OrderForm";
 
@@ -14,17 +16,22 @@ export function CardSection({ title, children, className = "" }: { title: string
 }
 
 export function PackCard({
-  pack,
+  pack: original,
   settings,
   order = false,
   compact = false,
+  locale = "fr",
 }: {
   pack: Pack;
   settings: PricingSettings;
   order?: boolean;
   // Version courte (accueil) : prix, promesse et livrables, sans options ni notes
   compact?: boolean;
+  locale?: Locale;
 }) {
+  // Textes de l'offre dans la langue de la page
+  const pack = trDeep(locale, original);
+  const to = (path: string) => href(locale, path);
   const quote = !pack.checkout;
   const buttonClass = `w-full rounded-full px-5 py-3 text-center font-semibold transition hover:brightness-110 ${
     pack.highlight || quote ? "bg-accent text-background" : "bg-foreground text-background"
@@ -47,15 +54,17 @@ export function PackCard({
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="font-display text-xl font-bold">{pack.name}</h3>
         {quote && (
-          <span className="rounded-full border border-accent-3/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-accent-3">Sur devis</span>
+          <span className="rounded-full border border-accent-3/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-accent-3">
+            {t(locale, { fr: "Sur devis", en: "Quote" })}
+          </span>
         )}
       </div>
       <p className="mt-2 font-display text-3xl font-bold">
-        <OfferPrice item={pack} stacked />
+        <OfferPrice item={pack} stacked locale={locale} />
       </p>
       <p className={`mt-3 ${quote ? "text-base text-foreground" : "text-sm text-muted"}`}>{pack.tagline}</p>
 
-      <CardSection title="Inclus">
+      <CardSection title={t(locale, { fr: "Inclus", en: "Included" })}>
         <ul className="space-y-2.5 text-sm">
           {pack.deliverables.map((f) => (
             <li key={f} className="flex gap-2">
@@ -69,7 +78,15 @@ export function PackCard({
       </CardSection>
 
       {showExtras ? (
-        <CardSection title={quote ? "Par exemple" : pack.extras!.length > 1 ? "Options" : "Option"}>
+        <CardSection
+          title={
+            quote
+              ? t(locale, { fr: "Par exemple", en: "For example" })
+              : pack.extras!.length > 1
+                ? t(locale, { fr: "Options", en: "Add-ons" })
+                : t(locale, { fr: "Option", en: "Add-on" })
+          }
+        >
           <ul className={`space-y-2 text-sm ${quote ? "" : "text-muted"}`}>
             {pack.extras!.map((e) => (
               <li key={e} className={quote ? "flex gap-2" : ""}>
@@ -78,7 +95,7 @@ export function PackCard({
                     ✦
                   </span>
                 )}
-                <span>{e.replace(/^Option : /, "")}</span>
+                <span>{e.replace(/^(Option : |Add-on: )/, "")}</span>
               </li>
             ))}
           </ul>
@@ -90,23 +107,23 @@ export function PackCard({
       {!order ? (
         <div className={compact ? "mt-auto pt-6" : "mt-8"}>
           <Link
-            href={`/offres#offre-${pack.id}`}
+            href={to(`/offres#offre-${pack.id}`)}
             className={`block rounded-full px-5 py-3 text-center font-semibold transition ${
               pack.highlight || quote ? "bg-accent text-background hover:brightness-110" : "border border-border hover:border-accent"
             }`}
           >
-            {quote ? "Découvrir l'offre" : "Voir le détail"}
+            {quote ? t(locale, { fr: "Découvrir l'offre", en: "Discover the package" }) : t(locale, { fr: "Voir le détail", en: "See details" })}
           </Link>
         </div>
       ) : pack.checkout ? (
         <OrderForm pack={pack} settings={settings} buttonClass={buttonClass} />
       ) : (
         <div className="mt-8 space-y-3">
-          <Link href={`/contact?offre=${pack.id}`} className={`block ${buttonClass} shadow-[0_0_30px_-10px_var(--accent)]`}>
-            Demander mon devis
+          <Link href={to(`/contact?offre=${pack.id}`)} className={`block ${buttonClass} shadow-[0_0_30px_-10px_var(--accent)]`}>
+            {t(locale, { fr: "Demander mon devis", en: "Request my quote" })}
           </Link>
-          <Link href="/portfolio" className="block text-center text-sm text-muted hover:text-foreground">
-            Voir des univers complets →
+          <Link href={to("/portfolio")} className="block text-center text-sm text-muted hover:text-foreground">
+            {t(locale, { fr: "Voir des univers complets →", en: "See complete universes →" })}
           </Link>
         </div>
       )}

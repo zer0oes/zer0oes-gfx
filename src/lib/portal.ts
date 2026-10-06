@@ -32,7 +32,8 @@ export function filesExpired(order: Pick<PortalOrder, "completedAt">, now = new 
 }
 
 // Les 5 étapes montrées au client : brief reçu, création, validation, solde, livraison
-export function orderSteps(order: PortalOrder, items: { approvedAt?: string }[]): Step[] {
+export function orderSteps(order: PortalOrder, items: { approvedAt?: string }[], locale: "fr" | "en" = "fr"): Step[] {
+  const en = locale === "en";
   const r = rank[order.status];
   const briefDone = Boolean(order.brief || order.briefReceivedAt) || r >= 1;
   const delivered = r >= 3 || items.length > 0;
@@ -41,18 +42,34 @@ export function orderSteps(order: PortalOrder, items: { approvedAt?: string }[])
   const finished = r >= 5 || (validated && paid);
 
   const steps: Step[] = [
-    { id: "brief", label: "Brief reçu", state: briefDone ? "fait" : "en_cours" },
-    { id: "creation", label: "Création", state: delivered ? "fait" : briefDone ? "en_cours" : "a_venir" },
-    { id: "validation", label: "Validation", state: validated ? "fait" : delivered ? "en_cours" : "a_venir" },
-    { id: "solde", label: "Solde", state: paid ? "fait" : validated ? "en_cours" : "a_venir" },
-    { id: "livraison", label: "Livraison", state: finished ? "fait" : validated && paid ? "en_cours" : "a_venir" },
+    { id: "brief", label: en ? "Brief received" : "Brief reçu", state: briefDone ? "fait" : "en_cours" },
+    { id: "creation", label: en ? "Creation" : "Création", state: delivered ? "fait" : briefDone ? "en_cours" : "a_venir" },
+    { id: "validation", label: en ? "Approval" : "Validation", state: validated ? "fait" : delivered ? "en_cours" : "a_venir" },
+    { id: "solde", label: en ? "Balance" : "Solde", state: paid ? "fait" : validated ? "en_cours" : "a_venir" },
+    { id: "livraison", label: en ? "Delivery" : "Livraison", state: finished ? "fait" : validated && paid ? "en_cours" : "a_venir" },
   ];
   return steps;
 }
 
 // Phrase de statut affichée en haut de l'espace commande
-export function statusMessage(steps: Step[]) {
+export function statusMessage(steps: Step[], locale: "fr" | "en" = "fr") {
   const current = steps.find((s) => s.state === "en_cours");
+  if (locale === "en") {
+    switch (current?.id) {
+      case "brief":
+        return "Order confirmed! Next step: your brief, so I can get started.";
+      case "creation":
+        return "Brief received: I'm working on your creation. Previews will appear here.";
+      case "validation":
+        return "Your previews are ready: approve each item or request a change.";
+      case "solde":
+        return "Everything is approved, thank you! The balance remains to be paid to unlock your files.";
+      case "livraison":
+        return "Your final files are available.";
+      default:
+        return steps.every((s) => s.state === "fait") ? "Project complete: your final files are available." : "";
+    }
+  }
   switch (current?.id) {
     case "brief":
       return "Commande confirmée ! Prochaine étape : ton brief, pour que je puisse commencer.";

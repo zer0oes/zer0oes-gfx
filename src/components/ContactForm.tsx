@@ -3,12 +3,122 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { sendContact, sendMessage } from "@/app/actions";
+import { href, type Locale } from "@/lib/i18n";
 import type { OptionChoice } from "@/lib/pricing";
-import { budgets, identityLevels, MAX_REFERENCES, messageSubjects, platforms, providedAssets, referralSources, requestTypes, styles } from "@/lib/contact-form";
+import {
+  budgets,
+  choiceLabel,
+  identityLevels,
+  MAX_REFERENCES,
+  messageSubjects,
+  platforms,
+  providedAssets,
+  referralSources,
+  requestTypes,
+  styles,
+} from "@/lib/contact-form";
+import { useLocale } from "./I18nProvider";
 import { Field, FormStatus, OptionsField, inputClass } from "./ui";
+
+// Textes des deux formulaires. Les valeurs envoyées (types, budgets, plateformes…) restent
+// en français pour le serveur et les e-mails reçus par Aurore ; seul l'affichage est traduit.
+const texts = {
+  fr: {
+    name: "Nom ou pseudo *",
+    email: "E-mail *",
+    project: "Ton projet",
+    channel: "Lien de ta chaîne",
+    type: "Type de projet",
+    budget: "Budget indicatif",
+    budgetUnknown: "Je ne sais pas encore",
+    platforms: "Plateforme(s)",
+    deadline: "Date souhaitée / deadline",
+    deadlinePlaceholder: "Ex. avant le 15 novembre, pour l'anniversaire de ma chaîne…",
+    universe: "Ton univers visuel",
+    identity: "As-tu déjà une identité visuelle ?",
+    style: "Style recherché",
+    styleHint: "Plusieurs choix possibles.",
+    styleOther: "Autre style (facultatif)",
+    styleOtherPlaceholder: "Ex. cyberpunk pastel, cosy, horreur…",
+    colors: "Couleurs à privilégier / éviter (facultatif)",
+    colorsPlaceholder: "Ex. violet et bleu nuit, pas de jaune",
+    references: "Liens d'inspiration",
+    referencesHint: `Un lien par ligne, ${MAX_REFERENCES} maximum : chaînes, Pinterest, Behance, images…`,
+    have: "Ce que tu as déjà",
+    assets: "Éléments disponibles",
+    filesLater: "Je pourrai envoyer mes fichiers après la prise de contact",
+    filesLaterHint: "Pas besoin de les joindre maintenant : on s'organise ensemble ensuite.",
+    need: "Besoin précis",
+    options: "Options complémentaires",
+    optional: "facultatif",
+    show: "Voir ↓",
+    hide: "Masquer ↑",
+    optionsLegend: "Ce qui pourrait s'ajouter à ton projet",
+    message: "Dis-moi ce que tu as en tête *",
+    messagePlaceholder:
+      "Décris-moi ce que tu imagines, l'ambiance recherchée, les éléments indispensables et tout ce qui peut m'aider à comprendre ton projet.",
+    referral: "Comment m'as-tu trouvée ?",
+    consentProject: "répondre à ma demande et préparer un devis",
+    noteProject: "Réponse sous 48 h ouvrées. Je reviendrai vers toi avec une première estimation ou quelques questions si besoin.",
+    subject: "Sujet",
+    simpleMessage: "Message *",
+    consentMessage: "répondre à mon message",
+    noteMessage: "Réponse sous 48 h ouvrées.",
+    consent: (purpose: string) => `J'accepte que mes informations soient utilisées pour ${purpose}. *`,
+    privacy: "Politique de confidentialité",
+    sending: "Envoi…",
+    send: "Envoyer",
+  },
+  en: {
+    name: "Name or nickname *",
+    email: "Email *",
+    project: "Your project",
+    channel: "Link to your channel",
+    type: "Project type",
+    budget: "Approximate budget",
+    budgetUnknown: "I don't know yet",
+    platforms: "Platform(s)",
+    deadline: "Preferred date / deadline",
+    deadlinePlaceholder: "E.g. before 15 November, for my channel's anniversary…",
+    universe: "Your visual universe",
+    identity: "Do you already have a visual identity?",
+    style: "Desired style",
+    styleHint: "Several choices possible.",
+    styleOther: "Other style (optional)",
+    styleOtherPlaceholder: "E.g. pastel cyberpunk, cosy, horror…",
+    colors: "Colours to favour / avoid (optional)",
+    colorsPlaceholder: "E.g. purple and midnight blue, no yellow",
+    references: "Inspiration links",
+    referencesHint: `One link per line, ${MAX_REFERENCES} maximum: channels, Pinterest, Behance, images…`,
+    have: "What you already have",
+    assets: "Available assets",
+    filesLater: "I can send my files after we get in touch",
+    filesLaterHint: "No need to attach them now: we'll sort it out together afterwards.",
+    need: "Specific needs",
+    options: "Additional add-ons",
+    optional: "optional",
+    show: "Show ↓",
+    hide: "Hide ↑",
+    optionsLegend: "What could be added to your project",
+    message: "Tell me what you have in mind *",
+    messagePlaceholder: "Describe what you imagine, the mood you're after, the must-have elements and anything that can help me understand your project.",
+    referral: "How did you find me?",
+    consentProject: "answer my request and prepare a quote",
+    noteProject: "Reply within 2 business days. I'll get back to you with a first estimate or a few questions if needed.",
+    subject: "Subject",
+    simpleMessage: "Message *",
+    consentMessage: "answer my message",
+    noteMessage: "Reply within 2 business days.",
+    consent: (purpose: string) => `I agree that my information may be used to ${purpose}. *`,
+    privacy: "Privacy policy",
+    sending: "Sending…",
+    send: "Send",
+  },
+} satisfies Record<Locale, Record<string, unknown>>;
 
 // Choix rapides en pastilles (cases à cocher ou boutons radio stylés)
 function Chips({ legend, name, choices, type = "checkbox", hint }: { legend: string; name: string; choices: string[]; type?: "checkbox" | "radio"; hint?: string }) {
+  const locale = useLocale();
   return (
     <fieldset>
       <legend className="mb-1.5 block text-sm font-medium">{legend}</legend>
@@ -18,7 +128,7 @@ function Chips({ legend, name, choices, type = "checkbox", hint }: { legend: str
           <label key={c} className="cursor-pointer">
             <input type={type} name={name} value={c} className="peer sr-only" />
             <span className="inline-block rounded-full border border-border bg-background px-3.5 py-1.5 text-sm text-muted transition peer-checked:border-accent peer-checked:bg-accent/15 peer-checked:text-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-accent hover:text-foreground">
-              {c}
+              {choiceLabel(locale, c)}
             </span>
           </label>
         ))}
@@ -41,13 +151,15 @@ function Section({ step, title, children }: { step: string; title: string; child
 
 // Consentement RGPD, obligatoire sur les deux formulaires
 function Consent({ purpose }: { purpose: string }) {
+  const locale = useLocale();
+  const tx = texts[locale];
   return (
     <label className="flex items-start gap-2 text-sm text-muted">
       <input type="checkbox" name="consent" value="1" required className="mt-1 accent-[var(--accent)]" />
       <span>
-        J&apos;accepte que mes informations soient utilisées pour {purpose}. *{" "}
-        <Link href="/confidentialite" className="text-accent underline-offset-4 hover:underline">
-          Politique de confidentialité
+        {tx.consent(purpose)}{" "}
+        <Link href={href(locale, "/confidentialite")} className="text-accent underline-offset-4 hover:underline">
+          {tx.privacy}
         </Link>
       </span>
     </label>
@@ -55,6 +167,7 @@ function Consent({ purpose }: { purpose: string }) {
 }
 
 function Submit({ pending, note }: { pending: boolean; note: string }) {
+  const tx = texts[useLocale()];
   return (
     <div>
       <button
@@ -62,16 +175,22 @@ function Submit({ pending, note }: { pending: boolean; note: string }) {
         disabled={pending}
         className="rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110 disabled:opacity-60"
       >
-        {pending ? "Envoi…" : "Envoyer"}
+        {pending ? tx.sending : tx.send}
       </button>
       <p className="mt-3 text-sm text-muted">{note}</p>
     </div>
   );
 }
 
-// Pot de miel anti-spam, invisible pour les humains
-function Honeypot() {
-  return <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />;
+// Pot de miel anti-spam, invisible pour les humains ; langue du visiteur pour les réponses du serveur
+function Hidden() {
+  const locale = useLocale();
+  return (
+    <>
+      <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
+      <input type="hidden" name="lang" value={locale} />
+    </>
+  );
 }
 
 export function ContactForm({
@@ -82,109 +201,108 @@ export function ContactForm({
   optionChoices: OptionChoice[];
 }) {
   const [state, action, pending] = useActionState(sendContact, null);
+  const locale = useLocale();
+  const tx = texts[locale];
 
   if (state?.ok) return <FormStatus state={state} />;
 
   return (
     <form action={action} className="space-y-8">
-      <Honeypot />
+      <Hidden />
 
-      <Section step="01" title="Ton projet">
+      <Section step="01" title={tx.project}>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Nom ou pseudo *">
+          <Field label={tx.name}>
             <input name="name" required autoComplete="nickname" className={inputClass} />
           </Field>
-          <Field label="E-mail *">
+          <Field label={tx.email}>
             <input name="email" type="email" required autoComplete="email" className={inputClass} />
           </Field>
         </div>
-        <Field label="Lien de ta chaîne">
+        <Field label={tx.channel}>
           <input name="channel" type="url" placeholder="https://twitch.tv/…" className={inputClass} />
         </Field>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Type de projet">
+          <Field label={tx.type}>
             <select name="type" className={inputClass} defaultValue={defaultType}>
-              {requestTypes.map((t) => (
-                <option key={t}>{t}</option>
+              {requestTypes.map((v) => (
+                <option key={v} value={v}>
+                  {choiceLabel(locale, v)}
+                </option>
               ))}
             </select>
           </Field>
-          <Field label="Budget indicatif">
+          <Field label={tx.budget}>
             <select name="budget" className={inputClass} defaultValue="">
-              <option value="">Je ne sais pas encore</option>
+              <option value="">{tx.budgetUnknown}</option>
               {budgets.map((b) => (
-                <option key={b}>{b}</option>
+                <option key={b} value={b}>
+                  {choiceLabel(locale, b)}
+                </option>
               ))}
             </select>
           </Field>
         </div>
-        <Chips legend="Plateforme(s)" name="platforms" choices={platforms} />
-        <Field label="Date souhaitée / deadline">
-          <input name="deadline" placeholder="Ex. avant le 15 novembre, pour l'anniversaire de ma chaîne…" maxLength={100} className={inputClass} />
+        <Chips legend={tx.platforms} name="platforms" choices={platforms} />
+        <Field label={tx.deadline}>
+          <input name="deadline" placeholder={tx.deadlinePlaceholder} maxLength={100} className={inputClass} />
         </Field>
       </Section>
 
-      <Section step="02" title="Ton univers visuel">
-        <Chips legend="As-tu déjà une identité visuelle ?" name="identity" choices={identityLevels} type="radio" />
-        <Chips legend="Style recherché" name="style" choices={styles} hint="Plusieurs choix possibles." />
-        <Field label="Autre style (facultatif)">
-          <input name="styleOther" placeholder="Ex. cyberpunk pastel, cosy, horreur…" maxLength={200} className={inputClass} />
+      <Section step="02" title={tx.universe}>
+        <Chips legend={tx.identity} name="identity" choices={identityLevels} type="radio" />
+        <Chips legend={tx.style} name="style" choices={styles} hint={tx.styleHint} />
+        <Field label={tx.styleOther}>
+          <input name="styleOther" placeholder={tx.styleOtherPlaceholder} maxLength={200} className={inputClass} />
         </Field>
-        <Field label="Couleurs à privilégier / éviter (facultatif)">
-          <input name="colors" placeholder="Ex. violet et bleu nuit, pas de jaune" maxLength={300} className={inputClass} />
+        <Field label={tx.colors}>
+          <input name="colors" placeholder={tx.colorsPlaceholder} maxLength={300} className={inputClass} />
         </Field>
-        <Field label="Liens d'inspiration" hint={`Un lien par ligne, ${MAX_REFERENCES} maximum : chaînes, Pinterest, Behance, images…`}>
+        <Field label={tx.references} hint={tx.referencesHint}>
           <textarea name="references" rows={3} placeholder={"https://…\nhttps://…"} className={inputClass} />
         </Field>
       </Section>
 
-      <Section step="03" title="Ce que tu as déjà">
-        <Chips legend="Éléments disponibles" name="assets" choices={providedAssets} />
+      <Section step="03" title={tx.have}>
+        <Chips legend={tx.assets} name="assets" choices={providedAssets} />
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" name="filesLater" value="1" className="mt-0.5 accent-[var(--accent)]" />
           <span>
-            Je pourrai envoyer mes fichiers après la prise de contact
-            <span className="block text-xs text-muted">Pas besoin de les joindre maintenant : on s&apos;organise ensemble ensuite.</span>
+            {tx.filesLater}
+            <span className="block text-xs text-muted">{tx.filesLaterHint}</span>
           </span>
         </label>
       </Section>
 
-      <Section step="04" title="Besoin précis">
+      <Section step="04" title={tx.need}>
         {optionChoices.length > 0 && (
           <details className="group rounded-xl border border-border bg-background/40 px-4 py-3">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm [&::-webkit-details-marker]:hidden">
               <span>
-                <span className="font-medium">Options complémentaires</span>
-                <span className="ml-2 text-muted">facultatif</span>
+                <span className="font-medium">{tx.options}</span>
+                <span className="ml-2 text-muted">{tx.optional}</span>
               </span>
-              <span className="text-accent group-open:hidden">Voir ↓</span>
-              <span className="hidden text-accent group-open:inline">Masquer ↑</span>
+              <span className="text-accent group-open:hidden">{tx.show}</span>
+              <span className="hidden text-accent group-open:inline">{tx.hide}</span>
             </summary>
             <div className="mt-4">
-              <OptionsField legend="Ce qui pourrait s'ajouter à ton projet" options={optionChoices} />
+              <OptionsField legend={tx.optionsLegend} options={optionChoices} />
             </div>
           </details>
         )}
         <label className="block">
-          <span className="mb-1.5 block font-display text-lg font-bold">Dis-moi ce que tu as en tête *</span>
-          <textarea
-            name="message"
-            required
-            minLength={10}
-            rows={9}
-            placeholder="Décris-moi ce que tu imagines, l'ambiance recherchée, les éléments indispensables et tout ce qui peut m'aider à comprendre ton projet."
-            className={inputClass}
-          />
+          <span className="mb-1.5 block font-display text-lg font-bold">{tx.message}</span>
+          <textarea name="message" required minLength={10} rows={9} placeholder={tx.messagePlaceholder} className={inputClass} />
         </label>
       </Section>
 
       <div className="border-t border-border pt-6">
-        <Chips legend="Comment m'as-tu trouvée ?" name="referral" choices={referralSources} type="radio" />
+        <Chips legend={tx.referral} name="referral" choices={referralSources} type="radio" />
       </div>
 
-      <Consent purpose="répondre à ma demande et préparer un devis" />
+      <Consent purpose={tx.consentProject} />
       <FormStatus state={state} />
-      <Submit pending={pending} note="Réponse sous 48 h ouvrées. Je reviendrai vers toi avec une première estimation ou quelques questions si besoin." />
+      <Submit pending={pending} note={tx.noteProject} />
     </form>
   );
 }
@@ -192,33 +310,37 @@ export function ContactForm({
 // Onglet « Message simple » : question, collaboration…
 export function MessageForm() {
   const [state, action, pending] = useActionState(sendMessage, null);
+  const locale = useLocale();
+  const tx = texts[locale];
 
   if (state?.ok) return <FormStatus state={state} />;
 
   return (
     <form action={action} className="space-y-5">
-      <Honeypot />
+      <Hidden />
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Nom ou pseudo *">
+        <Field label={tx.name}>
           <input name="name" required autoComplete="nickname" className={inputClass} />
         </Field>
-        <Field label="E-mail *">
+        <Field label={tx.email}>
           <input name="email" type="email" required autoComplete="email" className={inputClass} />
         </Field>
       </div>
-      <Field label="Sujet">
+      <Field label={tx.subject}>
         <select name="subject" className={inputClass} defaultValue={messageSubjects[0]}>
           {messageSubjects.map((s) => (
-            <option key={s}>{s}</option>
+            <option key={s} value={s}>
+              {choiceLabel(locale, s)}
+            </option>
           ))}
         </select>
       </Field>
-      <Field label="Message *">
+      <Field label={tx.simpleMessage}>
         <textarea name="message" required minLength={10} rows={7} className={inputClass} />
       </Field>
-      <Consent purpose="répondre à mon message" />
+      <Consent purpose={tx.consentMessage} />
       <FormStatus state={state} />
-      <Submit pending={pending} note="Réponse sous 48 h ouvrées." />
+      <Submit pending={pending} note={tx.noteMessage} />
     </form>
   );
 }

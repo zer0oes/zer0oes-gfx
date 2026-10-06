@@ -1,3 +1,4 @@
+import type { Locale } from "@/lib/i18n";
 import { formatPrice } from "@/lib/pricing";
 
 export function PageHeader({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: React.ReactNode }) {
@@ -44,7 +45,7 @@ export function OptionsField({
             <input type="checkbox" name={name} value={o.label} className="mt-0.5 accent-[var(--accent)]" />
             {o.main ? (
               <span>
-                {o.main} <span className="whitespace-nowrap text-muted">({o.price})</span>
+                {o.main} {o.price && <span className="whitespace-nowrap text-muted">({o.price})</span>}
                 {o.detail && <span className="block text-xs text-muted">{o.detail}</span>}
               </span>
             ) : (
@@ -71,14 +72,25 @@ export function FormStatus({ state }: { state: { ok: boolean; message: string } 
   );
 }
 
-// Prix d'une offre ou d'une option : seul le montant est en gras, « à partir de » et « HT » restent discrets
+// Prix d'une offre ou d'une option : seul le montant est en gras, « à partir de » reste discret (prix nets, franchise de TVA)
 // stacked : « à partir de » sur sa propre ligne (gros prix des cartes de formules)
-export function OfferPrice({ item, stacked }: { item: { price: number; priceFrom?: boolean; unit?: string }; stacked?: boolean }) {
+export function OfferPrice({
+  item,
+  stacked,
+  locale = "fr",
+}: {
+  item: { price: number; priceFrom?: boolean; unit?: string };
+  stacked?: boolean;
+  locale?: Locale;
+}) {
+  const unit = item.unit && locale === "en" && item.unit === "unité" ? "each" : item.unit;
   return (
     <>
-      {item.priceFrom && <span className={`font-normal text-muted ${stacked ? "block font-sans text-sm" : "mr-1 text-[0.7em]"}`}>à partir de </span>}
-      {formatPrice(item.price)}
-      <span className="font-normal text-muted"> HT{item.unit ? ` / ${item.unit}` : ""}</span>
+      {item.priceFrom && (
+        <span className={`font-normal text-muted ${stacked ? "block font-sans text-sm" : "mr-1 text-[0.7em]"}`}>{locale === "en" ? "from " : "à partir de "}</span>
+      )}
+      {formatPrice(item.price, locale)}
+      {unit && <span className="font-normal text-muted"> / {unit}</span>}
     </>
   );
 }

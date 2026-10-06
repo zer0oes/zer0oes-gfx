@@ -1,24 +1,39 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { parseContact, parseMessage } from "@/lib/contact-form";
+import { formMessage, parseContact, parseMessage } from "@/lib/contact-form";
+import { asLocale, href, type Locale } from "@/lib/i18n";
 import { notify } from "@/lib/notify";
 import { recordFormSent } from "@/lib/stats-server";
 import { attachBrief, paymentSummary, quote, quoteMetadata, recordDemoOrder } from "@/lib/orders";
-import { getPack, logoDiscountLabel, paymentLabel } from "@/lib/pricing";
+import { formatPrice, getPack, logoDiscountLabel, paymentLabel } from "@/lib/pricing";
 import { siteUrl } from "@/lib/site-url";
+import { trOfferName } from "@/lib/translations-en";
 import { getStore } from "@/lib/store";
 import { getStripe } from "@/lib/stripe";
 
 export type FormState = { ok: boolean; message: string } | null;
 
+// Langue du visiteur (champ caché « lang » des formulaires du site)
+const formLocale = (formData: FormData): Locale => asLocale(formData.get("lang")?.toString());
+
+// Réponse affichée au visiteur, dans sa langue
+function localized(locale: Locale, state: FormState): FormState {
+  return state && { ...state, message: formMessage(locale, state.message) };
+}
+
+// Mention ajoutée aux e-mails reçus par Aurore quand la demande vient du site anglais
+const languageField = (locale: Locale): Record<string, string> => (locale === "en" ? { Langue: "Anglais (site /en) : répondre en anglais" } : {});
+
 export async function createCheckout(formData: FormData) {
+  const locale = formLocale(formData);
+  const to = (path: string) => href(locale, path);
   const catalog = await getStore().getCatalog();
   const packId = formData.get("packId")?.toString();
   const pack = getPack(catalog.packs, packId);
-  if (!pack) redirect("/offres");
+  if (!pack) redirect(to("/offres"));
   // Offre sur devis (prix « à partir de ») : pas de paiement direct.
-  if (!pack.checkout) redirect(`/contact?offre=${pack.id}`);
+  if (!pack.checkout) redirect(to(`/contact?offre=${pack.id}`));
 
   // Formule, mode de paiement et remise relus et recalculés ici : le navigateur
   // n'envoie que des identifiants, jamais de montant.
@@ -28,7 +43,7 @@ export async function createCheckout(formData: FormData) {
     payment: formData.get("payment"),
     hasLogo: formData.get("logo") === "1",
   });
-  if (!q) redirect("/offres");
+  if (!q) redirect(to("/offres"));
 
   const stripe = getStripe();
   if (!stripe) {
@@ -42,7 +57,7 @@ export async function createCheckout(formData: FormData) {
       demo: "1",
     });
     if (q.hasLogo) params.set("logo", "1");
-    redirect(`/merci?${params}`);
+    redirect(`${to("/merci")}?${params}`);
   }
 
   const formula = pack.formulas?.find((f) => f.id === q.formulaId);
@@ -59,36 +74,49 @@ export async function createCheckout(formData: FormData) {
               currency: "eur",
               unit_amount: q.amount,
               product_data: {
-                name: `zer0oes gfx — ${q.offerName}${q.hasLogo ? " — logo fourni" : ""}${q.payment === "acompte" ? ` — Acompte ${s.depositPercent} %` : ""}`,
-                description: [q.hasLogo ? logoDiscountLabel(q.listPrice, s) : "", paymentLabel(q.totalPrice, q.payment, s)]
-                  .filter(Boolean)
-                  .join(" · "),
+                name:
+                  locale === "en"
+                    ? `zer0oes gfx — ${trOfferName("en", q.offerName)}${q.hasLogo ? " — logo supplied" : ""}${q.payment === "acompte" ? ` — ${s.depositPercent}% deposit` : ""}`
+                    : `zer0oes gfx — ${q.offerName}${q.hasLogo ? " — logo fourni" : ""}${q.payment === "acompte" ? ` — Acompte ${s.depositPercent} %` : ""}`,
+                description:
+                  locale === "en"
+                    ? [
+                        q.hasLogo ? `“Existing logo” discount: −${formatPrice(s.logoDiscount, "en")}` : "",
+                        q.payment === "acompte"
+                          ? `${s.depositPercent}% deposit: ${formatPrice(q.amount, "en")} of ${formatPrice(q.totalPrice, "en")} — balance due on delivery`
+                          : `Paid in full: ${formatPrice(q.totalPrice, "en")}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    : [q.hasLogo ? logoDiscountLabel(q.listPrice, s) : "", paymentLabel(q.totalPrice, q.payment, s)].filter(Boolean).join(" · "),
               },
             },
           },
     ],
     metadata: quoteMetadata(q),
+    // Page de paiement Stripe dans la langue du visiteur
+    locale: locale === "en" ? "en" : "fr",
     // Coordonnées pour la facture Abby (nom, adresse ; société et SIRET / TVA pour les pros)
     billing_address_collection: "required",
     tax_id_collection: { enabled: true },
     custom_fields: [
       {
         key: "raisonsociale",
-        label: { type: "custom", custom: "Raison sociale (si client pro)" },
+        label: { type: "custom", custom: locale === "en" ? "Company name (business customers)" : "Raison sociale (si client pro)" },
         type: "text",
         optional: true,
         text: { maximum_length: 120 },
       },
       {
         key: "siret",
-        label: { type: "custom", custom: "N° SIRET (si client pro)" },
+        label: { type: "custom", custom: locale === "en" ? "SIRET number (French businesses)" : "N° SIRET (si client pro)" },
         type: "text",
         optional: true,
         text: { minimum_length: 9, maximum_length: 20 },
       },
     ],
-    success_url: `${base}/merci?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${base}/offres?annule=1`,
+    success_url: `${base}${to("/merci")}?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${base}${to("/offres")}?annule=1`,
   });
 
   redirect(session.url!);
@@ -108,7 +136,7 @@ function checked(formData: FormData, name: string) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export async function sendContact(
+async function contactForm(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
@@ -125,7 +153,7 @@ export async function sendContact(
     await notify({
       subject: `[Projet] ${request.type} — ${request.name}`,
       replyTo: request.email,
-      fields: request.fields,
+      fields: { ...request.fields, ...languageField(formLocale(formData)) },
     });
   } catch (e) {
     console.error(e);
@@ -136,7 +164,7 @@ export async function sendContact(
 }
 
 // Onglet « Message simple » de /contact
-export async function sendMessage(_prev: FormState, formData: FormData): Promise<FormState> {
+async function messageForm(_prev: FormState, formData: FormData): Promise<FormState> {
   if (field(formData, "website")) return { ok: true, message: "Merci !" }; // pot de miel anti-spam
 
   const parsed = parseMessage((k) => formData.get(k)?.toString() ?? "");
@@ -144,7 +172,11 @@ export async function sendMessage(_prev: FormState, formData: FormData): Promise
   const { request } = parsed;
 
   try {
-    await notify({ subject: `[Message] ${request.subject} — ${request.name}`, replyTo: request.email, fields: request.fields });
+    await notify({
+      subject: `[Message] ${request.subject} — ${request.name}`,
+      replyTo: request.email,
+      fields: { ...request.fields, ...languageField(formLocale(formData)) },
+    });
   } catch (e) {
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou écris-moi directement par e-mail." };
@@ -153,7 +185,7 @@ export async function sendMessage(_prev: FormState, formData: FormData): Promise
   return { ok: true, message: "Message envoyé ! Je te réponds sous 48 h ouvrées." };
 }
 
-export async function sendBrief(
+async function briefForm(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
@@ -205,11 +237,24 @@ export async function sendBrief(
   }
 
   try {
-    await notify({ subject: `[Brief] ${channel}`, replyTo: email, fields: { Commande: orderLabel, ...brief } });
+    await notify({ subject: `[Brief] ${channel}`, replyTo: email, fields: { Commande: orderLabel, ...brief, ...languageField(formLocale(formData)) } });
   } catch (e) {
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou envoie ton brief par e-mail." };
   }
   await recordFormSent("Brief après commande", "/merci");
   return { ok: true, message: "Brief bien reçu ! Je reviens vers toi sous 48 h ouvrées pour démarrer." };
+}
+
+// Formulaires du site : la réponse au visiteur est traduite selon la langue de la page
+export async function sendContact(prev: FormState, formData: FormData): Promise<FormState> {
+  return localized(formLocale(formData), await contactForm(prev, formData));
+}
+
+export async function sendMessage(prev: FormState, formData: FormData): Promise<FormState> {
+  return localized(formLocale(formData), await messageForm(prev, formData));
+}
+
+export async function sendBrief(prev: FormState, formData: FormData): Promise<FormState> {
+  return localized(formLocale(formData), await briefForm(prev, formData));
 }
