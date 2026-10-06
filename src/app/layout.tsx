@@ -1,19 +1,27 @@
 import type { Metadata } from "next";
-import { Lexend, Poppins } from "next/font/google";
+import localFont from "next/font/local";
 import { site } from "@/data/site";
 import "./globals.css";
 
 // Texte courant (choix d'Aurore) : graisses utilisées par le site, normale à grasse
-const body = Poppins({
+const body = localFont({
   variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  src: [
+    { path: "./fonts/Poppins-Regular.ttf", weight: "400", style: "normal" },
+    { path: "./fonts/Poppins-Medium.ttf", weight: "500", style: "normal" },
+    { path: "./fonts/Poppins-SemiBold.ttf", weight: "600", style: "normal" },
+    { path: "./fonts/Poppins-Bold.ttf", weight: "700", style: "normal" },
+  ],
 });
 
-// Titres, prix et numéros (choix d'Aurore)
-const display = Lexend({
-  variable: "--font-display",
-  subsets: ["latin"],
+// Titres, prix et numéros : Lexend servie localement, sans téléchargement au démarrage.
+const display = localFont({
+  variable: "--font-lexend",
+  display: "swap",
+  src: "./fonts/Lexend-Variable.ttf",
+  weight: "100 900",
+  style: "normal",
 });
 
 export const metadata: Metadata = {

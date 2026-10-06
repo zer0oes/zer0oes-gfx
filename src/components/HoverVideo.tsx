@@ -23,7 +23,7 @@ function stop(video: HTMLVideoElement) {
 // - avec une souris : lecture au survol de l'élément parent marqué [data-hover-root] ;
 // - sur écran tactile : lecture quand la carte est bien visible à l'écran ;
 // - jamais de lecture automatique si prefers-reduced-motion.
-export function HoverVideo({ src }: { src: string }) {
+export function HoverVideo({ src, autoPlayOnTouch = true }: { src: string; autoPlayOnTouch?: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [active, setActive] = useState(false);
 
@@ -52,13 +52,15 @@ export function HoverVideo({ src }: { src: string }) {
         root.removeEventListener("focusin", enter);
         root.removeEventListener("focusout", leave);
       };
-    } else {
+    } else if (autoPlayOnTouch) {
       const observer = new IntersectionObserver(
         ([entry]) => (entry.intersectionRatio >= 0.6 ? play(video, src) : stop(video)),
         { threshold: [0, 0.6] },
       );
       observer.observe(root);
       cleanup = () => observer.disconnect();
+    } else {
+      cleanup = () => {};
     }
 
     return () => {
@@ -67,7 +69,7 @@ export function HoverVideo({ src }: { src: string }) {
       video.removeEventListener("pause", onPause);
       stop(video);
     };
-  }, [src]);
+  }, [src, autoPlayOnTouch]);
 
   return (
     <>

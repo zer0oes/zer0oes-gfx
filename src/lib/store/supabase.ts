@@ -650,6 +650,7 @@ export const supabaseStore: Store = {
         quoteEn: (r.quote_en as string | null) ?? undefined,
         consent: Boolean(r.consent),
         onHome: Boolean(r.on_home),
+        updatedAt: r.updated_at as string,
       }),
     );
   },

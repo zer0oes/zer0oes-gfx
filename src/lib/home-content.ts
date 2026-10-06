@@ -121,7 +121,7 @@ export const portfolioPageFields: HomeField[] = [
 export const homeDefaults: Record<string, string> = {
   "hero.title1": "Ton stream.",
   "hero.title2": "Ton univers.",
-  "hero.text": "Identités visuelles sur mesure pour les créateurs de live.",
+  "hero.text": "Logos, overlays et emotes sur mesure pour Twitch et YouTube.",
   "hero.cta": "Découvrir les projets",
   "hero.link": "Voir les offres →",
   "hero.work": "", // vide : première réalisation « mise en avant »
@@ -172,7 +172,7 @@ export const homeDefaults: Record<string, string> = {
 export const homeDefaultsEn: Record<string, string> = {
   "hero.title1": "Your stream.",
   "hero.title2": "Your universe.",
-  "hero.text": "Custom visual identities for live creators.",
+  "hero.text": "Custom logos, overlays and emotes for Twitch and YouTube.",
   "hero.cta": "Explore the projects",
   "hero.link": "See pricing →",
   "emotes.kicker": "Emotes",

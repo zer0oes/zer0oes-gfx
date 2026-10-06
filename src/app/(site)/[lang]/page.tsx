@@ -28,7 +28,7 @@ function Showcase({ work, href, sizes }: { work: Work; href: string; sizes: stri
     <Link href={href} data-hover-root className="group block overflow-hidden rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent">
       <ProtectedMedia className="aspect-video">
         <Image src={work.image!} alt={work.title} fill draggable={false} sizes={sizes} className="object-cover transition duration-500 group-hover:scale-[1.03]" />
-        {work.video && <HoverVideo src={work.video} />}
+        {work.video && <HoverVideo src={work.video} autoPlayOnTouch={false} />}
       </ProtectedMedia>
     </Link>
   );
@@ -114,7 +114,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
   const universeId = pick("universe.work");
   const universe =
     universeId === null ? undefined : (byId(universeId) ?? featured.find((w) => w.image && w.id !== hero?.id && w.streamer !== hero?.streamer));
-  const signature = byId(pick("signature.work"));
+
 
   return (
     <>
@@ -161,11 +161,11 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
                       src={hero.image}
                       alt={`${hero.title} — ${heroStreamer}`}
                       fill
-                      priority
-                      sizes="(min-width: 1280px) 760px, (min-width: 1024px) 60vw, 100vw"
+                      preload
+                      sizes="(min-width: 1280px) 606px, (min-width: 1024px) 50vw, (min-width: 640px) calc(100vw - 48px), calc(100vw - 32px)"
                       className="object-cover"
                     />
-                    {hero.video && <HoverVideo src={hero.video} />}
+                    {hero.video && <HoverVideo src={hero.video} autoPlayOnTouch={false} />}
                   </ProtectedMedia>
                 </div>
               </Link>
@@ -176,7 +176,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
                   className={`emote-pop pointer-events-none absolute drop-shadow-[0_8px_24px_rgba(0,0,0,0.6)] ${emoteSpots[i]}`}
                   style={{ animationDelay: `${450 + i * 120}ms` }}
                 >
-                  <Image src={e.src} alt="" width={128} height={128} draggable={false} unoptimized={e.animated} className="h-full w-full object-contain" />
+                  <Image src={e.src} alt="" width={128} height={128} sizes="(min-width: 640px) 96px, 64px" draggable={false} unoptimized={e.animated} className="h-full w-full object-contain" />
                 </div>
               ))}
             </div>
@@ -185,34 +185,11 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        {/* Emotes, univers puis logo : chacun apparaît à son tour, après le bandeau */}
-        {emoteWork && emotes.length > 0 && (
-          <div data-reveal style={{ "--reveal-delay": "900ms" } as React.CSSProperties} className="grid items-center gap-8 lg:grid-cols-12">
-            <div className="lg:col-span-4">
-              <p className={kickerClass}>{c.text("emotes.kicker")}</p>
-              <h2 className={titleClass}>
-                <Lines lines={c.lines("emotes.title")} />
-              </h2>
-              <Link href={to(projectHref(emoteWork.streamer, "emotes"))} className="mt-4 inline-block text-sm text-accent hover:underline">
-                {c.text("emotes.link")}
-              </Link>
-            </div>
-            <ProtectedMedia className="lg:col-span-8">
-              <ul className="grid grid-cols-4 gap-3 sm:grid-cols-6">
-                {emotes.map((e) => (
-                  <li key={e.name} className="relative aspect-square">
-                    <Image src={e.src} alt={e.name} fill sizes="120px" draggable={false} unoptimized={e.animated} className="object-contain" />
-                  </li>
-                ))}
-              </ul>
-            </ProtectedMedia>
-          </div>
-        )}
-
+        {/* Un projet distinct, puis une planche expressive avant les témoignages. */}
         {universe && (
-          <div data-reveal style={{ "--reveal-delay": "1100ms" } as React.CSSProperties} className="mt-16 grid items-center gap-8 lg:grid-cols-12">
+          <div data-reveal style={{ "--reveal-delay": "150ms" } as React.CSSProperties} className="grid items-center gap-8 lg:grid-cols-12">
             <div className="lg:col-span-7">
-              <Showcase work={universe} href={to(projectHref(universe.streamer))} sizes="(min-width: 1024px) 660px, 100vw" />
+              <Showcase work={universe} href={to(projectHref(universe.streamer))} sizes="(min-width: 1152px) 644px, (min-width: 1024px) 58vw, (min-width: 640px) calc(100vw - 48px), calc(100vw - 32px)" />
             </div>
             <div className="lg:col-span-5">
               <p className={kickerClass}>
@@ -225,31 +202,83 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
               <Link href={to(projectHref(universe.streamer))} className="mt-4 inline-block text-sm text-accent hover:underline">
                 {c.text("universe.link")}
               </Link>
+
             </div>
           </div>
         )}
 
-        {signature && (
-          <div data-reveal style={{ "--reveal-delay": "1300ms" } as React.CSSProperties} className="mt-16 grid items-center gap-8 lg:grid-cols-12">
-            <div className="order-2 lg:order-1 lg:col-span-5">
-              <p className={kickerClass}>
-                {c.text("signature.kicker")} · {streamerNames[signature.streamer]}
-              </p>
-              <h2 className={titleClass}>
-                <Lines lines={c.lines("signature.title")} />
+        {emoteWork && emotes.length > 0 && (
+          <div data-reveal style={{ "--reveal-delay": "150ms" } as React.CSSProperties} className="mt-10 grid items-center gap-5 lg:grid-cols-12 lg:gap-6">
+            <div className="lg:col-span-5">
+              <p className={kickerClass}>{c.text("emotes.kicker")}</p>
+              <h2 className={`${titleClass} lg:text-3xl xl:text-4xl`}>
+                <Lines lines={c.lines("emotes.title")} />
               </h2>
-              <Link href={to("/portfolio")} className="mt-4 inline-block text-sm text-accent hover:underline">
-                {c.text("signature.link")}
+              <Link href={to(projectHref(emoteWork.streamer, "emotes"))} className="mt-4 inline-block text-sm text-accent hover:underline">
+                {c.text("emotes.link")}
               </Link>
             </div>
-            <div className="order-1 lg:order-2 lg:col-span-7">
-              <Showcase work={signature} href={to(projectHref(signature.streamer))} sizes="(min-width: 1024px) 660px, 100vw" />
-            </div>
+            <ProtectedMedia className="lg:col-span-7">
+              <ul className="grid w-full grid-cols-4 gap-2 sm:grid-cols-6 sm:gap-3">
+                {emotes.map((e) => (
+                  <li key={e.name} className="relative aspect-square">
+                    <Image src={e.src} alt={e.name} fill sizes="(min-width: 1152px) 76px, (min-width: 1024px) 7vw, (min-width: 640px) 12vw, 19vw" draggable={false} unoptimized={e.animated} className="scale-80 object-contain" />
+                  </li>
+                ))}
+              </ul>
+            </ProtectedMedia>
           </div>
         )}
+
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-6 sm:pt-36">
+      {/* Avis clients choisis pour l'accueil (publiés avec l'accord du client), les cinq plus récents en priorité */}
+      {(() => {
+        const reviews = testimonials
+          .filter((review) => review.consent && review.onHome)
+          .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""))
+          .flatMap((r) => {
+            const s = streamers.find((streamer) => streamer.id === r.streamerId);
+            return s ? [{ r, s }] : [];
+          })
+          .slice(0, 5);
+
+        if (!reviews.length) return null;
+
+        return (
+          <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6" aria-labelledby="home-reviews-title">
+            <p className={`${kickerClass} text-center`}>{c.text("reviews.kicker")}</p>
+            <h2 id="home-reviews-title" className={`${titleClass} text-center`}>{c.text("reviews.title")}</h2>
+            <div className="mt-6">
+              <ReviewsCarousel>
+                {reviews.map(({ r, s }) => (
+                  <TestimonialQuote key={s.id} testimonial={r} locale={lang} href={to(projectHref(s.id))} projectName={s.name} image={testimonialImage(works, s.id)} />
+                ))}
+
+              </ReviewsCarousel>
+            </div>
+          </section>
+        );
+      })()}
+
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className={kickerClass}>{c.text("offers.kicker")}</p>
+            <h2 className={titleClass}>{c.text("offers.title")}</h2>
+          </div>
+          <Link href={to("/offres")} className="text-sm text-accent hover:underline">
+            {c.text("offers.link")}
+          </Link>
+        </div>
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          {packs.map((p) => (
+            <PackCard key={p.id} pack={p} settings={settings} compact locale={lang} />
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 sm:pt-10">
         <div className="grid items-center gap-10 lg:grid-cols-12">
           {/* Portrait cerclé de blanc, sur un halo violet */}
           <div className="relative mx-auto w-44 sm:w-52 lg:col-span-4 lg:w-56">
@@ -279,29 +308,8 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
             </Link>
           </div>
         </div>
-      </section>
 
-      {/* Avis clients choisis pour l'accueil (publiés avec l'accord du client), dans l'ordre du portfolio */}
-      {(() => {
-        const reviews = streamers.flatMap((s) => {
-          const r = testimonials.find((x) => x.streamerId === s.id && x.consent && x.onHome);
-          return r ? [{ r, s }] : [];
-        });
-        if (!reviews.length) return null;
-        return (
-          <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-            <p className={kickerClass}>{c.text("reviews.kicker")}</p>
-            <h2 className={titleClass}>{c.text("reviews.title")}</h2>
-            <div className="mt-12">
-              <ReviewsCarousel>
-                {reviews.map(({ r, s }) => (
-                  <TestimonialQuote key={s.id} testimonial={r} locale={lang} href={to(projectHref(s.id))} projectName={s.name} image={testimonialImage(works, s.id)} />
-                ))}
-              </ReviewsCarousel>
-            </div>
-          </section>
-        );
-      })()}
+      </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <p className={kickerClass}>{c.text("steps.kicker")}</p>
@@ -315,23 +323,6 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
             </li>
           ))}
         </ol>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className={kickerClass}>{c.text("offers.kicker")}</p>
-            <h2 className={titleClass}>{c.text("offers.title")}</h2>
-          </div>
-          <Link href={to("/offres")} className="text-sm text-accent hover:underline">
-            {c.text("offers.link")}
-          </Link>
-        </div>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {packs.map((p) => (
-            <PackCard key={p.id} pack={p} settings={settings} compact locale={lang} />
-          ))}
-        </div>
       </section>
 
       <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">

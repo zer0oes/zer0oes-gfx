@@ -156,6 +156,7 @@ export function OrderForm({
             </span>
           )}
         </label>
+        <p className="text-center text-xs leading-relaxed text-muted">{t(locale, { fr: `Généralement ${site.deliveryDays} jours ouvrés après réception du brief complet, selon le projet.`, en: `Usually ${site.deliveryDays.replace(" à ", " to ")} business days after receiving the complete brief, depending on the project.` })}</p>
         <button type="submit" className={buttonClass}>
           {payment === "acompte"
             ? t(locale, { fr: `Payer l'acompte de ${amount(deposit)}`, en: `Pay the ${amount(deposit)} deposit` })
