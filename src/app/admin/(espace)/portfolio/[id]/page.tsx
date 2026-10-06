@@ -1,3 +1,5 @@
+import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
+import { translationValues } from "@/lib/admin-translations";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -33,8 +35,10 @@ export default async function WorkEditPage({ params, searchParams }: PageProps<"
   // Emotes existantes + 3 lignes vides pour en ajouter
   const emoteRows = [...(work.emotes ?? []), undefined, undefined, undefined];
 
+  const translationContent = await getStore().getHomeContent();
+
   return (
-    <>
+    <TranslationTabs stored={translationValues(translationContent)}>
       <Link href={`/admin/portfolio/projet/${work.streamer}`} className="text-sm text-muted hover:text-foreground">
         ← {streamers.find((s) => s.id === work.streamer)?.name ?? "Portfolio"}
       </Link>
@@ -59,7 +63,7 @@ export default async function WorkEditPage({ params, searchParams }: PageProps<"
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="block sm:col-span-3">
             <span className="mb-1 block text-sm font-medium">Titre</span>
-            <input name="title" defaultValue={work.title} required className={input} />
+            <TranslationInput translationKey={`translation:work:${work.id}:title`} name="title" defaultValue={work.title} required className={input} />
           </label>
           <label className="block">
             <span className="mb-1 block text-sm font-medium">Streameur</span>
@@ -88,7 +92,7 @@ export default async function WorkEditPage({ params, searchParams }: PageProps<"
         </div>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">Description</span>
-          <textarea name="description" rows={2} defaultValue={work.description} className={input} />
+          <TranslationInput multiline translationKey={`translation:work:${work.id}:description`} name="description" rows={2} defaultValue={work.description} className={input} />
         </label>
         <div className="grid gap-6 lg:grid-cols-2">
           <MediaInput name="image" kind="image" label="Image (vignette et affiche)" defaultValue={work.image} {...media} />
@@ -102,7 +106,7 @@ export default async function WorkEditPage({ params, searchParams }: PageProps<"
             {emoteRows.map((e, i) => (
               <div key={i} className="grid items-start gap-3 rounded-xl border border-border p-3 lg:grid-cols-[2fr_1fr_1fr_auto]">
                 <MediaInput name={`emote_src_${i}`} kind="emote" label={e ? e.name : "Nouvelle emote"} defaultValue={e?.src} {...media} />
-                <input name={`emote_name_${i}`} defaultValue={e?.name} placeholder="Nom (ex. HYPE)" aria-label="Nom de l'emote" className={input} />
+                <TranslationInput translationKey={`translation:work:${work.id}:emote:${e?.name ?? `new-${i}`}:name`} name={`emote_name_${i}`} defaultValue={e?.name} placeholder="Nom (ex. HYPE)" aria-label="Nom de l'emote" className={input} />
                 <select name={`emote_group_${i}`} defaultValue={e?.group ?? "abonne"} aria-label="Groupe" className={input}>
                   {emoteGroups.map((g) => (
                     <option key={g.id} value={g.id}>
@@ -142,6 +146,6 @@ export default async function WorkEditPage({ params, searchParams }: PageProps<"
           </button>
         </form>
       )}
-    </>
+    </TranslationTabs>
   );
 }

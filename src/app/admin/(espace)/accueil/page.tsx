@@ -1,7 +1,9 @@
+import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
+import { translationValues } from "@/lib/admin-translations";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { categories } from "@/data/portfolio";
-import { homeSections, resolveHome, type HomeField } from "@/lib/home-content";
+import { homeSections, homeDefaultsEn, resolveHome, type HomeField } from "@/lib/home-content";
 import { getStore } from "@/lib/store";
 import { saveHomeAction } from "../../portfolio-actions";
 
@@ -18,6 +20,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
   const store = getStore();
   const [{ streamers, works }, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
   const content = resolveHome(stored);
+  const customContent = homeSections.flatMap((section) => section.fields).some((field) => stored && typeof stored === "object" && (field.key in stored || `en:${field.key}` in stored));
   const withImage = works.filter((w) => w.image);
   const emoteBoards = works.filter((w) => w.emotes?.length);
   const catLabel = (id: string) => categories.find((c) => c.id === id)?.label ?? id;
@@ -25,6 +28,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
   const field = (f: HomeField) => {
     const value = content.text(f.key);
     const name = `h:${f.key}`;
+    if (f.key === "hero.emotes") return <input name={name} defaultValue={value} maxLength={f.max} className={input} />;
     if (f.kind === "work" || f.kind === "emotes") {
       const chosen = works.find((w) => w.id === value);
       const list = f.kind === "emotes" ? emoteBoards : withImage;
@@ -58,7 +62,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
     }
     const multi = f.kind === "lines" || f.kind === "paragraphs" || f.kind === "long";
     return multi ? (
-      <textarea
+      <TranslationInput multiline translationKey={`en:${f.key}`} englishDefault={homeDefaultsEn[f.key]}
         name={name}
         defaultValue={value}
         rows={f.kind === "paragraphs" ? 6 : f.kind === "lines" ? 2 : 3}
@@ -66,12 +70,12 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
         className={input}
       />
     ) : (
-      <input name={name} defaultValue={value} maxLength={f.max ?? 1200} className={input} />
+      <TranslationInput translationKey={`en:${f.key}`} englishDefault={homeDefaultsEn[f.key]} name={name} defaultValue={value} maxLength={f.max ?? 1200} className={input} />
     );
   };
 
   return (
-    <>
+    <TranslationTabs stored={translationValues(stored)}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-display text-3xl font-bold">Page d&apos;accueil</h1>
         <Link href="/" target="_blank" className="text-sm text-accent hover:underline">
@@ -82,7 +86,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
         Textes et visuels de l&apos;accueil. Les visuels se choisissent parmi les réalisations du portfolio : pour une
         nouvelle image, ajoute-la d&apos;abord comme réalisation dans <Link href="/admin/portfolio" className="text-accent hover:underline">Portfolio</Link>.
         Un texte vidé reprend sa version d&apos;origine.
-        {stored ? " Contenu personnalisé en place." : " Contenu d'origine en place."}
+        {customContent ? " Contenu personnalisé en place." : " Contenu d'origine en place."}
       </p>
       {enregistre && (
         <p role="status" className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">
@@ -119,7 +123,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
           </button>
         </div>
       </form>
-      {stored ? (
+      {customContent ? (
         <form action={saveHomeAction} className="mt-6 flex flex-wrap items-center gap-2 text-xs text-muted">
           <input type="hidden" name="reset" value="1" />
           <label className="flex items-center gap-1">
@@ -130,6 +134,6 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
           </button>
         </form>
       ) : null}
-    </>
+    </TranslationTabs>
   );
 }

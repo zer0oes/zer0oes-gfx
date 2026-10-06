@@ -15,7 +15,7 @@ import {
 } from "@/lib/pricing";
 import { pageMetadata } from "@/lib/seo";
 import { getStore } from "@/lib/store";
-import { tr } from "@/lib/translations-en";
+import { trDeep } from "@/lib/translations-en";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/offres">): Promise<Metadata> {
   return pageMetadata(asLocale((await params).lang), "/offres", {
@@ -151,7 +151,7 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
   const lang = asLocale((await params).lang);
   const { annule, details } = await searchParams;
   const catalog = await getStore().getCatalog();
-  const { settings: site, options } = catalog;
+  const { settings: site, options } = trDeep(lang, catalog);
   const packs = activePacks(catalog.packs);
 
   return (
@@ -241,7 +241,7 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
                   </div>
                   <ul className="relative mt-5 divide-y divide-border/70">
                     {list.map((o) => {
-                      const name = splitOptionName(tr(lang, o.name));
+                      const name = splitOptionName(o.name);
                       return (
                         <li
                           key={o.id}

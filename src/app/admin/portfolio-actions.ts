@@ -1,11 +1,15 @@
 "use server";
 
+import { saveAdminTranslations, saveTranslationFields } from "@/lib/save-admin-translations";
+import { translationsFromForm } from "@/lib/admin-translations";
+import { homeSections, portfolioPageFields } from "@/lib/home-content";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { caseStudies } from "@/data/case-studies";
 import type { Emote, Work } from "@/data/portfolio";
 import { requireAdmin } from "@/lib/auth";
-import { textsFromForm } from "@/lib/case-study-texts";
+import { textGroups, textsFromForm } from "@/lib/case-study-texts";
 import { homeFromForm, resetGroup } from "@/lib/home-content";
 import { s3Configured, s3Delete, s3SignedUpload } from "@/lib/s3";
 import { getStore } from "@/lib/store";
@@ -56,6 +60,7 @@ export async function saveStreamerAction(formData: FormData) {
   const url = text(formData, "url", 300);
   if (url && !mediaUrl(url)) done(back, "Le lien de la chaîne doit commencer par https://.");
   await getStore().saveStreamer({ id, name, description: text(formData, "description", 300), url: url || undefined });
+  await saveAdminTranslations(formData, `streamer:${id}`, ["name", "description"]);
   // Nouveau projet : on ouvre directement sa fiche
   done(projectAdmin(id));
 }
@@ -89,10 +94,11 @@ export async function saveTestimonialAction(formData: FormData) {
     author,
     role: text(formData, "role", 80) || undefined,
     quote,
-    quoteEn: text(formData, "quoteEn", 600) || undefined,
+    quoteEn: text(formData, "en:quote", 600) || undefined,
     consent,
     onHome: consent && formData.get("onHome") === "on",
   });
+  await saveAdminTranslations(formData, `review:${streamerId}`, ["author", "role"]);
   done(back);
 }
 
@@ -149,6 +155,13 @@ export async function saveWorkAction(formData: FormData) {
     featured: formData.get("featured") === "on" || undefined,
     emotes,
   });
+  const translatedFields = Object.fromEntries(["title", "description"].map((field) => [field, `translation:work:${id}:${field}`]));
+  if (category === "emotes") for (let i = 0; i < 200; i++) {
+    const name = text(formData, `emote_name_${i}`, 40);
+    if (!name || !mediaUrl(text(formData, `emote_src_${i}`, 500)) || formData.get(`emote_delete_${i}`) === "on") continue;
+    translatedFields[`emote_name_${i}`] = `translation:work:${id}:emote:${name}:name`;
+  }
+  await saveTranslationFields(formData, translatedFields);
   done(`/admin/portfolio/${id}`);
 }
 
@@ -277,8 +290,14 @@ export async function saveCaseStudyTextsAction(formData: FormData) {
   if (formData.get("reset") === "1") {
     if (formData.get("confirm") !== "on") done(back, "Coche la case de confirmation.");
     await getStore().saveCaseStudyTexts(id, null);
+    const store = getStore();
+    const content = await store.getHomeContent();
+    if (content && typeof content === "object") {
+      await store.saveHomeContent(Object.fromEntries(Object.entries(content).filter(([key, value]) => !key.startsWith(`translation:study:${id}:`) && typeof value === "string")));
+    }
     done(back);
   }
+  await saveAdminTranslations(formData, `study:${id}`, textGroups(study, () => undefined).flatMap((group) => group.fields.map((field) => `t:${field.path}`)));
   await getStore().saveCaseStudyTexts(id, textsFromForm(study, (path) => formData.get(`t:${path}`)?.toString()));
   done(back);
 }
@@ -296,7 +315,9 @@ async function saveContent(formData: FormData, group: "accueil" | "portfolio", b
     await store.saveHomeContent(resetGroup(stored, group));
     done(back);
   }
-  await store.saveHomeContent(homeFromForm((key) => formData.get(`h:${key}`)?.toString(), stored, group));
+  const fields = group === "portfolio" ? portfolioPageFields : homeSections.flatMap((section) => section.fields);
+  const translated = translationsFromForm(stored, formData, Object.fromEntries(fields.filter((field) => field.kind !== "work" && field.kind !== "emotes" && field.key !== "hero.emotes").map((field) => [`h:${field.key}`, `en:${field.key}`])));
+  await store.saveHomeContent(homeFromForm((key) => formData.get(`h:${key}`)?.toString(), translated, group));
   done(back);
 }
 

@@ -5,7 +5,7 @@ import { asLocale } from "@/lib/i18n";
 import { activePacks, getPack, optionChoices } from "@/lib/pricing";
 import { languageAlternates } from "@/lib/seo";
 import { getStore } from "@/lib/store";
-import { tr } from "@/lib/translations-en";
+import { trDeep } from "@/lib/translations-en";
 import { site } from "@/data/site";
 
 const contactTexts = {
@@ -50,7 +50,8 @@ export default async function ContactPage({ params, searchParams }: PageProps<"/
   const lang = asLocale((await params).lang);
   const { offre, sujet } = await searchParams;
   const current = contactTexts[lang];
-  const catalog = await getStore().getCatalog();
+  const originalCatalog = await getStore().getCatalog();
+  const catalog = trDeep(lang, originalCatalog);
   const selectedPack = getPack(catalog.packs, typeof offre === "string" ? offre : undefined);
   const quote = selectedPack?.checkout === false;
   const aside = asideTexts[lang];
@@ -78,7 +79,7 @@ export default async function ContactPage({ params, searchParams }: PageProps<"/
           </div>
         </aside>
         <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-          <ContactForm selectedOffer={selectedPack ? tr(lang, selectedPack.name) : undefined} defaultType={sujet === "offre" ? "Question sur une offre" : quote ? "Devis Univers complet" : undefined} offerChoices={activePacks(catalog.packs).map((pack) => tr(lang, pack.name))} optionChoices={optionChoices(catalog.options, lang)} />
+          <ContactForm selectedOffer={selectedPack?.name} defaultType={sujet === "offre" ? "Question sur une offre" : quote ? "Devis Univers complet" : undefined} offerChoices={activePacks(catalog.packs).map((pack) => pack.name)} optionChoices={optionChoices(originalCatalog.options, lang)} />
         </div>
       </div>
     </>

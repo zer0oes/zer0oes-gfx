@@ -1,3 +1,4 @@
+import { trDeep } from "@/lib/translations-en";
 import Image from "next/image";
 import Link from "next/link";
 import type { Work } from "@/data/portfolio";
@@ -7,7 +8,7 @@ import type { Testimonial } from "@/lib/store/types";
 // Avis client publié (avec son accord) : à afficher seulement si testimonial.consent
 export function publishedQuote(t: Testimonial | undefined, locale: Locale) {
   if (!t?.consent) return null;
-  return { ...t, text: locale === "en" && t.quoteEn ? t.quoteEn : t.quote };
+  return { ...trDeep(locale, t), text: locale === "en" && t.quoteEn ? t.quoteEn : t.quote };
 }
 
 // Image du client à côté de son avis : l'avatar du projet s'il existe, sinon son logo

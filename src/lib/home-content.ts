@@ -2,6 +2,7 @@
 // Portfolio (Admin > Portfolio), modifiables dans l'admin et enregistrés ensemble.
 // Les valeurs par défaut reprennent l'accueil actuel ; ce qui est saisi dans l'admin les remplace.
 // Les visuels sont choisis parmi les réalisations du portfolio (par leur id).
+import { translationValues } from "@/lib/admin-translations";
 import { site } from "@/data/site";
 import type { Locale } from "@/lib/i18n";
 
@@ -241,7 +242,7 @@ export function homeFromForm(
 ): Record<string, string> {
   const edited = group === "portfolio" ? portfolioPageFields : homeFields;
   const kept = resolveStored(stored, group === "portfolio" ? homeFields : portfolioPageFields);
-  const out: Record<string, string> = { ...kept, ...storedTranslations(stored) };
+  const out: Record<string, string> = { ...kept, ...translationValues(stored), ...storedTranslations(stored) };
   for (const f of edited) {
     const v = get(f.key);
     if (v == null) continue;
@@ -275,7 +276,10 @@ function storedTranslations(raw: unknown) {
 
 // Retour au contenu d'origine d'une des deux pages, l'autre est conservée (null : plus rien d'enregistré)
 export function resetGroup(stored: unknown, group: "accueil" | "portfolio") {
-  const kept = resolveStored(stored, group === "portfolio" ? homeFields : portfolioPageFields);
+  const translations = translationValues(stored);
+  const removed = group === "portfolio" ? portfolioPageFields : homeFields;
+  for (const field of removed) delete translations[`en:${field.key}`];
+  const kept = { ...resolveStored(stored, group === "portfolio" ? homeFields : portfolioPageFields), ...translations };
   return Object.keys(kept).length ? kept : null;
 }
 
