@@ -68,6 +68,34 @@ export async function deleteStreamerAction(formData: FormData) {
   done("/admin/portfolio");
 }
 
+// --- Avis client du projet --------------------------------------------------------
+
+// Un avis facultatif par projet ; « supprimer » le retire du site.
+export async function saveTestimonialAction(formData: FormData) {
+  await requireAdmin();
+  const streamerId = text(formData, "streamerId", 60);
+  const back = projectAdmin(streamerId);
+  const store = getStore();
+  if (formData.get("remove") === "1") {
+    await store.deleteTestimonial(streamerId);
+    done(back);
+  }
+  const author = text(formData, "author", 80);
+  const quote = text(formData, "quote", 600);
+  if (!author || !quote) done(back, "Indique au moins le nom du client et son avis.");
+  const consent = formData.get("consent") === "on";
+  await store.saveTestimonial({
+    streamerId,
+    author,
+    role: text(formData, "role", 80) || undefined,
+    quote,
+    quoteEn: text(formData, "quoteEn", 600) || undefined,
+    consent,
+    onHome: consent && formData.get("onHome") === "on",
+  });
+  done(back);
+}
+
 // --- Réalisations ----------------------------------------------------------------
 
 export async function saveWorkAction(formData: FormData) {

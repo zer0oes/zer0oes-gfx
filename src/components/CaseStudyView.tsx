@@ -17,7 +17,18 @@ type Piece = { work: Work; label: string };
 
 // Page projet en « étude de cas » : scène d'ouverture, scènes du stream, sections numérotées
 // (pièces fortes en grand, pièces complémentaires plus discrètes), puis un appel au contact.
-export function CaseStudyView({ study, works, streamerName }: { study: CaseStudy; works: Work[]; streamerName: string }) {
+// quote : avis du client (citation), affiché avant l'appel au contact
+export function CaseStudyView({
+  study,
+  works,
+  streamerName,
+  quote,
+}: {
+  study: CaseStudy;
+  works: Work[];
+  streamerName: string;
+  quote?: React.ReactNode;
+}) {
   const byId = new Map(works.map((w) => [w.id, w]));
   const pieces = (list: CasePiece[] = []): Piece[] =>
     list.flatMap((p) => {
@@ -154,6 +165,8 @@ export function CaseStudyView({ study, works, streamerName }: { study: CaseStudy
           </div>
         </section>
       )}
+
+      {quote && <div className="mt-20">{quote}</div>}
 
       <aside className="mt-20 rounded-3xl border border-border bg-surface px-6 py-12 text-center sm:px-12">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">{t(locale, { fr: "Ton prochain univers", en: "Your next universe" })}</p>

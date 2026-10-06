@@ -74,8 +74,14 @@ export const caseStudies: Record<string, CaseStudy | EditorialStudy> = {
     tags: ["Logo", "Overlay animé", "Widgets & alertes", "YouTube"],
     hero: "tomavega-starting-screen",
     heroCaption: "La scène de lancement — l'univers en un regard.",
-    headerLogo: { id: "tomavega-logo", caption: "Le logo, point de départ de l'univers." },
     blocks: [
+      {
+        type: "signature",
+        kicker: "La signature",
+        title: ["Un éclair.", "Toute une identité."],
+        main: "tomavega-logo",
+        side: { id: "tomavega-avatar-monogramme", caption: "Le monogramme, jusque dans l'avatar." },
+      },
       {
         type: "detail",
         kicker: "Le live en détail",

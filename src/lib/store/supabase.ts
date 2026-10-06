@@ -7,7 +7,7 @@ import { defaultFinance, isUrssafPeriodicity, type FinanceSettings } from "@/lib
 import { defaultProtection, isWatermarkLevel, type ProtectionSettings } from "@/lib/protection";
 import type { Option, Pack } from "@/lib/pricing";
 import type { StatEvent } from "@/lib/stats";
-import type { Deliverable, DeliverableNote, Invoice, NewOrder, Order, OrderPatch, OrderStatus, Store } from "./types";
+import type { Deliverable, DeliverableNote, Invoice, NewOrder, Order, OrderPatch, OrderStatus, Store, Testimonial } from "./types";
 
 // Client avec la clé secrète : contourne la RLS, donc réservé au serveur
 // (pages publiques en lecture, et actions admin après contrôle de l'accès).
@@ -635,6 +635,42 @@ export const supabaseStore: Store = {
 
   async addNote(orderId, body) {
     check(await db().from("order_notes").insert({ order_id: orderId, body }));
+  },
+
+  async listTestimonials() {
+    // Tolérant : avant la migration 1500, la table n'existe pas encore (aucun avis).
+    const { data, error } = await db().from("testimonials").select("*");
+    if (error) return [];
+    return (data as Row[]).map(
+      (r): Testimonial => ({
+        streamerId: r.streamer_id as string,
+        author: r.author as string,
+        role: (r.role as string | null) ?? undefined,
+        quote: r.quote as string,
+        quoteEn: (r.quote_en as string | null) ?? undefined,
+        consent: Boolean(r.consent),
+        onHome: Boolean(r.on_home),
+      }),
+    );
+  },
+
+  async saveTestimonial(t) {
+    check(
+      await db().from("testimonials").upsert({
+        streamer_id: t.streamerId,
+        author: t.author,
+        role: t.role ?? null,
+        quote: t.quote,
+        quote_en: t.quoteEn ?? null,
+        consent: t.consent,
+        on_home: t.onHome,
+        updated_at: new Date().toISOString(),
+      }),
+    );
+  },
+
+  async deleteTestimonial(id) {
+    check(await db().from("testimonials").delete().eq("streamer_id", id));
   },
 
   async addStatEvent(e) {

@@ -65,6 +65,14 @@ export const homeSections: HomeSection[] = [
     ],
   },
   {
+    id: "reviews",
+    title: "Avis clients",
+    fields: [
+      { key: "reviews.kicker", label: "Surtitre", kind: "text", max: 60, hint: "Les avis se gèrent dans Portfolio, sur la fiche de chaque projet." },
+      { key: "reviews.title", label: "Titre", kind: "text", max: 120 },
+    ],
+  },
+  {
     id: "steps",
     title: "Comment ça marche",
     fields: [
@@ -134,6 +142,8 @@ export const homeDefaults: Record<string, string> = {
   "about.title1": site.about.title[0],
   "about.title2": site.about.title[1],
   "about.paragraphs": site.about.paragraphs.join("\n"),
+  "reviews.kicker": "Avis clients",
+  "reviews.title": "Ils parlent de leur univers.",
   "steps.kicker": "Comment ça marche",
   "steps.title": "De ton idée à ton premier live.",
   "steps.s1title": "Tu choisis",
@@ -179,6 +189,8 @@ export const homeDefaultsEn: Record<string, string> = {
   "about.title2": "I know what your screen needs to say.",
   "about.paragraphs":
     "Hi, I'm Aurore. Graphic designer, and streamer under the name zer0oes.\nI know the backstage: the scenes you switch between, the alerts that must stay readable mid-game, the identity people should recognise at a glance. Every universe I create, I design as if it were my own.",
+  "reviews.kicker": "Client reviews",
+  "reviews.title": "In their own words.",
   "steps.kicker": "How it works",
   "steps.title": "From your idea to your first live.",
   "steps.s1title": "You choose",

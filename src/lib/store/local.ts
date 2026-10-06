@@ -10,7 +10,7 @@ import { assertNotProduction } from "@/lib/env";
 import type { StoredTexts } from "@/lib/case-study-texts";
 import { staticCatalog, staticPortfolio } from "./static";
 import type { StatEvent } from "@/lib/stats";
-import type { Deliverable, Invoice, Order, Portfolio, Store } from "./types";
+import type { Deliverable, Invoice, Order, Portfolio, Store, Testimonial } from "./types";
 
 // Magasin JSON local, pour développer et tester l'admin sans Supabase.
 // Fichier .data/dev-store.json (ignoré par git). Interdit en production.
@@ -23,6 +23,7 @@ type Data = Catalog & Portfolio & {
   caseStudyTexts?: Record<string, StoredTexts>;
   home?: Record<string, string>;
   stats?: StatEvent[];
+  testimonials?: Testimonial[];
 };
 
 const FILE = path.join(process.cwd(), ".data", "dev-store.json");
@@ -212,6 +213,15 @@ export const localStore: Store = {
     mutate((d) => {
       const o = d.orders.find((x) => x.id === orderId);
       if (o) o.notes.push({ id: randomUUID(), createdAt: new Date().toISOString(), body });
+    }),
+  listTestimonials: async () => (await load()).testimonials ?? [],
+  saveTestimonial: (t) =>
+    mutate((d) => {
+      d.testimonials = [...(d.testimonials ?? []).filter((x) => x.streamerId !== t.streamerId), t];
+    }),
+  deleteTestimonial: (id) =>
+    mutate((d) => {
+      d.testimonials = (d.testimonials ?? []).filter((x) => x.streamerId !== id);
     }),
   addStatEvent: (event) =>
     mutate((d) => {

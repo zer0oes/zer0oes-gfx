@@ -142,6 +142,11 @@ const en: Record<string, string> = {
   Emotes: "Emotes",
   "La signature": "The signature",
   "Un trait.": "One line.",
+  "Un éclair.": "A lightning bolt.",
+  "Le monogramme, jusque dans l'avatar.": "The monogram, right down to the avatar.",
+  "Avatar / Monogramme": "Avatar / Monogram",
+  "Création d’un monogramme personnalisé pour TomaVega, décliné en avatar pour ses réseaux sociaux. Une identité graphique sombre et dynamique, marquée par des lignes anguleuses et des accents vert néon.":
+    "A custom monogram created for TomaVega, turned into an avatar for his social media. A dark, dynamic visual identity, marked by angular lines and neon green accents.",
   "Toute une identité.": "A whole identity.",
   "Le même univers, jusque dans l'avatar.": "The same universe, right down to the avatar.",
   "Les scènes du live": "The live scenes",

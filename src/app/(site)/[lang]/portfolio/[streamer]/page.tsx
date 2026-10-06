@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaseStudyView } from "@/components/CaseStudyView";
 import { EditorialView } from "@/components/EditorialView";
+import { TestimonialQuote, testimonialImage } from "@/components/TestimonialQuote";
 import { WorkGrid } from "@/components/WorkGrid";
 import { caseStudies } from "@/data/case-studies";
 import { categories, projectHref, type Category } from "@/data/portfolio";
@@ -39,6 +40,9 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
   if (!streamer) notFound();
 
   const own = works.filter((w) => w.streamer === streamer.id);
+  // Avis du client (publié seulement avec son accord)
+  const review = (await getStore().listTestimonials()).find((x) => x.streamerId === streamer.id);
+  const quote = review?.consent ? <TestimonialQuote testimonial={review} locale={lang} image={testimonialImage(own, streamer.id)} /> : null;
   const base = caseStudies[streamer.id];
   // Textes modifiés dans l'admin, appliqués sur la mise en page du code (puis traduits sur /en)
   const study = trDeep(lang, base && "layout" in base ? withStoredTexts(base, await getStore().getCaseStudyTexts(streamer.id)) : base);
@@ -52,9 +56,9 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
       <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
         {back}
         {"layout" in study ? (
-          <EditorialView study={study} works={own} streamerName={streamer.name} />
+          <EditorialView study={study} works={own} streamerName={streamer.name} quote={quote} />
         ) : (
-          <CaseStudyView study={study} works={own} streamerName={streamer.name} />
+          <CaseStudyView study={study} works={own} streamerName={streamer.name} quote={quote} />
         )}
       </div>
     );
@@ -111,6 +115,7 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
         {/* key : réinitialise la visionneuse au changement d'onglet */}
         <WorkGrid key={active.id} works={active.id === "tout" ? all : own.filter((w) => w.category === active.id)} showStreamer={false} />
       </div>
+      {quote && <div className="mt-16">{quote}</div>}
     </div>
   );
 }

@@ -7,6 +7,17 @@ import type { NewStatEvent, StatEvent } from "@/lib/stats";
 
 export type Portfolio = { streamers: Streamer[]; works: Work[] };
 
+// Avis client d'un projet (facultatif), publié seulement avec l'accord du client
+export type Testimonial = {
+  streamerId: string;
+  author: string;
+  role?: string;
+  quote: string;
+  quoteEn?: string;
+  consent: boolean;
+  onHome: boolean;
+};
+
 // Cycle de vie d'une commande.
 export const orderStatuses = [
   { id: "payee", label: "Payée" },
@@ -221,6 +232,10 @@ export interface Store {
   getInvoiceByKey(paymentKey: string): Promise<Invoice | null>;
   saveInvoice(invoice: Omit<Invoice, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<Invoice>;
   // Statistiques de visite (sans cookie ni adresse IP), du plus ancien au plus récent
+  // Avis clients (un par projet)
+  listTestimonials(): Promise<Testimonial[]>;
+  saveTestimonial(t: Testimonial): Promise<void>;
+  deleteTestimonial(streamerId: string): Promise<void>;
   addStatEvent(event: NewStatEvent): Promise<void>;
   listStatEvents(from: string, to: string): Promise<StatEvent[]>;
   purgeStatEvents(before: string): Promise<void>;

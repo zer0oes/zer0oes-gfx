@@ -28,7 +28,18 @@ function Lines({ lines }: { lines: string[] }) {
 }
 
 // Page projet « éditoriale » : blocs asymétriques où texte et visuels alternent.
-export function EditorialView({ study, works, streamerName }: { study: EditorialStudy; works: Work[]; streamerName: string }) {
+// quote : avis du client (citation), affiché avant l'appel au contact
+export function EditorialView({
+  study,
+  works,
+  streamerName,
+  quote,
+}: {
+  study: EditorialStudy;
+  works: Work[];
+  streamerName: string;
+  quote?: React.ReactNode;
+}) {
   const byId = new Map(works.map((w) => [w.id, w]));
   const get = (id?: string) => (id ? byId.get(id) : undefined);
 
@@ -101,6 +112,8 @@ export function EditorialView({ study, works, streamerName }: { study: Editorial
           </div>
         </section>
       )}
+
+      {quote && <div className="mt-24">{quote}</div>}
 
       <aside className="mt-24 flex flex-col gap-6 border-t border-border pt-12 sm:flex-row sm:items-end sm:justify-between">
         <div>

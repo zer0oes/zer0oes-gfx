@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { caseStudies } from "@/data/case-studies";
 import { categories } from "@/data/portfolio";
 import { getStore } from "@/lib/store";
-import { deleteStreamerAction, moveWorkAction, saveStreamerAction } from "../../../../portfolio-actions";
+import { deleteStreamerAction, moveWorkAction, saveStreamerAction, saveTestimonialAction } from "../../../../portfolio-actions";
 
 export const metadata: Metadata = { title: "Projet" };
 
@@ -15,11 +15,13 @@ const card = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
 export default async function AdminProjectPage({ params, searchParams }: PageProps<"/admin/portfolio/projet/[streamer]">) {
   const { streamer: id } = await params;
   const { enregistre, erreur } = await searchParams;
-  const { streamers, works } = await getStore().getPortfolio();
+  const store = getStore();
+  const [{ streamers, works }, testimonials] = await Promise.all([store.getPortfolio(), store.listTestimonials()]);
   const s = streamers.find((x) => x.id === decodeURIComponent(id));
   if (!s) notFound();
   const own = works.filter((w) => w.streamer === s.id);
   const study = caseStudies[s.id];
+  const review = testimonials.find((x) => x.streamerId === s.id);
 
   return (
     <>
@@ -77,6 +79,63 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
             </Link>
           </section>
         )}
+
+        <section className={card} aria-labelledby="avis">
+          <h2 id="avis" className="font-semibold">
+            Avis du client <span className="font-normal text-muted">(facultatif)</span>
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Une courte citation du client, affichée sur la page du projet, et sur l&apos;accueil si tu le coches. Elle n&apos;est
+            publiée qu&apos;avec son accord.
+          </p>
+          <form action={saveTestimonialAction} className="mt-4 space-y-3">
+            <input type="hidden" name="streamerId" value={s.id} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-xs text-muted">Nom ou pseudo du client *</span>
+                <input name="author" defaultValue={review?.author ?? s.name} maxLength={80} className={input} />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs text-muted">Précision (facultatif, ex. « Streamer Twitch »)</span>
+                <input name="role" defaultValue={review?.role} maxLength={80} className={input} />
+              </label>
+            </div>
+            <label className="block">
+              <span className="mb-1 block text-xs text-muted">Avis (français) *</span>
+              <textarea name="quote" defaultValue={review?.quote} rows={3} maxLength={600} className={input} />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs text-muted">Avis en anglais (facultatif : sinon l&apos;avis français s&apos;affiche sur le site anglais)</span>
+              <textarea name="quoteEn" defaultValue={review?.quoteEn} rows={3} maxLength={600} className={input} />
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" name="consent" defaultChecked={review?.consent} className="mt-1 accent-[var(--accent)]" />
+              <span>
+                Le client a donné son accord pour publier cet avis
+                <span className="block text-xs text-muted">Sans cette case, l&apos;avis est enregistré mais n&apos;apparaît pas sur le site.</span>
+              </span>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="onHome" defaultChecked={review?.onHome} className="accent-[var(--accent)]" />
+              Afficher aussi sur l&apos;accueil
+            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="submit" className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110">
+                Enregistrer l&apos;avis
+              </button>
+              {review && (
+                <button type="submit" name="remove" value="1" formNoValidate className="text-sm text-muted underline-offset-4 hover:text-foreground hover:underline">
+                  Supprimer l&apos;avis
+                </button>
+              )}
+              {review && (
+                <span className="text-xs text-muted">
+                  {review.consent ? (review.onHome ? "Publié sur la page projet et l'accueil" : "Publié sur la page projet") : "Non publié (accord non coché)"}
+                </span>
+              )}
+            </div>
+          </form>
+        </section>
 
         <section className={card}>
           <div className="flex flex-wrap items-center justify-between gap-3">

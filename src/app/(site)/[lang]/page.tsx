@@ -4,6 +4,8 @@ import { site } from "@/data/site";
 import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { PackCard } from "@/components/PackCard";
+import { ReviewsCarousel } from "@/components/ReviewsCarousel";
+import { TestimonialQuote, testimonialImage } from "@/components/TestimonialQuote";
 import { HoverVideo } from "@/components/HoverVideo";
 import { projectHref, type Work } from "@/data/portfolio";
 import { resolveHome } from "@/lib/home-content";
@@ -71,7 +73,12 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
   const lang = asLocale((await params).lang);
   const to = (path: string) => href(lang, path);
   const store = getStore();
-  const [catalog, portfolio, stored] = await Promise.all([store.getCatalog(), store.getPortfolio(), store.getHomeContent()]);
+  const [catalog, portfolio, stored, testimonials] = await Promise.all([
+    store.getCatalog(),
+    store.getPortfolio(),
+    store.getHomeContent(),
+    store.listTestimonials(),
+  ]);
   const { works, streamers } = trDeep(lang, portfolio);
   // Textes et visuels choisis dans l'admin (Admin > Accueil), sinon contenu d'origine
   const c = resolveHome(stored, lang);
@@ -268,6 +275,28 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
           </div>
         </div>
       </section>
+
+      {/* Avis clients choisis pour l'accueil (publiés avec l'accord du client), dans l'ordre du portfolio */}
+      {(() => {
+        const reviews = streamers.flatMap((s) => {
+          const r = testimonials.find((x) => x.streamerId === s.id && x.consent && x.onHome);
+          return r ? [{ r, s }] : [];
+        });
+        if (!reviews.length) return null;
+        return (
+          <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+            <p className={kickerClass}>{c.text("reviews.kicker")}</p>
+            <h2 className={titleClass}>{c.text("reviews.title")}</h2>
+            <div className="mt-12">
+              <ReviewsCarousel>
+                {reviews.map(({ r, s }) => (
+                  <TestimonialQuote key={s.id} testimonial={r} locale={lang} href={to(projectHref(s.id))} projectName={s.name} image={testimonialImage(works, s.id)} />
+                ))}
+              </ReviewsCarousel>
+            </div>
+          </section>
+        );
+      })()}
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <p className={kickerClass}>{c.text("steps.kicker")}</p>
