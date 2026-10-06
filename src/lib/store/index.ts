@@ -1,4 +1,5 @@
 import "server-only";
+import { withTranslations } from "@/lib/admin-translations";
 import { localStoreAllowed, supabaseConfigured } from "@/lib/env";
 import { mediaBaseUrl, mediaUrl } from "@/lib/media";
 import { s3Configured, s3DeliverableRead, s3DeliverableUrl, s3DeliverableWrite, s3Download, s3Upload } from "@/lib/s3";
@@ -31,7 +32,29 @@ function withMediaUrls(p: Portfolio): Portfolio {
 }
 
 export function getStore(): Store {
-  const store = baseStore();
+  const base = baseStore();
+  const store: Store = {
+    ...base,
+    async getCatalog() {
+      const [catalog, raw] = await Promise.all([base.getCatalog(), base.getHomeContent()]);
+      return {
+        settings: withTranslations(catalog.settings, raw, "settings", ["deliveryDays"]),
+        packs: catalog.packs.map((pack) => withTranslations({ ...pack, formulas: pack.formulas?.map((formula) => withTranslations(formula, raw, `pack:${pack.id}:formula:${formula.id}`, ["label"])) }, raw, `pack:${pack.id}`, ["name", "tagline", "deliverables", "extras", "note"], ["deliverables", "extras"])),
+        options: catalog.options.map((option) => withTranslations(option, raw, `option:${option.id}`, ["name", "unit"])),
+      };
+    },
+    async getPortfolio() {
+      const [portfolio, raw] = await Promise.all([base.getPortfolio(), base.getHomeContent()]);
+      return {
+        streamers: portfolio.streamers.map((streamer) => withTranslations(streamer, raw, `streamer:${streamer.id}`, ["name", "description"])),
+        works: portfolio.works.map((work) => withTranslations({ ...work, emotes: work.emotes?.map((emote) => withTranslations(emote, raw, `work:${work.id}:emote:${emote.name}`, ["name"])) }, raw, `work:${work.id}`, ["title", "description"])),
+      };
+    },
+    async listTestimonials() {
+      const [reviews, raw] = await Promise.all([base.listTestimonials(), base.getHomeContent()]);
+      return reviews.map((review) => withTranslations(review, raw, `review:${review.streamerId}`, ["author", "role"]));
+    },
+  };
   if (!mediaBaseUrl()) return store;
   return {
     ...store,

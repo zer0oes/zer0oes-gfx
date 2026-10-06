@@ -1,3 +1,6 @@
+import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
+import { translationValues } from "@/lib/admin-translations";
+import { trDeep } from "@/lib/translations-en";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -24,9 +27,12 @@ export default async function CaseStudyTextsPage({ params, searchParams }: PageP
   const study = withStoredTexts(base, stored);
   const title = (workId?: string) => works.find((w) => w.id === workId)?.title;
   const groups = textGroups(study, title);
+  const englishFields = Object.fromEntries(textGroups(trDeep("en", study), title).flatMap((group) => group.fields.map((field) => [field.path, field.value])));
+
+  const translationContent = await getStore().getHomeContent();
 
   return (
-    <>
+    <TranslationTabs stored={translationValues(translationContent)}>
       <Link href={`/admin/portfolio/projet/${id}`} className="text-sm text-muted hover:text-foreground">
         ← {streamer.name}
       </Link>
@@ -64,9 +70,9 @@ export default async function CaseStudyTextsPage({ params, searchParams }: PageP
                   <label key={f.path} className="block">
                     <span className="mb-1 block text-xs text-muted">{f.label}</span>
                     {rows > 1 ? (
-                      <textarea name={`t:${f.path}`} defaultValue={f.value} rows={rows} maxLength={600} className={input} />
+                      <TranslationInput multiline translationKey={`translation:study:${id}:t:${f.path}`} englishDefault={englishFields[f.path]} name={`t:${f.path}`} defaultValue={f.value} rows={rows} maxLength={600} className={input} />
                     ) : (
-                      <input name={`t:${f.path}`} defaultValue={f.value} maxLength={600} className={input} />
+                      <TranslationInput translationKey={`translation:study:${id}:t:${f.path}`} englishDefault={englishFields[f.path]} name={`t:${f.path}`} defaultValue={f.value} maxLength={600} className={input} />
                     )}
                   </label>
                 );
@@ -92,6 +98,6 @@ export default async function CaseStudyTextsPage({ params, searchParams }: PageP
           </button>
         </form>
       ) : null}
-    </>
+    </TranslationTabs>
   );
 }

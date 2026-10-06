@@ -4,7 +4,7 @@
 // Tous les montants sont en centimes d'euro HT.
 
 import { intlLocale, type Locale } from "@/lib/i18n";
-import { tr } from "@/lib/translations-en";
+import { trDeep } from "@/lib/translations-en";
 
 export type Formula = {
   id: string;
@@ -98,8 +98,8 @@ export function optionChoices(options: Option[], locale: Locale = "fr"): OptionC
   return options.map((o) => ({
     id: o.id,
     label: `${o.name} (${formatOfferPrice(o)})`,
-    ...splitOptionName(tr(locale, o.name)),
-    price: formatOfferPrice(o, locale),
+    ...splitOptionName(trDeep(locale, o).name),
+    price: formatOfferPrice(trDeep(locale, o), locale),
   }));
 }
 

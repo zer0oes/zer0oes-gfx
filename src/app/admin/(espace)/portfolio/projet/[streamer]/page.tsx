@@ -1,3 +1,5 @@
+import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
+import { translationValues } from "@/lib/admin-translations";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -23,8 +25,10 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
   const study = caseStudies[s.id];
   const review = testimonials.find((x) => x.streamerId === s.id);
 
+  const translationContent = await getStore().getHomeContent();
+
   return (
-    <>
+    <TranslationTabs stored={translationValues(translationContent)}>
       <Link href="/admin/portfolio" className="text-sm text-muted hover:text-foreground">
         ← Tous les projets
       </Link>
@@ -52,11 +56,11 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
             <input type="hidden" name="id" value={s.id} />
             <label className="block">
               <span className="mb-1 block text-xs text-muted">Nom</span>
-              <input name="name" defaultValue={s.name} required className={`${input} font-semibold`} />
+              <TranslationInput translationKey={`translation:streamer:${s.id}:name`} name="name" defaultValue={s.name} required className={`${input} font-semibold`} />
             </label>
             <label className="block">
               <span className="mb-1 block text-xs text-muted">Description</span>
-              <input name="description" defaultValue={s.description} className={input} />
+              <TranslationInput translationKey={`translation:streamer:${s.id}:description`} name="description" defaultValue={s.description} className={input} />
             </label>
             <label className="block">
               <span className="mb-1 block text-xs text-muted">Lien de la chaîne</span>
@@ -93,20 +97,16 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1 block text-xs text-muted">Nom ou pseudo du client *</span>
-                <input name="author" defaultValue={review?.author ?? s.name} maxLength={80} className={input} />
+                <TranslationInput translationKey={`translation:review:${s.id}:author`} name="author" defaultValue={review?.author ?? s.name} maxLength={80} className={input} />
               </label>
               <label className="block">
                 <span className="mb-1 block text-xs text-muted">Précision (facultatif, ex. « Streamer Twitch »)</span>
-                <input name="role" defaultValue={review?.role} maxLength={80} className={input} />
+                <TranslationInput translationKey={`translation:review:${s.id}:role`} name="role" defaultValue={review?.role} maxLength={80} className={input} />
               </label>
             </div>
             <label className="block">
               <span className="mb-1 block text-xs text-muted">Avis (français) *</span>
-              <textarea name="quote" defaultValue={review?.quote} rows={3} maxLength={600} className={input} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs text-muted">Avis en anglais (facultatif : sinon l&apos;avis français s&apos;affiche sur le site anglais)</span>
-              <textarea name="quoteEn" defaultValue={review?.quoteEn} rows={3} maxLength={600} className={input} />
+              <TranslationInput multiline translationKey="unused" englishDefault={review?.quoteEn ?? review?.quote ?? ""} name="quote" defaultValue={review?.quote} rows={3} maxLength={600} className={input} />
             </label>
             <label className="flex items-start gap-2 text-sm">
               <input type="checkbox" name="consent" defaultChecked={review?.consent} className="mt-1 accent-[var(--accent)]" />
@@ -195,6 +195,6 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
           </button>
         </form>
       </div>
-    </>
+    </TranslationTabs>
   );
 }

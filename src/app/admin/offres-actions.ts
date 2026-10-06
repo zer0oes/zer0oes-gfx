@@ -1,5 +1,7 @@
 "use server";
 
+import { saveAdminTranslations, saveTranslationFields } from "@/lib/save-admin-translations";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
@@ -55,6 +57,7 @@ export async function saveSettingsAction(formData: FormData) {
   if (logoDiscount === null) done(TAB.reglages, "Montant de remise invalide.");
   if (!deliveryDays) done(TAB.reglages, "Le délai de livraison est obligatoire.");
   await getStore().saveSettings({ depositPercent, logoDiscount, deliveryDays });
+  await saveAdminTranslations(formData, "settings", ["deliveryDays"]);
   done(TAB.reglages);
 }
 
@@ -101,6 +104,13 @@ export async function savePackAction(formData: FormData) {
     archived: current.archived,
   };
   await store.savePack(pack);
+  const translatedFields = Object.fromEntries(["name", "tagline", "deliverables", "extras", "note"].map((field) => [field, `translation:pack:${id}:${field}`]));
+  let formulaIndex = 0;
+  for (let i = 0; i < 10; i++) {
+    if (!text(formData, `formula_label_${i}`, 120)) continue;
+    translatedFields[`formula_label_${i}`] = `translation:pack:${id}:formula:${formulas[formulaIndex++].id}:label`;
+  }
+  await saveTranslationFields(formData, translatedFields);
   done(`/admin/offres?offre=${encodeURIComponent(id)}`);
 }
 
@@ -123,6 +133,14 @@ export async function saveOptionsAction(formData: FormData) {
     });
   }
   await getStore().saveOptions(options);
+  const translatedFields: Record<string, string> = {};
+  let optionIndex = 0;
+  for (let i = 0; i < 50; i++) {
+    if (!text(formData, `name_${i}`, 200) || formData.get(`delete_${i}`) === "on") continue;
+    const option = options[optionIndex++];
+    for (const field of ["name", "unit"]) translatedFields[`${field}_${i}`] = `translation:option:${option.id}:${field}`;
+  }
+  await saveTranslationFields(formData, translatedFields);
   done(TAB.options);
 }
 
@@ -189,6 +207,7 @@ export async function createPackAction(formData: FormData) {
     deliverables: [],
     formulas: checkout ? [{ id: "base", label: name, price }] : undefined,
   });
+  await saveAdminTranslations(formData, `pack:${id}`, ["name"]);
   done(`/admin/offres?offre=${encodeURIComponent(id)}`);
 }
 

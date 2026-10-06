@@ -90,7 +90,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
     const id = c.text(key);
     return id === "-" ? null : id;
   };
-  const { settings } = catalog;
+  const { settings } = trDeep(lang, catalog);
   const packs = activePacks(catalog.packs);
   const featured = works.filter((w) => w.featured);
   const streamerNames = Object.fromEntries(streamers.map((s) => [s.id, s.name]));
@@ -102,13 +102,15 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
   const emoteWork = works.find((w) => w.id === pick("emotes.work") && w.emotes?.length);
   const emotes = (emoteWork?.emotes ?? []).slice(0, 12);
   // Quelques emotes qui débordent autour de la création du hero
-  const allEmotes = emoteWork?.emotes ?? works.find((w) => w.emotes?.length)?.emotes ?? [];
+  const originalEmoteWork = portfolio.works.find((work) => work.id === emoteWork?.id) ?? portfolio.works.find((work) => work.emotes?.length);
+  const allEmotes = originalEmoteWork?.emotes ?? [];
   const heroEmotes = c
     .text("hero.emotes")
     .split(",")
     .map((n) => n.trim().toLowerCase())
     .flatMap((n) => allEmotes.filter((e) => e.name.toLowerCase() === n))
-    .slice(0, 4);
+    .slice(0, 4)
+    .map((emote) => trDeep(lang, emote));
   const universeId = pick("universe.work");
   const universe =
     universeId === null ? undefined : (byId(universeId) ?? featured.find((w) => w.image && w.id !== hero?.id && w.streamer !== hero?.streamer));

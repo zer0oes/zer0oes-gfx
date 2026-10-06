@@ -1,7 +1,9 @@
+import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
+import { translationValues } from "@/lib/admin-translations";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { categories } from "@/data/portfolio";
-import { portfolioPageFields, resolveHome } from "@/lib/home-content";
+import { portfolioPageFields, homeDefaultsEn, resolveHome } from "@/lib/home-content";
 import { getStore } from "@/lib/store";
 import { moveStreamerAction, savePortfolioPageAction, saveStreamerAction } from "../../portfolio-actions";
 
@@ -16,10 +18,10 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps<"/a
   const store = getStore();
   const [{ streamers, works }, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
   const texts = resolveHome(stored);
-  const customTexts = portfolioPageFields.some((f) => stored && typeof stored === "object" && f.key in stored);
+  const customTexts = portfolioPageFields.some((f) => stored && typeof stored === "object" && (f.key in stored || `en:${f.key}` in stored));
 
   return (
-    <>
+    <TranslationTabs stored={translationValues(stored)}>
       <h1 className="font-display text-3xl font-bold">Portfolio</h1>
       <p className="mt-2 text-sm text-muted">Les projets s&apos;affichent sur le site dans cet ordre. Clique sur un projet pour le modifier.</p>
       {enregistre && (
@@ -48,9 +50,9 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps<"/a
             <label key={f.key} className="block">
               <span className="mb-1 block text-xs text-muted">{f.label}</span>
               {f.kind === "long" ? (
-                <textarea name={`h:${f.key}`} defaultValue={texts.text(f.key)} rows={3} maxLength={1200} className={input} />
+                <TranslationInput multiline translationKey={`en:${f.key}`} englishDefault={homeDefaultsEn[f.key]} name={`h:${f.key}`} defaultValue={texts.text(f.key)} rows={3} maxLength={1200} className={input} />
               ) : (
-                <input name={`h:${f.key}`} defaultValue={texts.text(f.key)} maxLength={f.max ?? 1200} className={input} />
+                <TranslationInput translationKey={`en:${f.key}`} englishDefault={homeDefaultsEn[f.key]} name={`h:${f.key}`} defaultValue={texts.text(f.key)} maxLength={f.max ?? 1200} className={input} />
               )}
             </label>
           ))}
@@ -135,14 +137,14 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps<"/a
       <section className={`${card} mt-8`}>
         <h2 className="font-semibold">Nouveau projet</h2>
         <form action={saveStreamerAction} className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_1.4fr_auto] sm:items-end">
-          <input name="name" placeholder="Nom" required aria-label="Nom" className={input} />
-          <input name="description" placeholder="Courte description" aria-label="Description" className={input} />
+          <TranslationInput translationKey={`translation:streamer:new:name`} name="name" placeholder="Nom" required aria-label="Nom" className={input} />
+          <TranslationInput translationKey={`translation:streamer:new:description`} name="description" placeholder="Courte description" aria-label="Description" className={input} />
           <input name="url" placeholder="https://… (optionnel)" aria-label="Lien de la chaîne" className={input} />
           <button type="submit" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background hover:brightness-110">
             Ajouter
           </button>
         </form>
       </section>
-    </>
+    </TranslationTabs>
   );
 }

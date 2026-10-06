@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --conditions=react-server --import tsx --test \"src/**/*.test.ts\" \"scripts/**/*.test.ts\"",
+    "test": "node --conditions=react-server --import tsx --test \"src/**/*.test.ts\" \"scripts/**/*.test.ts\" && node --import tsx --test \"src/**/*.react-test.ts\"",
     "db:seed:generate": "tsx scripts/generate-seed.mts",
     "db:check": "tsx scripts/check-migrations.mts",
     "db:setup": "tsx scripts/db-setup.mts",

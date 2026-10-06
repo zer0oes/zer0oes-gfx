@@ -1,3 +1,5 @@
+import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
+import { translationValues } from "@/lib/admin-translations";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NetTable, priceCases } from "@/components/admin/NetTable";
@@ -98,14 +100,14 @@ function PackForm({ pack }: { pack: Pack }) {
       <input type="hidden" name="id" value={pack.id} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nom">
-          <input name="name" defaultValue={pack.name} required className={input} />
+          <TranslationInput translationKey={`translation:pack:${pack.id}:name`} name="name" defaultValue={pack.name} required className={input} />
         </Field>
         <Field label="Prix affiché (€ HT)" hint="Prix de la formule de base, ou prix « à partir de ».">
           <input name="price" defaultValue={euros(pack.price)} inputMode="decimal" required className={input} />
         </Field>
       </div>
       <Field label="Accroche">
-        <input name="tagline" defaultValue={pack.tagline} className={input} />
+        <TranslationInput translationKey={`translation:pack:${pack.id}:tagline`} name="tagline" defaultValue={pack.tagline} className={input} />
       </Field>
       <div className="flex flex-wrap gap-x-6 gap-y-2">
         <Check name="checkout" label="Commandable en ligne (sinon : sur devis)" defaultChecked={pack.checkout} />
@@ -114,14 +116,14 @@ function PackForm({ pack }: { pack: Pack }) {
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Livrables" hint="Un par ligne.">
-          <textarea name="deliverables" rows={5} defaultValue={pack.deliverables.join("\n")} className={input} />
+          <TranslationInput multiline translationKey={`translation:pack:${pack.id}:deliverables`} name="deliverables" rows={5} defaultValue={pack.deliverables.join("\n")} className={input} />
         </Field>
         <Field label="Options de l'offre" hint="Une par ligne, affichées sous les livrables. Offre sur devis : exemples de créations (« Par exemple »).">
-          <textarea name="extras" rows={5} defaultValue={(pack.extras ?? []).join("\n")} className={input} />
+          <TranslationInput multiline translationKey={`translation:pack:${pack.id}:extras`} name="extras" rows={5} defaultValue={(pack.extras ?? []).join("\n")} className={input} />
         </Field>
       </div>
       <Field label="Note">
-        <textarea name="note" rows={2} defaultValue={pack.note ?? ""} className={input} />
+        <TranslationInput multiline translationKey={`translation:pack:${pack.id}:note`} name="note" rows={2} defaultValue={pack.note ?? ""} className={input} />
       </Field>
 
       <fieldset>
@@ -133,7 +135,7 @@ function PackForm({ pack }: { pack: Pack }) {
         <div className="space-y-2">
           {rows.map((f, i) => (
             <div key={i} className="grid gap-2 sm:grid-cols-[1fr_8rem_9rem_1fr]">
-              <input name={`formula_label_${i}`} defaultValue={f?.label} placeholder="Libellé" aria-label="Libellé de la formule" className={input} />
+              <TranslationInput translationKey={`translation:pack:${pack.id}:formula:${f?.id ?? `new-${i}`}:label`} name={`formula_label_${i}`} defaultValue={f?.label} placeholder="Libellé" aria-label="Libellé de la formule" className={input} />
               <input name={`formula_price_${i}`} defaultValue={f ? euros(f.price) : ""} placeholder="Prix € HT" inputMode="decimal" aria-label="Prix de la formule" className={input} />
               <input name={`formula_id_${i}`} defaultValue={f?.id} placeholder="identifiant" aria-label="Identifiant de la formule" className={input} />
               <input name={`formula_stripe_${i}`} defaultValue={f?.stripePriceId} placeholder="price_… (optionnel)" aria-label="Prix Stripe" className={input} />
@@ -196,8 +198,10 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const qty = (id: string) => Math.min(99, Math.max(0, Math.floor(Number(one(sp[`v_${id}`]) ?? 0) || 0)));
   const sim = simulate(active, qty, finance);
 
+  const translationContent = await getStore().getHomeContent();
+
   return (
-    <>
+    <TranslationTabs stored={translationValues(translationContent)}>
       <h1 className="font-display text-3xl font-bold">Offres et réglages</h1>
       <p className="mt-2 text-sm text-muted">Les modifications sont visibles sur le site dès l&apos;enregistrement.</p>
 
@@ -256,7 +260,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
               <summary className="cursor-pointer list-none p-5 font-semibold text-accent sm:px-6 [&::-webkit-details-marker]:hidden">+ Nouvelle offre</summary>
               <form action={createPackAction} className="grid gap-3 px-5 pb-5 sm:grid-cols-[2fr_1fr_auto_auto] sm:items-end sm:px-6 sm:pb-6">
                 <Field label="Nom">
-                  <input name="name" required className={input} />
+                  <TranslationInput translationKey="translation:pack:new:name" name="name" required className={input} />
                 </Field>
                 <Field label="Prix (€ HT)">
                   <input name="price" required inputMode="decimal" className={input} />
@@ -281,9 +285,9 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
             {optionRows.map((o, i) => (
               <div key={i} className="grid items-center gap-2 sm:grid-cols-[1fr_7rem_7rem_auto_auto]">
                 <input type="hidden" name={`id_${i}`} defaultValue={o?.id} />
-                <input name={`name_${i}`} defaultValue={o?.name} placeholder="Nouvelle option" aria-label="Nom de l'option" className={input} />
+                <TranslationInput translationKey={`translation:option:${o?.id ?? "new"}:name`} name={`name_${i}`} defaultValue={o?.name} placeholder="Nouvelle option" aria-label="Nom de l'option" className={input} />
                 <input name={`price_${i}`} defaultValue={o ? euros(o.price) : ""} placeholder="€ HT" inputMode="decimal" aria-label="Prix" className={input} />
-                <input name={`unit_${i}`} defaultValue={o?.unit} placeholder="unité (opt.)" aria-label="Unité" className={input} />
+                <TranslationInput translationKey={`translation:option:${o?.id ?? "new"}:unit`} name={`unit_${i}`} defaultValue={o?.unit} placeholder="unité (opt.)" aria-label="Unité" className={input} />
                 <Check name={`from_${i}`} label="À partir de" defaultChecked={o?.priceFrom} />
                 {o ? <Check name={`delete_${i}`} label="Supprimer" /> : <span />}
               </div>
@@ -307,7 +311,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                 <input name="logoDiscount" defaultValue={euros(settings.logoDiscount)} inputMode="decimal" required className={input} />
               </Field>
               <Field label="Délai de livraison (jours ouvrés)" hint="Ex. « 7 à 14 ».">
-                <input name="deliveryDays" defaultValue={settings.deliveryDays} required className={input} />
+                <TranslationInput translationKey="translation:settings:deliveryDays" englishDefault={settings.deliveryDays.replace(" à ", " to ")} name="deliveryDays" defaultValue={settings.deliveryDays} required className={input} />
               </Field>
               <div className="sm:col-span-3">
                 <button type="submit" className={save}>
@@ -496,6 +500,6 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           </div>
         </section>
       )}
-    </>
+    </TranslationTabs>
   );
 }

@@ -200,7 +200,7 @@ export function trDeep<T>(locale: Locale, value: T): T {
   if (typeof value === "string") return tr(locale, value) as T;
   if (Array.isArray(value)) return value.map((v) => trDeep(locale, v)) as T;
   if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, trDeep(locale, v)])) as T;
+    return Object.fromEntries(Object.entries(value).filter(([k]) => k !== "__en").map(([k, v]) => [k, (value as { __en?: Record<string, unknown> }).__en?.[k] ?? trDeep(locale, v)])) as T;
   }
   return value;
 }

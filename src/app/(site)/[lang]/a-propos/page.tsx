@@ -1,7 +1,9 @@
+import { resolveAbout } from "@/lib/about-content";
+import { getStore } from "@/lib/store";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { asLocale, href, t, type Locale } from "@/lib/i18n";
+import { asLocale, href } from "@/lib/i18n";
 import { mediaUrl } from "@/lib/media";
 import { pageMetadata } from "@/lib/seo";
 
@@ -76,66 +78,11 @@ function Rings() {
   );
 }
 
-const chaptersFr = [
-  {
-    title: "Moi, en quelques pixels",
-    text: "Je suis Aurore, Graphic & Web Designer, passionnée par les univers visuels forts, cohérents et pensés pour vivre vraiment à l’écran.",
-    Detail: Pixels,
-  },
-  {
-    title: "Du web au broadcast",
-    text: "Mon parcours mêle design graphique, développement front-end, web et broadcast. J’aime autant réfléchir à l’esthétique qu’à la manière dont une création va être utilisée.",
-    Detail: WebToLive,
-  },
-  {
-    title: "Aujourd’hui, je crée pour les créateurs",
-    text: "J’accompagne principalement les streamers, créateurs de contenu et projets gaming avec des identités visuelles, overlays, interfaces, emotes et animations.",
-    Detail: LiveBadge,
-  },
-  {
-    title: "Pas de recette toute faite",
-    text: "Chaque projet commence par ton univers, tes références et ce que tu veux raconter. Pas de style plaqué ni de formule copiée-collée.",
-    Detail: NoCopyPaste,
-  },
-  {
-    title: "Une identité qui reste en tête",
-    text: "Mon objectif : créer quelque chose de reconnaissable, cohérent et suffisamment fort pour qu’on sache que c’est toi avant même de lire ton pseudo.",
-    Detail: Rings,
-  },
-];
-
-const chaptersEn = [
-  {
-    title: "Me, in a few pixels",
-    text: "I'm Aurore, a Graphic & Web Designer with a passion for strong, consistent visual universes designed to truly live on screen.",
-    Detail: Pixels,
-  },
-  {
-    title: "From web to broadcast",
-    text: "My background blends graphic design, front-end development, web and broadcast. I care as much about the look as about how a creation will actually be used.",
-    Detail: WebToLive,
-  },
-  {
-    title: "Today, I create for creators",
-    text: "I mainly work with streamers, content creators and gaming projects on visual identities, overlays, interfaces, emotes and animations.",
-    Detail: LiveBadge,
-  },
-  {
-    title: "No ready-made recipe",
-    text: "Every project starts with your universe, your references and what you want to say. No stuck-on style, no copy-paste formula.",
-    Detail: NoCopyPaste,
-  },
-  {
-    title: "An identity that sticks",
-    text: "My goal: to create something recognisable, consistent and strong enough that people know it's you before they even read your name.",
-    Detail: Rings,
-  },
-];
-
-const chapters: Record<Locale, typeof chaptersFr> = { fr: chaptersFr, en: chaptersEn };
+const details = [Pixels, WebToLive, LiveBadge, NoCopyPaste, Rings];
 
 export default async function AboutPage({ params }: PageProps<"/[lang]/a-propos">) {
   const lang = asLocale((await params).lang);
+  const content = resolveAbout(await getStore().getHomeContent(), lang);
 
   return (
     <div className="relative overflow-hidden">
@@ -145,11 +92,11 @@ export default async function AboutPage({ params }: PageProps<"/[lang]/a-propos"
         style={{ background: "radial-gradient(40% 50% at 25% 30%, var(--accent-3), transparent), radial-gradient(40% 50% at 75% 20%, var(--accent-2), transparent)" }}
       />
       <div className="relative mx-auto max-w-5xl px-4 pb-8 pt-16 sm:px-6 sm:pt-24">
-        <p className="text-sm font-semibold uppercase tracking-widest text-accent">{t(lang, { fr: "À propos", en: "About" })}</p>
+        <p className="text-sm font-semibold uppercase tracking-widest text-accent">{content.text("kicker")}</p>
 
         <ol className="mt-10">
-          {chapters[lang].map(({ title, text, Detail }, i) => (
-            <li key={title} data-reveal className={`border-t border-border/60 py-14 first:border-t-0 first:pt-0 sm:py-20 ${i === 0 ? "" : i % 2 ? "md:pl-[16%]" : "md:pr-[16%]"}`}>
+          {details.map((Detail, i) => (
+            <li key={i} data-reveal className={`border-t border-border/60 py-14 first:border-t-0 first:pt-0 sm:py-20 ${i === 0 ? "" : i % 2 ? "md:pl-[16%]" : "md:pr-[16%]"}`}>
               <div className="grid items-start gap-6 md:grid-cols-[9rem_1fr] md:gap-10">
                 <div className="flex items-center gap-5 md:flex-col md:items-start">
                   <span className="font-display text-5xl font-bold text-gradient">0{i + 1}</span>
@@ -157,15 +104,15 @@ export default async function AboutPage({ params }: PageProps<"/[lang]/a-propos"
                 </div>
                 <div className={i === 0 ? "grid items-center gap-10 sm:grid-cols-[1fr_auto]" : ""}>
                   <div>
-                    <h2 className={`font-display font-bold leading-tight tracking-tight ${i === 0 ? "text-4xl sm:text-5xl lg:text-6xl" : "text-3xl sm:text-4xl"}`}>{title}</h2>
-                    <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">{text}</p>
+                    <h2 className={`font-display font-bold leading-tight tracking-tight ${i === 0 ? "text-4xl sm:text-5xl lg:text-6xl" : "text-3xl sm:text-4xl"}`}>{content.text(`chapter.${i}.title`)}</h2>
+                    <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">{content.text(`chapter.${i}.text`)}</p>
                   </div>
                   {i === 0 && (
                     <figure className="relative w-56 sm:w-60">
                       <div aria-hidden className="absolute -inset-3 rounded-[2rem] opacity-50 blur-2xl" style={{ background: "linear-gradient(135deg, var(--accent-3), var(--accent), var(--accent-2))" }} />
                       <Image
                         src={mediaUrl("/a-propos/aurore.webp")}
-                        alt={t(lang, { fr: "Aurore, alias zer0oes, à son poste de stream", en: "Aurore, aka zer0oes, at her streaming setup" })}
+                        alt={content.text("image.alt")}
                         width={800}
                         height={1000}
                         priority
@@ -174,7 +121,7 @@ export default async function AboutPage({ params }: PageProps<"/[lang]/a-propos"
                       />
                       <figcaption className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-background/80 px-3 py-1 text-xs font-semibold backdrop-blur">
                         <span className="size-2 rounded-full bg-red-500" aria-hidden />
-                        {t(lang, { fr: "En live", en: "Live" })}
+                        {content.text("image.caption")}
                       </figcaption>
                     </figure>
                   )}
@@ -186,15 +133,15 @@ export default async function AboutPage({ params }: PageProps<"/[lang]/a-propos"
 
         <div data-reveal className="mt-4 flex flex-col items-start gap-4 rounded-3xl border border-border bg-surface p-8 sm:flex-row sm:items-center sm:justify-between sm:p-10">
           <div>
-            <h2 className="font-display text-2xl font-bold">{t(lang, { fr: "On crée ton univers ?", en: "Shall we create your universe?" })}</h2>
-            <p className="mt-1 text-muted">{t(lang, { fr: "Raconte-moi ta chaîne, je te réponds sous 48 h ouvrées.", en: "Tell me about your channel, I'll reply within 2 business days." })}</p>
+            <h2 className="font-display text-2xl font-bold">{content.text("cta.title")}</h2>
+            <p className="mt-1 text-muted">{content.text("cta.text")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
             <Link href={href(lang, "/contact")} className="rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110">
-              {t(lang, { fr: "Parlons de ton projet", en: "Let's talk about your project" })}
+              {content.text("cta.button")}
             </Link>
             <Link href={href(lang, "/portfolio")} className="text-sm text-muted hover:text-foreground">
-              {t(lang, { fr: "Voir le portfolio →", en: "See the portfolio →" })}
+              {content.text("cta.link")}
             </Link>
           </div>
         </div>
