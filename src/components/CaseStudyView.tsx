@@ -12,6 +12,7 @@ import { href, t } from "@/lib/i18n";
 import { useLocale } from "./I18nProvider";
 import { ProtectedMedia } from "./protection";
 import { WorkCard } from "./WorkCard";
+import { ProjectOverview } from "./ProjectOverview";
 
 type Piece = { work: Work; label: string };
 
@@ -23,13 +24,11 @@ export function CaseStudyView({
   works,
   streamerName,
   quote,
-  overview,
 }: {
   study: CaseStudy;
   works: Work[];
   streamerName: string;
   quote?: React.ReactNode;
-  overview?: React.ReactNode;
 }) {
   const byId = new Map(works.map((w) => [w.id, w]));
   const pieces = (list: CasePiece[] = []): Piece[] =>
@@ -73,16 +72,9 @@ export function CaseStudyView({
           <br />
           {study.headline[1]}
         </h1>
+        <ProjectOverview works={works} locale={locale} />
         <p className="mt-5 max-w-2xl text-lg text-muted">{study.intro}</p>
-        <ul className="mt-5 flex flex-wrap gap-2" aria-label={t(locale, { fr: "Ce que comprend le projet", en: "What the project includes" })}>
-          {study.tags.map((t) => (
-            <li key={t} className="rounded-full border border-border px-3 py-1 text-xs text-muted">
-              {t}
-            </li>
-          ))}
-        </ul>
       </header>
-      {overview}
 
       {hero && (
         <Figure work={hero} onOpen={() => openWork(hero)} caption={study.heroCaption} aside={t(locale, { fr: "Vue d'ensemble", en: "Overview" })} priority className="mt-10" />

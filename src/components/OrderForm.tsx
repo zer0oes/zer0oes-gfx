@@ -6,7 +6,7 @@ import { createCheckout } from "@/app/actions";
 import { href, t } from "@/lib/i18n";
 import { depositAmount, formatPrice, orderPrice, type Pack, type PaymentType, type PricingSettings } from "@/lib/pricing";
 import { useLocale } from "./I18nProvider";
-import { CardSection } from "./PackCard";
+
 
 // Choix de la formule et du mode de paiement. Les montants affichés ici sont
 // indicatifs : le montant encaissé est recalculé côté serveur (createCheckout).
@@ -14,11 +14,15 @@ export function OrderForm({
   pack,
   settings,
   buttonClass,
+  defaultOpen = false,
 }: {
   pack: Pack;
   settings: PricingSettings;
   buttonClass: string;
+  defaultOpen?: boolean;
 }) {
+  const [formulaOpen, setFormulaOpen] = useState(defaultOpen);
+  const [paymentOpen, setPaymentOpen] = useState(defaultOpen);
   const site = settings;
   const locale = useLocale();
   const amount = (cents: number) => formatPrice(cents, locale);
@@ -42,7 +46,15 @@ export function OrderForm({
       <input type="hidden" name="packId" value={pack.id} />
       {/* Langue : paiement Stripe et page de remerciement dans la langue du visiteur */}
       <input type="hidden" name="lang" value={locale} />
-      <CardSection title={t(locale, { fr: "Formule", en: "Package" })}>
+      <div className="mt-6 relative before:absolute before:-left-6 before:-right-6 before:top-0 before:border-t before:border-border pt-5">
+        <button type="button" aria-expanded={formulaOpen} aria-controls={`formula-${pack.id}`} onClick={() => setFormulaOpen((open) => !open)} className="flex w-full cursor-pointer items-start justify-between gap-3 rounded-sm py-1 text-left focus-visible:outline-2 focus-visible:outline-accent">
+          <span>
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-accent">{t(locale, { fr: "Formule", en: "Package" })}</span>
+            <span className="mt-1 block text-xs text-muted">{`${formulas.find((formula) => formula.id === formulaId)?.label ?? pack.name} · ${amount(price)}`}</span>
+          </span>
+          <span aria-hidden className="flex h-4 shrink-0 items-center text-lg leading-none text-accent">{formulaOpen ? "−" : "+"}</span>
+        </button>
+        <div id={`formula-${pack.id}`} hidden={!formulaOpen} className="mt-4">
         {formulas.length > 1 ? (
           <fieldset className="space-y-2">
             <legend className="sr-only">{t(locale, { fr: "Formule", en: "Package" })}</legend>
@@ -86,9 +98,18 @@ export function OrderForm({
           </span>
           <span className="shrink-0 font-semibold">−{amount(site.logoDiscount)}</span>
         </label>
-      </CardSection>
+        </div>
+      </div>
 
-      <CardSection title={t(locale, { fr: "Paiement", en: "Payment" })}>
+      <div className="mt-6 relative before:absolute before:-left-6 before:-right-6 before:top-0 before:border-t before:border-border pt-5">
+        <button type="button" aria-expanded={paymentOpen} aria-controls={`payment-${pack.id}`} onClick={() => setPaymentOpen((open) => !open)} className="flex w-full cursor-pointer items-start justify-between gap-3 rounded-sm py-1 text-left focus-visible:outline-2 focus-visible:outline-accent">
+          <span>
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-accent">{t(locale, { fr: "Paiement", en: "Payment" })}</span>
+            <span className="mt-1 block text-xs text-muted">{payment === "acompte" ? t(locale, { fr: `Acompte de ${site.depositPercent} % · ${amount(deposit)}`, en: `${site.depositPercent}% deposit · ${amount(deposit)}` }) : t(locale, { fr: `En une fois · ${amount(price)}`, en: `In full · ${amount(price)}` })}</span>
+          </span>
+          <span aria-hidden className="flex h-4 shrink-0 items-center text-lg leading-none text-accent">{paymentOpen ? "−" : "+"}</span>
+        </button>
+        <div id={`payment-${pack.id}`} hidden={!paymentOpen} className="mt-4">
         <fieldset className="space-y-2">
           <legend className="sr-only">{t(locale, { fr: "Paiement", en: "Payment" })}</legend>
           <label className={choiceClass}>
@@ -114,9 +135,10 @@ export function OrderForm({
             </p>
           )}
         </fieldset>
-      </CardSection>
+        </div>
+      </div>
 
-      <div className="mt-6 space-y-4 border-t border-border pt-5">
+      <div className="mt-6 space-y-4 relative before:absolute before:-left-6 before:-right-6 before:top-0 before:border-t before:border-border pt-5">
         <label className="flex items-start gap-2 text-xs text-muted">
           <input type="checkbox" name="cgv" required className="mt-0.5 accent-[var(--accent)]" />
           {locale === "en" ? (

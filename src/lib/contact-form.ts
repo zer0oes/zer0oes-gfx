@@ -2,7 +2,7 @@
 // qui ne retient que les valeurs de ces listes) et mise en forme de la demande.
 
 // Onglet « Projet sur-mesure »
-export const requestTypes = ["Projet sur mesure", "Devis Univers complet"];
+export const requestTypes = ["Projet sur mesure", "Question sur une offre", "Suivi d'une commande", "Collaboration / partenariat", "Autre demande", "Devis Univers complet"];
 // Onglet « Message simple »
 export const messageSubjects = ["Question sur une offre", "Collaboration / partenariat", "Autre"];
 export const budgets = ["Moins de 500 €", "500 à 1 000 €", "1 000 à 2 000 €", "Plus de 2 000 €"];
@@ -16,6 +16,8 @@ export const MAX_REFERENCES = 5;
 // Affichage en anglais des choix (la valeur envoyée reste la valeur française ci-dessus)
 const choicesEn: Record<string, string> = {
   "Projet sur mesure": "Custom project",
+  "Suivi d'une commande": "Order follow-up",
+  "Autre demande": "Other enquiry",
   "Devis Univers complet": "Full Universe quote",
   "Question sur une offre": "Question about a package",
   "Collaboration / partenariat": "Collaboration / partnership",
@@ -127,6 +129,7 @@ export function parseContact(get: Get, getAll: GetAll): { ok: true; request: Con
         "E-mail": email,
         Chaîne: text("channel", 300),
         "Type de demande": type,
+        ...(type === "Suivi d'une commande" ? { "Numéro de commande": text("orderNumber", 100) } : {}),
         "Offre envisagée": text("offer", 200),
         Budget: one(get("budget"), budgets) || "Je ne sais pas encore",
         Plateformes: join(pick(getAll("platforms"), platforms)),
