@@ -270,6 +270,7 @@ export async function finalizeUpload(input: { path: string; kind: MediaKind; pub
   const real = sniffType(bytes);
   const error = real ? checkUpload(input.kind, real, bytes.length) : "Format de fichier non reconnu.";
   if (error) return { url: "", error };
+  if (input.kind === "portrait") return { url: input.publicUrl };
   const wm = await watermarkImage(bytes, (await store.getProtection()).watermark, input.kind);
   if (!wm) return { url: input.publicUrl };
   const marked = input.path.replace(/\.[a-z0-9]+$/, ".webp");

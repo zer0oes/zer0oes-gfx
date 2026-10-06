@@ -1,9 +1,10 @@
 // Règles d'envoi des médias du portfolio (vérifiées côté serveur ; le bucket
 // Supabase « portfolio » applique aussi une limite de 20 Mo et une liste de types).
 
-export type MediaKind = "image" | "video" | "emote";
+export type MediaKind = "image" | "video" | "emote" | "portrait";
 
 export const uploadRules: Record<MediaKind, { types: string[]; maxBytes: number; label: string }> = {
+  portrait: { types: ["image/webp", "image/png", "image/jpeg", "image/gif"], maxBytes: 5 * 1024 * 1024, label: "portrait (WebP, PNG, JPEG, GIF, 5 Mo max)" },
   image: { types: ["image/webp", "image/png", "image/jpeg", "image/gif"], maxBytes: 5 * 1024 * 1024, label: "image (WebP, PNG, JPEG, GIF, 5 Mo max)" },
   video: { types: ["video/mp4", "video/webm"], maxBytes: 20 * 1024 * 1024, label: "vidéo (MP4 ou WebM, 20 Mo max)" },
   emote: { types: ["image/webp", "image/png", "image/gif"], maxBytes: 2 * 1024 * 1024, label: "emote (WebP, PNG ou GIF, 2 Mo max)" },

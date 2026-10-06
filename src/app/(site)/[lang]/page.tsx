@@ -288,7 +288,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
               style={{ background: "radial-gradient(circle, rgba(219,39,160,0.95) 0%, rgba(124,58,237,0.85) 45%, rgba(76,29,149,0.5) 62%, transparent 72%)" }}
             />
             <ProtectedMedia className="relative overflow-hidden rounded-full border-[3px] border-white/90 shadow-[0_0_24px_rgba(255,255,255,0.25)]">
-              <Image src={mediaUrl("/a-propos/zer0oes-avatar.webp")} alt={t(lang, { fr: "Aurore, alias zer0oes", en: "Aurore, aka zer0oes" })} width={500} height={500} draggable={false} sizes="(min-width: 640px) 224px, 176px" className="aspect-square h-auto w-full object-cover" />
+              <Image src={mediaUrl(c.text("about.image"))} alt={t(lang, { fr: "Aurore, alias zer0oes", en: "Aurore, aka zer0oes" })} width={500} height={500} draggable={false} sizes="(min-width: 640px) 224px, 176px" className="aspect-square h-auto w-full object-cover" />
             </ProtectedMedia>
           </div>
           <div className="lg:col-span-7 lg:col-start-6">

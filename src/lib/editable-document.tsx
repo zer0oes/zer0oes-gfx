@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui";
 import type { Locale } from "@/lib/i18n";
 
 type NodeProps = { children?: ReactNode; title?: string; href?: string; name?: string; value?: string | number };
-export type DocumentField = { key: string; label: string; section: string; value: string; multiline: boolean };
+export type DocumentField = { key: string; label: string; section: string; value: string; multiline: boolean; image?: boolean };
 const blocks = new Set(["h1", "h2", "h3", "p", "li", "th", "td"]);
 const labels: Record<string, string> = { h1: "Titre", h2: "Titre de section", h3: "Sous-titre", p: "Paragraphe", li: "Élément de liste", th: "En-tête de tableau", td: "Cellule du tableau" };
 
@@ -97,6 +97,7 @@ export function editableDocument(tree: ReactNode, raw: unknown = null, page = ""
 export function saveDocumentFields(raw: unknown, page: string, form: FormData, defaults: Record<Locale, DocumentField[]>) {
   const content = raw && typeof raw === "object" ? { ...raw } as Record<string, string> : {};
   for (const locale of ["fr", "en"] as const) for (const field of defaults[locale]) {
+    if (field.image && locale === "en") continue;
     const value = form.get(`${locale === "en" ? "en:" : ""}p:${field.key}`);
     if (typeof value !== "string") continue;
     const clean = value.replace(/\r/g, "").trim().slice(0, 12000);
