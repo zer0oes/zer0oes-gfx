@@ -198,7 +198,9 @@ export function ContactForm({
   optionChoices,
   selectedOffer,
   offerChoices,
+  selectedOptionId,
 }: {
+  selectedOptionId?: string;
   defaultType?: string;
   selectedOffer?: string;
   offerChoices: string[];
@@ -328,7 +330,7 @@ export function ContactForm({
 
           <Section step="04" title={tx.need}>
             {optionChoices.length > 0 && (
-              <details className="group rounded-xl border border-border bg-background/40 px-4 py-3">
+              <details open={selectedOptionId ? true : undefined} className="group rounded-xl border border-border bg-background/40 px-4 py-3">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm [&::-webkit-details-marker]:hidden">
                   <span>
                     <span className="font-medium">{tx.options}</span>
@@ -338,7 +340,7 @@ export function ContactForm({
                   <span className="hidden text-accent group-open:inline">{tx.hide}</span>
                 </summary>
                 <div className="mt-4">
-                  <OptionsField legend={tx.optionsLegend} options={optionChoices} />
+                  <OptionsField legend={tx.optionsLegend} options={optionChoices} selectedIds={selectedOptionId ? [selectedOptionId] : []} />
                 </div>
               </details>
             )}

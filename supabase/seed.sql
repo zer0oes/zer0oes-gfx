@@ -7,20 +7,20 @@ insert into public.finance_settings (id, urssaf_rate, cfp_rate, vl_enabled, vl_r
   (1, 25.6, 0.2, false, 2.2, 1.5, 25)
 on conflict (id) do update set urssaf_rate = excluded.urssaf_rate, cfp_rate = excluded.cfp_rate, vl_enabled = excluded.vl_enabled, vl_rate = excluded.vl_rate, stripe_percent = excluded.stripe_percent, stripe_fixed = excluded.stripe_fixed;
 insert into public.packs (id, position, name, tagline, price, price_from, checkout, deliverables, extras, note, highlight) values
-  ('premier-look', 0, 'Premier look', 'L''essentiel pour lancer ta chaîne avec une identité cohérente.', 39000, false, true, array['Logo', '2 overlays fixes au choix', 'Bannière et avatar', '2 séries de corrections regroupées']::text[], array['Option : 5 emotes personnalisées pour 60 €']::text[], null, false),
-  ('identite-signature', 1, 'Identité signature', 'Une identité complète pour affirmer ton style sur tes streams.', 69000, false, true, array['Logo et ses déclinaisons', '5 overlays fixes au choix', 'Bannière et avatar', '2 séries de corrections regroupées']::text[], array['10 emotes personnalisées : +100 €', 'Animation légère des 5 overlays, en plus des emotes : +200 €']::text[], null, true),
-  ('univers-complet', 2, 'Univers complet', 'Un univers visuel complet et animé pour ta chaîne.', 149000, true, false, array['Logo et ses déclinaisons', '5 overlays animés', 'Bannière et avatar', '15 emotes personnalisées', '2 séries de corrections regroupées']::text[], array[]::text[], 'Le tarif de base comprend des animations légères : apparition des éléments, transitions simples et boucles d''ambiance. Les animations complexes sont chiffrées sur devis.', false)
+  ('premier-look', 0, 'Premier look', 'L''essentiel pour lancer ta chaîne avec une identité cohérente.', 39000, false, true, array['Logo', '2 overlays au choix', 'Bannière et avatar', '2 corrections incluses par élément du pack']::text[], array['Option : 5 emotes personnalisées pour 60 €']::text[], null, false),
+  ('identite-signature', 1, 'Identité signature', 'Une identité complète pour affirmer ton style sur tes streams.', 76500, false, true, array['Logo et ses déclinaisons', '5 overlays au choix', '5 alertes statiques (follow, sub, raid, cheer, tips)', 'Bannière et avatar', '2 corrections incluses par élément du pack']::text[], array['10 emotes personnalisées : +100 €', 'Animation légère des 5 overlays, en plus des emotes : +200 €']::text[], null, true),
+  ('univers-complet', 2, 'Univers complet', 'Un univers visuel complet et animé pour ta chaîne.', 106000, true, false, array['Logo et ses déclinaisons', '5 overlays animés', 'Bannière et avatar', '15 emotes statiques personnalisées', '3 corrections incluses par élément du pack']::text[], array[]::text[], 'Le tarif de base comprend des animations légères : apparition des éléments, transitions simples et boucles d''ambiance. Les animations complexes sont chiffrées sur devis.', false)
 on conflict (id) do update set position = excluded.position, name = excluded.name, tagline = excluded.tagline, price = excluded.price, price_from = excluded.price_from, checkout = excluded.checkout, deliverables = excluded.deliverables, extras = excluded.extras, note = excluded.note, highlight = excluded.highlight;
 insert into public.formulas (pack_id, id, position, label, price, stripe_price_id) values
   ('premier-look', 'base', 0, 'Premier look', 39000, null),
   ('premier-look', 'emotes', 1, 'Pack avec emotes', 45000, null),
-  ('identite-signature', 'base', 0, 'Identité signature', 69000, null),
-  ('identite-signature', 'emotes', 1, 'Pack avec emotes', 79000, null),
-  ('identite-signature', 'emotes-animations', 2, 'Pack avec emotes et animations', 99000, null)
+  ('identite-signature', 'base', 0, 'Identité signature', 76500, null),
+  ('identite-signature', 'emotes', 1, 'Pack avec emotes', 86500, null),
+  ('identite-signature', 'emotes-animations', 2, 'Pack avec emotes et animations', 106500, null)
 on conflict (pack_id, id) do update set position = excluded.position, label = excluded.label, price = excluded.price, stripe_price_id = excluded.stripe_price_id;
 insert into public.options (id, position, name, price, price_from, unit) values
-  ('overlay-fixe-unite', 0, 'Overlay fixe (unité)', 5000, false, null),
-  ('overlay-anime-unite', 1, 'Overlay animé (unité)', 9000, false, null),
+  ('overlay-fixe-unite', 0, 'Overlay fixe (unité)', 7500, false, null),
+  ('overlay-anime-unite', 1, 'Overlay animé (unité)', 12000, false, null),
   ('alertes-fixes', 2, 'Pack d’alertes fixes', 8000, false, null),
   ('alertes-animees', 3, 'Pack d’alertes animées', 14000, false, null),
   ('widget-personnalise', 4, 'Widget personnalisé (barre d’objectifs, tchat, sponsor, partenariats)', 10000, true, null),
@@ -32,12 +32,14 @@ insert into public.options (id, position, name, price, price_from, unit) values
   ('emotes-10', 10, 'Pack de 10 emotes statiques', 12000, false, null),
   ('emote-animee', 11, 'Emote animée (unité)', 3000, false, null),
   ('emotes-animees-3', 12, 'Pack de 3 emotes animées', 8000, false, null),
-  ('emotes-animees-5', 13, 'Pack de 5 emotes animées', 12500, false, null),
-  ('logo', 14, 'Logo', 15000, true, null),
-  ('banniere', 15, 'Bannière pour YouTube / Twitch', 7000, false, null),
-  ('avatar', 16, 'Avatar', 2500, false, null),
-  ('panneaux-twitch', 17, 'Pack de 6 panneaux Twitch', 9000, false, null),
-  ('animation-logo', 18, 'Animation du logo', 18000, true, null)
+  ('emotes-animees-5', 13, 'Pack de 5 emotes animées', 13000, false, null),
+  ('emotes-animees-10', 14, 'Pack de 10 emotes animées', 24000, false, null),
+  ('logo', 15, 'Logo', 17000, true, null),
+  ('logo-declinaisons', 16, 'Logo avec déclinaisons', 28000, true, null),
+  ('banniere', 17, 'Bannière pour YouTube / Twitch', 8500, false, null),
+  ('avatar', 18, 'Avatar', 3000, false, null),
+  ('panneaux-twitch', 19, 'Pack de 6 panneaux Twitch', 9000, false, null),
+  ('animation-logo', 20, 'Animation du logo', 18000, true, null)
 on conflict (id) do update set position = excluded.position, name = excluded.name, price = excluded.price, price_from = excluded.price_from, unit = excluded.unit;
 insert into public.streamers (id, position, name, description, url) values
   ('tomavega', 0, 'TomaVega', 'Identité électrique sur fond minéral : écran de lancement, tchat et alertes.', null),

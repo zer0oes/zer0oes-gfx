@@ -7,7 +7,7 @@ export function Footer({ locale }: { locale: Locale }) {
   const to = (path: string) => href(locale, path);
   const links = [
     { href: "/portfolio", label: "Portfolio" },
-    { href: "/offres", label: t(locale, { fr: "Offres", en: "Pricing" }) },
+    { href: "/offres", label: t(locale, { fr: "Packs & à la carte", en: "Packages & à la carte" }) },
     { href: "/a-propos", label: t(locale, { fr: "À propos", en: "About" }) },
     { href: "/contact", label: t(locale, { fr: "Demander un devis", en: "Request a quote" }) },
     { href: "/contact?onglet=message", label: t(locale, { fr: "Poser une question", en: "Ask a question" }) },

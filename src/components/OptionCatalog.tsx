@@ -1,0 +1,121 @@
+"use client";
+
+import Link from "next/link";
+import { useId, useState, Fragment, type CSSProperties } from "react";
+import { useFormStatus } from "react-dom";
+import { createCheckout } from "@/app/actions";
+import { href, t, type Locale } from "@/lib/i18n";
+import { formatPrice, optionCategories, type Option, type Pack, type PricingSettings } from "@/lib/pricing";
+import { animatedOption, emoteCount, optionIncludes, optionProducts, optionProductTitle, optionThemeColors } from "@/lib/option-products";
+import { recommendPack } from "@/lib/pack-recommendation";
+import { ProductPreview } from "./ProductPreview";
+import { ProductCompatibility } from "./ProductCompatibility";
+import { useOfferNavigation } from "./OfferTabs";
+import { OfferPrice, SaleBadge } from "./ui";
+
+function CheckoutButton({ disabled, locale }: { disabled: boolean; locale: Locale }) {
+  const { pending } = useFormStatus();
+  return <button type="submit" disabled={disabled || pending} className="w-full rounded-full bg-accent px-5 py-3 font-semibold text-background hover:brightness-110 disabled:opacity-50">{t(locale, { fr: pending ? "Redirection…" : "Commander", en: pending ? "Redirecting…" : "Order" })}</button>;
+}
+
+function Quantity({ value, onChange, label, className = "flex flex-col gap-1" }: { value: number; onChange: (value: number) => void; label: string; className?: string }) {
+  const id = useId();
+  return <div className={`${className} text-xs`}><label htmlFor={id} className="text-center">{label}</label><div className="flex items-center gap-1.5">
+    <button type="button" aria-label={`${label} −`} aria-controls={id} disabled={value <= 1} onClick={() => onChange(value - 1)} className="size-11 rounded-lg border border-border text-xl hover:border-accent disabled:opacity-30">−</button>
+    <input id={id} type="number" min={1} max={20} step={1} value={value} onChange={(e) => { const next = Number(e.target.value); if (Number.isInteger(next) && next >= 1 && next <= 20) onChange(next); }} className="catalog-quantity h-11 w-12 rounded-lg border border-border bg-background p-1 text-center text-sm font-semibold" />
+    <button type="button" aria-label={`${label} +`} aria-controls={id} disabled={value >= 20} onClick={() => onChange(value + 1)} className="size-11 rounded-lg border border-border text-xl hover:border-accent disabled:opacity-30">+</button>
+  </div></div>;
+}
+
+function ProductCard({ product, locale, add }: { product: ReturnType<typeof optionProducts>[number]; locale: Locale; add: (option: Option, quantity: number) => void }) {
+  const variantGroup = useId();
+  const [variantId, setVariantId] = useState(product.variants[0].id);
+  const [quantity, setQuantity] = useState(1);
+  const option = product.variants.find((o) => o.id === variantId) ?? product.variants[0];
+  const title = optionProductTitle(option.name);
+  const emotes = product.category === "emotes";
+  const counts = [...new Set(product.variants.map(emoteCount))].sort((a, b) => a - b);
+  const variants = emotes ? product.variants.filter((v) => emoteCount(v) === emoteCount(option)) : product.variants;
+  return <article style={{ "--product-color": optionThemeColors[product.category] } as CSSProperties} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--product-color)_35%,var(--border))] bg-surface">
+    <div className="relative">
+      <ProductPreview option={option} locale={locale} />
+      <SaleBadge item={option} locale={locale} className="absolute right-3 top-3" />
+    </div>
+    <div className="flex flex-col gap-2.5 p-4">
+      <div><h3 className="font-display text-lg font-bold">{emotes ? "Emotes" : title.main}</h3>{!emotes && title.detail && <p className="mt-1 text-xs text-muted">{title.detail}</p>}</div>
+      {product.variants.length > 1 && <fieldset aria-label={t(locale, { fr: "Variante", en: "Variant" })} className="grid grid-cols-2 gap-1 rounded-full border border-border bg-background p-1">{[false, true].map((animated) => {
+        const variant = variants.find((v) => animatedOption(v) === animated);
+        const active = animatedOption(option) === animated;
+        return <label key={String(animated)} className={`relative rounded-full px-3 py-2 text-center text-xs font-semibold transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${!variant ? "opacity-35" : "cursor-pointer"} ${active ? "bg-[var(--product-color)] text-background shadow-sm" : "text-muted hover:text-foreground"}`}><input type="radio" name={variantGroup} value={variant?.id ?? String(animated)} checked={active} disabled={!variant} onChange={() => variant && setVariantId(variant.id)} className="sr-only" />{t(locale, { fr: animated ? "Animé" : "Statique", en: animated ? "Animated" : "Static" })}</label>;
+      })}</fieldset>}
+      <p className="text-sm leading-relaxed text-muted">{optionIncludes(option, locale)}</p>
+      <ProductCompatibility option={option} locale={locale} />
+      <p className="text-xs font-medium text-[var(--product-color)]">{t(locale, { fr: "1 modification incluse par création", en: "1 revision included per creation" })}</p>
+      {emotes && variants.length === 1 && <p className="text-xs text-muted">{t(locale, { fr: "Seule cette variante est disponible pour ce nombre d’emotes.", en: "Only this variant is available for this number of emotes." })}</p>}
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_2.75rem] items-center gap-x-3 gap-y-1">
+      {emotes && <label className="row-span-2 grid grid-rows-subgrid text-center text-xs">{t(locale, { fr: "Nombre d’emotes", en: "Number of emotes" })}<select value={emoteCount(option)} onChange={(e) => { const available = product.variants.filter((v) => emoteCount(v) === Number(e.target.value)); setVariantId((available.find((v) => animatedOption(v) === animatedOption(option)) ?? available[0]).id); }} className="h-11 rounded-lg border border-border bg-background px-3 py-2 text-center text-sm font-semibold">{counts.map((count) => <option key={count} value={count}>{count}</option>)}</select></label>}
+        {!option.priceFrom && !emotes && <Quantity className="row-span-2 grid grid-rows-subgrid" label={t(locale, { fr: /alerte|alert|panneau|panel/i.test(option.id) ? "Nombre de packs" : "Quantité", en: /alerte|alert|panneau|panel/i.test(option.id) ? "Number of packs" : "Quantity" })} value={quantity} onChange={setQuantity} />}
+        <p className="col-start-2 row-start-2 text-right font-display text-2xl font-bold"><OfferPrice item={{ ...option, unit: undefined, price: option.price * quantity, normalPrice: option.normalPrice ? option.normalPrice * quantity : undefined }} locale={locale} /></p>
+      </div>
+      {option.priceFrom ? <Link href={href(locale, `/contact?option=${encodeURIComponent(option.id)}`)} className="rounded-full border border-[var(--product-color)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--product-color)]">{t(locale, { fr: "Demander un devis", en: "Request a quote" })}</Link> : <button type="button" onClick={() => add(option, quantity)} className="rounded-full border border-transparent bg-accent px-4 py-2.5 text-sm font-semibold text-background transition-colors hover:border-[var(--product-color)] hover:bg-transparent hover:text-[var(--product-color)]">{t(locale, { fr: "Ajouter", en: "Add" })}</button>}
+    </div>
+  </article>;
+}
+
+export function OptionCatalog({ options, packs, settings, locale }: { options: Option[]; packs: Pack[]; settings: PricingSettings; locale: Locale }) {
+  const showPack = useOfferNavigation();
+  const [filter, setFilter] = useState("all");
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [message, setMessage] = useState("");
+  const cartId = useId();
+  const selected = options.filter((o) => !o.priceFrom && quantities[o.id] > 0);
+  const items = selected.map((o) => ({ id: o.id, quantity: quantities[o.id] }));
+  const total = selected.reduce((sum, o) => sum + o.price * quantities[o.id], 0);
+  const recommendation = recommendPack(packs, options, items, settings);
+  const tooMany = items.length > 20 || JSON.stringify(items).length > 500;
+  const count = items.reduce((sum, item) => sum + item.quantity, 0);
+  const labels: Record<string, string> = locale === "en" ? { all: "All", overlays: "Overlays", emotes: "Emotes", branding: "Visual identity", motion: "Animation" } : { all: "Tout", overlays: "Overlays", emotes: "Emotes", branding: "Identité visuelle", motion: "Animation" };
+  const products = optionProducts(options).filter((product) => filter === "all" || product.category === filter).sort((a, b) => filter === "all" ? Number(a.variants.every((v) => v.priceFrom)) - Number(b.variants.every((v) => v.priceFrom)) : 0);
+  const change = (id: string, quantity: number) => setQuantities((current) => ({ ...current, [id]: quantity }));
+  return <section className="pb-24 lg:pb-0">
+
+    <p role="status" aria-live="polite" className="sr-only">{message}</p>
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div>
+    <div className="mb-3 flex flex-wrap gap-2" aria-label={t(locale, { fr: "Filtrer les créations", en: "Filter creations" })}>
+      {["all", ...optionCategories.map((c) => c.id)].map((id) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} style={id !== "all" ? { "--filter-color": optionThemeColors[id as keyof typeof optionThemeColors] } as CSSProperties : undefined} className={`rounded-full border px-4 py-2 text-sm font-medium ${filter === id ? id === "all" ? "border-accent bg-accent text-background" : "border-[var(--filter-color)] bg-[var(--filter-color)] text-background" : id === "all" ? "border-border bg-surface text-muted hover:text-foreground" : "border-[color-mix(in_srgb,var(--filter-color)_40%,var(--border))] bg-surface text-[var(--filter-color)]"}`}>{labels[id]}</button>)}
+    </div>
+      <div className="grid items-start gap-4 sm:grid-cols-2">{products.map((product, index) => <Fragment key={product.id}>{product.variants.every((v) => v.priceFrom) && (index === 0 || !products[index - 1].variants.every((v) => v.priceFrom)) && <h3 className="col-span-full mt-3 border-t border-border pt-4 font-display text-base font-semibold">{t(locale, { fr: "Créations sur devis", en: "Creations by quote" })}</h3>}<ProductCard product={product} locale={locale} add={(option, quantity) => {
+        const next = (quantities[option.id] ?? 0) + quantity;
+        if (next > 20) { setMessage(t(locale, { fr: "Maximum 20 exemplaires par produit. Contacte-moi pour une commande plus importante.", en: "Maximum 20 of each product. Contact me for larger orders." })); return; }
+        change(option.id, next);
+        setMessage(t(locale, { fr: `${quantity} × ${option.name} ajouté à ta commande.`, en: `${quantity} × ${option.name} added to your order.` }));
+      }} /></Fragment>)}{!products.length && <p className="text-sm text-muted">{t(locale, { fr: "Aucune création dans cette catégorie.", en: "No creations in this category." })}</p>}</div>
+      </div>
+      <aside id={cartId} className="scroll-mt-28 rounded-2xl border border-accent/40 bg-surface p-5 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto">
+        <form action={createCheckout}>
+          <h3 className="font-display text-xl font-bold">{t(locale, { fr: "Ma commande", en: "My order" })} <span className="text-sm text-muted">({count})</span></h3>
+          <input type="hidden" name="optionItems" value={JSON.stringify(items)} /><input type="hidden" name="expectedPrice" value={total} /><input type="hidden" name="lang" value={locale} />
+          {selected.length ? <ul className="-mx-5 mt-4 divide-y divide-border">{selected.map((o) => <li key={o.id} className="space-y-3 px-5 py-3 text-sm"><div className="flex items-center justify-between gap-3"><p className="min-w-0 flex-1 font-medium">{o.name.replace(/\s*\((?:unité|unit|each)\)/gi, "").trim()}</p><button type="button" aria-label={t(locale, { fr: `Retirer ${o.name}`, en: `Remove ${o.name}` })} onClick={() => change(o.id, 0)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-accent/10 hover:text-accent focus-visible:outline-2 focus-visible:outline-accent"><svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6" /></svg></button></div><div className="flex items-center justify-between gap-2"><Quantity label={t(locale, { fr: /alerte|alert|panneau|panel/i.test(o.id) ? "Nombre de packs" : "Quantité", en: /alerte|alert|panneau|panel/i.test(o.id) ? "Number of packs" : "Quantity" })} value={quantities[o.id]} onChange={(next) => change(o.id, next)} /><span className="font-semibold">{formatPrice(o.price * quantities[o.id], locale)}</span></div></li>)}</ul> : <p className="my-4 text-sm text-muted">{t(locale, { fr: "Ajoute une création pour commencer ta commande.", en: "Add a creation to start your order." })}</p>}
+          <p aria-live="polite" className="my-4 flex justify-between text-lg font-bold"><span>Total</span><span>{formatPrice(total, locale)}</span></p>
+          {recommendation && <div className="mb-4 space-y-3 rounded-xl border border-accent/40 bg-accent/10 p-3 text-xs" aria-live="polite">
+            <p className="font-semibold text-accent">{t(locale, { fr: "Ta sélection ressemble à un pack complet", en: "Your selection looks like a complete package" })}</p>
+            <p>{recommendation.pack.name}{recommendation.formula && recommendation.formula.id !== "base" ? ` · ${recommendation.formula.label}` : ""}{recommendation.hasLogo ? t(locale, { fr: " — logo fourni", en: " — logo supplied" }) : ""} · {recommendation.pack.priceFrom ? t(locale, { fr: "à partir de ", en: "from " }) : ""}{formatPrice(recommendation.price, locale)}</p>
+            <ul className="list-inside list-disc space-y-1 text-muted">{recommendation.pack.deliverables.map((line) => <li key={line}>{recommendation.hasLogo && /^logo\b/i.test(line) ? t(locale, { fr: "Ton logo existant fourni", en: "Your existing logo supplied" }) : line}</li>)}</ul>
+            {recommendation.formula && recommendation.formula.id !== "base" && <ul className="list-inside list-disc space-y-1 text-muted">{(recommendation.formula.id === "emotes" ? recommendation.pack.extras?.slice(0, 1) : recommendation.pack.extras)?.map((line) => <li key={line}>{line}</li>)}</ul>}
+            {recommendation.addsLogo && <p>{t(locale, { fr: "Le pack comprend aussi la création du logo.", en: "The package also includes a custom logo." })}</p>}
+            {recommendation.remaining.length > 0 && <p className="text-muted">{t(locale, { fr: "À prévoir en complément : ", en: "To add separately: " })}{recommendation.remaining.join(" · ")}</p>}
+            <button type="button" onClick={() => showPack(recommendation.pack.id, recommendation.formula?.id, recommendation.hasLogo)} className="block w-full rounded-full bg-accent px-3 py-2 text-center font-semibold text-background">{t(locale, { fr: "Voir ce pack", en: "View this package" })}</button>
+          </div>}
+          {selected.length > 0 && <label className="mb-4 flex items-start gap-2 text-xs text-muted"><input type="checkbox" name="cgv" required className="mt-0.5 accent-[var(--accent)]" /><span>{locale === "fr" ? <>J&apos;accepte les <Link href={href(locale, "/cgv")} className="underline">CGV</Link> et demande le démarrage dès le paiement, avant la fin du délai de rétractation.</> : <>I accept the <Link href={href(locale, "/cgv")} className="underline">terms of sale</Link> and request work to start upon payment, before the withdrawal period ends.</>}</span></label>}
+          {tooMany && <p role="alert" className="mb-3 text-xs text-muted">{t(locale, { fr: "Contacte-moi pour un devis groupé de cette taille.", en: "Contact me for a combined quote of this size." })}</p>}
+          <CheckoutButton locale={locale} disabled={!items.length || tooMany || total < 50} />
+          <p className="mt-3 text-center text-xs text-muted">{t(locale, { fr: "Une seule modification incluse par création.", en: "One revision included per creation." })}</p>
+          <p className="mt-3 text-center text-xs leading-relaxed text-muted"><span className="block">{t(locale, { fr: "Paiement sécurisé · En une fois", en: "Secure payment · Paid in full" })}</span><span className="block">{t(locale, { fr: "Brief à compléter après paiement", en: "Complete your brief after payment" })}</span></p>
+        </form>
+      </aside>
+    </div>
+    <p className="mt-8 text-center text-sm text-muted">{t(locale, { fr: "Un projet particulier ?", en: "A specific project?" })} <Link href={href(locale, "/contact")} className="text-accent underline underline-offset-4">{t(locale, { fr: "Parlons-en", en: "Let's talk" })}</Link></p>
+    <a href={`#${cartId}`} className="fixed inset-x-4 bottom-4 z-40 flex items-center justify-between rounded-full border border-accent/40 bg-surface px-5 py-4 text-sm font-semibold shadow-xl lg:hidden"><span>{t(locale, { fr: `Voir ma commande (${count})`, en: `View my order (${count})` })}</span><span>{formatPrice(total, locale)}</span></a>
+  </section>;
+}

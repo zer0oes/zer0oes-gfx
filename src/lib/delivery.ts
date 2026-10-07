@@ -86,6 +86,7 @@ export function deliveryEmail({ offerName, url, links, files }: { offerName: str
 // Remarques du client sur un fichier livré (page /livraison/<jeton>)
 export const MAX_NOTES = 30;
 export function itemRevisionLimit(order: { packId: string }): number {
+  if (order.packId === "options" || order.packId.startsWith("option:")) return 1;
   return order.packId === "univers-complet" ? 3 : 2;
 }
 export const NOTE_MAX_CHARS = 2000;

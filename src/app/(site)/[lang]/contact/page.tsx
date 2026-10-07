@@ -48,12 +48,13 @@ const asideTexts = {
 
 export default async function ContactPage({ params, searchParams }: PageProps<"/[lang]/contact">) {
   const lang = asLocale((await params).lang);
-  const { offre, sujet } = await searchParams;
+  const { offre, sujet, option } = await searchParams;
   const current = contactTexts[lang];
   const originalCatalog = await getPublicCatalog();
   const catalog = trDeep(lang, originalCatalog);
   const selectedPack = getPack(catalog.packs, typeof offre === "string" ? offre : undefined);
   const quote = selectedPack?.checkout === false;
+  const selectedOption = originalCatalog.options.find((o) => o.id === option);
   const aside = asideTexts[lang];
 
   return (
@@ -79,7 +80,7 @@ export default async function ContactPage({ params, searchParams }: PageProps<"/
           </div>
         </aside>
         <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-          <ContactForm selectedOffer={selectedPack?.name} defaultType={sujet === "offre" ? "Question sur une offre" : quote ? "Devis Univers complet" : undefined} offerChoices={activePacks(catalog.packs).map((pack) => pack.name)} optionChoices={optionChoices(originalCatalog.options, lang)} />
+          <ContactForm selectedOptionId={selectedOption?.id} selectedOffer={selectedPack?.name ?? selectedOption?.name} defaultType={sujet === "offre" ? "Question sur une offre" : quote ? "Devis Univers complet" : undefined} offerChoices={activePacks(catalog.packs).map((pack) => pack.name)} optionChoices={optionChoices(originalCatalog.options, lang)} />
         </div>
       </div>
     </>

@@ -16,6 +16,7 @@ import { getPublicCatalog } from "@/lib/public-catalog";
 import { discountQuote } from "@/lib/orders";
 import { normalizeCode, validPromotion } from "@/lib/promotions";
 import { includedOverlays, validOverlaySelection } from "@/lib/brief-overlays";
+import { productBriefFields } from "@/lib/product-brief";
 
 export type FormState = { ok: boolean; message: string } | null;
 
@@ -35,15 +36,25 @@ export async function createCheckout(formData: FormData) {
   const to = (path: string) => href(locale, path);
   const catalog = await getPublicCatalog();
   const packId = formData.get("packId")?.toString();
+  const optionId = formData.get("optionId")?.toString();
+  const cart = formData.get("optionItems");
+  let optionItems: { id: string; quantity: number }[] | undefined;
+  if (cart !== null) {
+    try { optionItems = JSON.parse(String(cart)); } catch { redirect(to("/offres")); }
+    if (!Array.isArray(optionItems) || !optionItems.length) redirect(to("/offres"));
+  }
   const pack = getPack(catalog.packs, packId);
-  if (!pack) redirect(to("/offres"));
+  if (!optionItems && !optionId && !pack) redirect(to("/offres"));
   // Offre sur devis (prix « à partir de ») : pas de paiement direct.
-  if (!pack.checkout) redirect(to(`/contact?offre=${pack.id}`));
+  if (!optionItems && !optionId && pack && !pack.checkout) redirect(to(`/contact?offre=${pack.id}`));
+  if (!formData.has("cgv")) redirect(to("/offres"));
 
   // Formule, mode de paiement et remise relus et recalculés ici : le navigateur
   // n'envoie que des identifiants, jamais de montant.
   let q = quote(catalog, {
     packId,
+    optionId,
+    optionItems,
     formulaId: formData.get("formulaId")?.toString(),
     payment: formData.get("payment"),
     hasLogo: formData.get("logo") === "1",
@@ -73,7 +84,7 @@ export async function createCheckout(formData: FormData) {
     redirect(`${to("/merci")}?${params}`);
   }
 
-  const formula = pack.formulas?.find((f) => f.id === q.formulaId);
+  const formula = !optionItems && !optionId ? pack?.formulas?.find((f) => f.id === q.formulaId) : undefined;
   const base = await siteUrl();
   const s = catalog.settings;
   const session = await stripe.checkout.sessions.create({
@@ -92,16 +103,17 @@ export async function createCheckout(formData: FormData) {
                     ? `zer0oes gfx — ${trOfferName("en", q.offerName)}${q.hasLogo ? " — logo supplied" : ""}${q.payment === "acompte" ? ` — ${s.depositPercent}% deposit` : ""}`
                     : `zer0oes gfx — ${q.offerName}${q.hasLogo ? " — logo fourni" : ""}${q.payment === "acompte" ? ` — Acompte ${s.depositPercent} %` : ""}`,
                 description:
+                  optionItems ? q.deliveryTemplate?.join(" · ").slice(0, 1000) :
                   locale === "en"
                     ? [
-                        q.hasLogo ? `“Existing logo” discount: −${formatPrice(s.logoDiscount, "en")}` : "",
+                        q.hasLogo ? `“Existing logo” discount: −${formatPrice(q.logoDiscount, "en")}` : "",
                         q.payment === "acompte"
                           ? `${s.depositPercent}% deposit: ${formatPrice(q.amount, "en")} of ${formatPrice(q.totalPrice, "en")} — balance due on delivery`
                           : `Paid in full: ${formatPrice(q.totalPrice, "en")}`,
                       ]
                         .filter(Boolean)
                         .join(" · ")
-                    : [q.hasLogo ? logoDiscountLabel(q.listPrice, s) : "", paymentLabel(q.totalPrice, q.payment, s)].filter(Boolean).join(" · "),
+                    : [q.hasLogo ? logoDiscountLabel(q.listPrice, { ...s, logoDiscount: q.logoDiscount }) : "", paymentLabel(q.totalPrice, q.payment, s)].filter(Boolean).join(" · "),
               },
             },
           },
@@ -205,6 +217,7 @@ async function briefForm(
   const sessionId = field(formData, "sessionId", 300);
   const locale = formLocale(formData);
   const editingBrief = formData.get("editBrief") === "1";
+  let productFields: Record<string, string> = {};
   try {
     const store = getStore();
     const order = sessionId ? await store.getOrderBySession(sessionId) : null;
@@ -212,14 +225,25 @@ async function briefForm(
     if (editingBrief && (order?.briefRevisions?.length ?? 0) >= 2) return { ok: false, message: locale === "en" ? "You’ve reached the limit of 2 brief updates. Please contact me for further changes." : "La limite de 2 modifications du brief est atteinte. Contacte-moi pour tout autre changement." };
     if (!editingBrief && (order?.briefReceivedAt || order?.brief)) return { ok: true, message: locale === "en" ? "Your brief has already been received. You can follow your project in your order space." : "Ton brief a déjà été reçu. Tu peux suivre ton projet dans ton espace commande." };
     let packId = order?.packId;
+    let deliveryTemplate = order?.deliveryTemplate;
     if (!packId && sessionId && !sessionId.startsWith("demo_")) {
       const session = await getStripe()?.checkout.sessions.retrieve(sessionId);
-      if (session?.payment_status === "paid") packId = session.metadata?.packId;
+      if (session?.payment_status === "paid") {
+        packId = session.metadata?.packId;
+        deliveryTemplate = Object.entries(session.metadata ?? {}).filter(([key]) => key.startsWith("deliveryTemplate_")).sort(([a], [b]) => Number(a.split("_")[1]) - Number(b.split("_")[1])).map(([, value]) => value);
+      }
     }
-    const pack = (await store.getCatalog()).packs.find((p) => p.id === packId);
-    const count = includedOverlays(pack);
-    if (!pack || count === null) return { ok: false, message: locale === "en" ? "Unable to verify your package. Please refresh or contact me." : "Impossible de vérifier ton pack. Actualise la page ou contacte-moi." };
-    if (!validOverlaySelection(formData.getAll("overlays"), count)) return { ok: false, message: locale === "en" ? `Choose exactly ${count} different overlays included in your package.` : `Choisis exactement ${count} overlays différents, inclus dans ton pack.` };
+    if (packId === "options" || packId?.startsWith("option:")) {
+      if (!deliveryTemplate?.length) return { ok: false, message: locale === "en" ? "Unable to verify your products. Please refresh." : "Impossible de vérifier tes créations. Actualise la page." };
+      const fields = productBriefFields(deliveryTemplate, (name) => field(formData, name));
+      if (!fields) return { ok: false, message: locale === "en" ? "Describe each purchased creation before sending your brief." : "Précise ta demande pour chaque création achetée avant d’envoyer ton brief." };
+      productFields = fields;
+    } else {
+      const pack = (await store.getCatalog()).packs.find((p) => p.id === packId);
+      const count = includedOverlays(pack);
+      if (!pack || count === null) return { ok: false, message: locale === "en" ? "Unable to verify your package. Please refresh or contact me." : "Impossible de vérifier ton pack. Actualise la page ou contacte-moi." };
+      if (!validOverlaySelection(formData.getAll("overlays"), count)) return { ok: false, message: locale === "en" ? `Choose exactly ${count} different overlays included in your package.` : `Choisis exactement ${count} overlays différents, inclus dans ton pack.` };
+    }
   } catch (e) {
     console.error(e);
     return { ok: false, message: locale === "en" ? "Unable to verify your package. Please try again." : "Impossible de vérifier ton pack. Réessaie." };
@@ -235,6 +259,7 @@ async function briefForm(
   }
 
   const brief: Record<string, string> = {
+    ...productFields,
     "E-mail": email,
     Pseudo: field(formData, "pseudo", 200),
     Chaîne: channel,

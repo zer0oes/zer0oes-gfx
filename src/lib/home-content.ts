@@ -130,7 +130,7 @@ export const offersPageFields: HomeField[] = [
 ];
 
 export const homeDefaults: Record<string, string> = {
-  "pricing.kicker": "Offres",
+  "pricing.kicker": "Packs & à la carte",
   "pricing.title": "Un univers",
   "pricing.titleAccent": "à ton image.",
   "pricing.intro": "Une identité complète ou quelques créations pour enrichir ta chaîne : choisis ce qui te correspond.",
@@ -189,7 +189,7 @@ export const homeDefaults: Record<string, string> = {
 // Version anglaise des textes (/en). Les visuels et les noms d'emotes sont communs aux deux langues.
 // Une traduction saisie dans l'admin est enregistrée sous la clé « en:<clé> ».
 export const homeDefaultsEn: Record<string, string> = {
-  "pricing.kicker": "Pricing",
+  "pricing.kicker": "Packages & à la carte",
   "pricing.title": "A universe",
   "pricing.titleAccent": "that reflects you.",
   "pricing.intro": "A complete identity or a few creations to enrich your channel: choose what suits you.",

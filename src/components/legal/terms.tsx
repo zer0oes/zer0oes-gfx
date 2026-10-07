@@ -21,8 +21,8 @@ export function CgvFr({ settings }: { settings: PricingSettings }) {
           correspond à une création réalisée sur mesure, selon l&apos;échange de cadrage et le brief transmis par le
           client après la commande. Les livrables de chaque offre sont décrits sur la page Offres au moment de la
           commande. Les offres « Premier look » et « Identité signature », dans la formule choisie, se commandent et se
-          règlent directement en ligne. L&apos;offre « Univers complet », dont le prix est indiqué « à partir de », les
-          options à la carte, les animations complexes, les illustrations complexes et les demandes hors offre font
+          règlent directement en ligne. Les options à la carte à prix fixe se commandent en ligne et se règlent en une fois.
+          L&apos;offre « Univers complet », les options dont le prix est indiqué « à partir de », les animations complexes, les illustrations complexes et les demandes hors offre font
           l&apos;objet d&apos;un devis préalable.
         </p>
 
@@ -34,7 +34,7 @@ export function CgvFr({ settings }: { settings: PricingSettings }) {
         </p>
         <ul>
           <li>
-            Offres commandées en ligne : le client choisit, à la commande, de régler la totalité du prix ou un acompte
+            Packs commandés en ligne : le client choisit, à la commande, de régler la totalité du prix ou un acompte
             de <ContentVariable name="settings.depositPercent" value={settings.depositPercent} /> % du prix de la formule choisie.
           </li>
           <li>
@@ -47,7 +47,7 @@ export function CgvFr({ settings }: { settings: PricingSettings }) {
           </li>
           <li>
             Remise « logo déjà existant » : lorsque le client fournit son propre logo, une remise de{" "}
-            <ContentVariable name="logoDiscountEuros" value={settings.logoDiscount / 100} /> € est appliquée sur les offres « Premier look » et « Identité signature », et
+            <ContentVariable name="logoDiscountEuros" value={settings.logoDiscount / 100} /> € est appliquée sur l&apos;offre « Premier look », et une remise de 250 € sur « Identité signature », et
             sur devis pour « Univers complet ». Le logo doit être fourni en qualité suffisante, idéalement en format
             vectoriel ; toute retouche, reconstruction ou refonte éventuelle est chiffrée séparément. Le client garantit
             détenir les droits sur ce logo.
@@ -67,7 +67,7 @@ export function CgvFr({ settings }: { settings: PricingSettings }) {
             brief complet.
           </li>
           <li>
-            Chaque élément inclut deux corrections pour Premier look et Identité signature, et trois pour Univers complet. Les modifications du brief sont comptées séparément. Les modifications supplémentaires ou les
+            Chaque création à la carte inclut une seule modification. Chaque élément inclut deux corrections pour Premier look et Identité signature, et trois pour Univers complet. Les modifications du brief sont comptées séparément. Les modifications supplémentaires ou les
             changements de direction après validation peuvent être facturés.
           </li>
           <li>
@@ -141,7 +141,8 @@ export function CgvEn({ settings }: { settings: PricingSettings }) {
           Three packages are offered: “First Look”, “Signature Identity” and “Full Universe”. Each one is a custom creation, based on
           the scoping exchange and the brief sent by the customer after ordering. The deliverables of each package are described on the
           Pricing page at the time of ordering. The “First Look” and “Signature Identity” packages, in the chosen option, are ordered and
-          paid for directly online. The “Full Universe” package, whose price is shown as “from”, à la carte add-ons, complex animations,
+          paid for directly online. Fixed-price à la carte creations are ordered online and paid for in full.
+          The “Full Universe” package, add-ons whose price is shown as “from”, complex animations,
           complex illustrations and requests outside the packages are subject to a prior quote.
         </p>
 
@@ -165,7 +166,7 @@ export function CgvEn({ settings }: { settings: PricingSettings }) {
           </li>
           <li>
             “Existing logo” discount: when the customer supplies their own logo, a <ContentVariable name="logoDiscount" value={formatPrice(settings.logoDiscount, "en")} /> discount
-            applies to the “First Look” and “Signature Identity” packages, and on quote for “Full Universe”. The logo must be supplied in
+            applies to “First Look”, and a €250 discount applies to “Signature Identity”; on quote for “Full Universe”. The logo must be supplied in
             good enough quality, ideally as a vector file; any retouching, rebuilding or redesign is quoted separately. The customer
             guarantees that they hold the rights to this logo.
           </li>
@@ -180,7 +181,7 @@ export function CgvEn({ settings }: { settings: PricingSettings }) {
           <li>After payment, the customer sends their brief through the dedicated form.</li>
           <li>The indicative delivery time is <ContentVariable name="settings.deliveryDays" value={settings.deliveryDays.replace(" à ", " to ")} /> business days from receipt of a complete brief.</li>
           <li>
-            Each item includes two corrections for Premier look and Identité signature, and three for Univers complet. Brief updates are counted separately. Additional changes or changes of direction after approval may be
+            Each à la carte creation includes one revision. Each item includes two corrections for Premier look and Identité signature, and three for Univers complet. Brief updates are counted separately. Additional changes or changes of direction after approval may be
             charged.
           </li>
           <li>

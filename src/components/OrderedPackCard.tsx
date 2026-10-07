@@ -3,19 +3,22 @@ import { t, type Locale } from "@/lib/i18n";
 import { formatPrice, type Pack } from "@/lib/pricing";
 import { trDeep, trOfferName } from "@/lib/translations-en";
 
-export function OrderedPackCard({ pack: original, offerName, formulaId, totalPrice, hasLogo, locale, children }: {
+export function OrderedPackCard({ pack: original, offerName, formulaId, totalPrice, hasLogo, locale, children, deliveryTemplate }: {
   pack?: Pack; offerName: string; formulaId: string; totalPrice: number; hasLogo: boolean; locale: Locale;
   children?: React.ReactNode;
+  deliveryTemplate?: string[];
 }) {
-  const pack = original && trDeep(locale, original);
+  const translated = original && trDeep(locale, original);
+  const pack = translated && { ...translated, deliverables: translated.deliverables.map((line) => line.replace(/overlays fixes/gi, "overlays").replace(/static overlays/gi, "overlays")) };
   const formula = pack?.formulas?.find((f) => f.id === formulaId);
   const withOptions = formula && formula.id !== pack?.formulas?.[0]?.id;
   return (
     <section aria-labelledby="order-summary" className={`relative overflow-hidden rounded-2xl border p-6 ${pack?.highlight ? "border-accent bg-surface-2 shadow-[0_0_40px_-12px_var(--accent)]" : "border-border bg-surface"}`}>
-      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-accent">{t(locale, { fr: "Ton pack sélectionné", en: "Your selected package" })}</p>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-accent">{t(locale, { fr: "Ta commande", en: "Your order" })}</p>
       <h2 id="order-summary" className="font-display text-xl font-bold">{pack?.name ?? trOfferName(locale, offerName)}</h2>
       <p className="mt-2 font-display text-3xl font-bold">{formatPrice(totalPrice, locale)}</p>
       {pack && <p className="mt-3 text-sm leading-relaxed text-muted">{pack.tagline}</p>}
+      {!pack && deliveryTemplate?.length ? <CardSection title={t(locale, { fr: "Produits sélectionnés", en: "Selected products" })}><ul className="space-y-2 text-sm">{deliveryTemplate.map((line, index) => <li key={index}>{trOfferName(locale, line)}</li>)}</ul></CardSection> : null}
       {pack && <CardSection title={t(locale, { fr: "Inclus", en: "Included" })}>
         <ul className="space-y-2.5 text-sm">{pack.deliverables.map((item) => (
           <li key={item} className="flex gap-2"><span aria-hidden className="text-accent-2">✓</span><span>{hasLogo && /^logo\b/i.test(item) ? t(locale, { fr: "Ton logo existant fourni", en: "Your existing logo supplied" }) : item}</span></li>

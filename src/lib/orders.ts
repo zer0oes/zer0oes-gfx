@@ -13,6 +13,7 @@ import {
   getFormula,
   getPack,
   orderPrice,
+  packPricingSettings,
   parsePaymentType,
   paymentLabel,
   type Catalog,
@@ -52,13 +53,64 @@ export function discountQuote(q: CheckoutQuote, promotion: Promotion): CheckoutQ
 
 export function quote(
   catalog: Catalog,
-  input: { packId?: string | null; formulaId?: string | null; payment?: unknown; hasLogo?: boolean },
+  input: { packId?: string | null; optionId?: string | null; optionItems?: { id: string; quantity: number }[]; formulaId?: string | null; payment?: unknown; hasLogo?: boolean },
 ): CheckoutQuote | null {
+  if (input.optionItems || input.packId === "options") {
+    let items = input.optionItems;
+    if (!items) {
+      try { items = JSON.parse(input.formulaId ?? ""); } catch { return null; }
+    }
+    if (!Array.isArray(items) || !items.length || items.length > 20) return null;
+    const seen = new Set<string>();
+    const lines: string[] = [];
+    let totalPrice = 0, listPrice = 0;
+    const codes = new Set<string>();
+    for (const item of items) {
+      if (!item || typeof item.id !== "string" || seen.has(item.id) || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || item.quantity > 20) return null;
+      seen.add(item.id);
+      const q = quote(catalog, { optionId: item.id });
+      if (!q) return null;
+      totalPrice += q.totalPrice * item.quantity;
+      listPrice += q.listPrice * item.quantity;
+      const line = q.deliveryTemplate?.[0] ?? q.offerName;
+      lines.push(item.quantity > 1 ? `${line} × ${item.quantity}` : line);
+      if (q.promoCode) codes.add(q.promoCode);
+    }
+    const formulaId = JSON.stringify(items);
+    if (formulaId.length > 500 || lines.some((line) => line.length > 500) || !Number.isSafeInteger(totalPrice)) return null;
+    return {
+      packId: "options", formulaId, offerName: "À la carte", deliveryTemplate: lines,
+      payment: "total", hasLogo: false, listPrice, totalPrice, amount: totalPrice,
+      depositPercent: 0, logoDiscount: 0,
+      promoCode: codes.size ? [...codes].join(", ").slice(0, 500) : undefined,
+      promoDiscount: listPrice - totalPrice,
+    };
+  }
+  const optionId = input.optionId ?? (input.packId?.startsWith("option:") ? input.packId.slice(7) : undefined);
+  if (optionId) {
+    const option = catalog.options.find((o) => o.id === optionId);
+    if (!option || option.priceFrom || !Number.isSafeInteger(option.price) || option.price < 50) return null;
+    return {
+      packId: `option:${option.id}`,
+      formulaId: "base",
+      offerName: option.name,
+      deliveryTemplate: [option.id === "alertes-fixes" || option.id === "alertes-animees" ? `${option.name} — 5 alertes : follow, sub, raid, cheer, tips` : option.name],
+      payment: "total",
+      hasLogo: false,
+      listPrice: option.normalPrice ?? option.price,
+      totalPrice: option.price,
+      amount: option.price,
+      depositPercent: 0,
+      logoDiscount: 0,
+      promoCode: option.promotionCode,
+      promoDiscount: option.normalPrice ? option.normalPrice - option.price : undefined,
+    };
+  }
   const pack = getPack(catalog.packs, input.packId);
   if (!pack || !pack.checkout || pack.archived) return null;
   const formula = getFormula(pack, input.formulaId);
   if (!formula) return null;
-  const s = catalog.settings;
+  const s = packPricingSettings(catalog.settings, pack.id);
   const payment = parsePaymentType(input.payment);
   const hasLogo = Boolean(input.hasLogo);
   const totalPrice = orderPrice(formula.price, hasLogo, s);
@@ -125,7 +177,7 @@ export function newOrderFrom(
   };
 }
 
-function quoteFromMetadata(m: Stripe.Metadata): CheckoutQuote | null {
+export function quoteFromMetadata(m: Stripe.Metadata): CheckoutQuote | null {
   if (!m.packId || !m.totalPrice) return null;
   const payment = parsePaymentType(m.paymentType);
   const totalPrice = Number(m.totalPrice);

@@ -32,7 +32,8 @@ export function PackCard({
   locale?: Locale;
 }) {
   // Textes de l'offre dans la langue de la page
-  const pack = trDeep(locale, original);
+  const translated = trDeep(locale, original);
+  const pack = { ...translated, deliverables: translated.deliverables.map((line) => line.replace(/overlays fixes/gi, "overlays").replace(/static overlays/gi, "overlays")) };
   const to = (path: string) => href(locale, path);
   const quote = !pack.checkout;
   const buttonClass = `w-full rounded-full px-5 py-3 text-center font-semibold transition hover:brightness-110 ${
@@ -122,6 +123,7 @@ export function PackCard({
           </ul>
         </CardSection>
       ) : null}
+      {!compact && (pack.id === "premier-look" || pack.id === "identite-signature") && <p className="mt-4 text-xs text-muted">{t(locale, { fr: pack.formulas?.some((f) => f.id === "emotes-animations") ? "Overlays statiques inclus. Variante animée disponible dans la formule avec emotes et animations." : "Overlays statiques inclus.", en: pack.formulas?.some((f) => f.id === "emotes-animations") ? "Static overlays included. Animated variant available in the package with emotes and animations." : "Static overlays included." })}</p>}
       {order && <Link href={to(`/contact?offre=${pack.id}&sujet=offre`)} className="mt-4 text-sm text-accent underline underline-offset-4">{t(locale, { fr: "Poser une question sur ce pack", en: "Ask about this package" })}</Link>}
       {!compact && quote && <p className="mt-5 text-xs leading-relaxed text-muted">{t(locale, { fr: "Alertes, widgets et transition (stinger) ne sont pas inclus dans le tarif de base : ces ajouts sont chiffrés séparément sur le devis.", en: "Alerts, widgets and a stinger transition are not included in the base price: these add-ons are priced separately in your quote." })}</p>}
       {!compact && pack.note && <p className="mt-5 text-xs leading-relaxed text-muted">{pack.note}</p>}

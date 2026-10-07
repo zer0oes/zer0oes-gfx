@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+.catalog-quantity { appearance: textfield; -moz-appearance: textfield; }
+.catalog-quantity::-webkit-inner-spin-button,
+.catalog-quantity::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
 @keyframes archive-button-shimmer {
   from { transform: translateX(-100%); }
   to { transform: translateX(100%); }
@@ -242,4 +246,41 @@ select:not([multiple]):not([size]) {
 @media (prefers-reduced-motion: reduce) {
   .review-slide-in, .review-slide-out { animation: none; }
   .review-slide-out { visibility: hidden; }
+}
+
+@keyframes preview-float {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+@keyframes preview-icon {
+  0%, 100% { translate: 0 0; rotate: -3deg; }
+  50% { translate: 0 -7px; rotate: 3deg; }
+}
+
+.product-preview-animated {
+  animation: preview-float 3s ease-in-out infinite;
+}
+
+.product-preview-animated svg,
+.product-preview-animated > div > span {
+  animation: preview-icon 2.4s ease-in-out infinite;
+}
+
+.product-preview-animated svg:nth-child(2),
+.product-preview-animated > div > span:nth-child(2) {
+  animation-delay: -0.8s;
+}
+
+.product-preview-animated svg:nth-child(3),
+.product-preview-animated > div > span:nth-child(3) {
+  animation-delay: -1.6s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-preview-animated,
+  .product-preview-animated svg,
+  .product-preview-animated > div > span {
+    animation: none;
+  }
 }

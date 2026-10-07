@@ -4,6 +4,11 @@ import { plannedDelivery, deliveryState } from "./delivery-plan";
 import { unlockState } from "./delivery";
 import type { Deliverable } from "./store/types";
 
+test("livraison à la carte : conserver chaque produit et sa quantité sans dépendre des scènes du brief", () => {
+  const deliveryTemplate = ["Overlay animé (unité) × 2", "Pack de 3 emotes statiques", "Avatar"];
+  assert.deepEqual(plannedDelivery({ packId: "options", formulaId: "[]", hasLogo: false, deliveryTemplate }).map((item) => item.label), deliveryTemplate);
+});
+
 test("le plan figé suit le brief et exclut le logo fourni et les corrections", () => {
   const order = { packId: "premier-look", formulaId: "base", hasLogo: true, deliveryTemplate: ["Logo", "2 overlays fixes au choix", "Bannière et avatar", "2 séries de corrections regroupées"], brief: { "Overlays choisis": "Démarrage, Gameplay" } };
   assert.deepEqual(plannedDelivery(order).map((item) => item.label), ["Overlay Démarrage", "Overlay Gameplay", "Bannière", "Avatar"]);

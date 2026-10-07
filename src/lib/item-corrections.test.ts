@@ -6,4 +6,6 @@ test("les limites de correction dépendent du pack et pas des modifications du b
   assert.equal(itemRevisionLimit({ packId: "premier-look" }), 2);
   assert.equal(itemRevisionLimit({ packId: "identite-signature" }), 2);
   assert.equal(itemRevisionLimit({ packId: "univers-complet" }), 3);
+  assert.equal(itemRevisionLimit({ packId: "options" }), 1);
+  assert.equal(itemRevisionLimit({ packId: "option:overlay-fixe-unite" }), 1);
 });

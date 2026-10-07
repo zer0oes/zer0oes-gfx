@@ -116,6 +116,11 @@ export function orderPrice(price: number, hasLogo: boolean, s: PricingSettings) 
   return Math.max(0, price - (hasLogo ? s.logoDiscount : 0));
 }
 
+// Identité signature : 765 € avec création du logo, 515 € avec logo fourni.
+export function packPricingSettings(settings: PricingSettings, packId: string): PricingSettings {
+  return packId === "identite-signature" ? { ...settings, logoDiscount: 25000 } : settings;
+}
+
 export function amountToPay(price: number, payment: PaymentType, s: PricingSettings) {
   return payment === "acompte" ? depositAmount(price, s) : price;
 }
@@ -141,7 +146,7 @@ export const overlayTypes = ["Démarrage", "Pause", "Fin", "Discussion", "Gamepl
 export const optionCategories = [
   { id: "overlays", label: "Overlays", hint: "Scènes et habillage du live" },
   { id: "emotes", label: "Emotes", hint: "Pour ton tchat et tes abonnés" },
-  { id: "branding", label: "Branding", hint: "Ta chaîne sur toutes les plateformes" },
+  { id: "branding", label: "Identité visuelle", hint: "Ta chaîne sur toutes les plateformes" },
   { id: "motion", label: "Animation", hint: "Pour donner vie à ton univers" },
 ] as const;
 export type OptionCategory = (typeof optionCategories)[number]["id"];

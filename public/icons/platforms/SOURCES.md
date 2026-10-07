@@ -1,0 +1,3 @@
+- obs: https://cdn.simpleicons.org/obsstudio/ffffff
+- streamlabs: https://cdn.simpleicons.org/streamlabs/80f5d2
+- streamelements: https://cdn.streamelements.com/assets/logos/SE_home_page_logo.svg

@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState } from "react";
 import { sendBrief } from "@/app/actions";
 import { href, type Locale } from "@/lib/i18n";
 import { overlayTypes } from "@/lib/pricing";
+import { productBriefHint } from "@/lib/option-products";
 import { useLocale } from "./I18nProvider";
 import { DatePicker } from "./DatePicker";
 import { Field, FormStatus, inputClass } from "./ui";
@@ -75,7 +76,9 @@ export function BriefForm({
   portalUrl,
   initialBrief,
   revisionsUsed = 0,
+  purchasedProducts = [],
 }: {
+  purchasedProducts?: string[];
   revisionsUsed?: number;
   initialBrief?: Record<string, string>;
   portalUrl?: string;
@@ -97,6 +100,7 @@ export function BriefForm({
     ...(!initialBrief?.["Chaîne"] ? [tx.channel.replace(" *", "")] : []),
     ...(hasLogo && !initialBrief?.["Logo existant"] ? [tx.logo.replace(" *", "")] : []),
     ...(!initialBrief?.["Univers / ambiance"] ? [tx.universe.replace(" *", "")] : []),
+    ...purchasedProducts.filter((line, index) => !initialBrief?.[`Création ${index + 1} : ${line}`]),
   ]);
   const remaining = overlayCount === null ? 0 : overlayCount - overlays.length;
   const missing = [...missingFields, ...(remaining > 0 ? [locale === "en" ? `${remaining} overlay${remaining > 1 ? "s" : ""} to choose` : `${remaining} overlay${remaining > 1 ? "s" : ""} à choisir`] : [])];
@@ -124,7 +128,7 @@ export function BriefForm({
   return (
     <form action={action} className="space-y-5 [&_input::placeholder]:text-foreground/65 [&_label>span.text-xs]:text-sm [&_label>span.text-xs]:text-foreground/75" onInput={(event) => {
       const form = event.currentTarget;
-      const required = [["email", tx.email], ["channel", tx.channel], ...(hasLogo ? [["logoLink", tx.logo]] : []), ["universe", tx.universe]];
+      const required = [["email", tx.email], ["channel", tx.channel], ...(hasLogo ? [["logoLink", tx.logo]] : []), ["universe", tx.universe], ...purchasedProducts.map((line, index) => [`productBrief_${index}`, line])];
       setMissingFields(required.filter(([name]) => {
         const field = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(`input[name="${name}"], textarea[name="${name}"]`);
         return !field?.value.trim() || !field.validity.valid;
@@ -177,6 +181,10 @@ export function BriefForm({
       <Field label={tx.elements} hint={tx.elementsHint}>
         <textarea name="elements" defaultValue={initialBrief?.["Éléments à inclure"]} rows={3} className={inputClass} />
       </Field>
+      {purchasedProducts.length > 0 && <fieldset className="space-y-5 rounded-xl border border-accent/30 p-4">
+        <legend className="px-2 font-semibold">{locale === "en" ? "Your purchased creations" : "Tes créations achetées"}</legend>
+        {purchasedProducts.map((line, index) => <Field key={index} label={`${line} *`} hint={productBriefHint(line, locale)}><textarea name={`productBrief_${index}`} required rows={3} defaultValue={initialBrief?.[`Création ${index + 1} : ${line}`]} className={inputClass} /></Field>)}
+      </fieldset>}
       {overlayCount !== null && <fieldset>
         <legend className="text-sm font-medium">{tx.overlays}</legend>
         <p id="overlay-count" aria-live="polite" className="mt-1 text-sm text-foreground/75">{overlayHint} {overlays.length} / {overlayCount} {locale === "en" ? "selected" : "sélectionnés"}</p>

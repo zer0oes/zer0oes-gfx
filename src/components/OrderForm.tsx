@@ -4,20 +4,31 @@ import Link from "next/link";
 import { useState } from "react";
 import { createCheckout } from "@/app/actions";
 import { href, t } from "@/lib/i18n";
-import { depositAmount, formatPrice, orderPrice, type Pack, type PaymentType, type PricingSettings } from "@/lib/pricing";
+import { depositAmount, formatPrice, orderPrice, packPricingSettings, type Pack, type PaymentType, type PricingSettings } from "@/lib/pricing";
 import { useLocale } from "./I18nProvider";
 import { previewPromotion } from "@/app/promotion-actions";
 import { OfferPrice, SaleBadge, discountPercent } from "./ui";
+import { usePackSelection } from "./OfferTabs";
 
 
 // Choix de la formule et du mode de paiement. Les montants affichés ici sont
 // indicatifs : le montant encaissé est recalculé côté serveur (createCheckout).
-export function OrderForm({
+export function OrderForm(props: Parameters<typeof OrderFormFields>[0]) {
+  const selection = usePackSelection();
+  const chosen = selection?.packId === props.pack.id ? selection : null;
+  return <OrderFormFields {...props} key={chosen?.revision ?? "initial"} defaultOpen={chosen ? true : props.defaultOpen} defaultFormulaId={chosen?.formulaId} defaultHasLogo={chosen?.hasLogo} />;
+}
+
+function OrderFormFields({
   pack,
   settings,
   buttonClass,
   defaultOpen = false,
+  defaultFormulaId,
+  defaultHasLogo = false,
 }: {
+  defaultFormulaId?: string;
+  defaultHasLogo?: boolean;
   pack: Pack;
   settings: PricingSettings;
   buttonClass: string;
@@ -25,13 +36,13 @@ export function OrderForm({
 }) {
   const [formulaOpen, setFormulaOpen] = useState(defaultOpen);
   const [paymentOpen, setPaymentOpen] = useState(defaultOpen);
-  const site = settings;
+  const site = packPricingSettings(settings, pack.id);
   const locale = useLocale();
   const amount = (cents: number) => formatPrice(cents, locale);
   const formulas = pack.formulas ?? [];
-  const [formulaId, setFormulaId] = useState(formulas[0]?.id);
+  const [formulaId, setFormulaId] = useState(formulas.find((f) => f.id === defaultFormulaId)?.id ?? formulas[0]?.id);
   const [payment, setPayment] = useState<PaymentType>("total");
-  const [hasLogo, setHasLogo] = useState(false);
+  const [hasLogo, setHasLogo] = useState(defaultHasLogo);
   const selectedFormula = formulas.find((f) => f.id === formulaId);
   const publicSale = Boolean(selectedFormula?.promotionCode);
   const [code, setCode] = useState("");
@@ -41,7 +52,7 @@ export function OrderForm({
   const promoKey = JSON.stringify([code, formulaId, payment, hasLogo]);
   const applied = !publicSale && promo?.key === promoKey ? promo : null;
   const listPrice = formulas.find((f) => f.id === formulaId)?.price ?? pack.price;
-  const price = applied?.totalPrice ?? orderPrice(listPrice, hasLogo, settings);
+  const price = applied?.totalPrice ?? orderPrice(listPrice, hasLogo, site);
   const deposit = depositAmount(price, settings);
   const basePrice = formulas[0]?.price ?? pack.price;
 

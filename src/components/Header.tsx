@@ -14,7 +14,7 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const links = [
     { href: "/portfolio", label: "Portfolio" },
-    { href: "/offres", label: t(locale, { fr: "Offres", en: "Pricing" }) },
+    { href: "/offres", label: t(locale, { fr: "Packs & à la carte", en: "Packages & à la carte" }) },
     { href: "/a-propos", label: t(locale, { fr: "À propos", en: "About" }) },
   ];
   const cta = t(locale, { fr: "Parlons de ton projet ↗", en: "Let's talk about your project ↗" });

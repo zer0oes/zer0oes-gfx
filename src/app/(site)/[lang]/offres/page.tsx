@@ -1,19 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { OfferGuide } from "@/components/OfferGuide";
 import { OfferTabs } from "@/components/OfferTabs";
-import { OptionDisclosure } from "@/components/OptionDisclosure";
+import { OptionCatalog } from "@/components/OptionCatalog";
 import { PackCard } from "@/components/PackCard";
-import { OfferPrice, SaleBadge, discountPercent } from "@/components/ui";
 import { resolveHome } from "@/lib/home-content";
-import { asLocale, href, t, type Locale } from "@/lib/i18n";
+import { asLocale, t, type Locale } from "@/lib/i18n";
 import {
   activePacks,
   formatPrice,
-  optionCategories,
-  optionCategory,
-  splitOptionName,
-  type OptionCategory,
   type PricingSettings,
 } from "@/lib/pricing";
 import { pageMetadata } from "@/lib/seo";
@@ -24,11 +18,11 @@ import { trDeep } from "@/lib/translations-en";
 export async function generateMetadata({ params }: PageProps<"/[lang]/offres">): Promise<Metadata> {
   return pageMetadata(asLocale((await params).lang), "/offres", {
     fr: {
-      title: "Offres",
+      title: "Packs & à la carte",
       description: "Premier look, Identité signature, Univers complet : logo, overlays, bannière, avatar et emotes sur mesure pour ta chaîne.",
     },
     en: {
-      title: "Pricing",
+      title: "Packages & à la carte",
       description: "First Look, Signature Identity, Full Universe: custom logo, overlays, banner, avatar and emotes for your channel.",
     },
   });
@@ -49,7 +43,7 @@ const faq = (locale: Locale, site: PricingSettings, universPrice?: number) => {
       },
       {
         q: "I already have a logo, is it cheaper?",
-        a: `Yes: ${price(site.logoDiscount)} off First Look and Signature Identity (tick “I already have my logo”), and on the quote for Full Universe. The logo must be supplied in good enough quality, ideally as a vector file; any retouching, rebuilding or redesign is quoted separately.`,
+        a: `Yes: ${price(site.logoDiscount)} off First Look and ${price(25000)} off Signature Identity (tick “I already have my logo”), and on the quote for Full Universe. The logo must be supplied in good enough quality, ideally as a vector file; any retouching, rebuilding or redesign is quoted separately.`,
       },
       {
         q: "Can I pay in instalments?",
@@ -61,7 +55,7 @@ const faq = (locale: Locale, site: PricingSettings, universPrice?: number) => {
       },
       {
         q: "How do I add an add-on?",
-        a: "Emotes and overlay animation are chosen directly in the package options. Other à la carte add-ons are ticked in your brief after ordering, or in your quote request; I confirm the amount before making them.",
+        a: "Emotes and overlay animation are chosen in the package options. Fixed-price à la carte creations can be ordered and paid for directly in full. Creations marked ‘from’ require a quote.",
       },
       {
         q: "How long does delivery take?",
@@ -88,7 +82,7 @@ const faq = (locale: Locale, site: PricingSettings, universPrice?: number) => {
     },
     {
       q: "J'ai déjà un logo, est-ce moins cher ?",
-      a: `Oui : ${price(site.logoDiscount)} de réduction sur Premier look et Identité signature (case « J'ai déjà mon logo »), et sur devis pour Univers complet. Le logo doit être fourni en qualité suffisante, idéalement en format vectoriel ; toute retouche, reconstruction ou refonte est chiffrée séparément.`,
+      a: `Oui : ${price(site.logoDiscount)} de réduction sur Premier look et ${price(25000)} sur Identité signature (case « J'ai déjà mon logo »), et sur devis pour Univers complet. Le logo doit être fourni en qualité suffisante, idéalement en format vectoriel ; toute retouche, reconstruction ou refonte est chiffrée séparément.`,
     },
     {
       q: "Puis-je payer en plusieurs fois ?",
@@ -100,7 +94,7 @@ const faq = (locale: Locale, site: PricingSettings, universPrice?: number) => {
     },
     {
       q: "Comment ajouter une option ?",
-      a: "Les emotes et l'animation des overlays se choisissent directement dans les formules des offres. Les autres options à la carte se cochent dans ton brief après la commande, ou dans ta demande de devis ; je te confirme le montant avant de les réaliser.",
+      a: "Les emotes et l'animation des overlays se choisissent dans les formules des offres. Les créations à la carte à prix fixe se commandent directement avec un paiement en une fois. Les tarifs « à partir de » nécessitent un devis.",
     },
     {
       q: "Quel est le délai de livraison ?",
@@ -117,48 +111,6 @@ const faq = (locale: Locale, site: PricingSettings, universPrice?: number) => {
   ];
 };
 
-// Nom et sous-titre des catégories d'options en anglais
-const categoryEn: Record<OptionCategory, { label: string; hint: string }> = {
-  overlays: { label: "Overlays", hint: "Scenes and stream branding" },
-  emotes: { label: "Emotes", hint: "For your chat and subscribers" },
-  branding: { label: "Branding", hint: "Your channel across every platform" },
-  motion: { label: "Animation", hint: "To bring your universe to life" },
-};
-
-// Couleur, dégradé et pictogramme de chaque catégorie d'options
-const categoryLooks: Record<OptionCategory, { color: string; gradient: string; icon: React.ReactNode }> = {
-  overlays: {
-    color: "var(--accent-2)",
-    gradient: "linear-gradient(135deg, var(--accent-2), var(--accent))",
-    icon: (
-      <>
-        <rect x="3" y="4" width="18" height="13" rx="2" />
-        <path d="M8 21h8M12 17v4" />
-      </>
-    ),
-  },
-  emotes: {
-    color: "var(--accent)",
-    gradient: "linear-gradient(135deg, var(--accent), var(--accent-3))",
-    icon: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01" />
-      </>
-    ),
-  },
-  branding: {
-    color: "var(--accent)",
-    gradient: "linear-gradient(135deg, var(--accent), var(--accent-2))",
-    icon: <path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" />,
-  },
-  motion: {
-    color: "var(--accent-3)",
-    gradient: "linear-gradient(135deg, var(--accent-3), var(--accent))",
-    icon: <path d="M13 2L4 14h7l-1 8 9-12h-7z" />,
-  },
-};
-
 export default async function OffresPage({ params, searchParams }: PageProps<"/[lang]/offres">) {
   const lang = asLocale((await params).lang);
   const { annule, details, promo_erreur, prix_modifie } = await searchParams;
@@ -170,10 +122,10 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
   return (
     <>
       <header className="mx-auto max-w-3xl px-4 pt-16 pb-8 text-center sm:px-6">
-        <p className="text-sm font-semibold uppercase tracking-widest text-accent">{texts.text("pricing.kicker")}</p>
-        <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">
-          {texts.text("pricing.title")}{" "}
-          <span className="text-gradient">{texts.text("pricing.titleAccent")}</span>
+        <p className="text-sm font-semibold uppercase tracking-widest text-accent">{t(lang, { fr: "Packs & à la carte", en: "Packages & à la carte" })}</p>
+        <h1 className="mt-3 text-center font-display text-4xl font-bold leading-[1.2] tracking-tight sm:text-5xl sm:leading-[1.2]">
+          <span className="block">{texts.text("pricing.title")}</span>
+          <span className="text-gradient block pb-[0.12em]">{texts.text("pricing.titleAccent")}</span>
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
           {texts.text("pricing.intro")}
@@ -205,121 +157,7 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
         <OfferGuide locale={lang} />
 
         </>} options={
-        <section>
-          <p className="mb-6 text-center text-sm leading-relaxed text-muted">{texts.text("pricing.optionsIntro")}</p>
-          <div className="grid items-start gap-5 sm:grid-cols-2">
-            {([["overlays", "emotes"], ["branding", "motion"]] as OptionCategory[][]).map((column, columnIndex) => (
-              <div key={columnIndex} className="space-y-5">
-            {column.map((category) => optionCategories.find((c) => c.id === category)!).map((c) => {
-              const list = catalog.options.filter((o) => optionCategory(o) === c.id).map((o) => trDeep(lang, o));
-              if (!list.length) return null;
-              const look = categoryLooks[c.id];
-              const label = lang === "en" ? categoryEn[c.id] : c;
-              const promoted = list.filter((o) => discountPercent(o) > 0);
-              const bestDiscount = promoted.reduce<(typeof list)[number] | undefined>((best, item) => !best || discountPercent(item) > discountPercent(best) ? item : best, undefined);
-              return (
-                <div
-                  key={c.id}
-                  className="group relative overflow-hidden rounded-2xl border border-border bg-surface p-5 transition duration-300 hover:-translate-y-1 sm:p-6"
-                  style={
-                    {
-                      "--cat": look.color,
-                      background: "linear-gradient(160deg, color-mix(in srgb, var(--cat) 14%, var(--surface)), var(--surface) 55%)",
-                      borderColor: "color-mix(in srgb, var(--cat) 35%, var(--border))",
-                    } as React.CSSProperties
-                  }
-                >
-                  {/* Liseré et halo aux couleurs de la catégorie */}
-                  <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: look.gradient }} />
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full opacity-30 blur-3xl transition-opacity duration-300 group-hover:opacity-60"
-                    style={{ background: look.gradient }}
-                  />
-                  {bestDiscount && <SaleBadge item={bestDiscount} locale={lang} upTo={promoted.length !== list.length || promoted.some((o) => discountPercent(o) !== discountPercent(bestDiscount))} className="absolute right-4 top-4" />}
-                  <div className={`relative flex items-center gap-3 ${bestDiscount ? "pr-28" : ""}`}>
-                    <span
-                      aria-hidden
-                      className="flex size-11 shrink-0 items-center justify-center rounded-xl text-background shadow-[0_0_24px_-6px_var(--cat)]"
-                      style={{ background: look.gradient }}
-                    >
-                      <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        {look.icon}
-                      </svg>
-                    </span>
-                    <div>
-                      <h3 className="font-display text-lg font-bold">{label.label}</h3>
-                      <p className="text-xs text-muted">{label.hint}</p>
-                    </div>
-                  </div>
-                  {(() => {
-                    const renderOption = (o: (typeof list)[number]) => {
-                      const name = splitOptionName(o.name);
-                      return (
-                        <li
-                          key={o.id}
-                          className="-mx-2 flex items-center justify-between gap-4 rounded-lg px-2 py-2.5 text-sm transition-colors hover:bg-[color-mix(in_srgb,var(--cat)_10%,transparent)]"
-                        >
-                          <span className="flex items-start gap-2.5">
-                            <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full" style={{ background: "var(--cat)" }} />
-                            <span>
-                              {name.main}
-                              {name.detail && <span className="block text-xs text-muted">{name.detail}</span>}
-                            </span>
-                          </span>
-                          <span
-                            className="shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-right font-semibold"
-                            style={{ borderColor: "color-mix(in srgb, var(--cat) 45%, transparent)", background: "color-mix(in srgb, var(--cat) 12%, transparent)" }}
-                          >
-                            <OfferPrice item={o} locale={lang} />
-                          </span>
-                        </li>
-                      );
-                    };
-                    if (c.id !== "emotes" && c.id !== "overlays") return <ul className="relative mt-5 divide-y divide-border/70">{list.map(renderOption)}</ul>;
-                    const isAnimated = (o: (typeof list)[number]) => /anim/i.test(o.id) || /anim/i.test(o.name);
-                    const grouped = c.id === "emotes" ? list : list.filter((o) => /overlay|alerte|alert/i.test(o.id) || /overlay|alerte|alert/i.test(o.name));
-                    const other = list.filter((o) => !grouped.includes(o));
-                    return (
-                      <div className="relative mt-5 divide-y divide-border/70">
-                        {[false, true].map((animated) => {
-                          const items = grouped.filter((o) => isAnimated(o) === animated);
-                          if (!items.length) return null;
-                          return (
-                            <OptionDisclosure key={String(animated)}
-                              label={animated ? t(lang, { fr: c.id === "emotes" ? "Animées" : "Animés", en: "Animated" }) : t(lang, { fr: "Statiques", en: "Static" })}
-                              price={
-                                <span
-                                  className="ml-auto shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-right font-semibold"
-                                  style={{ borderColor: "color-mix(in srgb, var(--cat) 45%, transparent)", background: "color-mix(in srgb, var(--cat) 12%, transparent)" }}
-                                >
-                                  <span className="mr-1 text-[0.7em] font-normal text-muted">{t(lang, { fr: "dès", en: "from" })}</span>
-                                  {formatPrice(Math.min(...items.map((o) => o.price)), lang)}
-                                </span>
-                              }>
-                              <ul className="mt-3 divide-y divide-border/70">{items.map(renderOption)}</ul>
-                            </OptionDisclosure>
-                          );
-                        })}
-                        {other.length > 0 && <ul className="divide-y divide-border/70">{other.map(renderOption)}</ul>}
-                      </div>
-                    );
-                  })()}
-                </div>
-              );
-            })}
-              </div>
-            ))}
-          </div>
-          <div className="mt-8 text-center">
-            <Link href={href(lang, "/contact")} className="inline-flex rounded-full bg-accent px-8 py-3 text-sm font-semibold text-background transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">
-              {t(lang, { fr: "Demander un devis à la carte", en: "Request an à la carte quote" })}
-            </Link>
-            <p className="mt-3 text-sm text-muted">
-              {t(lang, { fr: "Indique les créations dont tu as besoin.", en: "Tell me which creations you need." })}
-            </p>
-          </div>
-        </section>
+          <OptionCatalog settings={site} packs={packs.map((p) => trDeep(lang, p))} options={catalog.options.map((o) => trDeep(lang, o))} locale={lang} />
         } />
 
         <section className="mt-20">

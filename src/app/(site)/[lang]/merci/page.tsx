@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BriefForm } from "@/components/BriefForm";
 import { PageHeader } from "@/components/ui";
-import { quote } from "@/lib/orders";
+import { quote, quoteFromMetadata } from "@/lib/orders";
 import { asLocale, href, t } from "@/lib/i18n";
 import { depositAmount, formatPrice, paymentLabel, type PaymentType } from "@/lib/pricing";
 import { getStore } from "@/lib/store";
@@ -18,6 +18,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/merci">): 
 }
 
 type View = {
+  deliveryTemplate?: string[];
   packId: string;
   formulaId: string;
   offerName: string;
@@ -71,12 +72,7 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
   if (!view && stripe && sessionId && !sessionId.startsWith("demo_")) {
     try {
       const s = await stripe.checkout.sessions.retrieve(sessionId);
-      const q = quote(catalog, {
-        packId: s.metadata?.packId,
-        formulaId: s.metadata?.formulaId,
-        payment: s.metadata?.paymentType,
-        hasLogo: s.metadata?.logoProvided === "oui",
-      });
+      const q = s.metadata ? quoteFromMetadata(s.metadata) : null;
       if (q) {
         view = {
           ...q,
@@ -139,7 +135,7 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
       </PageHeader>
       <div className="mx-auto grid max-w-5xl items-start gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_2fr]">
         <aside className="min-w-0 space-y-6 lg:sticky lg:top-24">
-        {view && <OrderedPackCard pack={pack} offerName={view.offerName} formulaId={view.formulaId} totalPrice={view.totalPrice} hasLogo={view.hasLogo} locale={lang}>
+        {view && <OrderedPackCard pack={pack} offerName={view.offerName} formulaId={view.formulaId} totalPrice={view.totalPrice} hasLogo={view.hasLogo} locale={lang} deliveryTemplate={view.deliveryTemplate}>
           <p className="text-sm leading-relaxed text-muted">
             {view.hasLogo && (
               <>
@@ -179,7 +175,7 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
           </div> : <>
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">{editBrief ? t(lang, { fr: "Modifier mon brief", en: "Edit my brief" }) : t(lang, { fr: "Prochaine étape · 5 à 10 minutes", en: "Next step · 5 to 10 minutes" })}</p>
           <h2 className="font-display text-2xl font-bold">{lang === "fr" ? <>Complète ton <span className="text-gradient">brief</span> pour lancer la <span className="text-gradient">création</span></> : <>Complete your <span className="text-gradient">brief</span> to start the <span className="text-gradient">creation</span></>}</h2>
-          <p className="mb-6 mt-3 text-sm leading-relaxed text-foreground/80">{t(lang, { fr: "Les champs marqués d’un * sont obligatoires. Choisis aussi les overlays inclus dans ton pack avant d’envoyer.", en: "Fields marked * are required. Choose the overlays included in your package before sending." })}</p>
+          <p className="mb-6 mt-3 text-sm leading-relaxed text-foreground/80">{t(lang, { fr: "Les champs marqués d’un * sont obligatoires. Précise tes besoins pour les créations achetées avant d’envoyer.", en: "Fields marked * are required. Describe your needs for the purchased creations before sending." })}</p>
           <BriefForm
             sessionId={sessionId}
             packId={view?.packId}
@@ -192,6 +188,7 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
             portalUrl={portal ? `/commande/${portal}` : undefined}
             initialBrief={editBrief ? order?.brief ?? {} : undefined}
             revisionsUsed={revisionsUsed}
+            purchasedProducts={view?.packId === "options" || view?.packId.startsWith("option:") ? view.deliveryTemplate : undefined}
           />
           </>}
         </div>

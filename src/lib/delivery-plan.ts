@@ -5,8 +5,12 @@ import { allFinalsAccessed } from "./final-downloads";
 
 export function plannedDelivery(order: Pick<Order, "deliveryTemplate" | "brief" | "hasLogo" | "formulaId" | "packId">) {
   const result: { key: string; label: string; itemType: string }[] = [];
-  const animated = order.deliveryTemplate?.some((line) => /animation/i.test(line));
+  const animated = order.deliveryTemplate?.some((line) => /animation|overlays?.*anim/i.test(line));
   for (const line of order.deliveryTemplate ?? []) {
+    if (order.packId === "options" || order.packId.startsWith("option:")) {
+      result.push({ key: `item-${result.length}`, label: line, itemType: "visuel" });
+      continue;
+    }
     if (/correction/i.test(line)) continue;
     if (/overlay/i.test(line)) {
       for (const scene of overlayTypes.filter((s) => order.brief?.["Overlays choisis"]?.includes(s))) {
@@ -14,7 +18,8 @@ export function plannedDelivery(order: Pick<Order, "deliveryTemplate" | "brief" 
       }
     } else if (/banni[eè]re.*avatar/i.test(line)) {
       result.push({ key: "banner", label: "Bannière", itemType: "visuel" }, { key: "avatar", label: "Avatar", itemType: "visuel" });
-    } else if (/logo/i.test(line) && order.hasLogo) continue;
+    } else if (/alertes/i.test(line)) result.push({ key: "alertes", label: line, itemType: "alerte" });
+    else if (/logo/i.test(line) && order.hasLogo) continue;
     else if (/emotes/i.test(line)) result.push({ key: "emotes", label: line.match(/\d+\s+emotes[^:€]*?(?=\s+(pour|:|\+)|$)/i)?.[0] ?? line, itemType: "visuel" });
     else result.push({ key: `item-${result.length}`, label: line, itemType: "visuel" });
   }
