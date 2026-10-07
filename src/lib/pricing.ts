@@ -31,7 +31,7 @@ export type Pack = {
   archived?: boolean;
 };
 
-export type Option = { id: string; name: string; price: number; priceFrom?: boolean; unit?: string };
+export type Option = { id: string; name: string; price: number; priceFrom?: boolean; unit?: string; category?: OptionCategory };
 
 export type PricingSettings = {
   // Acompte proposé à la commande (en %)
@@ -138,11 +138,12 @@ export const optionCategories = [
   { id: "overlays", label: "Overlays", hint: "Scènes et habillage du live" },
   { id: "emotes", label: "Emotes", hint: "Pour ton tchat et tes abonnés" },
   { id: "branding", label: "Branding", hint: "Ta chaîne sur toutes les plateformes" },
-  { id: "motion", label: "Motion", hint: "Pour donner vie à ton univers" },
+  { id: "motion", label: "Animation", hint: "Pour donner vie à ton univers" },
 ] as const;
 export type OptionCategory = (typeof optionCategories)[number]["id"];
 
-export function optionCategory(o: Pick<Option, "name">): OptionCategory {
+export function optionCategory(o: Pick<Option, "name" | "category">): OptionCategory {
+  if (o.category && optionCategories.some((c) => c.id === o.category)) return o.category;
   const n = o.name.toLowerCase();
   if (n.includes("emote")) return "emotes";
   // Overlays, alertes et widgets (même animés) : habillage du live

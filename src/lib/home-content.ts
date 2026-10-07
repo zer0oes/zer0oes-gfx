@@ -119,7 +119,24 @@ export const portfolioPageFields: HomeField[] = [
   { key: "portfolio.link", label: "Lien des cartes projet", kind: "text", max: 40 },
 ];
 
+export const offersPageFields: HomeField[] = [
+  { key: "pricing.kicker", label: "Surtitre", kind: "text", max: 60 },
+  { key: "pricing.title", label: "Titre — début", kind: "text", max: 80 },
+  { key: "pricing.titleAccent", label: "Titre — partie en dégradé", kind: "text", max: 80 },
+  { key: "pricing.intro", label: "Sous-titre", kind: "long" },
+  { key: "pricing.explanationTitle", label: "Titre de l’explication des packs", kind: "text", max: 120 },
+  { key: "pricing.summary", label: "Phrase courte sous le titre des packs", kind: "long" },
+  { key: "pricing.optionsIntro", label: "Introduction de l’onglet À la carte", kind: "long" },
+];
+
 export const homeDefaults: Record<string, string> = {
+  "pricing.kicker": "Offres",
+  "pricing.title": "Un univers",
+  "pricing.titleAccent": "à ton image.",
+  "pricing.intro": "Une identité complète ou quelques créations pour enrichir ta chaîne : choisis ce qui te correspond.",
+  "pricing.explanationTitle": "Une identité pensée dans son ensemble.",
+  "pricing.summary": "Logo et habillage conçus autour d’une même direction graphique.",
+  "pricing.optionsIntro": "Les prestations à la carte répondent à un besoin ponctuel ou permettent de compléter ton univers existant.",
   "hero.title1": "Ton stream.",
   "hero.title2": "Ton univers.",
   "hero.text": "Logos, overlays et emotes sur mesure pour Twitch et YouTube.",
@@ -172,6 +189,13 @@ export const homeDefaults: Record<string, string> = {
 // Version anglaise des textes (/en). Les visuels et les noms d'emotes sont communs aux deux langues.
 // Une traduction saisie dans l'admin est enregistrée sous la clé « en:<clé> ».
 export const homeDefaultsEn: Record<string, string> = {
+  "pricing.kicker": "Pricing",
+  "pricing.title": "A universe",
+  "pricing.titleAccent": "that reflects you.",
+  "pricing.intro": "A complete identity or a few creations to enrich your channel: choose what suits you.",
+  "pricing.explanationTitle": "An identity designed as a whole.",
+  "pricing.summary": "Your logo and channel visuals designed around a shared visual direction.",
+  "pricing.optionsIntro": "À la carte services meet a specific need or help expand your existing visual universe.",
   "hero.title1": "Your stream.",
   "hero.title2": "Your universe.",
   "hero.text": "Custom logos, overlays and emotes for Twitch and YouTube.",
@@ -217,7 +241,9 @@ export const homeDefaultsEn: Record<string, string> = {
 };
 
 const homeFields = homeSections.flatMap((s) => s.fields);
-const fields = [...homeFields, ...portfolioPageFields];
+const fields = [...homeFields, ...portfolioPageFields, ...offersPageFields];
+export type ContentGroup = "accueil" | "portfolio" | "offres";
+const groupFields = (group: ContentGroup) => group === "accueil" ? homeFields : group === "portfolio" ? portfolioPageFields : offersPageFields;
 const LONG = 1200;
 
 function clean(f: HomeField, raw: string): string {
@@ -240,10 +266,10 @@ function clean(f: HomeField, raw: string): string {
 export function homeFromForm(
   get: (key: string) => string | null | undefined,
   stored: unknown = null,
-  group: "accueil" | "portfolio" = "accueil",
+  group: ContentGroup = "accueil",
 ): Record<string, string> {
-  const edited = group === "portfolio" ? portfolioPageFields : homeFields;
-  const kept = resolveStored(stored, group === "portfolio" ? homeFields : portfolioPageFields);
+  const edited = groupFields(group);
+  const kept = resolveStored(stored, fields.filter((f) => !edited.includes(f)));
   const out: Record<string, string> = { ...kept, ...translationValues(stored), ...storedTranslations(stored) };
   for (const f of edited) {
     const v = get(f.key);
@@ -277,11 +303,11 @@ function storedTranslations(raw: unknown) {
 }
 
 // Retour au contenu d'origine d'une des deux pages, l'autre est conservée (null : plus rien d'enregistré)
-export function resetGroup(stored: unknown, group: "accueil" | "portfolio") {
+export function resetGroup(stored: unknown, group: ContentGroup) {
   const translations = translationValues(stored);
-  const removed = group === "portfolio" ? portfolioPageFields : homeFields;
+  const removed = groupFields(group);
   for (const field of removed) delete translations[`en:${field.key}`];
-  const kept = { ...resolveStored(stored, group === "portfolio" ? homeFields : portfolioPageFields), ...translations };
+  const kept = { ...resolveStored(stored, fields.filter((f) => !removed.includes(f))), ...translations };
   return Object.keys(kept).length ? kept : null;
 }
 
