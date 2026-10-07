@@ -116,6 +116,7 @@ function toOrder(r: Row, notes: Row[]): Order {
     deliveryToken: opt<string>(r.delivery_token),
     deliveredAt: opt<string>(r.delivered_at),
     completedAt: opt<string>(r.completed_at),
+    testimonial: opt<Order["testimonial"]>(r.client_testimonial),
   };
 }
 
@@ -176,6 +177,7 @@ const orderColumns: Record<keyof OrderPatch, string> = {
   deliveryToken: "delivery_token",
   deliveredAt: "delivered_at",
   completedAt: "completed_at",
+  testimonial: "client_testimonial",
 };
 
 const selectOrders = () => db().from("orders").select("*");

@@ -139,7 +139,7 @@ export function deliveryProgress(items: { approvedAt?: string }[]) {
 }
 
 // E-mail de confirmation de commande avec le lien de l'espace commande
-export function portalEmail({ offerName, url }: { offerName: string; url: string }) {
+export function portalEmail({ offerName, url, briefUrl }: { offerName: string; url: string; briefUrl?: string }) {
   return {
     subject: `Ta commande zer0oes gfx est confirmée — ${offerName}`,
     text: [
@@ -147,13 +147,14 @@ export function portalEmail({ offerName, url }: { offerName: string; url: string
       "",
       `Merci pour ta commande « ${offerName} » !`,
       "",
+      ...(briefUrl ? ["Pour lancer la création, remplis ton brief ici :", briefUrl, "", "Tu y retrouveras le rappel de ton pack et des options sélectionnées.", ""] : []),
       "Tu peux suivre ton projet à tout moment depuis ton espace commande privé :",
       url,
       "",
       "Tu y retrouveras les étapes (brief, création, validation, solde, livraison), tes paiements, puis les aperçus à valider et tes fichiers définitifs.",
       "Garde ce lien pour toi : il donne accès à ta commande, sans mot de passe.",
       "",
-      "Si ce n'est pas déjà fait, remplis ton brief pour que je puisse commencer.",
+      ...(briefUrl ? [] : ["Si ce n'est pas déjà fait, remplis ton brief pour que je puisse commencer."]),
       "",
       "À très vite,",
       "Aurore — zer0oes gfx",

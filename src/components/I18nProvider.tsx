@@ -42,7 +42,11 @@ export function LanguageSwitch({ className = "" }: { className?: string }) {
           href={href(l, path)}
           hrefLang={l}
           lang={l}
-          onClick={() => rememberLocale(l)}
+          onClick={(event) => {
+            rememberLocale(l);
+            // Conserver la session de paiement, les filtres et l’ancre de la page.
+            event.currentTarget.href = `${href(l, path)}${window.location.search}${window.location.hash}`;
+          }}
           aria-current={l === locale ? "true" : undefined}
           aria-label={l === "fr" ? "Français" : "English"}
           className={`rounded-full px-2.5 py-1 uppercase transition ${l === locale ? "bg-accent text-background" : "text-muted hover:text-foreground"}`}

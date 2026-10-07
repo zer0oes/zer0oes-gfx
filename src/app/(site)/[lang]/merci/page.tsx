@@ -4,10 +4,12 @@ import { BriefForm } from "@/components/BriefForm";
 import { PageHeader } from "@/components/ui";
 import { quote } from "@/lib/orders";
 import { asLocale, href, t } from "@/lib/i18n";
-import { depositAmount, formatPrice, optionChoices, paymentLabel, type PaymentType } from "@/lib/pricing";
+import { depositAmount, formatPrice, paymentLabel, type PaymentType } from "@/lib/pricing";
 import { getStore } from "@/lib/store";
 import { trOfferName } from "@/lib/translations-en";
 import { getStripe } from "@/lib/stripe";
+import { includedOverlays } from "@/lib/brief-overlays";
+import { OrderedPackCard } from "@/components/OrderedPackCard";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/merci">): Promise<Metadata> {
   const lang = asLocale((await params).lang);
@@ -25,6 +27,7 @@ type View = {
   depositPercent: number;
   email?: string;
   paid: boolean;
+  amountPaid?: number;
 };
 
 export default async function MerciPage({ params: routeParams, searchParams }: PageProps<"/[lang]/merci">) {
@@ -54,8 +57,9 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
   const order = sessionId ? await store.getOrderBySession(sessionId).catch(() => null) : null;
   // Espace commande privé : lien créé à l'enregistrement de la commande (webhook ou démo)
   const portal = order?.deliveryToken ?? null;
+  const briefReceived = Boolean(order?.briefReceivedAt || order?.brief);
   if (order) {
-    view = { ...order, payment: order.paymentType, email: order.customerEmail || undefined, paid: true };
+    view = { ...order, payment: order.paymentType, email: order.customerEmail || undefined, paid: !order.demo };
   }
 
   // 2. Webhook pas encore reçu : lecture de la session Stripe
@@ -75,6 +79,7 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
           totalPrice: Number(s.metadata?.totalPrice) || q.totalPrice,
           email: s.customer_details?.email ?? undefined,
           paid: s.payment_status === "paid",
+          amountPaid: s.payment_status === "paid" ? s.amount_total ?? 0 : 0,
         };
       }
     } catch {
@@ -94,12 +99,9 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
   }
 
   const pack = catalog.packs.find((p) => p.id === view?.packId);
+  const overlayCount = includedOverlays(pack);
   const overlayHint =
-    pack?.id === "premier-look"
-      ? t(lang, { fr: "Ton offre comprend 2 overlays au choix.", en: "Your package includes 2 overlays of your choice." })
-      : pack
-        ? t(lang, { fr: "Ton offre comprend 5 overlays au choix.", en: "Your package includes 5 overlays of your choice." })
-        : undefined;
+    overlayCount !== null ? t(lang, { fr: `Choisis les ${overlayCount} overlays inclus dans ton pack. Pour changer un choix, décoche d’abord un overlay.`, en: `Choose the ${overlayCount} overlays included in your package. Uncheck an overlay to change your selection.` }) : undefined;
   const pricing = { ...catalog.settings, depositPercent: view?.depositPercent ?? catalog.settings.depositPercent };
 
   return (
@@ -108,51 +110,33 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
         eyebrow={view?.paid || demo ? t(lang, { fr: "Commande confirmée", en: "Order confirmed" }) : t(lang, { fr: "Commande reçue", en: "Order received" })}
         title={t(lang, { fr: "Merci !", en: "Thank you!" })}
       >
-        {view ? (
+        {view?.paid ? (
+          <>
+            <span className="block font-semibold text-emerald-300">{t(lang, { fr: `Paiement de ${amount(view.amountPaid ?? 0)} confirmé`, en: `Payment of ${amount(view.amountPaid ?? 0)} confirmed` })}</span>
+            <span className="mt-1 block text-base">{t(lang, { fr: `Reste à payer : ${amount(Math.max(0, view.totalPrice - (view.amountPaid ?? 0)))}`, en: `Remaining balance: ${amount(Math.max(0, view.totalPrice - (view.amountPaid ?? 0)))}` })}</span>
+          </>
+        ) : view ? (
           lang === "en" ? (
             <>
-              Your <strong className="text-foreground">“{trOfferName(lang, view.offerName)}”</strong> package is booked.
+              Your package: <strong className="text-foreground">“{trOfferName(lang, view.offerName)}”</strong>.
             </>
           ) : (
             <>
-              Ton offre <strong className="text-foreground">« {view.offerName} »</strong> est réservée.
+              Ton pack : <strong className="text-foreground">« {view.offerName} »</strong>.
             </>
           )
         ) : (
           t(lang, { fr: "Ta commande est enregistrée.", en: "Your order is saved." })
         )}{" "}
-        {t(lang, {
-          fr: "Pour lancer la création, raconte-moi ta chaîne en quelques minutes.",
-          en: "To get the creation started, tell me about your channel in a few minutes.",
-        })}
+        {view?.paid && <span className="mt-2 block text-base">{t(lang, {
+          fr: `Ta commande ${view.offerName} est confirmée.`,
+          en: `Your ${trOfferName(lang, view.offerName)} order is confirmed.`,
+        })}</span>}
       </PageHeader>
-      <div className="mx-auto max-w-2xl px-4 sm:px-6">
-        {portal && (
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-accent/50 bg-accent/10 p-4">
-            <p className="text-sm">
-              {lang === "en" ? (
-                <>
-                  <strong>Your order space</strong>: follow progress, approve your previews and download your files.
-                  <span className="block text-xs text-muted">Keep this link to yourself, it is also in your emails.</span>
-                </>
-              ) : (
-                <>
-                  <strong>Ton espace commande</strong> : suis l&apos;avancement, valide tes aperçus et récupère tes fichiers.
-                  <span className="block text-xs text-muted">Garde ce lien pour toi, il est aussi dans tes e-mails.</span>
-                </>
-              )}
-            </p>
-            <Link href={`/commande/${portal}`} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background hover:brightness-110">
-              {t(lang, { fr: "Mon espace commande →", en: "My order space →" })}
-            </Link>
-          </div>
-        )}
-        {view && (
-          <p
-            className={`mb-6 rounded-lg border px-4 py-3 text-sm ${
-              view.payment === "acompte" ? "border-accent/50 bg-accent/10 text-foreground" : "border-border bg-surface text-muted"
-            }`}
-          >
+      <div className="mx-auto grid max-w-5xl items-start gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_2fr]">
+        <aside className="min-w-0 space-y-6 lg:sticky lg:top-24">
+        {view && <OrderedPackCard pack={pack} offerName={view.offerName} formulaId={view.formulaId} totalPrice={view.totalPrice} hasLogo={view.hasLogo} locale={lang}>
+          <p className="text-sm leading-relaxed text-muted">
             {view.hasLogo && (
               <>
                 {t(lang, { fr: "Remise « logo déjà existant »", en: "“Existing logo” discount" })} : −{amount(view.listPrice - view.totalPrice)} (
@@ -171,7 +155,7 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
                 en: ", before the final files are handed over. I'll send you an invoice or a payment link for the balance.",
               })}
           </p>
-        )}
+        </OrderedPackCard>}
         {demo && (
           <p className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
             {t(lang, {
@@ -180,8 +164,16 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
             })}
           </p>
         )}
-        <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-          <h2 className="mb-6 font-display text-2xl font-bold">{t(lang, { fr: "Ton brief", en: "Your brief" })}</h2>
+        </aside>
+        <div className="min-w-0 rounded-2xl border border-border bg-surface p-6 sm:p-8">
+          {briefReceived ? <div className="space-y-4">
+            <h2 className="font-display text-2xl font-bold">{t(lang, { fr: "Ton brief a bien été reçu", en: "Your brief has been received" })}</h2>
+            <p className="text-sm leading-relaxed text-foreground/80">{t(lang, { fr: "Tu n’as plus besoin de remplir ce formulaire. Je reviens vers toi sous 2 jours ouvrés. Pour toute précision, contacte-moi ou retrouve la suite dans ton espace commande.", en: "You don’t need to fill in this form again. I’ll get back to you within 2 business days. For any clarification, contact me or follow the next steps in your order space." })}</p>
+            {portal && <Link href={`/commande/${portal}`} className="inline-flex rounded-full bg-accent px-6 py-3 font-semibold text-background hover:brightness-110">{t(lang, { fr: "Accéder à ma commande →", en: "Open my order →" })}</Link>}
+          </div> : <>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">{t(lang, { fr: "Prochaine étape · 5 à 10 minutes", en: "Next step · 5 to 10 minutes" })}</p>
+          <h2 className="font-display text-2xl font-bold">{lang === "fr" ? <>Complète ton <span className="text-gradient">brief</span> pour lancer la <span className="text-gradient">création</span></> : <>Complete your <span className="text-gradient">brief</span> to start the <span className="text-gradient">creation</span></>}</h2>
+          <p className="mb-6 mt-3 text-sm leading-relaxed text-foreground/80">{t(lang, { fr: "Les champs marqués d’un * sont obligatoires. Choisis aussi les overlays inclus dans ton pack avant d’envoyer.", en: "Fields marked * are required. Choose the overlays included in your package before sending." })}</p>
           <BriefForm
             sessionId={sessionId}
             packId={view?.packId}
@@ -190,8 +182,10 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
             hasLogo={view?.hasLogo}
             email={view?.email}
             overlayHint={overlayHint}
-            optionChoices={optionChoices(catalog.options, lang)}
+            overlayCount={overlayCount}
+            portalUrl={portal ? `/commande/${portal}` : undefined}
           />
+          </>}
         </div>
       </div>
     </>

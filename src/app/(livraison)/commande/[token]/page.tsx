@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProtectedMedia } from "@/components/protection";
+import { ClientTestimonialForm } from "@/components/ClientTestimonialForm";
+import { OrderLiveRefresh } from "@/components/OrderLiveRefresh";
 import {
   canCancelApproval,
   deliverableTypes,
@@ -363,7 +365,7 @@ function Item({
 // Étapes du projet : brief reçu, création, validation, solde, livraison
 function Steps({ steps, tx }: { steps: Step[]; tx: Texts }) {
   return (
-    <ol className="grid grid-cols-5 gap-1.5" aria-label={tx.stepsLabel}>
+    <ol className="grid w-full gap-1.5" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label={tx.stepsLabel}>
       {steps.map((s, i) => (
         <li key={s.id} aria-current={s.state === "en_cours" ? "step" : undefined} className="min-w-0">
           <div className={`h-1.5 rounded-full ${s.state === "fait" ? "bg-emerald-400" : s.state === "en_cours" ? "bg-accent" : "bg-surface-2"}`} />
@@ -405,6 +407,7 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <OrderLiveRefresh />
       <div className="rounded-3xl border border-border bg-surface p-5 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.6)] sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">{tx.yourOrder}</p>
         <h1 className="mt-3 font-display text-3xl font-bold sm:text-4xl">{trOfferName(locale, order.offerName)}</h1>
@@ -503,6 +506,7 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
             </>
           )}
         </section>
+        {progress.complete && <ClientTestimonialForm token={token} testimonial={order.testimonial} en={locale === "en"} />}
       </div>
     </div>
   );

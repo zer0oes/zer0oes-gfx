@@ -62,7 +62,7 @@ export const packs: Pack[] = [
   },
 ];
 
-// Options à la carte : non vendues via Stripe, elles se cochent dans le brief ou la demande de devis.
+// Options à la carte : non vendues via Stripe, elles se cochent dans la demande de devis.
 
 export const options: Option[] = [
   { id: "overlay-fixe-unite", name: "Overlay fixe (unité)", price: 5000 },

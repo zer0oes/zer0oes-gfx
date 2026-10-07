@@ -95,6 +95,7 @@ export type DeliverablePatch = { itemType?: string | null; previewPath?: string 
 export type DeliverableNote = { at: string; body: string };
 
 export type Order = {
+  testimonial?: ClientTestimonial;
   id: string;
   createdAt: string;
   updatedAt: string;
@@ -140,6 +141,14 @@ export type Order = {
   completedAt?: string;
 };
 
+export type ClientTestimonial = {
+  author: string;
+  quote: string;
+  consent: boolean;
+  submittedAt: string;
+  consentAt?: string;
+};
+
 export type NewOrder = Omit<
   Order,
   "id" | "createdAt" | "updatedAt" | "status" | "notes" | "refunds" | "balanceSessionId" | "balanceUrl" | "balancePaidAt" | "brief" | "briefReceivedAt" | "feesPaid"
@@ -170,6 +179,7 @@ export type OrderPatch = Partial<
     | "refunds"
     | "deliveryToken"
     | "deliveredAt"
+    | "testimonial"
   >
 > & { completedAt?: string | null };
 

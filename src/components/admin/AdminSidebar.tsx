@@ -7,7 +7,7 @@ import { logoutAction } from "@/app/admin/actions";
 import { AdminNavigation } from "./AdminNavigation";
 import { MaterialIcon } from "./MaterialIcon";
 
-export function AdminSidebar({ email, storeKind }: { email: string; storeKind: "supabase" | "local" | "static" }) {
+export function AdminSidebar({ email, storeKind, pendingOrders }: { email: string; storeKind: "supabase" | "local" | "static"; pendingOrders: number }) {
   const [collapsed, setCollapsed] = useState(false);
   const toggleLabel = collapsed ? "Déplier le menu" : "Replier le menu";
   return (
@@ -26,7 +26,7 @@ export function AdminSidebar({ email, storeKind }: { email: string; storeKind: "
         </div>
         <p className={collapsed ? "sr-only" : "mt-2 truncate text-xs text-muted"}>{email}</p>
       </div>
-      <AdminNavigation collapsed={collapsed} />
+      <AdminNavigation collapsed={collapsed} initialPendingOrders={pendingOrders} />
       {storeKind !== "supabase" && (
         <p className={collapsed ? "sr-only" : "m-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200"}>
           {storeKind === "local" ? "Mode développement : données dans .data/dev-store.json (pas de Supabase)." : "Aucune base configurée : lecture seule."}

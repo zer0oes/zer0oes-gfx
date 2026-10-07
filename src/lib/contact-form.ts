@@ -62,7 +62,7 @@ const messagesEn: Record<string, string> = {
   "Merci d'indiquer au minimum ton e-mail, ta chaîne et ton univers.": "Please give at least your email, your channel and your universe.",
   "Merci d'indiquer le lien vers ton logo existant.": "Please give the link to your existing logo.",
   "L'envoi a échoué, réessaie ou envoie ton brief par e-mail.": "Sending failed, please try again or send your brief by email.",
-  "Brief bien reçu ! Je reviens vers toi sous 48 h ouvrées pour démarrer.": "Brief received! I'll get back to you within 2 business days to get started.",
+  "Brief bien reçu ! Je reviens vers toi sous 2 jours ouvrés pour démarrer.": "Brief received! I'll get back to you within 2 business days to get started.",
 };
 
 export function formMessage(locale: "fr" | "en", message: string) {

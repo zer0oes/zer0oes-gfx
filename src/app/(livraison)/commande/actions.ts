@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { canCancelApproval, cleanNote, isDeliveryToken } from "@/lib/delivery";
+import { canCancelApproval, cleanNote, deliveryProgress, isDeliveryToken } from "@/lib/delivery";
 import { notify } from "@/lib/notify";
 import { createBalanceLink } from "@/lib/orders";
 import { requestLocale } from "@/lib/request-locale";
@@ -34,6 +34,30 @@ function back(token: string, id: string, retour: string): never {
 }
 
 const who = (o: { offerName: string; customerEmail: string }) => `${o.offerName} (${o.customerEmail || "e-mail inconnu"})`;
+
+export async function saveClientTestimonialAction(_state: { status: string }, formData: FormData) {
+  const { store, order, token } = await orderFor(formData);
+  if (!deliveryProgress(await store.listDeliverables(order.id)).complete) return { status: "unapproved" };
+  const author = typeof formData.get("author") === "string" ? (formData.get("author") as string).trim() : "";
+  const quote = typeof formData.get("quote") === "string" ? (formData.get("quote") as string).trim() : "";
+  if (!author || author.length > 80 || !quote || quote.length > 600) return { status: "invalid" };
+  const consent = formData.get("consent") === "on";
+  const now = new Date().toISOString();
+  try {
+    await store.updateOrder(order.id, { testimonial: { author, quote, consent, submittedAt: now, ...(consent ? { consentAt: now } : {}) } });
+  } catch (e) {
+    console.error(e);
+    return { status: "error" };
+  }
+  await notify({
+    subject: `Avis client — ${order.offerName}`,
+    replyTo: order.customerEmail || undefined,
+    fields: { Commande: who(order), Auteur: author, Avis: quote, "Accord de diffusion sur le site": consent ? "Oui" : "Non", "Date de soumission": now },
+  }).catch((e) => console.error(e));
+  revalidatePath(`/commande/${token}`);
+  revalidatePath(`/admin/commandes/${order.id}`);
+  return { status: "saved" };
+}
 
 export async function addClientNoteAction(formData: FormData) {
   const { store, order, item, token } = await target(formData);

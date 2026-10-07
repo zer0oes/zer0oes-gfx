@@ -247,7 +247,12 @@ async function openPortal(order: Order) {
   const token = newDeliveryToken();
   await getStore().updateOrder(order.id, { deliveryToken: token });
   if (!order.customerEmail) return;
-  const mail = portalEmail({ offerName: order.offerName, url: `${await siteUrl()}/commande/${token}` });
+  const base = await siteUrl();
+  const mail = portalEmail({
+    offerName: order.offerName,
+    url: `${base}/commande/${token}`,
+    briefUrl: `${base}/merci?session_id=${encodeURIComponent(order.stripeSessionId)}`,
+  });
   await sendToCustomer({ to: order.customerEmail, subject: mail.subject, text: mail.text }).catch((e) => console.error(e));
 }
 
@@ -363,6 +368,7 @@ export async function attachBrief(sessionId: string, brief: Record<string, strin
   if (store.kind === "static" || !sessionId) return null;
   const order = await store.getOrderBySession(sessionId);
   if (!order) return null;
+  if (order.briefReceivedAt || order.brief) return order;
   await store.updateOrder(order.id, {
     brief,
     briefReceivedAt: new Date().toISOString(),

@@ -12,6 +12,7 @@ type PortalOrder = {
   status: OrderStatus;
   totalPrice: number;
   amountPaid: number;
+  paymentType?: "total" | "acompte";
   brief?: Record<string, string>;
   briefReceivedAt?: string;
   completedAt?: string;
@@ -31,7 +32,7 @@ export function filesExpired(order: Pick<PortalOrder, "completedAt">, now = new 
   return at !== null && now > at;
 }
 
-// Les 5 étapes montrées au client : brief reçu, création, validation, solde, livraison
+// Le solde fait partie du suivi uniquement pour les commandes avec acompte.
 export function orderSteps(order: PortalOrder, items: { approvedAt?: string }[], locale: "fr" | "en" = "fr"): Step[] {
   const en = locale === "en";
   const r = rank[order.status];
@@ -42,18 +43,21 @@ export function orderSteps(order: PortalOrder, items: { approvedAt?: string }[],
   const finished = r >= 5 || (validated && paid);
 
   const steps: Step[] = [
-    { id: "brief", label: en ? "Brief received" : "Brief reçu", state: briefDone ? "fait" : "en_cours" },
-    { id: "creation", label: en ? "Creation" : "Création", state: delivered ? "fait" : briefDone ? "en_cours" : "a_venir" },
+    { id: "brief", label: briefDone ? (en ? "Brief received" : "Brief reçu") : (en ? "Complete your brief" : "Brief à compléter"), state: briefDone ? "fait" : "en_cours" },
+    { id: "creation", label: en ? "Creation" : "Création", state: r >= 3 ? "fait" : r >= 2 ? "en_cours" : "a_venir" },
     { id: "validation", label: en ? "Approval" : "Validation", state: validated ? "fait" : delivered ? "en_cours" : "a_venir" },
     { id: "solde", label: en ? "Balance" : "Solde", state: paid ? "fait" : validated ? "en_cours" : "a_venir" },
     { id: "livraison", label: en ? "Delivery" : "Livraison", state: finished ? "fait" : validated && paid ? "en_cours" : "a_venir" },
   ];
-  return steps;
+  return order.paymentType === "total" ? steps.filter((step) => step.id !== "solde") : steps;
 }
 
 // Phrase de statut affichée en haut de l'espace commande
 export function statusMessage(steps: Step[], locale: "fr" | "en" = "fr") {
   const current = steps.find((s) => s.state === "en_cours");
+  if (!current && steps.find((s) => s.id === "brief")?.state === "fait" && steps.find((s) => s.id === "creation")?.state === "a_venir") {
+    return locale === "en" ? "Brief received: your project is waiting for creation to start." : "Brief bien reçu : ton projet est en attente du début de la création.";
+  }
   if (locale === "en") {
     switch (current?.id) {
       case "brief":

@@ -1,5 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { portalEmail } from "./delivery";
+
+test("la confirmation donne accès au brief et à l’espace commande", () => {
+  const briefUrl = "https://example.com/merci?session_id=cs_test_order";
+  const url = "https://example.com/commande/private-token";
+  const mail = portalEmail({ offerName: "Premier look — Pack avec emotes", url, briefUrl });
+  assert.match(mail.subject, /confirmée/);
+  assert.ok(mail.text.includes(briefUrl));
+  assert.ok(mail.text.includes(url));
+  assert.ok(mail.text.indexOf(briefUrl) < mail.text.indexOf(url));
+  assert.match(mail.text, /options sélectionnées/);
+});
 import { canCancelApproval, checkDeliveryLink, cleanNote, deliveryProgress, itemType, unlockState, NOTE_MAX_CHARS, deliverablePath, deliveryEmail, formatBytes, isDeliveryToken, newDeliveryToken, safeFilename } from "./delivery";
 
 test("jeton de livraison : 48 caractères hexadécimaux, non répétable", () => {

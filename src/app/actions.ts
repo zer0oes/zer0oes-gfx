@@ -14,6 +14,7 @@ import { getStripe } from "@/lib/stripe";
 import { getPublicCatalog } from "@/lib/public-catalog";
 import { discountQuote } from "@/lib/orders";
 import { normalizeCode, validPromotion } from "@/lib/promotions";
+import { includedOverlays, validOverlaySelection } from "@/lib/brief-overlays";
 
 export type FormState = { ok: boolean; message: string } | null;
 
@@ -200,6 +201,25 @@ async function briefForm(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const sessionId = field(formData, "sessionId", 300);
+  const locale = formLocale(formData);
+  try {
+    const store = getStore();
+    const order = sessionId ? await store.getOrderBySession(sessionId) : null;
+    if (order?.briefReceivedAt || order?.brief) return { ok: true, message: locale === "en" ? "Your brief has already been received. You can follow your project in your order space." : "Ton brief a déjà été reçu. Tu peux suivre ton projet dans ton espace commande." };
+    let packId = order?.packId;
+    if (!packId && sessionId && !sessionId.startsWith("demo_")) {
+      const session = await getStripe()?.checkout.sessions.retrieve(sessionId);
+      if (session?.payment_status === "paid") packId = session.metadata?.packId;
+    }
+    const pack = (await store.getCatalog()).packs.find((p) => p.id === packId);
+    const count = includedOverlays(pack);
+    if (!pack || count === null) return { ok: false, message: locale === "en" ? "Unable to verify your package. Please refresh or contact me." : "Impossible de vérifier ton pack. Actualise la page ou contacte-moi." };
+    if (!validOverlaySelection(formData.getAll("overlays"), count)) return { ok: false, message: locale === "en" ? `Choose exactly ${count} different overlays included in your package.` : `Choisis exactement ${count} overlays différents, inclus dans ton pack.` };
+  } catch (e) {
+    console.error(e);
+    return { ok: false, message: locale === "en" ? "Unable to verify your package. Please try again." : "Impossible de vérifier ton pack. Réessaie." };
+  }
   const email = field(formData, "email", 200);
   const channel = field(formData, "channel", 300);
   const universe = field(formData, "universe");
@@ -221,13 +241,11 @@ async function briefForm(
     "Logo existant": field(formData, "logoLink", 1000),
     "Overlays choisis": checked(formData, "overlays"),
     "Éléments à inclure": field(formData, "elements"),
-    Options: checked(formData, "options"),
     "Date souhaitée": field(formData, "deadline", 100),
     Remarques: field(formData, "notes"),
   };
 
   // Rattache le brief à la commande enregistrée (session Stripe ou démo).
-  const sessionId = field(formData, "sessionId", 300);
   let orderLabel = [field(formData, "packId", 50) || "inconnu", field(formData, "formulaId", 50), field(formData, "payment", 20)]
     .filter(Boolean)
     .join(" / ");
@@ -254,7 +272,7 @@ async function briefForm(
     return { ok: false, message: "L'envoi a échoué, réessaie ou envoie ton brief par e-mail." };
   }
   await recordFormSent("Brief après commande", "/merci");
-  return { ok: true, message: "Brief bien reçu ! Je reviens vers toi sous 48 h ouvrées pour démarrer." };
+  return { ok: true, message: "Brief bien reçu ! Je reviens vers toi sous 2 jours ouvrés pour démarrer." };
 }
 
 // Formulaires du site : la réponse au visiteur est traduite selon la langue de la page

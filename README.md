@@ -301,6 +301,14 @@ Adresse : `/admin`. Saisir ton e-mail, puis cliquer sur le lien reçu.
   « Envoyer la livraison au client » : le client reçoit par e-mail le lien d'une page privée
   `/livraison/<jeton>` (non indexée) où il importe ses overlays et télécharge ses fichiers
   (liens de téléchargement valables 10 minutes, régénérés à chaque clic).
+  Après validation de tous les livrables dans son espace commande, le client peut laisser
+  un témoignage facultatif et choisir, via une case décochée par défaut, d’autoriser sa
+  diffusion sur le site (accueil et portfolio). L’avis, le choix de diffusion et sa date
+  sont conservés dans la commande et visibles dans l’admin ; une notification est envoyée.
+  La publication reste manuelle : après relecture, reporter uniquement les avis autorisés
+  dans le témoignage du projet concerné dans Portfolio. Le client peut modifier son avis
+  et son choix ; répercuter toute modification ou tout retrait d’accord sur les avis publiés.
+  Appliquer la migration `20261008001900_client_testimonials.sql` avant déploiement.
 - **Offres** : prix, formules, options, acompte, remise logo, ordre d'affichage, archivage.
   On y trouve aussi les réglages financiers (taux URSSAF, versement libératoire…) et la protection
   du portfolio (flou, niveau de filigrane).

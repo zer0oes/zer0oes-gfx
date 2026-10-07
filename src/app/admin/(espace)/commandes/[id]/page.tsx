@@ -159,6 +159,17 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
           </section>
 
           <DeliverySection order={order} items={deliverables} message={{ ok: one(sp.enregistre), error: one(sp.erreur) }} />
+          {order.testimonial && (
+            <section className={card}>
+              <h2 className="font-semibold">Avis du client</h2>
+              <p className="mt-3 whitespace-pre-wrap text-sm">{order.testimonial.quote}</p>
+              <p className="mt-2 text-sm text-muted">— {order.testimonial.author}</p>
+              <p className="mt-3 text-sm">{order.testimonial.consent ? "Diffusion autorisée sur le site (accueil et portfolio)." : "Avis privé : aucune autorisation de diffusion."}</p>
+              <p className="mt-1 text-xs text-muted">Mis à jour le {dateFmt.format(new Date(order.testimonial.submittedAt))}</p>
+              {order.testimonial.consentAt && <p className="mt-1 text-xs text-muted">Accord donné le {dateFmt.format(new Date(order.testimonial.consentAt))}</p>}
+              {order.testimonial.consent && <p className="mt-3 text-xs text-muted">Après relecture, reporte cet avis dans le témoignage du projet correspondant dans Portfolio. Vérifie ce choix avant toute publication et répercute toute modification ou tout retrait d’accord.</p>}
+            </section>
+          )}
         </div>
 
         <div className="space-y-6">

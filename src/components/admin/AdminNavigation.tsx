@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { MaterialIcon, type MaterialIconName } from "./MaterialIcon";
 
@@ -16,8 +16,38 @@ const nav: { href: string; label: string; icon: MaterialIconName }[] = [
   { href: "/admin/contenu-legal", label: "Contenu légal", icon: "gavel" },
 ];
 
-export function AdminNavigation({ collapsed = false }: { collapsed?: boolean }) {
+export function AdminNavigation({ collapsed = false, initialPendingOrders = 0 }: { collapsed?: boolean; initialPendingOrders?: number }) {
   const pathname = usePathname();
+  const [pendingOrders, setPendingOrders] = useState(initialPendingOrders);
+  useEffect(() => {
+    const controller = new AbortController();
+    let loading = false;
+    async function refreshCount() {
+      if (document.visibilityState === "hidden" || loading) return;
+      loading = true;
+      try {
+        const response = await fetch("/admin/commandes/en-attente", { cache: "no-store", signal: controller.signal });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (Number.isInteger(data.count) && data.count >= 0 && !controller.signal.aborted) setPendingOrders(data.count);
+      } catch {
+        // Conserver le dernier compteur connu en cas de coupure réseau.
+      } finally {
+        loading = false;
+      }
+    }
+    void refreshCount();
+    const interval = window.setInterval(() => void refreshCount(), 15_000);
+    const refresh = () => void refreshCount();
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [pathname, initialPendingOrders]);
   return (
     <nav id="admin-navigation" className="flex gap-1 overflow-x-auto pb-2 md:flex-1 md:flex-col md:overflow-x-hidden md:overflow-y-auto" aria-label="Admin">
       <div role="separator" className="mb-2 hidden shrink-0 border-t border-border md:block" />
@@ -27,8 +57,15 @@ export function AdminNavigation({ collapsed = false }: { collapsed?: boolean }) 
           <Fragment key={item.href}>
           {item.href === "/admin/accueil" && <div role="separator" className="my-2 shrink-0 border-l border-border md:border-l-0 md:border-t" />}
           <Link href={item.href} aria-current={active ? "page" : undefined} title={collapsed ? item.label : undefined}
+            style={{ position: "relative" }}
             className={`flex shrink-0 items-center whitespace-nowrap rounded-lg text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent ${collapsed ? "mx-2 size-11 justify-center p-0 md:mx-auto" : "mx-2 gap-3 px-3 py-2.5 md:mx-3"} ${active ? "is-active bg-gradient-to-r from-accent-3/25 via-accent/25 to-accent-2/25 font-medium text-white ring-1 ring-inset ring-white/30" : "text-muted hover:bg-surface-2 hover:text-foreground"}`}>
             <MaterialIcon name={item.icon} /><span className={collapsed ? "sr-only" : undefined}>{item.label}</span>
+            {item.href === "/admin/commandes" && pendingOrders > 0 && (
+              <span className={`flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-bold leading-5 text-white ${collapsed ? "absolute -right-1 -top-1" : "ml-auto"}`}>
+                <span aria-hidden="true">{pendingOrders}</span>
+                <span className="sr-only">{pendingOrders} commande{pendingOrders > 1 ? "s" : ""} en attente</span>
+              </span>
+            )}
           </Link>
           </Fragment>
         );

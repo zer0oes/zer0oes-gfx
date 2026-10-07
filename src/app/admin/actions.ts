@@ -61,6 +61,7 @@ export async function updateStatus(formData: FormData) {
   if (!order) return;
   // « Terminée » pose la date de clôture (départ des 6 mois de conservation des fichiers)
   await getStore().updateOrder(id, { status, ...completionPatch(order, status) });
+  if (order.deliveryToken) revalidatePath(`/commande/${order.deliveryToken}`);
   revalidatePath(`/admin/commandes/${id}`);
   revalidatePath("/admin/commandes");
 }
