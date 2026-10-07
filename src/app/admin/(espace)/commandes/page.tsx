@@ -11,11 +11,12 @@ export const metadata: Metadata = { title: "Commandes" };
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" });
 
-const columns: { key: SortKey; label: string }[] = [
+const columns: { key: SortKey | "brief"; label: string }[] = [
   { key: "date", label: "Date" },
   { key: "client", label: "Client" },
   { key: "offre", label: "Offre" },
-  { key: "montant", label: "Payé / total HT" },
+  { key: "brief", label: "Brief" },
+  { key: "montant", label: "Payé / Total HT" },
   { key: "solde", label: "Solde dû" },
   { key: "statut", label: "Statut" },
 ];
@@ -61,6 +62,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
   return (
     <>
       <h1 className="font-display text-3xl font-bold">Commandes</h1>
+      {all.filter((order) => order.briefRevisions?.some((revision) => !revision.consultedAt && !revision.acknowledgedAt)).map((order) => <Link key={order.id} href={`/admin/commandes/${order.id}`} className="mt-3 block rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-200">Brief modifié : {order.offerName} — {order.briefRevisions?.length} / 2 modifications. Voir les changements →</Link>)}
       <nav aria-label="Filtrer par statut" className="mt-6 flex flex-wrap gap-2">
         {chip(undefined, "Toutes", !status, all.length)}
         {orderStatuses.map((s) => chip(s.id, s.label, status === s.id, counts[s.id]))}
@@ -91,6 +93,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
                     <SelectAllOrders />
                   </th>
                   {columns.map((c) => {
+                    if (c.key === "brief") return <th key={c.key} scope="col" className="px-4 py-3 font-medium">{c.label}</th>;
                     const active = c.key === key;
                     // Premier clic : sens naturel de la colonne ; clic suivant : sens inverse
                     const nextDir = active ? (dir === "asc" ? "desc" : "asc") : c.key === "date" ? "desc" : "asc";
@@ -105,6 +108,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
                       </th>
                     );
                   })}
+                  <th scope="col" className="px-4 py-3 font-medium">Voir</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -117,7 +121,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-muted">{dateFmt.format(new Date(o.createdAt))}</td>
                       <td className="px-4 py-3">
-                        <Link href={`/admin/commandes/${o.id}`} className="font-medium after:absolute after:inset-0">
+                        <Link href={`/admin/commandes/${o.id}`} className="font-medium hover:text-accent">
                           {o.customerEmail || <span className="text-muted">e-mail inconnu</span>}
                         </Link>
                         {o.demo && <span className="ml-2 text-xs text-amber-300">démo</span>}
@@ -127,13 +131,22 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
                         {o.hasLogo && <span className="ml-1 text-xs text-muted">(logo fourni)</span>}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
+                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${o.briefReceivedAt || o.brief ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-amber-400/30 bg-amber-400/10 text-amber-300"}`}>
+                          {o.briefReceivedAt || o.brief ? "Reçu" : "Non reçu"}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
                         {formatPrice(o.amountPaid)} / {formatPrice(o.totalPrice)}
                         {o.paymentType === "acompte" && <span className="ml-1 text-xs text-muted">acompte</span>}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3">{due > 0 ? formatPrice(due) : "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{due > 0 ? formatPrice(due) : <span className="text-emerald-300">Réglé</span>}</td>
                       <td className="px-4 py-3">
                         <StatusBadge status={o.status} />
                         {pendingInvoice.has(o.id) && <span className="ml-2 text-xs text-amber-300">facture en attente</span>}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <Link href={`/admin/commandes/${o.id}`} aria-label={`Voir la commande ${o.offerName} de ${o.customerEmail || "client inconnu"}`} className="inline-flex rounded-full border border-border px-3 py-1.5 text-sm font-semibold text-accent transition hover:border-accent hover:bg-accent/10">Voir →</Link>
                       </td>
                     </tr>
                   );

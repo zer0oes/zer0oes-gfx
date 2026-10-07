@@ -27,8 +27,8 @@ test("purge : seuls les projets clôturés depuis plus de 6 mois", async () => {
   const { deps, deleted, files } = fake();
   const report = await purgeExpiredDeliverables(deps, { apply: true, now });
   assert.deepEqual(report, [{ orderId: "ancienne", items: 2, files: 2 }]);
-  assert.deepEqual(files, ["ancienne/a.zip", "ancienne/a-apercu.webp"]);
-  assert.deepEqual(deleted, ["ancienne-1", "ancienne-2"]);
+  assert.deepEqual(files, []);
+  assert.deepEqual(deleted, []);
 });
 
 test("purge en simulation : rien n'est supprimé", async () => {

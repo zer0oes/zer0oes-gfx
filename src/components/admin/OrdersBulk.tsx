@@ -48,7 +48,7 @@ export function OrdersBulkBar() {
     return () => form.removeEventListener("change", sync);
   }, []);
   return (
-    <div ref={ref} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+    <div ref={ref} className={count ? "flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-sm" : "hidden"}>
       <span aria-live="polite" className={count ? "font-semibold" : "text-muted"}>
         {count ? `${count} commande${count > 1 ? "s" : ""} sélectionnée${count > 1 ? "s" : ""}` : "Coche des commandes pour changer leur statut"}
       </span>

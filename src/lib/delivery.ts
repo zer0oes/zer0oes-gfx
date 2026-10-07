@@ -38,6 +38,13 @@ export function safeFilename(raw: string) {
   return `${base || "fichier"}${ext ? `.${ext}` : ""}`;
 }
 
+export function downloadFilename(label: string, originalPath: string) {
+  const originalName = originalPath.split("/").at(-1) ?? "";
+  const extension = originalName.match(/\.[a-z0-9]+$/i)?.[0] ?? "";
+  const base = label.replace(/[\x00-\x1f\x7f"\\/:*?<>|]/g, "-").trim().slice(0, 160) || "fichier";
+  return extension && !base.toLowerCase().endsWith(extension.toLowerCase()) ? `${base}${extension}` : base;
+}
+
 export function deliverablePath(orderId: string, filename: string, unique: string) {
   return `${orderId}/${unique}-${safeFilename(filename)}`;
 }
@@ -78,7 +85,17 @@ export function deliveryEmail({ offerName, url, links, files }: { offerName: str
 
 // Remarques du client sur un fichier livré (page /livraison/<jeton>)
 export const MAX_NOTES = 30;
+export function itemRevisionLimit(order: { packId: string }): number {
+  return order.packId === "univers-complet" ? 3 : 2;
+}
 export const NOTE_MAX_CHARS = 2000;
+
+export function correctionPending(item: { clientNotes?: { at: string }[]; publishedAt?: string; previewVersions?: { publishedAt: string }[] }) {
+  const note = item.clientNotes?.at(-1);
+  if (!note) return false;
+  const published = item.publishedAt ?? item.previewVersions?.at(-1)?.publishedAt;
+  return !published || Date.parse(note.at) >= Date.parse(published);
+}
 
 export function cleanNote(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
@@ -126,6 +143,22 @@ export type UnlockState = "a_valider" | "solde_a_regler" | "debloque";
 export function unlockState(order: { totalPrice: number; amountPaid: number }, d: { approvedAt?: string }): UnlockState {
   if (!d.approvedAt) return "a_valider";
   return order.totalPrice - order.amountPaid > 0 ? "solde_a_regler" : "debloque";
+}
+
+export function previewPublished(item: { plannedKey?: string; publishedAt?: string; approvedAt?: string }) {
+  return !item.plannedKey || Boolean(item.publishedAt);
+}
+
+export function pendingPreview(item: { previewPath?: string; storagePath?: string; plannedKey?: string; notifiedPreview?: string }) {
+  const path = item.previewPath ?? (!item.plannedKey && mediaKind(item.storagePath) === "image" ? item.storagePath : undefined);
+  return path && path !== item.notifiedPreview ? path : null;
+}
+
+export function previewsEmail({ offerName, url, labels, paid }: { offerName: string; url: string; labels: string[]; paid: boolean }) {
+  return {
+    subject: `Tes aperçus sont prêts à être validés — ${offerName}`,
+    text: ["Bonjour,", "", `${labels.length} aperçu${labels.length > 1 ? "s" : ""} nouveau${labels.length > 1 ? "x" : ""} ou mis à jour pour ta commande « ${offerName} » :`, ...labels.map((label) => `• ${label}`), "", "Consulte-les dans ton espace commande, puis valide-les ou demande une modification :", url, "", paid ? "Les fichiers HD seront accessibles après validation." : "Les fichiers HD seront accessibles après validation et règlement intégral de la commande.", "", "Garde ce lien privé pour toi.", "", "Aurore — zer0oes gfx"].join("\n"),
+  };
 }
 
 // Le client peut revenir sur sa validation tant que la commande n'est pas terminée

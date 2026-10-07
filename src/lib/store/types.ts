@@ -73,6 +73,11 @@ export type Invoice = {
 // Élément livré au client : lien d'import (overlay StreamElements partagé…) ou fichier
 // du stockage privé « livrables ».
 export type Deliverable = {
+  publishedAt?: string;
+  notifiedPreview?: string;
+  previewVersions?: { path: string; publishedAt: string }[];
+  plannedKey?: string;
+  finalAssets?: { path?: string; url?: string; label: string }[];
   id: string;
   orderId: string;
   kind: "lien" | "fichier";
@@ -84,17 +89,22 @@ export type Deliverable = {
   // Retours du client sur sa page de livraison
   clientNotes?: DeliverableNote[];
   approvedAt?: string;
+  finalAccessedAt?: string;
+  accessedFinalAssets?: string[];
   // Badge (overlay, fichier, vidéo…) et aperçu protégé montré avant validation
   itemType?: string;
   previewPath?: string;
   previewType?: "image" | "video";
 };
 
-export type DeliverablePatch = { itemType?: string | null; previewPath?: string | null; previewType?: "image" | "video" | null };
+export type DeliverablePatch = { previewVersions?: Deliverable["previewVersions"]; notifiedPreview?: string; publishedAt?: string | null; label?: string; itemType?: string | null; previewPath?: string | null; previewType?: "image" | "video" | null; finalAssets?: Deliverable["finalAssets"]; };
 
 export type DeliverableNote = { at: string; body: string };
 
 export type Order = {
+  briefLogoPreview?: string;
+  deliveryTemplate?: string[];
+  briefRevisions?: { at: string; changes: Record<string, { before: string; after: string }>; consultedAt?: string; acknowledgedAt?: string }[];
   testimonial?: ClientTestimonial;
   id: string;
   createdAt: string;
@@ -172,6 +182,8 @@ export type OrderPatch = Partial<
     | "balancePaidAt"
     | "brief"
     | "briefReceivedAt"
+    | "deliveryTemplate"
+    | "briefLogoPreview"
     | "customerEmail"
     | "customerName"
     | "feesPaid"
@@ -234,6 +246,8 @@ export interface Store {
   getOrderBySession(sessionId: string): Promise<Order | null>;
   listOrders(status?: OrderStatus): Promise<Order[]>;
   updateOrder(id: string, patch: OrderPatch): Promise<void>;
+  saveBriefRevision(order: Order, brief: Record<string, string>, revision: NonNullable<Order["briefRevisions"]>[number]): Promise<boolean>;
+  reviewBriefRevision(order: Order, at: string, state: "consulted" | "acknowledged"): Promise<boolean>;
   addNote(orderId: string, body: string): Promise<void>;
   // Livraison
   listDeliverables(orderId: string): Promise<Deliverable[]>;
@@ -242,6 +256,7 @@ export interface Store {
   addDeliverableNote(id: string, body: string): Promise<void>;
   updateDeliverable(id: string, patch: DeliverablePatch): Promise<void>;
   setDeliverableApproval(id: string, approved: boolean): Promise<void>;
+  beginFinalAccess(id: string, assetKeys?: string[]): Promise<boolean>;
   getOrderByDeliveryToken(token: string): Promise<Order | null>;
   // Fichiers livrés : envoi direct du navigateur vers le stockage privé (Supabase),
   // lien de téléchargement temporaire, ou lecture directe (magasin local de développement).

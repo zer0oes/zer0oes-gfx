@@ -46,11 +46,13 @@ export async function sendToCustomer({
   subject,
   text,
   attachments,
+  idempotencyKey,
 }: {
   to: string;
   subject: string;
   text: string;
   attachments?: { filename: string; content: Uint8Array }[];
+  idempotencyKey?: string;
 }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -60,7 +62,7 @@ export async function sendToCustomer({
   }
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) },
     body: JSON.stringify({
       from: process.env.NOTIFY_FROM ?? "zer0oes gfx <onboarding@resend.dev>",
       to: [to],

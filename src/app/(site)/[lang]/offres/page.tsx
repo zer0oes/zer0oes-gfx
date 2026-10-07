@@ -45,7 +45,7 @@ const faq = (locale: Locale, site: PricingSettings, universPrice?: number) => {
       },
       {
         q: "How does the creation work after I order?",
-        a: "Right after payment, you fill in a short brief: universe, colours, references and the overlays you want (starting, break, ending, just chatting or gameplay). I then show you a first proposal that we refine together: two grouped rounds of revisions are included.",
+        a: "Right after payment, you fill in a short brief: universe, colours, references and the overlays you want (starting, break, ending, just chatting or gameplay). I then show you a first proposal that we refine together: each package item has its own included corrections.",
       },
       {
         q: "I already have a logo, is it cheaper?",
@@ -84,7 +84,7 @@ const faq = (locale: Locale, site: PricingSettings, universPrice?: number) => {
     },
     {
       q: "Comment se passe la création après la commande ?",
-      a: "Juste après le paiement, tu remplis un court brief : univers, couleurs, références et overlays souhaités (démarrage, pause, fin, discussion ou gameplay). Je te présente ensuite une première proposition que l'on ajuste ensemble : deux séries de corrections regroupées sont incluses.",
+      a: "Juste après le paiement, tu remplis un court brief : univers, couleurs, références et overlays souhaités (démarrage, pause, fin, discussion ou gameplay). Je te présente ensuite une première proposition que l'on ajuste ensemble : chaque élément du pack bénéficie de corrections incluses.",
     },
     {
       q: "J'ai déjà un logo, est-ce moins cher ?",
@@ -200,7 +200,7 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
         <section className="mt-8 text-center text-sm leading-relaxed text-muted" aria-labelledby="pack-value">
           <h2 id="pack-value" className="font-semibold text-foreground">{texts.text("pricing.explanationTitle")}</h2>
           <p className="mt-3 whitespace-pre-line">{texts.text("pricing.summary")}</p>
-          <p className="mt-4 font-medium text-foreground">{t(lang, { fr: `2 séries de corrections · Fichiers prêts à utiliser · Acompte de ${site.depositPercent} % possible`, en: `2 rounds of revisions · Ready-to-use files · ${site.depositPercent}% deposit available` })}</p>
+          <p className="mt-4 font-medium text-foreground">{t(lang, { fr: `Corrections incluses par élément · Fichiers prêts à utiliser · Acompte de ${site.depositPercent} % possible`, en: `Included corrections per item · Ready-to-use files · ${site.depositPercent}% deposit available` })}</p>
         </section>
         <OfferGuide locale={lang} />
 

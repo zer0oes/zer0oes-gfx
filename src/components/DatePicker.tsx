@@ -6,11 +6,11 @@ import { inputClass } from "./ui";
 
 const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
-export function DatePicker({ name, label, locale }: { name: string; label: string; locale: Locale }) {
+export function DatePicker({ name, label, locale, defaultValue = "" }: { name: string; label: string; locale: Locale; defaultValue?: string }) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(/^\d{4}-\d{2}-\d{2}$/.test(defaultValue) ? defaultValue : "");
   const [month, setMonth] = useState<Date | null>(null);
   const [open, setOpen] = useState(false);
   const en = locale === "en";

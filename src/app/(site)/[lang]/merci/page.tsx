@@ -1,3 +1,4 @@
+import { previewPublished } from "@/lib/delivery";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BriefForm } from "@/components/BriefForm";
@@ -58,6 +59,9 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
   // Espace commande privé : lien créé à l'enregistrement de la commande (webhook ou démo)
   const portal = order?.deliveryToken ?? null;
   const briefReceived = Boolean(order?.briefReceivedAt || order?.brief);
+  const briefLocked = order ? Boolean(order.deliveredAt) || (await store.listDeliverables(order.id)).some(previewPublished) : false;
+  const revisionsUsed = order?.briefRevisions?.length ?? 0;
+  const editBrief = briefReceived && params.modifier === "1" && revisionsUsed < 2 && !briefLocked;
   if (order) {
     view = { ...order, payment: order.paymentType, email: order.customerEmail || undefined, paid: !order.demo };
   }
@@ -166,12 +170,14 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
         )}
         </aside>
         <div className="min-w-0 rounded-2xl border border-border bg-surface p-6 sm:p-8">
-          {briefReceived ? <div className="space-y-4">
+          {briefReceived && !editBrief ? <div className="space-y-4">
             <h2 className="font-display text-2xl font-bold">{t(lang, { fr: "Ton brief a bien été reçu", en: "Your brief has been received" })}</h2>
             <p className="text-sm leading-relaxed text-foreground/80">{t(lang, { fr: "Tu n’as plus besoin de remplir ce formulaire. Je reviens vers toi sous 2 jours ouvrés. Pour toute précision, contacte-moi ou retrouve la suite dans ton espace commande.", en: "You don’t need to fill in this form again. I’ll get back to you within 2 business days. For any clarification, contact me or follow the next steps in your order space." })}</p>
             {portal && <Link href={`/commande/${portal}`} className="inline-flex rounded-full bg-accent px-6 py-3 font-semibold text-background hover:brightness-110">{t(lang, { fr: "Accéder à ma commande →", en: "Open my order →" })}</Link>}
+            <p className="text-sm text-muted">{t(lang, { fr: `${revisionsUsed} / 2 modifications utilisées.`, en: `${revisionsUsed} / 2 updates used.` })}</p>
+            {briefLocked ? <p className="text-sm text-muted">{t(lang, { fr: "Ton brief est verrouillé depuis les premiers aperçus. Demande tes corrections dans ton espace commande.", en: "Your brief is locked since the first previews. Request corrections in your order space." })}</p> : revisionsUsed < 2 ? <Link href={`${href(lang, "/merci")}?session_id=${encodeURIComponent(sessionId ?? "")}&modifier=1`} className="block text-sm font-semibold text-accent hover:underline">{t(lang, { fr: "Modifier mon brief", en: "Edit my brief" })}</Link> : <p className="text-sm text-muted">{t(lang, { fr: "La limite est atteinte. Contacte-moi pour tout autre changement.", en: "The limit has been reached. Contact me for further changes." })}</p>}
           </div> : <>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">{t(lang, { fr: "Prochaine étape · 5 à 10 minutes", en: "Next step · 5 to 10 minutes" })}</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">{editBrief ? t(lang, { fr: "Modifier mon brief", en: "Edit my brief" }) : t(lang, { fr: "Prochaine étape · 5 à 10 minutes", en: "Next step · 5 to 10 minutes" })}</p>
           <h2 className="font-display text-2xl font-bold">{lang === "fr" ? <>Complète ton <span className="text-gradient">brief</span> pour lancer la <span className="text-gradient">création</span></> : <>Complete your <span className="text-gradient">brief</span> to start the <span className="text-gradient">creation</span></>}</h2>
           <p className="mb-6 mt-3 text-sm leading-relaxed text-foreground/80">{t(lang, { fr: "Les champs marqués d’un * sont obligatoires. Choisis aussi les overlays inclus dans ton pack avant d’envoyer.", en: "Fields marked * are required. Choose the overlays included in your package before sending." })}</p>
           <BriefForm
@@ -184,6 +190,8 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
             overlayHint={overlayHint}
             overlayCount={overlayCount}
             portalUrl={portal ? `/commande/${portal}` : undefined}
+            initialBrief={editBrief ? order?.brief ?? {} : undefined}
+            revisionsUsed={revisionsUsed}
           />
           </>}
         </div>

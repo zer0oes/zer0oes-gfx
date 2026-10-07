@@ -1,3 +1,5 @@
+import { reviewedRevisions } from "@/lib/brief-review";
+import { hasFinalAccess, readyToClose } from "@/lib/final-downloads";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
@@ -164,12 +166,34 @@ export const localStore: Store = {
   updateOrder: (id, patch) =>
     mutate((d) => {
       const o = d.orders.find((x) => x.id === id);
-      if (o) Object.assign(o, patch, { completedAt: patch.completedAt === null ? undefined : (patch.completedAt ?? o.completedAt) }, { updatedAt: new Date().toISOString() });
+      if (o) Object.assign(o, patch, { completedAt: o.completedAt ?? patch.completedAt ?? undefined }, { updatedAt: new Date().toISOString() });
+      if (o && readyToClose(o, (d.deliverables ?? []).filter((item) => item.orderId === id))) {
+        o.status = "terminee";
+        o.completedAt ??= new Date().toISOString();
+      }
     }),
+  reviewBriefRevision: (expected, at, state) => mutate((data) => {
+    const order = data.orders?.find((item) => item.id === expected.id);
+    if (!order || order.updatedAt !== expected.updatedAt) return false;
+    const now = new Date().toISOString();
+    order.briefRevisions = reviewedRevisions(order.briefRevisions ?? [], at, state, now);
+    order.updatedAt = now;
+    return true;
+  }),
+  saveBriefRevision: (expected, brief, revision) => mutate((data) => {
+    const order = data.orders.find((o) => o.id === expected.id);
+    if (!order || order.updatedAt !== expected.updatedAt || (order.briefRevisions?.length ?? 0) >= 2) return false;
+    order.brief = brief;
+    order.briefRevisions = [...(order.briefRevisions ?? []), revision];
+    order.updatedAt = revision.at;
+    return true;
+  }),
   listDeliverables: async (orderId) => ((await load()).deliverables ?? []).filter((d) => d.orderId === orderId),
   addDeliverable: (item) =>
     mutate((d) => {
       d.deliverables ??= [];
+      const existing = item.plannedKey && d.deliverables.find((entry) => entry.orderId === item.orderId && entry.plannedKey === item.plannedKey);
+      if (existing) return existing;
       const created: Deliverable = { ...item, id: randomUUID(), createdAt: new Date().toISOString() };
       d.deliverables.push(created);
       return created;
@@ -180,6 +204,8 @@ export const localStore: Store = {
       d.deliverables = (d.deliverables ?? []).filter((x) => x.id !== id);
       if (item?.storagePath) await fs.rm(deliverableFile(item.storagePath), { force: true });
       if (item?.previewPath) await fs.rm(deliverableFile(item.previewPath), { force: true });
+      for (const v of item?.previewVersions ?? []) await fs.rm(deliverableFile(v.path), { force: true });
+      for (const asset of item?.finalAssets ?? []) if (asset.path) await fs.rm(deliverableFile(asset.path), { force: true });
     }),
   getOrderByDeliveryToken: async (token) => (await load()).orders.find((o) => o.deliveryToken === token) ?? null,
   addDeliverableNote: (id, body) =>
@@ -191,15 +217,30 @@ export const localStore: Store = {
     mutate(async (d) => {
       const item = d.deliverables?.find((x) => x.id === id);
       if (!item) return;
-      if (patch.previewPath !== undefined && item.previewPath && item.previewPath !== patch.previewPath)
-        await fs.rm(deliverableFile(item.previewPath), { force: true });
       for (const [k, v] of Object.entries(patch)) (item as Record<string, unknown>)[k] = v ?? undefined;
     }),
   setDeliverableApproval: (id, approved) =>
     mutate((d) => {
       const item = d.deliverables?.find((x) => x.id === id);
+      if (item && hasFinalAccess(item) && !approved) throw new Error("Validation verrouillée après téléchargement.");
       if (item) item.approvedAt = approved ? new Date().toISOString() : undefined;
     }),
+  beginFinalAccess: async (id, assetKeys = []) => {
+    let allowed = false;
+    await mutate((d) => {
+      const item = d.deliverables?.find((x) => x.id === id);
+      if (!item?.approvedAt) return;
+      item.finalAccessedAt ??= new Date().toISOString();
+      item.accessedFinalAssets = [...new Set([...(item.accessedFinalAssets ?? []), ...assetKeys])];
+      const order = d.orders.find((o) => o.id === item.orderId);
+      if (order && readyToClose(order, (d.deliverables ?? []).filter((x) => x.orderId === order.id))) {
+        order.status = "terminee";
+        order.completedAt ??= new Date().toISOString();
+      }
+      allowed = true;
+    });
+    return allowed;
+  },
   saveDeliverableFile: async (rel, data) => {
     assertNotProduction("Le magasin JSON local");
     const file = deliverableFile(rel);

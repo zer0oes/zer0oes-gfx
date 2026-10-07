@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { abbyConfigured, createAbbyApi } from "@/lib/abby";
 import { invoicePayment, type InvoiceDeps, type PaymentInput } from "@/lib/invoicing";
-import { newDeliveryToken, portalEmail } from "@/lib/delivery";
+import { newDeliveryToken, portalEmail, previewPublished } from "@/lib/delivery";
 import { notify, sendToCustomer } from "@/lib/notify";
 import { siteUrl } from "@/lib/site-url";
 import {
@@ -23,9 +23,11 @@ import { mergeRefunds, refundedTotal } from "@/lib/refunds";
 import { getStripe } from "@/lib/stripe";
 import { trOfferName } from "@/lib/translations-en";
 import { discountedPrice, type Promotion } from "@/lib/promotions";
+import { plannedDelivery } from "@/lib/delivery-plan";
 
 // Commande calculée côté serveur à partir des identifiants envoyés par le formulaire.
 export type CheckoutQuote = {
+  deliveryTemplate?: string[];
   packId: string;
   formulaId: string;
   offerName: string;
@@ -63,6 +65,7 @@ export function quote(
   if (amountToPay(totalPrice, payment, s) < 50) return null;
   return {
     packId: pack.id,
+    deliveryTemplate: [...pack.deliverables, ...((formula.id === "emotes" ? pack.extras?.slice(0, 1) : formula.id === "emotes-animations" ? pack.extras : []) ?? [])],
     formulaId: formula.id,
     offerName: formulaName(pack, formula),
     payment,
@@ -81,6 +84,7 @@ export function quote(
 export function quoteMetadata(q: CheckoutQuote): Record<string, string> {
   return {
     kind: "commande",
+    ...Object.fromEntries((q.deliveryTemplate ?? []).map((line, index) => [`deliveryTemplate_${index}`, line])),
     packId: q.packId,
     formulaId: q.formulaId,
     offerName: q.offerName,
@@ -102,6 +106,7 @@ export function newOrderFrom(
 ): NewOrder {
   return {
     stripeSessionId: extra.sessionId,
+    deliveryTemplate: q.deliveryTemplate,
     demo: extra.demo,
     packId: q.packId,
     formulaId: q.formulaId,
@@ -125,6 +130,7 @@ function quoteFromMetadata(m: Stripe.Metadata): CheckoutQuote | null {
   const payment = parsePaymentType(m.paymentType);
   const totalPrice = Number(m.totalPrice);
   return {
+    deliveryTemplate: Object.keys(m).some((key) => key.startsWith("deliveryTemplate_")) ? Object.keys(m).filter((key) => key.startsWith("deliveryTemplate_")).sort((a, b) => Number(a.split("_")[1]) - Number(b.split("_")[1])).map((key) => m[key]) : undefined,
     packId: m.packId,
     formulaId: m.formulaId ?? "",
     offerName: m.offerName || m.packId,
@@ -363,19 +369,45 @@ export async function recordDemoOrder(q: CheckoutQuote) {
   return sessionId;
 }
 
-export async function attachBrief(sessionId: string, brief: Record<string, string>, email: string) {
+export async function ensureDeliveryPlan(order: Order) {
+  const store = getStore();
+  if (!order.brief) return;
+  const existing = await store.listDeliverables(order.id);
+  if (existing.some((item) => item.plannedKey)) return;
+  let template = order.deliveryTemplate;
+  if (!template) {
+    template = (await store.getCatalog()).packs.find((pack) => pack.id === order.packId)?.deliverables ?? [];
+    await store.updateOrder(order.id, { deliveryTemplate: template });
+  }
+  for (const item of plannedDelivery({ ...order, deliveryTemplate: template })) {
+    try { await store.addDeliverable({ orderId: order.id, kind: "fichier", plannedKey: item.key, label: item.label, itemType: item.itemType }); }
+    catch (e) { if (!(await store.listDeliverables(order.id)).some((d) => d.plannedKey === item.key)) throw e; }
+  }
+}
+
+export async function attachBrief(sessionId: string, brief: Record<string, string>, email: string, allowUpdate = false) {
   const store = getStore();
   if (store.kind === "static" || !sessionId) return null;
   const order = await store.getOrderBySession(sessionId);
   if (!order) return null;
-  if (order.briefReceivedAt || order.brief) return order;
+  if ((order.briefReceivedAt || order.brief) && !allowUpdate) return order;
+  if (allowUpdate) {
+    if (order.deliveredAt || (await store.listDeliverables(order.id)).some(previewPublished)) throw new Error("Le brief est verrouillé après publication des aperçus.");
+    if ((order.briefRevisions?.length ?? 0) >= 2) throw new Error("La limite de 2 modifications du brief est atteinte.");
+    const changes = Object.fromEntries(Object.entries(brief).filter(([key, value]) => (order.brief?.[key] ?? "") !== value).map(([key, after]) => [key, { before: order.brief?.[key] ?? "", after }]));
+    if (!Object.keys(changes).length) throw new Error("Aucune modification à enregistrer.");
+    const revision = { at: new Date().toISOString(), changes };
+    if (!await store.saveBriefRevision(order, brief, revision)) throw new Error("Le brief a changé entre-temps. Actualise la page avant de réessayer.");
+    return { ...order, brief, briefRevisions: [...(order.briefRevisions ?? []), revision] };
+  }
   await store.updateOrder(order.id, {
     brief,
-    briefReceivedAt: new Date().toISOString(),
+    briefReceivedAt: order.briefReceivedAt ?? new Date().toISOString(),
     ...(order.status === "payee" ? { status: "brief_recu" as const } : {}),
     // Commande de démo : l'e-mail du client arrive avec le brief.
     ...(!order.customerEmail && email ? { customerEmail: email } : {}),
   });
+  await ensureDeliveryPlan({ ...order, brief });
   return order;
 }
 

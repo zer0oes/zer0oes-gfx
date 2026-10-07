@@ -24,6 +24,8 @@ const en: Record<string, string> = {
   "5 overlays animés": "5 animated overlays",
   "Bannière et avatar": "Banner and avatar",
   "2 séries de corrections regroupées": "2 grouped rounds of revisions",
+  "2 corrections incluses par élément du pack": "2 corrections included per package item",
+  "3 corrections incluses par élément du pack": "3 corrections included per package item",
   "Logo et ses déclinaisons": "Logo and its variations",
   "15 emotes personnalisées": "15 custom emotes",
   "Option : 5 emotes personnalisées pour 60 €": "Add-on: 5 custom emotes for €60",

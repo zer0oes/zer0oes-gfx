@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { formMessage, parseContact, parseMessage } from "@/lib/contact-form";
 import { asLocale, href, type Locale } from "@/lib/i18n";
 import { notify } from "@/lib/notify";
@@ -203,10 +204,13 @@ async function briefForm(
 ): Promise<FormState> {
   const sessionId = field(formData, "sessionId", 300);
   const locale = formLocale(formData);
+  const editingBrief = formData.get("editBrief") === "1";
   try {
     const store = getStore();
     const order = sessionId ? await store.getOrderBySession(sessionId) : null;
-    if (order?.briefReceivedAt || order?.brief) return { ok: true, message: locale === "en" ? "Your brief has already been received. You can follow your project in your order space." : "Ton brief a déjà été reçu. Tu peux suivre ton projet dans ton espace commande." };
+    if (editingBrief && !order) return { ok: false, message: locale === "en" ? "Order not found." : "Commande introuvable." };
+    if (editingBrief && (order?.briefRevisions?.length ?? 0) >= 2) return { ok: false, message: locale === "en" ? "You’ve reached the limit of 2 brief updates. Please contact me for further changes." : "La limite de 2 modifications du brief est atteinte. Contacte-moi pour tout autre changement." };
+    if (!editingBrief && (order?.briefReceivedAt || order?.brief)) return { ok: true, message: locale === "en" ? "Your brief has already been received. You can follow your project in your order space." : "Ton brief a déjà été reçu. Tu peux suivre ton projet dans ton espace commande." };
     let packId = order?.packId;
     if (!packId && sessionId && !sessionId.startsWith("demo_")) {
       const session = await getStripe()?.checkout.sessions.retrieve(sessionId);
@@ -249,9 +253,19 @@ async function briefForm(
   let orderLabel = [field(formData, "packId", 50) || "inconnu", field(formData, "formulaId", 50), field(formData, "payment", 20)]
     .filter(Boolean)
     .join(" / ");
+  let revisionFields: Record<string, string> = {};
   try {
-    const order = await attachBrief(sessionId, brief, email);
+    const order = await attachBrief(sessionId, brief, email, editingBrief);
     if (order) {
+      const revisions = order.briefRevisions ?? [];
+      if (editingBrief && revisions.length) {
+        revisionFields = { "Modification du brief": `${revisions.length} / 2`, ...Object.fromEntries(Object.entries(revisions[revisions.length - 1].changes).map(([key, value]) => [`Changement : ${key}`, `Avant : ${value.before || "—"}\nAprès : ${value.after || "—"}`])) };
+      }
+      if (order.deliveryToken) revalidatePath(`/commande/${order.deliveryToken}`);
+      revalidatePath(`/admin/commandes/${order.id}`);
+      revalidatePath("/admin/commandes");
+      revalidatePath("/merci");
+      revalidatePath("/en/merci");
       orderLabel = `${order.offerName}${order.hasLogo ? " — logo fourni" : ""} — ${paymentSummary(order)} — commande ${order.id}`;
     } else {
       const stripe = getStripe();
@@ -262,17 +276,18 @@ async function briefForm(
     }
   } catch (e) {
     console.error(e);
+    if (editingBrief) return { ok: false, message: locale === "en" ? "Unable to save your changes. Please try again." : "Impossible d’enregistrer tes modifications. Réessaie." };
     orderLabel = `${orderLabel} (session ${sessionId})`;
   }
 
   try {
-    await notify({ subject: `[Brief] ${channel}`, replyTo: email, fields: { Commande: orderLabel, ...brief, ...languageField(formLocale(formData)) } });
+    await notify({ subject: `[${editingBrief ? "Brief modifié" : "Brief"}] ${channel}`, replyTo: email, fields: { Commande: orderLabel, ...revisionFields, ...brief, ...languageField(formLocale(formData)) } });
   } catch (e) {
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou envoie ton brief par e-mail." };
   }
   await recordFormSent("Brief après commande", "/merci");
-  return { ok: true, message: "Brief bien reçu ! Je reviens vers toi sous 2 jours ouvrés pour démarrer." };
+  return { ok: true, message: editingBrief ? (locale === "en" ? "Your brief has been updated. I’ve been notified of your changes." : "Ton brief a été mis à jour. Je suis informée de tes modifications.") : "Brief bien reçu ! Je reviens vers toi sous 2 jours ouvrés pour démarrer." };
 }
 
 // Formulaires du site : la réponse au visiteur est traduite selon la langue de la page

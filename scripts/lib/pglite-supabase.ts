@@ -6,7 +6,7 @@ import type { Db } from "./db-setup-core";
 export async function supabaseLikePglite() {
   const pg = new PGlite();
   await pg.exec(`
-    create role anon; create role authenticated;
+    create role anon; create role authenticated; create role service_role;
     create schema storage;
     create schema auth;
     -- Simulation de auth.jwt() : claims lus dans le réglage request.jwt.claims

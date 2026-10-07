@@ -6,32 +6,47 @@ import {
   sendDeliveryAction,
   setDeliverableTypeAction,
 } from "@/app/admin/livraison-actions";
-import { deliverableTypes, formatBytes, itemType, mediaKind, unlockState } from "@/lib/delivery";
+import { correctionPending, itemRevisionLimit, deliverableTypes, formatBytes, itemType, mediaKind, pendingPreview } from "@/lib/delivery";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/env";
 import { siteUrl } from "@/lib/site-url";
 import type { Deliverable, Order } from "@/lib/store";
 import { DeliveryUpload } from "./DeliveryUpload";
+import { AddDeliveryElement, ClientSpaceLinks } from "./DeliveryControls";
+import { DeliveryDrawer } from "./DeliveryDrawer";
+import { deliveryState } from "@/lib/delivery-plan";
+import { DeliveryNotice } from "./DeliveryNotice";
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" });
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
+
+const statusStyles = {
+  "À préparer": "border-slate-400/40 bg-slate-400/10 text-slate-300",
+  "À valider": "border-violet-400/60 bg-violet-400/20 text-violet-200",
+  "Correction demandée": "border-amber-400/60 bg-amber-400/20 text-amber-200",
+  "Validé": "border-emerald-400/60 bg-emerald-400/20 text-emerald-200",
+  "Téléchargé": "border-cyan-400/60 bg-cyan-400/20 text-cyan-200",
+  "Prêt à télécharger": "border-emerald-400/60 bg-emerald-400/20 text-emerald-200",
+};
 
 // Livraison de la commande : liens d'import StreamElements, fichiers (Streamlabs, visuels,
 // guide), puis envoi au client d'un lien privé vers sa page de livraison.
 export async function DeliverySection({ order, items, message }: { order: Order; items: Deliverable[]; message?: { ok?: string; error?: string } }) {
   const pageUrl = order.deliveryToken ? `${await siteUrl()}/commande/${order.deliveryToken}` : null;
+  const readyCount = items.filter((item) => item.previewPath || (!item.plannedKey && mediaKind(item.storagePath) === "image")).length;
+  const newCount = items.filter((item) => pendingPreview(item)).length;
   return (
     <section id="livraison" className="scroll-mt-24 rounded-2xl border border-border bg-surface p-5 sm:p-6">
       <h2 className="font-semibold">Livraison</h2>
       <p className="mt-1 text-sm text-muted">
-        Liens d&apos;import StreamElements et fichiers (Streamlabs, visuels, guide). Le client les retrouve sur une page privée, sans compte :
-        il voit d&apos;abord un aperçu protégé, puis le fichier final (ou le lien d&apos;import) une fois l&apos;élément validé et le solde réglé.
+        Ajoute les éléments du projet : le client les valide dans son espace privé avant d’accéder aux fichiers définitifs.
       </p>
+      <details className="mt-2 text-sm text-muted">
+        <summary className="cursor-pointer text-accent">Comment fonctionne la livraison ?</summary>
+        <p className="mt-2 leading-relaxed">Les liens d’import StreamElements et les fichiers (Streamlabs, visuels, guide) sont réunis dans l’espace client, sans compte. Le client voit d’abord un aperçu protégé. Le fichier final ou le lien d’import est accessible après validation de l’élément et règlement du solde.</p>
+      </details>
       <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm">
-        <span className="text-muted">Espace commande du client :</span>
         {pageUrl ? (
-          <a href={pageUrl} target="_blank" rel="noopener noreferrer" className="break-all text-accent hover:underline">
-            {pageUrl} ↗
-          </a>
+          <ClientSpaceLinks url={pageUrl} />
         ) : (
           <form action={createPortalLinkAction}>
             <input type="hidden" name="orderId" value={order.id} />
@@ -44,105 +59,65 @@ export async function DeliverySection({ order, items, message }: { order: Order;
           {message.error}
         </p>
       )}
-      {message?.ok && message.ok !== "1" && (
-        <p role="status" className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
-          {message.ok}
-        </p>
-      )}
+      {message?.ok && message.ok !== "1" && <DeliveryNotice message={message.ok} />}
 
-      <ul className="mt-4 divide-y divide-border">
-        {items.map((d) => (
-          <li key={d.id} className="py-2 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <span className="min-w-0">
-                <span className="mr-2 rounded-full border border-border px-2 py-0.5 text-xs text-muted">{d.kind === "lien" ? "Lien" : "Fichier"}</span>
-                <span className="font-medium">{d.label}</span>
-                <span className="ml-2 text-xs text-muted">{d.kind === "lien" ? d.url : formatBytes(d.sizeBytes)}</span>
-                {d.approvedAt && (
-                  <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-300">
-                    ✓ validé par le client le {dateFmt.format(new Date(d.approvedAt))}
-                  </span>
-                )}
-              </span>
-              <form action={deleteDeliverableAction}>
-                <input type="hidden" name="orderId" value={order.id} />
-                <input type="hidden" name="id" value={d.id} />
-                <button className="text-xs text-muted hover:text-red-300" aria-label={`Retirer ${d.label}`}>
-                  Retirer
-                </button>
-              </form>
-            </div>
-            {/* Badge affiché au client, aperçu protégé et état de déblocage */}
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
-              <form action={setDeliverableTypeAction} className="flex items-center gap-1">
-                <input type="hidden" name="orderId" value={order.id} />
-                <input type="hidden" name="id" value={d.id} />
-                <select name="type" defaultValue={itemType(d)} aria-label={`Type de ${d.label}`} className="rounded-md border border-border bg-background px-2 py-1 text-xs">
-                  {deliverableTypes.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-                <button className="rounded-md border border-border px-2 py-1 hover:border-accent">OK</button>
-              </form>
-              <span>
-                {unlockState(order, d) === "debloque"
-                  ? "🔓 Fichier final accessible au client"
-                  : unlockState(order, d) === "solde_a_regler"
-                    ? "🔒 Validé, en attente du solde"
-                    : "🔒 Aperçu seulement (en attente de validation)"}
-              </span>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
-              {d.previewPath ? (
-                <>
-                  <span>Aperçu : {d.previewType === "video" ? "vidéo" : "image"} ✓</span>
-                  <form action={removeDeliverablePreviewAction}>
-                    <input type="hidden" name="orderId" value={order.id} />
-                    <input type="hidden" name="id" value={d.id} />
-                    <button className="hover:text-red-300">Retirer l&apos;aperçu</button>
-                  </form>
-                </>
-              ) : (
-                <span>
-                  {mediaKind(d.storagePath) === "image"
-                    ? "Aperçu auto : visuel réduit et filigrané. Ou envoie un aperçu dédié :"
-                    : "Pas d'aperçu : envoie une image ou une vidéo basse résolution."}
-                </span>
-              )}
-              {!d.previewPath && <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} />}
-            </div>
-            {/* Remarques laissées par le client sur sa page de livraison */}
-            {d.clientNotes?.length ? (
-              <ul className="mt-2 space-y-1.5 border-l-2 border-amber-400/50 pl-3">
-                {d.clientNotes.map((n, i) => (
-                  <li key={i}>
-                    <span className="block text-xs text-amber-300">Demande du client — {dateFmt.format(new Date(n.at))}</span>
-                    <span className="whitespace-pre-line">{n.body}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </li>
-        ))}
-        {items.length === 0 && <li className="py-2 text-sm text-muted">Rien à livrer pour l&apos;instant.</li>}
-      </ul>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <form action={addDeliveryLinkAction} className="space-y-2">
+      <div className="mt-5 overflow-x-auto rounded-xl border border-border">
+        <table className="w-full min-w-[620px] text-left text-sm">
+          <thead className="bg-background/50 text-xs text-muted"><tr>{["Livrable", "Aperçu", "Fichiers finaux", "Statut", "Action"].map((label) => <th key={label} scope="col" className="px-3 py-3 font-medium">{label}</th>)}</tr></thead>
+          <tbody className="divide-y divide-border">
+            {items.map((d) => {
+              const ready = Boolean(d.previewPath || (!d.plannedKey && mediaKind(d.storagePath) === "image"));
+              const finals = (d.finalAssets?.length ?? 0) + (d.storagePath || d.url ? 1 : 0);
+              const status = deliveryState(order, d);
+              return <tr key={d.id}>
+                <td className="px-3 py-3 font-medium">{status === "Téléchargé" ? <details><summary className="cursor-pointer">{d.label}</summary><ul className="mt-2 space-y-1 text-xs font-normal text-muted">{(d.finalAssets ?? []).map((asset, index) => <li key={index}>{asset.label} · Téléchargé</li>)}{(d.storagePath || d.url) && <li>{d.label} · Téléchargé</li>}</ul></details> : d.label}{correctionPending(d) && <span className="mt-1 block text-xs text-amber-300">Retour client à traiter</span>}<span className="mt-1 block text-xs font-normal text-muted">{d.clientNotes?.length ?? 0}/{itemRevisionLimit(order)} corrections utilisées</span></td>
+                <td className={`px-3 py-3 ${ready ? "text-emerald-300" : "text-muted"}`}>{ready ? "Prêt" : "À ajouter"}</td>
+                <td className="px-3 py-3">{finals ? `${finals} fichier(s) / lien(s)` : "Aucun"}</td>
+                <td className="px-3 py-3"><span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold ${statusStyles[status]}`}><span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />{status}</span></td>
+                <td className="px-3 py-3"><DeliveryDrawer label={d.label}>
+                  <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
+                    <h4 className="font-semibold">Aperçu client</h4>
+                    {ready && order.deliveryToken && <div className="rounded-lg border border-border bg-background p-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`/commande/${order.deliveryToken}/${d.id}/apercu`} alt={`Aperçu protégé de ${d.label}`} className="max-h-56 w-full object-contain" />
+                    </div>}
+                    {!ready && <p className="text-sm text-muted">Ajoute une image de présentation. Elle sera réduite et filigranée côté serveur.</p>}
+                    <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} />
+                    {d.previewPath && <form action={removeDeliverablePreviewAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-xs text-muted hover:text-red-300">Retirer l’aperçu</button></form>}
+                  </section>
+                  <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
+                    <h4 className="font-semibold">Fichiers définitifs</h4>
+                    <p className="text-xs text-muted">Privés jusqu’à validation du livrable et paiement intégral.</p>
+                    <ul className="space-y-2 text-sm">{d.storagePath && <li>✓ {d.label} — {formatBytes(d.sizeBytes)}</li>}{d.url && <li>✓ Lien d’import existant</li>}{(d.finalAssets ?? []).map((asset, i) => <li key={i}>✓ {asset.label} ({asset.url ? "lien d’import" : "fichier"})</li>)}</ul>
+                    <DeliveryUpload orderId={order.id} targetId={d.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} />
+                    <form action={addDeliveryLinkAction} className="space-y-3"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="targetId" value={d.id} /><input name="label" required placeholder="Nom du lien d’import" aria-label="Nom du lien d’import" className={input} /><input name="url" type="url" required placeholder="https://…" aria-label="Adresse du lien d’import" className={input} /><button className="rounded-full border border-border px-4 py-2 text-sm">Ajouter le lien d’import</button></form>
+                  </section>
+                  {!!d.clientNotes?.length && <section className="space-y-3"><h4 className="font-semibold">Retours du client</h4>{d.clientNotes.map((note, i) => <div key={i} className="rounded-lg border border-amber-400/30 p-3"><p className="text-xs text-muted">{dateFmt.format(new Date(note.at))}</p><p className="mt-1 whitespace-pre-wrap text-sm">{note.body}</p></div>)}</section>}
+                  <details className="border-t border-border pt-4"><summary className="cursor-pointer text-sm text-muted">Nom, type et retrait du livrable</summary><div className="mt-3 space-y-4">
+                    <form action={setDeliverableTypeAction} className="space-y-3"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><input name="label" defaultValue={d.label} required aria-label="Nom du livrable" className={input} /><select name="type" defaultValue={itemType(d)} aria-label="Type du livrable" className={input}>{deliverableTypes.map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}</select><button className="rounded-full border border-border px-4 py-2 text-sm">Enregistrer</button></form>
+                    <form action={deleteDeliverableAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-sm text-red-300">Retirer ce livrable</button></form>
+                  </div></details>
+                </DeliveryDrawer></td>
+              </tr>;
+            })}
+            {!items.length && <tr><td colSpan={5} className="px-3 py-4 text-muted">Aucun livrable prévu.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-sm text-muted">{readyCount} aperçu{readyCount > 1 ? "s" : ""} prêt{readyCount > 1 ? "s" : ""} sur {items.length}</p>
+      <AddDeliveryElement linkForm={<form action={addDeliveryLinkAction} className="space-y-3">
           <input type="hidden" name="orderId" value={order.id} />
           <p className="text-sm font-medium">Ajouter un lien d&apos;import</p>
           <input name="label" required placeholder="Ex. Overlays — import StreamElements" aria-label="Nom du lien" className={input} />
           <input name="url" type="url" required placeholder="https://streamelements.com/…" aria-label="Adresse du lien (https)" className={input} />
           <button className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-accent">Ajouter le lien</button>
-        </form>
-        <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} />
-      </div>
+        </form>} fileForm={<DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} />} />
 
-      <div className="mt-6 border-t border-border pt-5">
+      <div className="mt-6 flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 space-y-2">
+        <p className="text-sm text-muted">{newCount ? `${newCount} nouvel aperçu / nouvelle version à envoyer` : "Aucun nouvel aperçu à notifier."}</p>
         {order.deliveredAt && (
-          <p className="mb-3 text-sm text-muted">
+          <p className="text-sm text-muted">
             Envoyée le {dateFmt.format(new Date(order.deliveredAt))}
             {pageUrl && (
               <>
@@ -154,10 +129,11 @@ export async function DeliverySection({ order, items, message }: { order: Order;
             )}
           </p>
         )}
-        <form action={sendDeliveryAction}>
+        </div>
+        <form action={sendDeliveryAction} className="flex shrink-0 flex-col items-start sm:items-end">
           <input type="hidden" name="orderId" value={order.id} />
-          <button disabled={!items.length || !order.customerEmail} className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background disabled:opacity-40">
-            {order.deliveredAt ? "Renvoyer le lien au client" : "Envoyer la livraison au client"}
+          <button disabled={!newCount || !order.customerEmail} className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background disabled:opacity-40">
+            Envoyer les aperçus prêts
           </button>
           {!order.customerEmail && <p className="mt-2 text-xs text-amber-300">Pas d&apos;e-mail client sur cette commande.</p>}
         </form>

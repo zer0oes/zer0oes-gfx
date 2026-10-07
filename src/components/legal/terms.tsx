@@ -67,7 +67,7 @@ export function CgvFr({ settings }: { settings: PricingSettings }) {
             brief complet.
           </li>
           <li>
-            Chaque offre inclut deux séries de corrections regroupées. Les modifications supplémentaires ou les
+            Chaque élément inclut deux corrections pour Premier look et Identité signature, et trois pour Univers complet. Les modifications du brief sont comptées séparément. Les modifications supplémentaires ou les
             changements de direction après validation peuvent être facturés.
           </li>
           <li>
@@ -180,7 +180,7 @@ export function CgvEn({ settings }: { settings: PricingSettings }) {
           <li>After payment, the customer sends their brief through the dedicated form.</li>
           <li>The indicative delivery time is <ContentVariable name="settings.deliveryDays" value={settings.deliveryDays.replace(" à ", " to ")} /> business days from receipt of a complete brief.</li>
           <li>
-            Each package includes two grouped rounds of revisions. Additional changes or changes of direction after approval may be
+            Each item includes two corrections for Premier look and Identité signature, and three for Univers complet. Brief updates are counted separately. Additional changes or changes of direction after approval may be
             charged.
           </li>
           <li>

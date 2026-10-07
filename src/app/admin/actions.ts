@@ -13,6 +13,19 @@ import { getStore, isOrderStatus } from "@/lib/store";
 
 export type AdminFormState = { ok: boolean; message: string } | null;
 
+export async function reviewBriefRevisionAction(formData: FormData) {
+  await requireAdmin();
+  const id = formData.get("id")?.toString() ?? "";
+  const at = formData.get("at")?.toString() ?? "";
+  const state = formData.get("state");
+  if (state !== "consulted" && state !== "acknowledged") throw new Error("État invalide.");
+  const store = getStore();
+  const order = await store.getOrder(id);
+  if (!order || !await store.reviewBriefRevision(order, at, state)) throw new Error("La commande a changé. Actualise la page et réessaie.");
+  revalidatePath(`/admin/commandes/${id}`);
+  revalidatePath("/admin/commandes");
+}
+
 // --- Connexion ---------------------------------------------------------------
 
 export async function sendMagicLink(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {

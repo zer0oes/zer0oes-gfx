@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { canCancelApproval, cleanNote, deliveryProgress, isDeliveryToken } from "@/lib/delivery";
+import { canCancelApproval, correctionPending, itemRevisionLimit, cleanNote, deliveryProgress, isDeliveryToken, previewPublished } from "@/lib/delivery";
+import { hasFinalAccess } from "@/lib/final-downloads";
 import { notify } from "@/lib/notify";
 import { createBalanceLink } from "@/lib/orders";
 import { requestLocale } from "@/lib/request-locale";
@@ -61,11 +62,14 @@ export async function saveClientTestimonialAction(_state: { status: string }, fo
 
 export async function addClientNoteAction(formData: FormData) {
   const { store, order, item, token } = await target(formData);
+  if (!previewPublished(item)) back(token, item.id, "vide");
+  if (item.approvedAt) back(token, item.id, "deja-valide");
+  if (correctionPending(item)) back(token, item.id, "attente");
+  if (!canCancelApproval(order)) back(token, item.id, "cloturee");
+  if ((item.clientNotes?.length ?? 0) >= itemRevisionLimit(order)) back(token, item.id, "limite");
   const body = cleanNote(formData.get("body"));
   if (!body) back(token, item.id, "vide");
   await store.addDeliverableNote(item.id, body);
-  // Une demande de modification annule la validation éventuelle
-  if (item.approvedAt && canCancelApproval(order)) await store.setDeliverableApproval(item.id, false);
   await notify({
     subject: `Demande de modification — ${order.offerName} : ${item.label}`,
     replyTo: order.customerEmail || undefined,
@@ -77,8 +81,18 @@ export async function addClientNoteAction(formData: FormData) {
 export async function setClientApprovalAction(formData: FormData) {
   const { store, order, item, token } = await target(formData);
   const approved = formData.get("approved") === "1";
+  if (!approved && hasFinalAccess(item)) back(token, item.id, "telecharge");
+  if (correctionPending(item)) back(token, item.id, "attente");
+  if (!previewPublished(item)) back(token, item.id, "vide");
+  if (approved && item.plannedKey && !item.previewPath) back(token, item.id, "vide");
   if (!approved && !canCancelApproval(order)) back(token, item.id, "cloturee");
-  await store.setDeliverableApproval(item.id, approved);
+  try {
+    await store.setDeliverableApproval(item.id, approved);
+  } catch (error) {
+    const latest = (await store.listDeliverables(order.id)).find((d) => d.id === item.id);
+    if (!approved && latest && hasFinalAccess(latest)) back(token, item.id, "telecharge");
+    throw error;
+  }
   await notify({
     subject: `${approved ? "Validé" : "Validation annulée"} par le client — ${order.offerName} : ${item.label}`,
     replyTo: order.customerEmail || undefined,

@@ -187,10 +187,7 @@ dans le bucket, dans le dossier privé `livrables/` : jamais lisibles publiqueme
 signés de 10 minutes après les contrôles de l'espace commande (validation + solde), pendant 6 mois
 après la clôture du projet (statut « Terminée »). Retirer un élément le supprime du bucket.
 
-**Purge automatique (RGPD)** : `npm run purge:livrables` (simulation) puis `-- --yes` supprime les
-fichiers et éléments livrés des projets clôturés depuis plus de 6 mois. En production, l'ajouter dans
-**Heroku Scheduler** (module gratuit) : tâche quotidienne `npm run purge:livrables -- --yes`. Les durées de
-conservation sont décrites sur la page `/confidentialite`.
+**Expiration des accès** : six mois après la première clôture, les routes clients bloquent les téléchargements et les aperçus. Aucun fichier ni historique admin n’est supprimé automatiquement. `npm run purge:livrables` affiche uniquement un rapport, même avec l’ancien argument `--yes`. Les téléchargements suivants ne repoussent pas la date limite.
 
 ## Stripe
 
@@ -309,6 +306,18 @@ Adresse : `/admin`. Saisir ton e-mail, puis cliquer sur le lien reçu.
   dans le témoignage du projet concerné dans Portfolio. Le client peut modifier son avis
   et son choix ; répercuter toute modification ou tout retrait d’accord sur les avis publiés.
   Appliquer la migration `20261008001900_client_testimonials.sql` avant déploiement.
+  Le client peut ensuite modifier son brief depuis son espace commande, au maximum deux
+  fois après le premier envoi. Chaque modification conserve les valeurs avant/après,
+  affiche une alerte dans l’admin et envoie une notification par e-mail.
+  Le compteur nécessite la migration `20261008002000_brief_revisions.sql`.
+  La livraison prépare les emplacements à partir du pack et des scènes du brief ; le
+  contenu inclus est figé dans la commande au paiement. Chaque emplacement accepte un
+  aperçu image protégé, plusieurs formats finaux et des liens d’import. La migration
+  `20261008002100_planned_delivery.sql` rend ces emplacements possibles et retire l’accès
+  direct aux livrables via l’API client. Les vidéos d’aperçu sont bloquées tant qu’un
+  transcodage basse définition n’est pas garanti ; utiliser une image de présentation.
+  Le logo du brief est affiché si son lien pointe directement vers une image ; les liens
+  de partage Drive/WeTransfer restent accessibles via « Voir le logo ».
 - **Offres** : prix, formules, options, acompte, remise logo, ordre d'affichage, archivage.
   On y trouve aussi les réglages financiers (taux URSSAF, versement libératoire…) et la protection
   du portfolio (flou, niveau de filigrane).

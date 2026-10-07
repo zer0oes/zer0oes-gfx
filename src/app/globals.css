@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@keyframes archive-button-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+.archive-download-loading::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 15%, rgba(255,255,255,0.45) 45%, rgba(236,72,153,0.35) 65%, transparent 85%);
+  animation: archive-button-shimmer 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .archive-download-loading::before { animation: none; }
+}
+
 :root {
   --background: #0b0a12;
   --surface: #15131f;

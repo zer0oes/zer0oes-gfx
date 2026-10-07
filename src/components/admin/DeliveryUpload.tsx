@@ -14,11 +14,13 @@ export function DeliveryUpload({
   supabaseUrl,
   supabaseKey,
   previewFor,
+  targetId,
 }: {
   orderId: string;
   supabaseUrl?: string;
   supabaseKey?: string;
   previewFor?: string;
+  targetId?: string;
 }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
@@ -38,7 +40,7 @@ export function DeliveryUpload({
         if (!put.ok) throw new Error(`Envoi vers S3 refusé (${put.status}).`);
         const done = previewFor
           ? await attachDeliverablePreview({ orderId, id: previewFor, path: ticket.path })
-          : await finalizeDeliverable({ orderId, label: label || file.name, path: ticket.path, size: file.size });
+          : await finalizeDeliverable({ orderId, label: label || file.name, path: ticket.path, size: file.size, targetId });
         if ("error" in done && done.error) throw new Error(done.error);
       } else if (ticket.mode === "signed") {
         if (!supabaseUrl || !supabaseKey) throw new Error("Configuration Supabase manquante.");
@@ -48,13 +50,14 @@ export function DeliveryUpload({
         if (error) throw new Error(error.message);
         const done = previewFor
           ? await attachDeliverablePreview({ orderId, id: previewFor, path: ticket.path })
-          : await finalizeDeliverable({ orderId, label: label || file.name, path: ticket.path, size: file.size });
+          : await finalizeDeliverable({ orderId, label: label || file.name, path: ticket.path, size: file.size, targetId });
         if ("error" in done && done.error) throw new Error(done.error);
       } else {
         const fd = new FormData();
         fd.set("orderId", orderId);
         fd.set("label", label || file.name);
         if (previewFor) fd.set("previewFor", previewFor);
+        if (targetId) fd.set("targetId", targetId);
         fd.set("file", file);
         const res = await uploadDeliverableDirect(fd);
         if ("error" in res && res.error) throw new Error(res.error);
@@ -79,7 +82,7 @@ export function DeliveryUpload({
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="file"
-          accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"
+          accept="image/png,image/jpeg,image/webp"
           aria-label="Aperçu (image ou vidéo basse résolution)"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           className={`${fileInput} max-w-xs text-xs`}

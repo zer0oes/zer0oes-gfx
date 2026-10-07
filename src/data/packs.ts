@@ -17,7 +17,7 @@ export const packs: Pack[] = [
     tagline: "L'essentiel pour lancer ta chaîne avec une identité cohérente.",
     price: 39000,
     checkout: true,
-    deliverables: ["Logo", "2 overlays fixes au choix", "Bannière et avatar", "2 séries de corrections regroupées"],
+    deliverables: ["Logo", "2 overlays fixes au choix", "Bannière et avatar", "2 corrections incluses par élément du pack"],
     extras: ["Option : 5 emotes personnalisées pour 60 €"],
     formulas: [
       { id: "base", label: "Premier look", price: 39000 },
@@ -35,7 +35,7 @@ export const packs: Pack[] = [
       "Logo et ses déclinaisons",
       "5 overlays fixes au choix",
       "Bannière et avatar",
-      "2 séries de corrections regroupées",
+      "2 corrections incluses par élément du pack",
     ],
     extras: ["10 emotes personnalisées : +100 €", "Animation légère des 5 overlays, en plus des emotes : +200 €"],
     formulas: [
@@ -56,7 +56,7 @@ export const packs: Pack[] = [
       "5 overlays animés",
       "Bannière et avatar",
       "15 emotes personnalisées",
-      "2 séries de corrections regroupées",
+      "3 corrections incluses par élément du pack",
     ],
     note: "Le tarif de base comprend des animations légères : apparition des éléments, transitions simples et boucles d'ambiance. Les animations complexes sont chiffrées sur devis.",
   },

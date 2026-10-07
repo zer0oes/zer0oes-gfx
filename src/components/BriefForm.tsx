@@ -73,7 +73,11 @@ export function BriefForm({
   overlayHint,
   overlayCount,
   portalUrl,
+  initialBrief,
+  revisionsUsed = 0,
 }: {
+  revisionsUsed?: number;
+  initialBrief?: Record<string, string>;
   portalUrl?: string;
   overlayCount: number | null;
   sessionId?: string;
@@ -87,25 +91,31 @@ export function BriefForm({
   const [state, action, pending] = useActionState(sendBrief, null);
   const locale = useLocale();
   const tx = texts[locale];
-  const [overlays, setOverlays] = useState<string[]>([]);
+  const [overlays, setOverlays] = useState<string[]>(() => overlayTypes.filter((o) => initialBrief?.["Overlays choisis"]?.includes(o)));
   const [missingFields, setMissingFields] = useState<string[]>([
-    ...(!email ? [tx.email.replace(" *", "")] : []), tx.channel.replace(" *", ""),
-    ...(hasLogo ? [tx.logo.replace(" *", "")] : []), tx.universe.replace(" *", ""),
+    ...(!(initialBrief?.["E-mail"] || email) ? [tx.email.replace(" *", "")] : []),
+    ...(!initialBrief?.["Chaîne"] ? [tx.channel.replace(" *", "")] : []),
+    ...(hasLogo && !initialBrief?.["Logo existant"] ? [tx.logo.replace(" *", "")] : []),
+    ...(!initialBrief?.["Univers / ambiance"] ? [tx.universe.replace(" *", "")] : []),
   ]);
   const remaining = overlayCount === null ? 0 : overlayCount - overlays.length;
   const missing = [...missingFields, ...(remaining > 0 ? [locale === "en" ? `${remaining} overlay${remaining > 1 ? "s" : ""} to choose` : `${remaining} overlay${remaining > 1 ? "s" : ""} à choisir`] : [])];
 
   useEffect(() => {
     if (!state?.ok || !portalUrl) return;
+    if (initialBrief) {
+      window.location.assign(portalUrl);
+      return;
+    }
     const timer = window.setTimeout(() => window.location.assign(portalUrl), 20_000);
     return () => window.clearTimeout(timer);
-  }, [state?.ok, portalUrl]);
+  }, [state?.ok, portalUrl, initialBrief]);
 
   if (state?.ok) return (
     <div className="space-y-4">
       <FormStatus state={state} />
       {portalUrl && <>
-        <p className="text-sm text-foreground/80">{locale === "en" ? "You’ll be redirected to your order space in 20 seconds." : "Tu seras redirigé vers ton espace commande dans 20 secondes."}</p>
+        <p className="text-sm text-foreground/80">{initialBrief ? (locale === "en" ? "Redirecting to your order space…" : "Redirection vers ton espace commande…") : locale === "en" ? "You’ll be redirected to your order space in 20 seconds." : "Tu seras redirigé vers ton espace commande dans 20 secondes."}</p>
         <a href={portalUrl} className="inline-flex rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110">{locale === "en" ? "Open my order now →" : "Accéder à ma commande maintenant →"}</a>
       </>}
     </div>
@@ -121,6 +131,8 @@ export function BriefForm({
       }).map(([, label]) => label.replace(" *", "")));
     }}>
       <input type="hidden" name="sessionId" value={sessionId ?? ""} />
+      <input type="hidden" name="editBrief" value={initialBrief ? "1" : "0"} />
+      {initialBrief && <p className="rounded-xl border border-accent/40 bg-accent/10 p-3 text-sm">{locale === "en" ? `${revisionsUsed} / 2 updates used. Saving these changes uses one update and notifies me.` : `${revisionsUsed} / 2 modifications utilisées. Enregistrer ces changements utilise une modification et m’envoie une notification.`}</p>}
       <input type="hidden" name="packId" value={packId ?? ""} />
       <input type="hidden" name="formulaId" value={formulaId ?? ""} />
       <input type="hidden" name="payment" value={payment ?? ""} />
@@ -128,18 +140,18 @@ export function BriefForm({
       <input type="hidden" name="lang" value={locale} />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label={tx.email}>
-          <input name="email" type="email" required defaultValue={email} className={inputClass} />
+          <input name="email" type="email" required defaultValue={initialBrief?.["E-mail"] ?? email} className={inputClass} />
         </Field>
         <Field label={tx.pseudo}>
-          <input name="pseudo" className={inputClass} />
+          <input name="pseudo" defaultValue={initialBrief?.["Pseudo"]} className={inputClass} />
         </Field>
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label={tx.channel}>
-          <input name="channel" required placeholder="https://twitch.tv/…" className={inputClass} />
+          <input name="channel" defaultValue={initialBrief?.["Chaîne"]} required placeholder="https://twitch.tv/…" className={inputClass} />
         </Field>
         <Field label={tx.platform}>
-          <select name="platform" className={inputClass} defaultValue="Twitch">
+          <select name="platform" className={inputClass} defaultValue={initialBrief?.["Plateforme"] || "Twitch"}>
             <option>Twitch</option>
             <option>YouTube</option>
             <option>Kick</option>
@@ -150,20 +162,20 @@ export function BriefForm({
       </div>
       {hasLogo && (
         <Field label={tx.logo} hint={tx.logoHint}>
-          <input name="logoLink" required placeholder="https://…" className={inputClass} />
+          <input name="logoLink" defaultValue={initialBrief?.["Logo existant"]} required placeholder="https://…" className={inputClass} />
         </Field>
       )}
       <Field label={tx.universe} hint={tx.universeHint}>
-        <textarea name="universe" required rows={4} className={inputClass} />
+        <textarea name="universe" defaultValue={initialBrief?.["Univers / ambiance"]} required rows={4} className={inputClass} />
       </Field>
       <Field label={tx.colors} hint={tx.colorsHint}>
-        <input name="colors" className={inputClass} />
+        <input name="colors" defaultValue={initialBrief?.["Couleurs"]} className={inputClass} />
       </Field>
       <Field label={tx.references} hint={tx.referencesHint}>
-        <textarea name="references" rows={3} className={inputClass} />
+        <textarea name="references" defaultValue={initialBrief?.["Références"]} rows={3} className={inputClass} />
       </Field>
       <Field label={tx.elements} hint={tx.elementsHint}>
-        <textarea name="elements" rows={3} className={inputClass} />
+        <textarea name="elements" defaultValue={initialBrief?.["Éléments à inclure"]} rows={3} className={inputClass} />
       </Field>
       {overlayCount !== null && <fieldset>
         <legend className="text-sm font-medium">{tx.overlays}</legend>
@@ -180,9 +192,9 @@ export function BriefForm({
         </div>
       </fieldset>}
       <div className="grid gap-5 sm:grid-cols-2">
-        <DatePicker name="deadline" label={tx.deadline} locale={locale} />
+        <DatePicker defaultValue={initialBrief?.["Date souhaitée"]} name="deadline" label={tx.deadline} locale={locale} />
         <Field label={tx.notes}>
-          <input name="notes" className={inputClass} />
+          <input name="notes" defaultValue={initialBrief?.["Remarques"]} className={inputClass} />
         </Field>
       </div>
       <FormStatus state={state} />
@@ -193,7 +205,7 @@ export function BriefForm({
         aria-describedby="brief-missing brief-next"
         className="rounded-full bg-accent px-6 py-3 font-semibold text-background transition hover:brightness-110 disabled:opacity-60"
       >
-        {pending ? tx.sending : tx.send}
+        {pending ? tx.sending : initialBrief ? (locale === "en" ? "Save my changes" : "Enregistrer mes modifications") : tx.send}
       </button>
       <p id="brief-next" className="text-sm leading-relaxed text-foreground/80">{locale === "en" ? "After you send your brief, I’ll review your details and reply within 2 business days to confirm the next steps or clarify any missing information. Your previews will then appear in your order space." : "Après l’envoi, je relis tes informations et te réponds sous 2 jours ouvrés pour confirmer la suite ou préciser les éléments manquants. Tes aperçus seront ensuite disponibles dans ton espace commande."}</p>
       <p className="text-xs text-muted">

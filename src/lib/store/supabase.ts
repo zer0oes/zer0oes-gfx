@@ -1,3 +1,4 @@
+import { reviewedRevisions } from "@/lib/brief-review";
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Emote, Streamer, Work } from "@/data/portfolio";
@@ -109,6 +110,9 @@ function toOrder(r: Row, notes: Row[]): Order {
     companyVat: opt<string>(r.company_vat),
     brief: opt<Record<string, string>>(r.brief),
     briefReceivedAt: opt<string>(r.brief_received_at),
+    deliveryTemplate: opt<string[]>(r.delivery_template),
+    briefLogoPreview: opt<string>(r.brief_logo_preview),
+    briefRevisions: (r.brief_revisions as Order["briefRevisions"]) ?? [],
     notes: notes
       .filter((n) => n.order_id === r.id)
       .map((n) => ({ id: n.id as string, createdAt: n.created_at as string, body: n.body as string })),
@@ -122,6 +126,11 @@ function toOrder(r: Row, notes: Row[]): Order {
 
 function toDeliverable(r: Row): Deliverable {
   return {
+    plannedKey: opt<string>(r.planned_key),
+    publishedAt: opt<string>(r.published_at),
+    notifiedPreview: opt<string>(r.notified_preview),
+    previewVersions: Array.isArray(r.preview_versions) ? r.preview_versions : [],
+    finalAssets: (r.final_assets as Deliverable["finalAssets"]) ?? [],
     id: r.id as string,
     orderId: r.order_id as string,
     kind: r.kind as Deliverable["kind"],
@@ -132,6 +141,8 @@ function toDeliverable(r: Row): Deliverable {
     createdAt: r.created_at as string,
     clientNotes: Array.isArray(r.client_notes) ? (r.client_notes as DeliverableNote[]) : [],
     approvedAt: opt<string>(r.approved_at),
+    finalAccessedAt: opt<string>(r.final_accessed_at),
+    accessedFinalAssets: (r.accessed_final_assets as string[]) ?? [],
     itemType: opt<string>(r.item_type),
     previewPath: opt<string>(r.preview_path),
     previewType: opt<Deliverable["previewType"]>(r.preview_type),
@@ -169,6 +180,8 @@ const orderColumns: Record<keyof OrderPatch, string> = {
   balancePaidAt: "balance_paid_at",
   brief: "brief",
   briefReceivedAt: "brief_received_at",
+  deliveryTemplate: "delivery_template",
+  briefLogoPreview: "brief_logo_preview",
   customerEmail: "customer_email",
   customerName: "customer_name",
   feesPaid: "fees_paid",
@@ -523,6 +536,7 @@ export const supabaseStore: Store = {
           stripe_session_id: o.stripeSessionId,
           demo: o.demo,
           pack_id: o.packId,
+          delivery_template: o.deliveryTemplate ?? null,
           formula_id: o.formulaId,
           offer_name: o.offerName,
           payment_type: o.paymentType,
@@ -568,7 +582,27 @@ export const supabaseStore: Store = {
   async updateOrder(id, patch) {
     const row: Row = { updated_at: new Date().toISOString() };
     for (const [k, v] of Object.entries(patch)) row[orderColumns[k as keyof OrderPatch]] = v ?? null;
+    if (patch.completedAt !== undefined) {
+      const current = check(await db().from("orders").select("completed_at").eq("id", id).single()) as Row;
+      if (current.completed_at) delete row.completed_at;
+    }
     check(await db().from("orders").update(row).eq("id", id));
+    if (patch.amountPaid !== undefined) {
+      const items = check(await db().from("deliverables").select("id").eq("order_id", id).not("final_accessed_at", "is", null).limit(1)) as Row[];
+      if (items[0]) check(await db().rpc("record_final_access", { deliverable_id: items[0].id, asset_keys: [] }));
+    }
+  },
+
+  async reviewBriefRevision(order, at, state) {
+    const now = new Date().toISOString();
+    const revisions = reviewedRevisions(order.briefRevisions ?? [], at, state, now);
+    const rows = check(await db().from("orders").update({ brief_revisions: revisions, updated_at: now }).eq("id", order.id).eq("updated_at", order.updatedAt).select("id")) as Row[];
+    return rows.length > 0;
+  },
+  async saveBriefRevision(order, brief, revision) {
+    if ((order.briefRevisions?.length ?? 0) >= 2) return false;
+    const rows = check(await db().from("orders").update({ brief, brief_revisions: [...(order.briefRevisions ?? []), revision], updated_at: revision.at }).eq("id", order.id).eq("updated_at", order.updatedAt).select("id")) as Row[];
+    return rows.length === 1;
   },
 
   async listDeliverables(orderId) {
@@ -577,13 +611,17 @@ export const supabaseStore: Store = {
   },
 
   async addDeliverable(d) {
-    const row = check(
+    const result =
       await db()
         .from("deliverables")
-        .insert({ order_id: d.orderId, kind: d.kind, item_type: d.itemType ?? null, label: d.label, url: d.url ?? null, storage_path: d.storagePath ?? null, size_bytes: d.sizeBytes ?? null })
+        .insert({ order_id: d.orderId, kind: d.kind, planned_key: d.plannedKey ?? null, final_assets: d.finalAssets ?? [], item_type: d.itemType ?? null, label: d.label, url: d.url ?? null, storage_path: d.storagePath ?? null, size_bytes: d.sizeBytes ?? null })
         .select("*")
-        .single(),
-    ) as Row;
+        .single();
+    if (result.error?.code === "23505" && d.plannedKey) {
+      const existing = check(await db().from("deliverables").select("*").eq("order_id", d.orderId).eq("planned_key", d.plannedKey).single()) as Row;
+      return toDeliverable(existing);
+    }
+    const row = check(result) as Row;
     return toDeliverable(row);
   },
 
@@ -597,10 +635,13 @@ export const supabaseStore: Store = {
   async updateDeliverable(id, patch) {
     const row: Row = {};
     if (patch.itemType !== undefined) row.item_type = patch.itemType;
+    if (patch.publishedAt !== undefined) row.published_at = patch.publishedAt;
+    if (patch.notifiedPreview !== undefined) row.notified_preview = patch.notifiedPreview;
+    if (patch.previewVersions !== undefined) row.preview_versions = patch.previewVersions;
+    if (patch.label !== undefined) row.label = patch.label;
+    if (patch.finalAssets !== undefined) row.final_assets = patch.finalAssets;
     if (patch.previewType !== undefined) row.preview_type = patch.previewType;
     if (patch.previewPath !== undefined) {
-      const r = check(await db().from("deliverables").select("preview_path").eq("id", id).maybeSingle()) as Row | null;
-      if (r?.preview_path && r.preview_path !== patch.previewPath) await db().storage.from("livrables").remove([r.preview_path as string]);
       row.preview_path = patch.previewPath;
     }
     check(await db().from("deliverables").update(row).eq("id", id));
@@ -610,15 +651,24 @@ export const supabaseStore: Store = {
     const blob = check(await db().storage.from("livrables").download(path)) as Blob;
     return new Uint8Array(await blob.arrayBuffer());
   },
+  async saveDeliverableFile(path, data) {
+    check(await db().storage.from("livrables").upload(path, data, { contentType: path.endsWith(".webp") ? "image/webp" : "application/octet-stream", upsert: false }));
+  },
 
   async setDeliverableApproval(id, approved) {
-    check(await db().from("deliverables").update({ approved_at: approved ? new Date().toISOString() : null }).eq("id", id));
+    let query = db().from("deliverables").update({ approved_at: approved ? new Date().toISOString() : null }).eq("id", id);
+    if (!approved) query = query.is("final_accessed_at", null).eq("accessed_final_assets", "{}");
+    const rows = check(await query.select("id")) as Row[];
+    if (!rows.length) throw new Error("Validation verrouillée après téléchargement.");
+  },
+  async beginFinalAccess(id, assetKeys = []) {
+    return check(await db().rpc("record_final_access", { deliverable_id: id, asset_keys: assetKeys })) as boolean;
   },
 
   async deleteDeliverable(id) {
-    const r = check(await db().from("deliverables").select("storage_path, preview_path").eq("id", id).maybeSingle()) as Row | null;
+    const r = check(await db().from("deliverables").select("storage_path, preview_path, final_assets, preview_versions").eq("id", id).maybeSingle()) as Row | null;
     check(await db().from("deliverables").delete().eq("id", id));
-    const files = [r?.storage_path, r?.preview_path].filter(Boolean) as string[];
+    const files = [r?.storage_path, r?.preview_path, ...((r?.preview_versions as Deliverable["previewVersions"]) ?? []).map((v) => v.path), ...((r?.final_assets as Deliverable["finalAssets"]) ?? []).map((asset) => asset.path)].filter(Boolean) as string[];
     if (files.length) await db().storage.from("livrables").remove(files);
   },
 

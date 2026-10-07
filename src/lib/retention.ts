@@ -1,10 +1,9 @@
-// Durée de conservation des fichiers livrés : passé le délai après la clôture du projet
-// (voir FILES_RETENTION_MONTHS), les fichiers et aperçus sont supprimés du stockage, ainsi que
-// les éléments de livraison correspondants. Les données de commande et factures, elles, restent.
+// Rapport des accès expirés. Les fichiers, aperçus et historiques sont conservés.
+// Les routes clientes bloquent les accès après FILES_RETENTION_MONTHS.
 import { filesExpired } from "@/lib/portal";
 
 type Order = { id: string; completedAt?: string };
-type Item = { id: string; storagePath?: string; previewPath?: string };
+type Item = { id: string; storagePath?: string; previewPath?: string; previewVersions?: { path: string }[]; finalAssets?: { path?: string }[] };
 
 export type PurgeDeps = {
   listOrders(): Promise<Order[]>;
@@ -19,11 +18,9 @@ export async function purgeExpiredDeliverables(deps: PurgeDeps, opts: { apply: b
     if (!filesExpired(order, opts.now)) continue;
     const items = await deps.listDeliverables(order.id);
     if (!items.length) continue;
-    const files = items.flatMap((d) => [d.storagePath, d.previewPath]).filter((p): p is string => Boolean(p));
+    const files = items.flatMap((d) => [d.storagePath, d.previewPath, ...(d.previewVersions ?? []).map((v) => v.path), ...(d.finalAssets ?? []).map((asset) => asset.path)]).filter((p): p is string => Boolean(p));
     report.push({ orderId: order.id, items: items.length, files: files.length });
-    if (!opts.apply) continue;
-    for (const f of files) await deps.deleteFile(f);
-    for (const d of items) await deps.deleteDeliverable(d.id);
+    // L'expiration bloque l'accès client sans supprimer de fichiers ou d'historique.
   }
   return report;
 }
