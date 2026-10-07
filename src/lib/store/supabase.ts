@@ -7,6 +7,7 @@ import { defaultFinance, isUrssafPeriodicity, type FinanceSettings } from "@/lib
 import { defaultProtection, isWatermarkLevel, type ProtectionSettings } from "@/lib/protection";
 import type { Option, Pack } from "@/lib/pricing";
 import type { StatEvent } from "@/lib/stats";
+import type { AffiliateLink, Banner, Promotion } from "@/lib/promotions";
 import type { Deliverable, DeliverableNote, Invoice, NewOrder, Order, OrderPatch, OrderStatus, Store, Testimonial } from "./types";
 
 // Client avec la clé secrète : contourne la RLS, donc réservé au serveur
@@ -90,6 +91,8 @@ function toOrder(r: Row, notes: Row[]): Order {
     amountPaid: r.amount_paid as number,
     depositPercent: r.deposit_percent as number,
     logoDiscount: r.logo_discount as number,
+    promoCode: opt<string>(r.promo_code),
+    promoDiscount: Number(r.promo_discount ?? 0),
     customerName: r.customer_name as string,
     customerEmail: r.customer_email as string,
     status: r.status as OrderStatus,
@@ -192,6 +195,27 @@ async function fetchOrders(filter: (q: OrdersQuery) => OrdersQuery) {
 }
 
 export const supabaseStore: Store = {
+  async listAffiliateLinks() {
+    const result = await db().from("marketing_affiliate_links").select("content").order("id");
+    if (result.error?.code === "PGRST205" || result.error?.code === "42P01") return [];
+    return (check(result) ?? []).map((r) => r.content as AffiliateLink);
+  },
+  async saveAffiliateLink(link) { check(await db().from("marketing_affiliate_links").upsert({ id: link.id, content: link })); },
+  async deleteAffiliateLink(id) { check(await db().from("marketing_affiliate_links").delete().eq("id", id)); },
+  async listBanners() {
+    const result = await db().from("marketing_banners").select("content").order("id");
+    if (result.error?.code === "PGRST205" || result.error?.code === "42P01") return [];
+    return (check(result) ?? []).map((r) => r.content as Banner);
+  },
+  async saveBanner(b) { check(await db().from("marketing_banners").upsert({ id: b.id, content: b })); },
+  async deleteBanner(id) { check(await db().from("marketing_banners").delete().eq("id", id)); },
+  async listPromotions() {
+    const result = await db().from("marketing_promotions").select("content").order("id");
+    if (result.error?.code === "PGRST205" || result.error?.code === "42P01") return [];
+    return (check(result) ?? []).map((r) => r.content as Promotion);
+  },
+  async savePromotion(p) { check(await db().from("marketing_promotions").upsert({ id: p.id, code: p.code, content: p })); },
+  async deletePromotion(id) { check(await db().from("marketing_promotions").delete().eq("id", id)); },
   kind: "supabase",
 
   async getCatalog() {
@@ -506,6 +530,8 @@ export const supabaseStore: Store = {
           amount_paid: o.amountPaid,
           deposit_percent: o.depositPercent,
           logo_discount: o.logoDiscount,
+          promo_code: o.promoCode ?? null,
+          promo_discount: o.promoDiscount ?? 0,
           customer_name: o.customerName,
           customer_email: o.customerEmail,
           fees_paid: o.feesPaid ?? null,

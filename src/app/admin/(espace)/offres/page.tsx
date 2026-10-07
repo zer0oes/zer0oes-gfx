@@ -1,4 +1,6 @@
 import { OptionRows } from "@/components/admin/OptionRows";
+import { MarketingPanel } from "@/components/admin/MarketingPanel";
+import { AffiliatePanel } from "@/components/admin/AffiliatePanel";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
 import { homeDefaultsEn, offersPageFields, resolveHome } from "@/lib/home-content";
@@ -33,6 +35,8 @@ const save = "rounded-full bg-accent px-5 py-2 text-sm font-semibold text-backgr
 const tabs = [
   { id: "offres", label: "Offres" },
   { id: "options", label: "Options à la carte" },
+  { id: "promotions", label: "Promotions et fidélité" },
+  { id: "affiliation", label: "Affiliation" },
   { id: "reglages", label: "Réglages" },
   { id: "cotisations", label: "Frais et cotisations" },
   { id: "simulateur", label: "Simulateur de revenus" },
@@ -234,6 +238,8 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
         </p>
       )}
 
+      {tab === "promotions" && <MarketingPanel />}
+      {tab === "affiliation" && <AffiliatePanel />}
       {tab === "offres" && (
         <section className="mt-6">
           <details className={`${card} mb-6`}>

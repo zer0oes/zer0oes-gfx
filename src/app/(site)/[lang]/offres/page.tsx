@@ -4,7 +4,7 @@ import { OfferGuide } from "@/components/OfferGuide";
 import { OfferTabs } from "@/components/OfferTabs";
 import { OptionDisclosure } from "@/components/OptionDisclosure";
 import { PackCard } from "@/components/PackCard";
-import { OfferPrice } from "@/components/ui";
+import { OfferPrice, SaleBadge, discountPercent } from "@/components/ui";
 import { resolveHome } from "@/lib/home-content";
 import { asLocale, href, t, type Locale } from "@/lib/i18n";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@/lib/pricing";
 import { pageMetadata } from "@/lib/seo";
 import { getStore } from "@/lib/store";
+import { getPublicCatalog } from "@/lib/public-catalog";
 import { trDeep } from "@/lib/translations-en";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/offres">): Promise<Metadata> {
@@ -160,8 +161,8 @@ const categoryLooks: Record<OptionCategory, { color: string; gradient: string; i
 
 export default async function OffresPage({ params, searchParams }: PageProps<"/[lang]/offres">) {
   const lang = asLocale((await params).lang);
-  const { annule, details } = await searchParams;
-  const catalog = await getStore().getCatalog();
+  const { annule, details, promo_erreur, prix_modifie } = await searchParams;
+  const catalog = await getPublicCatalog();
   const { settings: site } = catalog;
   const packs = activePacks(catalog.packs);
   const texts = resolveHome(await getStore().getHomeContent(), lang);
@@ -180,6 +181,8 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
       </header>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        {prix_modifie && <p role="alert" className="mb-6 rounded-xl border border-border p-4 text-sm">{lang === "fr" ? "Le prix a changé depuis l’ouverture de la page. Vérifie le nouveau montant avant de commander." : "The price has changed since you opened this page. Check the updated amount before ordering."}</p>}
+        {promo_erreur && <p role="alert" className="mb-6 rounded-xl border border-border p-4 text-sm">{lang === "fr" ? "Ce code de réduction n’est plus disponible pour cette commande. Vérifie le code et réessaie." : "This discount code is no longer available for this order. Check your code and try again."}</p>}
         {annule && (
           <p role="status" className="mb-8 rounded-lg border border-border bg-surface px-4 py-3 text-center text-sm text-muted">
             {t(lang, {
@@ -212,6 +215,8 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
               if (!list.length) return null;
               const look = categoryLooks[c.id];
               const label = lang === "en" ? categoryEn[c.id] : c;
+              const promoted = list.filter((o) => discountPercent(o) > 0);
+              const bestDiscount = promoted.reduce<(typeof list)[number] | undefined>((best, item) => !best || discountPercent(item) > discountPercent(best) ? item : best, undefined);
               return (
                 <div
                   key={c.id}
@@ -231,7 +236,8 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
                     className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full opacity-30 blur-3xl transition-opacity duration-300 group-hover:opacity-60"
                     style={{ background: look.gradient }}
                   />
-                  <div className="relative flex items-center gap-3">
+                  {bestDiscount && <SaleBadge item={bestDiscount} locale={lang} upTo={promoted.length !== list.length || promoted.some((o) => discountPercent(o) !== discountPercent(bestDiscount))} className="absolute right-4 top-4" />}
+                  <div className={`relative flex items-center gap-3 ${bestDiscount ? "pr-28" : ""}`}>
                     <span
                       aria-hidden
                       className="flex size-11 shrink-0 items-center justify-center rounded-xl text-background shadow-[0_0_24px_-6px_var(--cat)]"

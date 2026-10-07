@@ -6,6 +6,8 @@ import { createCheckout } from "@/app/actions";
 import { href, t } from "@/lib/i18n";
 import { depositAmount, formatPrice, orderPrice, type Pack, type PaymentType, type PricingSettings } from "@/lib/pricing";
 import { useLocale } from "./I18nProvider";
+import { previewPromotion } from "@/app/promotion-actions";
+import { OfferPrice, SaleBadge, discountPercent } from "./ui";
 
 
 // Choix de la formule et du mode de paiement. Les montants affichés ici sont
@@ -30,8 +32,16 @@ export function OrderForm({
   const [formulaId, setFormulaId] = useState(formulas[0]?.id);
   const [payment, setPayment] = useState<PaymentType>("total");
   const [hasLogo, setHasLogo] = useState(false);
+  const selectedFormula = formulas.find((f) => f.id === formulaId);
+  const publicSale = Boolean(selectedFormula?.promotionCode);
+  const [code, setCode] = useState("");
+  const [promo, setPromo] = useState<{ key: string; code: string; totalPrice: number; discount: number } | null>(null);
+  const [promoMessage, setPromoMessage] = useState("");
+  const [checking, setChecking] = useState(false);
+  const promoKey = JSON.stringify([code, formulaId, payment, hasLogo]);
+  const applied = !publicSale && promo?.key === promoKey ? promo : null;
   const listPrice = formulas.find((f) => f.id === formulaId)?.price ?? pack.price;
-  const price = orderPrice(listPrice, hasLogo, settings);
+  const price = applied?.totalPrice ?? orderPrice(listPrice, hasLogo, settings);
   const deposit = depositAmount(price, settings);
   const basePrice = formulas[0]?.price ?? pack.price;
 
@@ -44,6 +54,8 @@ export function OrderForm({
   return (
     <form action={createCheckout} className="flex flex-col">
       <input type="hidden" name="packId" value={pack.id} />
+      <input type="hidden" name="promoCode" value={applied?.code ?? ""} />
+      <input type="hidden" name="expectedPrice" value={price} />
       {/* Langue : paiement Stripe et page de remerciement dans la langue du visiteur */}
       <input type="hidden" name="lang" value={locale} />
       <div className="mt-6 relative before:absolute before:-left-6 before:-right-6 before:top-0 before:border-t before:border-border pt-5">
@@ -69,10 +81,11 @@ export function OrderForm({
                   onChange={() => setFormulaId(f.id)}
                   className="peer sr-only"
                 />
-                <span className="block pr-7 text-sm font-medium">{f.label}</span>
+                <SaleBadge item={f} locale={locale} compact className="absolute right-10 top-3" />
+                <span className={`block text-sm font-medium ${discountPercent(f) ? "min-h-10 pr-20" : "pr-7"}`}>{f.label}</span>
                 <span className="mt-0.5 flex items-baseline justify-between gap-3">
                   <span className="font-display text-2xl font-bold">
-                    {formatPrice(f.price, locale)}
+                    <OfferPrice item={f} locale={locale} />
                   </span>
                   {i > 0 && <span className="text-xs text-muted">+{formatPrice(f.price - basePrice, locale)}</span>}
                 </span>
@@ -141,6 +154,16 @@ export function OrderForm({
       </div>
 
       <div className="mt-6 space-y-4 relative before:absolute before:-left-6 before:-right-6 before:top-0 before:border-t before:border-border pt-5">
+        {!publicSale && <details className="text-sm"><summary className="cursor-pointer text-muted">{locale === "fr" ? "Tu as un code de réduction ?" : "Have a discount code?"}</summary><div className="mt-3 flex gap-2"><input aria-label={locale === "fr" ? "Code de réduction" : "Discount code"} value={code} maxLength={60} onChange={(e) => { setCode(e.target.value); setPromoMessage(""); }} className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2" /><button type="button" disabled={checking || !code.trim()} className="rounded-lg border border-accent px-3 py-2 disabled:opacity-50" onClick={async () => {
+          const key = promoKey;
+          setChecking(true);
+          try {
+            const result = await previewPromotion({ code, packId: pack.id, formulaId, hasLogo, payment });
+            setPromo(result ? { ...result, key } : null);
+            setPromoMessage(result ? "" : locale === "fr" ? "Code indisponible pour cette commande." : "Code unavailable for this order.");
+          } catch { setPromo(null); setPromoMessage(locale === "fr" ? "Vérification impossible, réessaie." : "Unable to check. Please try again."); }
+          finally { setChecking(false); }
+        }}>{checking ? "…" : locale === "fr" ? "Appliquer" : "Apply"}</button></div><p role="status" className="mt-2 text-xs text-muted">{applied ? `${applied.code} : −${amount(applied.discount)}` : promoMessage || (promo ? locale === "fr" ? "Applique à nouveau le code après avoir modifié tes choix." : "Apply the code again after changing your selection." : "")}</p></details>}
         <label className="flex items-start gap-2 text-xs text-muted">
           <input type="checkbox" name="cgv" required className="mt-0.5 accent-[var(--accent)]" />
           {locale === "en" ? (
@@ -159,7 +182,8 @@ export function OrderForm({
           )}
         </label>
         <p className="text-center text-xs leading-relaxed text-muted">{t(locale, { fr: `Généralement ${site.deliveryDays} jours ouvrés après réception du brief complet, selon le projet.`, en: `Usually ${site.deliveryDays.replace(" à ", " to ")} business days after receiving the complete brief, depending on the project.` })}</p>
-        <button type="submit" className={buttonClass}>
+        {(payment === "acompte" ? deposit : price) < 50 && <p role="alert" className="text-xs text-muted">{locale === "fr" ? "Contacte-moi pour un devis avec cette combinaison de remises." : "Contact me for a quote with this combination of discounts."}</p>}
+        <button type="submit" disabled={(payment === "acompte" ? deposit : price) < 50} className={`${buttonClass} disabled:opacity-50`}>
           {payment === "acompte"
             ? t(locale, { fr: `Payer l'acompte de ${amount(deposit)}`, en: `Pay the ${amount(deposit)} deposit` })
             : t(locale, { fr: `Commander — ${amount(price)}`, en: `Order — ${amount(price)}` })}

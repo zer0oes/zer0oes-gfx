@@ -4,6 +4,7 @@ import type { FinanceSettings } from "@/lib/finance";
 import type { Catalog, Option, Pack, PaymentType, PricingSettings } from "@/lib/pricing";
 import type { ProtectionSettings } from "@/lib/protection";
 import type { NewStatEvent, StatEvent } from "@/lib/stats";
+import type { AffiliateLink, Banner, Promotion } from "@/lib/promotions";
 
 export type Portfolio = { streamers: Streamer[]; works: Work[] };
 
@@ -110,6 +111,8 @@ export type Order = {
   amountPaid: number;
   depositPercent: number;
   logoDiscount: number;
+  promoCode?: string;
+  promoDiscount?: number;
   customerName: string;
   customerEmail: string;
   status: OrderStatus;
@@ -175,6 +178,15 @@ export function balanceDue(o: Pick<Order, "totalPrice" | "amountPaid">) {
 }
 
 export interface Store {
+  listBanners(): Promise<Banner[]>;
+  listAffiliateLinks(): Promise<AffiliateLink[]>;
+  saveAffiliateLink(link: AffiliateLink): Promise<void>;
+  deleteAffiliateLink(id: string): Promise<void>;
+  saveBanner(banner: Banner): Promise<void>;
+  deleteBanner(id: string): Promise<void>;
+  listPromotions(): Promise<Promotion[]>;
+  savePromotion(promotion: Promotion): Promise<void>;
+  deletePromotion(id: string): Promise<void>;
   kind: "supabase" | "local" | "static";
   // Lecture publique
   getCatalog(): Promise<Catalog>;

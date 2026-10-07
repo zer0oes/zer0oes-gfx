@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Analytics } from "@/components/Analytics";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { AnnouncementBanners } from "@/components/AnnouncementBanners";
 import { I18nProvider } from "@/components/I18nProvider";
 import { ProtectionProvider } from "@/components/protection";
 import { ScrollReveal } from "@/components/ScrollReveal";
@@ -23,11 +24,12 @@ export function generateStaticParams() {
 export default async function SiteLayout({ children, params }: LayoutProps<"/[lang]">) {
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
-  const protection = await getStore().getProtection();
+  const [protection, banners] = await Promise.all([getStore().getProtection(), getStore().listBanners()]);
   return (
     <I18nProvider locale={lang}>
       <ProtectionProvider value={protection}>
         <Header />
+        <AnnouncementBanners banners={banners} locale={lang} />
         {/* reveal-page : blocs animés au chargement et au scroll sur toutes les pages (voir ScrollReveal) */}
         <main lang={lang} className="reveal-page flex-1">
           {children}

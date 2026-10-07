@@ -2,7 +2,7 @@ import Link from "next/link";
 import { href, t, type Locale } from "@/lib/i18n";
 import { type Pack, type PricingSettings } from "@/lib/pricing";
 import { trDeep } from "@/lib/translations-en";
-import { OfferPrice } from "./ui";
+import { OfferPrice, SaleBadge, discountPercent } from "./ui";
 import { OrderForm } from "./OrderForm";
 
 // Titre de sous-section d'une carte (Inclus, Formule, Paiement…), séparé par un trait franc
@@ -60,7 +60,8 @@ export function PackCard({
             : "border-border bg-surface"
       }`}
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <SaleBadge item={pack} locale={locale} className="absolute right-4 top-4" />
+      <div className={`flex flex-wrap items-center gap-2 ${discountPercent(pack) ? "pr-20" : ""}`}>
         <h3 className="font-display text-xl font-bold">{pack.name}</h3>
         {quote && (
           <span className="rounded-full border border-accent-3/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-accent-3">

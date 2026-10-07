@@ -22,6 +22,7 @@ import { balanceDue, getStore, type NewOrder, type Order } from "@/lib/store";
 import { mergeRefunds, refundedTotal } from "@/lib/refunds";
 import { getStripe } from "@/lib/stripe";
 import { trOfferName } from "@/lib/translations-en";
+import { discountedPrice, type Promotion } from "@/lib/promotions";
 
 // Commande calculée côté serveur à partir des identifiants envoyés par le formulaire.
 export type CheckoutQuote = {
@@ -35,7 +36,17 @@ export type CheckoutQuote = {
   amount: number;
   depositPercent: number;
   logoDiscount: number;
+  promoCode?: string;
+  promoDiscount?: number;
 };
+
+export function discountQuote(q: CheckoutQuote, promotion: Promotion): CheckoutQuote | null {
+  if (q.promoCode || promotion.mode === "sale") return null;
+  const totalPrice = discountedPrice(q.totalPrice, promotion);
+  const amount = q.payment === "acompte" ? Math.round(totalPrice * q.depositPercent / 100) : totalPrice;
+  if (amount < 50) return null;
+  return { ...q, totalPrice, amount, promoCode: promotion.code, promoDiscount: q.totalPrice - totalPrice };
+}
 
 export function quote(
   catalog: Catalog,
@@ -49,17 +60,20 @@ export function quote(
   const payment = parsePaymentType(input.payment);
   const hasLogo = Boolean(input.hasLogo);
   const totalPrice = orderPrice(formula.price, hasLogo, s);
+  if (amountToPay(totalPrice, payment, s) < 50) return null;
   return {
     packId: pack.id,
     formulaId: formula.id,
     offerName: formulaName(pack, formula),
     payment,
     hasLogo,
-    listPrice: formula.price,
+    listPrice: formula.normalPrice ?? formula.price,
     totalPrice,
     amount: amountToPay(totalPrice, payment, s),
     depositPercent: s.depositPercent,
     logoDiscount: formula.price - totalPrice,
+    promoCode: formula.promotionCode,
+    promoDiscount: formula.normalPrice ? formula.normalPrice - formula.price : undefined,
   };
 }
 
@@ -77,6 +91,8 @@ export function quoteMetadata(q: CheckoutQuote): Record<string, string> {
     listPrice: String(q.listPrice),
     totalPrice: String(q.totalPrice),
     amountCharged: String(q.amount),
+    promoCode: q.promoCode ?? "",
+    promoDiscount: String(q.promoDiscount ?? 0),
   };
 }
 
@@ -97,6 +113,8 @@ export function newOrderFrom(
     amountPaid: extra.amountPaid ?? q.amount,
     depositPercent: q.depositPercent,
     logoDiscount: q.logoDiscount,
+    promoCode: q.promoCode,
+    promoDiscount: q.promoDiscount,
     customerName: extra.customerName ?? "",
     customerEmail: extra.customerEmail ?? "",
   };
@@ -117,6 +135,8 @@ function quoteFromMetadata(m: Stripe.Metadata): CheckoutQuote | null {
     amount: Number(m.amountCharged || totalPrice),
     depositPercent: Number(m.depositPercent || 0),
     logoDiscount: Number(m.logoDiscount || 0),
+    promoCode: m.promoCode || undefined,
+    promoDiscount: Number(m.promoDiscount || 0),
   };
 }
 

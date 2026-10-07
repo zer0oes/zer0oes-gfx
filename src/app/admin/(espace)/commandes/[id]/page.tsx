@@ -75,6 +75,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
                 {order.hasLogo ? `oui (−${formatPrice(order.logoDiscount)} HT, prix catalogue ${formatPrice(order.listPrice)})` : "non"}
               </Row>
               <Row label="Paiement">{paymentSummary(order)}</Row>
+              {order.promoCode && <Row label="Remise promotionnelle">{order.promoCode} · −{formatPrice(order.promoDiscount ?? 0)}</Row>}
               <Row label="Encaissé">{formatPrice(order.amountPaid)} HT</Row>
               <Row label="Solde dû">{due > 0 ? `${formatPrice(due)} HT` : "aucun"}</Row>
               <Row label="Session Stripe">

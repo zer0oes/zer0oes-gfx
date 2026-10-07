@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui";
 import { asLocale } from "@/lib/i18n";
 import { activePacks, getPack, optionChoices } from "@/lib/pricing";
 import { languageAlternates } from "@/lib/seo";
-import { getStore } from "@/lib/store";
+import { getPublicCatalog } from "@/lib/public-catalog";
 import { trDeep } from "@/lib/translations-en";
 import { site } from "@/data/site";
 
@@ -50,7 +50,7 @@ export default async function ContactPage({ params, searchParams }: PageProps<"/
   const lang = asLocale((await params).lang);
   const { offre, sujet } = await searchParams;
   const current = contactTexts[lang];
-  const originalCatalog = await getStore().getCatalog();
+  const originalCatalog = await getPublicCatalog();
   const catalog = trDeep(lang, originalCatalog);
   const selectedPack = getPack(catalog.packs, typeof offre === "string" ? offre : undefined);
   const quote = selectedPack?.checkout === false;

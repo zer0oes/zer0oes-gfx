@@ -7,6 +7,8 @@ import { intlLocale, type Locale } from "@/lib/i18n";
 import { trDeep } from "@/lib/translations-en";
 
 export type Formula = {
+  normalPrice?: number;
+  promotionCode?: string;
   id: string;
   label: string;
   price: number;
@@ -14,6 +16,8 @@ export type Formula = {
 };
 
 export type Pack = {
+  normalPrice?: number;
+  promotionCode?: string;
   id: string;
   name: string;
   tagline: string;
@@ -31,7 +35,7 @@ export type Pack = {
   archived?: boolean;
 };
 
-export type Option = { id: string; name: string; price: number; priceFrom?: boolean; unit?: string; category?: OptionCategory };
+export type Option = { id: string; name: string; price: number; normalPrice?: number; promotionCode?: string; priceFrom?: boolean; unit?: string; category?: OptionCategory };
 
 export type PricingSettings = {
   // Acompte proposé à la commande (en %)

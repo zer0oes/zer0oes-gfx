@@ -12,6 +12,7 @@ import { resolveHome } from "@/lib/home-content";
 import { activePacks } from "@/lib/pricing";
 import { ProtectedMedia } from "@/components/protection";
 import { getStore } from "@/lib/store";
+import { getPublicCatalog } from "@/lib/public-catalog";
 import { mediaUrl } from "@/lib/media";
 import { asLocale, href, t } from "@/lib/i18n";
 import { trDeep } from "@/lib/translations-en";
@@ -77,7 +78,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
   const to = (path: string) => href(lang, path);
   const store = getStore();
   const [catalog, portfolio, stored, testimonials] = await Promise.all([
-    store.getCatalog(),
+    getPublicCatalog(),
     store.getPortfolio(),
     store.getHomeContent(),
     store.listTestimonials(),

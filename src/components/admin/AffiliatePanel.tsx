@@ -1,0 +1,11 @@
+import { getStore } from "@/lib/store";
+import type { AffiliateLink } from "@/lib/promotions";
+import { saveAffiliateAction, deleteAffiliateAction } from "@/app/admin/affiliation-actions";
+const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
+function AffiliateForm({ link }: { link?: AffiliateLink }) {
+  return <><form action={saveAffiliateAction} className="space-y-4"><input type="hidden" name="id" value={link?.id ?? ""} /><label className="grid gap-2 text-sm">Partenaire<input name="name" required maxLength={120} defaultValue={link?.name} className={input} /></label><label className="grid gap-2 text-sm">Lien d’affiliation<input type="url" name="url" required maxLength={2000} defaultValue={link?.url} placeholder="https://…" className={input} /></label><label className="grid gap-2 text-sm">Notes privées<textarea name="notes" rows={3} maxLength={2000} defaultValue={link?.notes} className={input} /></label><button className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background">Enregistrer le lien</button></form>{link && <form action={deleteAffiliateAction} className="mt-4"><input type="hidden" name="id" value={link.id} /><label className="mr-3 text-sm text-muted"><input type="checkbox" name="confirm" required /> Confirmer</label><button className="text-sm text-muted underline">Supprimer le lien</button></form>}</>;
+}
+export async function AffiliatePanel() {
+  const links = await getStore().listAffiliateLinks();
+  return <section className="mt-6 space-y-4"><h2 className="text-xl font-semibold">Liens d’affiliation</h2><p className="max-w-2xl text-sm text-muted">Prépare ici tes partenaires et leurs liens pour plus tard. Ils restent privés dans l’admin ; l’affichage public et le suivi des commissions seront ajoutés quand tu voudras les utiliser.</p>{links.map((link) => <details key={link.id} className="rounded-2xl border border-border bg-surface p-5"><summary className="cursor-pointer font-semibold">{link.name} <span className="font-normal text-muted">· Brouillon</span></summary><div className="mt-5"><AffiliateForm link={link} /></div></details>)}<details className="rounded-2xl border border-border bg-surface p-5"><summary className="cursor-pointer font-semibold">+ Ajouter un partenaire</summary><div className="mt-5"><AffiliateForm /></div></details></section>;
+}

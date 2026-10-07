@@ -11,6 +11,9 @@ import { siteUrl } from "@/lib/site-url";
 import { trOfferName } from "@/lib/translations-en";
 import { getStore } from "@/lib/store";
 import { getStripe } from "@/lib/stripe";
+import { getPublicCatalog } from "@/lib/public-catalog";
+import { discountQuote } from "@/lib/orders";
+import { normalizeCode, validPromotion } from "@/lib/promotions";
 
 export type FormState = { ok: boolean; message: string } | null;
 
@@ -28,7 +31,7 @@ const languageField = (locale: Locale): Record<string, string> => (locale === "e
 export async function createCheckout(formData: FormData) {
   const locale = formLocale(formData);
   const to = (path: string) => href(locale, path);
-  const catalog = await getStore().getCatalog();
+  const catalog = await getPublicCatalog();
   const packId = formData.get("packId")?.toString();
   const pack = getPack(catalog.packs, packId);
   if (!pack) redirect(to("/offres"));
@@ -37,13 +40,21 @@ export async function createCheckout(formData: FormData) {
 
   // Formule, mode de paiement et remise relus et recalculés ici : le navigateur
   // n'envoie que des identifiants, jamais de montant.
-  const q = quote(catalog, {
+  let q = quote(catalog, {
     packId,
     formulaId: formData.get("formulaId")?.toString(),
     payment: formData.get("payment"),
     hasLogo: formData.get("logo") === "1",
   });
   if (!q) redirect(to("/offres"));
+  const code = normalizeCode(formData.get("promoCode")?.toString() ?? "");
+  if (code) {
+    const promotion = (await getStore().listPromotions()).find((p) => p.code === code && validPromotion(p, q!.packId));
+    q = promotion ? discountQuote(q, promotion) : null;
+    if (!q) redirect(to("/offres?promo_erreur=1"));
+  }
+  const expectedPrice = formData.get("expectedPrice");
+  if (expectedPrice !== null && Number(expectedPrice) !== q.totalPrice) redirect(to("/offres?prix_modifie=1"));
 
   const stripe = getStripe();
   if (!stripe) {
@@ -66,7 +77,7 @@ export async function createCheckout(formData: FormData) {
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [
-      formula?.stripePriceId && q.payment === "total" && !q.hasLogo
+      formula?.stripePriceId && q.payment === "total" && !q.hasLogo && !q.promoCode
         ? { price: formula.stripePriceId, quantity: 1 }
         : {
             quantity: 1,

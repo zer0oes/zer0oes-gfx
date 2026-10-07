@@ -39,13 +39,19 @@ await db.exec(`grant usage on schema public to anon, authenticated;
   grant insert on public.order_messages to authenticated;`);
 await db.exec(`insert into public.orders (stripe_session_id, pack_id, formula_id, offer_name, payment_type, list_price, total_price, amount_paid, deposit_percent)
   values ('cs_test', 'premier-look', 'base', 'Premier look', 'total', 49000, 49000, 49000, 30)`);
+await db.exec(`insert into public.marketing_promotions (id, code, content) values ('00000000-0000-4000-8000-000000000001', 'PRIVATE-TEST', '{}');`);
+await db.exec(`insert into public.marketing_affiliate_links (id, content) values ('00000000-0000-4000-8000-000000000001', '{"notes":"privées"}');`);
 await db.exec(`set role anon`);
+const anonPromotions = await count("public.marketing_promotions");
+const anonAffiliateLinks = await count("public.marketing_affiliate_links");
 const anonOrders = await count("public.orders");
 const anonPacks = await count("public.packs");
 const anonFinance = await count("public.finance_settings");
 await db.exec(`reset role`);
 if (anonOrders !== 0) throw new Error("Le rôle anon peut lire les commandes !");
 if (anonFinance !== 0) throw new Error("Le rôle anon peut lire les réglages financiers !");
+if (anonPromotions !== 0) throw new Error("Le rôle anon peut lire les codes privés !");
+if (anonAffiliateLinks !== 0) throw new Error("Le rôle anon peut lire les liens d’affiliation privés !");
 console.log(`anon : ${anonPacks} offres visibles, ${anonOrders} commande visible, ${anonFinance} réglage financier visible`);
 
 // Espace client : un client connecté ne voit que ses commandes
@@ -61,6 +67,10 @@ const asClient = async (email: string, sql: string) => {
   }
 };
 const mine = (await asClient("client@exemple.fr", "select count(*)::int as n from public.orders")).rows[0].n;
+const clientPromotions = (await asClient("client@exemple.fr", "select count(*)::int as n from public.marketing_promotions")).rows[0].n;
+if (clientPromotions !== 0) throw new Error("Un client peut lire la liste des codes privés !");
+const clientAffiliateLinks = (await asClient("client@exemple.fr", "select count(*)::int as n from public.marketing_affiliate_links")).rows[0].n;
+if (clientAffiliateLinks !== 0) throw new Error("Un client peut lire les liens d’affiliation privés !");
 const other = (await asClient("inconnu@exemple.fr", "select count(*)::int as n from public.orders")).rows[0].n;
 if (mine !== 1 || other !== 0) throw new Error(`RLS client incorrecte (${mine}, ${other})`);
 const orderId = (await db.query<{ id: string }>("select id from public.orders where stripe_session_id = 'cs_test'")).rows[0].id;

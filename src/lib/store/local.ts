@@ -10,11 +10,15 @@ import { assertNotProduction } from "@/lib/env";
 import type { StoredTexts } from "@/lib/case-study-texts";
 import { staticCatalog, staticPortfolio } from "./static";
 import type { StatEvent } from "@/lib/stats";
+import type { AffiliateLink, Banner, Promotion } from "@/lib/promotions";
 import type { Deliverable, Invoice, Order, Portfolio, Store, Testimonial } from "./types";
 
 // Magasin JSON local, pour développer et tester l'admin sans Supabase.
 // Fichier .data/dev-store.json (ignoré par git). Interdit en production.
 type Data = Catalog & Portfolio & {
+  banners?: Banner[];
+  affiliateLinks?: AffiliateLink[];
+  promotions?: Promotion[];
   orders: Order[];
   invoices?: Invoice[];
   deliverables?: Deliverable[];
@@ -73,6 +77,18 @@ function upsertAt<T extends { id: string }>(list: T[], item: T, position?: numbe
 }
 
 export const localStore: Store = {
+  listAffiliateLinks: async () => (await load()).affiliateLinks ?? [],
+  saveAffiliateLink: (link) => mutate((d) => upsertAt(d.affiliateLinks ??= [], link)),
+  deleteAffiliateLink: (id) => mutate((d) => void (d.affiliateLinks = (d.affiliateLinks ?? []).filter((l) => l.id !== id))),
+  listBanners: async () => (await load()).banners ?? [],
+  saveBanner: (b) => mutate((d) => upsertAt(d.banners ??= [], b)),
+  deleteBanner: (id) => mutate((d) => void (d.banners = (d.banners ?? []).filter((b) => b.id !== id))),
+  listPromotions: async () => (await load()).promotions ?? [],
+  savePromotion: (p) => mutate((d) => {
+    if ((d.promotions ?? []).some((x) => x.id !== p.id && x.code === p.code)) throw new Error("Ce code existe déjà.");
+    upsertAt(d.promotions ??= [], p);
+  }),
+  deletePromotion: (id) => mutate((d) => void (d.promotions = (d.promotions ?? []).filter((p) => p.id !== id))),
   kind: "local",
   getCatalog: async () => {
     const d = await load();
