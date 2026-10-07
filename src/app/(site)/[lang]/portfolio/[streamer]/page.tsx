@@ -14,10 +14,10 @@ import { languageAlternates } from "@/lib/seo";
 import { getStore } from "@/lib/store";
 import { tr, trDeep } from "@/lib/translations-en";
 
-export async function generateStaticParams() {
-  const { streamers } = await getStore().getPortfolio();
-  return streamers.map((s) => ({ streamer: s.id }));
-}
+// Les projets sont lus à la demande : leur disponibilité ne dépend pas des
+// données présentes au build, et un ajout dans l'admin est accessible aussitôt.
+export const dynamic = "force-dynamic";
+export const dynamicParams = true;
 
 async function findStreamer(id: string, locale: Locale) {
   const portfolio = trDeep(locale, await getStore().getPortfolio());
