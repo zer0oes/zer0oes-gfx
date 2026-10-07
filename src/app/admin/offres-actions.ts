@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { isUrssafPeriodicity } from "@/lib/finance";
 import type { Formula, Option, Pack } from "@/lib/pricing";
+import { optionCategories, type OptionCategory } from "@/lib/pricing";
 import { isWatermarkLevel } from "@/lib/protection";
 import { getStore } from "@/lib/store";
 
@@ -116,10 +117,22 @@ export async function savePackAction(formData: FormData) {
 
 export async function saveOptionsAction(formData: FormData) {
   await requireAdmin();
+  const deleting = formData.get("bulkDelete") === "1";
   const options: Option[] = [];
-  for (let i = 0; i < 50; i++) {
+  const indices = [...new Set([...formData.keys()].flatMap((key) => {
+    const match = /^name_(\d+)$/.exec(key);
+    return match ? [Number(match[1])] : [];
+  }))].sort((a, b) => {
+    const position = (index: number) => {
+      const raw = formData.get(`position_${index}`);
+      const value = raw === null ? index : Number(raw);
+      return Number.isSafeInteger(value) && value >= 0 ? value : index;
+    };
+    return position(a) - position(b) || a - b;
+  });
+  for (const i of indices) {
     const name = text(formData, `name_${i}`, 200);
-    if (!name || formData.get(`delete_${i}`) === "on") continue;
+    if (!name || (deleting && formData.get(`delete_${i}`) === "on")) continue;
     const price = parseEuros(formData.get(`price_${i}`));
     if (price === null) done(TAB.options, `Option « ${name} » : prix invalide.`);
     let id = slug(text(formData, `id_${i}`, 60) || name);
@@ -130,13 +143,14 @@ export async function saveOptionsAction(formData: FormData) {
       price,
       priceFrom: formData.get(`from_${i}`) === "on" || undefined,
       unit: text(formData, `unit_${i}`, 30) || undefined,
+      category: optionCategories.find((c) => c.id === formData.get(`category_${i}`))?.id as OptionCategory | undefined,
     });
   }
   await getStore().saveOptions(options);
   const translatedFields: Record<string, string> = {};
   let optionIndex = 0;
-  for (let i = 0; i < 50; i++) {
-    if (!text(formData, `name_${i}`, 200) || formData.get(`delete_${i}`) === "on") continue;
+  for (const i of indices) {
+    if (!text(formData, `name_${i}`, 200) || (deleting && formData.get(`delete_${i}`) === "on")) continue;
     const option = options[optionIndex++];
     for (const field of ["name", "unit"]) translatedFields[`${field}_${i}`] = `translation:option:${option.id}:${field}`;
   }

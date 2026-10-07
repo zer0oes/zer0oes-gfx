@@ -2,7 +2,7 @@
 
 import { saveAdminTranslations, saveTranslationFields } from "@/lib/save-admin-translations";
 import { translationsFromForm } from "@/lib/admin-translations";
-import { homeSections, portfolioPageFields } from "@/lib/home-content";
+import { homeSections, portfolioPageFields, offersPageFields, type ContentGroup } from "@/lib/home-content";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -306,7 +306,7 @@ export async function saveCaseStudyTextsAction(formData: FormData) {
 
 // Page d'accueil et textes de la page Portfolio : enregistrés ensemble, chaque formulaire
 // ne remplace que les textes de sa page.
-async function saveContent(formData: FormData, group: "accueil" | "portfolio", back: string) {
+async function saveContent(formData: FormData, group: ContentGroup, back: string) {
   await requireAdmin();
   const store = getStore();
   const stored = await store.getHomeContent();
@@ -315,7 +315,7 @@ async function saveContent(formData: FormData, group: "accueil" | "portfolio", b
     await store.saveHomeContent(resetGroup(stored, group));
     done(back);
   }
-  const fields = group === "portfolio" ? portfolioPageFields : homeSections.flatMap((section) => section.fields);
+  const fields = group === "offres" ? offersPageFields : group === "portfolio" ? portfolioPageFields : homeSections.flatMap((section) => section.fields);
   const translated = translationsFromForm(stored, formData, Object.fromEntries(fields.filter((field) => field.kind !== "work" && field.kind !== "emotes" && field.key !== "hero.emotes").map((field) => [`h:${field.key}`, `en:${field.key}`])));
   await store.saveHomeContent(homeFromForm((key) => formData.get(`h:${key}`)?.toString(), translated, group));
   done(back);
@@ -327,4 +327,8 @@ export async function saveHomeAction(formData: FormData) {
 
 export async function savePortfolioPageAction(formData: FormData) {
   await saveContent(formData, "portfolio", "/admin/portfolio");
+}
+
+export async function saveOffersPageAction(formData: FormData) {
+  await saveContent(formData, "offres", "/admin/offres");
 }

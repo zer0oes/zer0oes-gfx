@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { OfferGuide } from "@/components/OfferGuide";
+import { OfferTabs } from "@/components/OfferTabs";
+import { OptionDisclosure } from "@/components/OptionDisclosure";
 import { PackCard } from "@/components/PackCard";
-import { OfferPrice, PageHeader } from "@/components/ui";
-import { legal } from "@/data/site";
-import { asLocale, t, type Locale } from "@/lib/i18n";
+import { OfferPrice } from "@/components/ui";
+import { resolveHome } from "@/lib/home-content";
+import { asLocale, href, t, type Locale } from "@/lib/i18n";
 import {
   activePacks,
   formatPrice,
@@ -35,6 +38,10 @@ const faq = (locale: Locale, site: PricingSettings, universPrice?: number) => {
   const price = (cents: number) => formatPrice(cents, locale);
   if (locale === "en") {
     return [
+      {
+        q: "Is VAT added to the prices?",
+        a: "No VAT is added to the displayed prices. VAT is not applicable under article 293 B of the French General Tax Code.",
+      },
       {
         q: "How does the creation work after I order?",
         a: "Right after payment, you fill in a short brief: universe, colours, references and the overlays you want (starting, break, ending, just chatting or gameplay). I then show you a first proposal that we refine together: two grouped rounds of revisions are included.",
@@ -70,6 +77,10 @@ const faq = (locale: Locale, site: PricingSettings, universPrice?: number) => {
     ];
   }
   return [
+    {
+      q: "La TVA s’ajoute-t-elle aux prix affichés ?",
+      a: "Aucune TVA ne s’ajoute aux prix affichés. TVA non applicable, article 293 B du Code général des impôts.",
+    },
     {
       q: "Comment se passe la création après la commande ?",
       a: "Juste après le paiement, tu remplis un court brief : univers, couleurs, références et overlays souhaités (démarrage, pause, fin, discussion ou gameplay). Je te présente ensuite une première proposition que l'on ajuste ensemble : deux séries de corrections regroupées sont incluses.",
@@ -110,7 +121,7 @@ const categoryEn: Record<OptionCategory, { label: string; hint: string }> = {
   overlays: { label: "Overlays", hint: "Scenes and stream branding" },
   emotes: { label: "Emotes", hint: "For your chat and subscribers" },
   branding: { label: "Branding", hint: "Your channel across every platform" },
-  motion: { label: "Motion", hint: "To bring your universe to life" },
+  motion: { label: "Animation", hint: "To bring your universe to life" },
 };
 
 // Couleur, dégradé et pictogramme de chaque catégorie d'options
@@ -127,7 +138,7 @@ const categoryLooks: Record<OptionCategory, { color: string; gradient: string; i
   },
   emotes: {
     color: "var(--accent)",
-    gradient: "linear-gradient(135deg, var(--accent), var(--accent-2))",
+    gradient: "linear-gradient(135deg, var(--accent), var(--accent-3))",
     icon: (
       <>
         <circle cx="12" cy="12" r="9" />
@@ -137,7 +148,7 @@ const categoryLooks: Record<OptionCategory, { color: string; gradient: string; i
   },
   branding: {
     color: "var(--accent)",
-    gradient: "linear-gradient(135deg, var(--accent), var(--accent-3))",
+    gradient: "linear-gradient(135deg, var(--accent), var(--accent-2))",
     icon: <path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" />,
   },
   motion: {
@@ -153,15 +164,20 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
   const catalog = await getStore().getCatalog();
   const { settings: site } = catalog;
   const packs = activePacks(catalog.packs);
+  const texts = resolveHome(await getStore().getHomeContent(), lang);
 
   return (
     <>
-      <PageHeader eyebrow={t(lang, { fr: "Offres", en: "Pricing" })} title={t(lang, { fr: "Les offres zer0oes gfx", en: "zer0oes gfx packages" })}>
-        {t(lang, {
-          fr: "Compose ton pack selon tes besoins. Choisis tes overlays : démarrage, pause, fin, discussion ou gameplay.",
-          en: "Build your package around your needs. Pick your overlays: starting, break, ending, just chatting or gameplay.",
-        })}
-      </PageHeader>
+      <header className="mx-auto max-w-3xl px-4 pt-16 pb-8 text-center sm:px-6">
+        <p className="text-sm font-semibold uppercase tracking-widest text-accent">{texts.text("pricing.kicker")}</p>
+        <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">
+          {texts.text("pricing.title")}{" "}
+          <span className="text-gradient">{texts.text("pricing.titleAccent")}</span>
+        </h1>
+        <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
+          {texts.text("pricing.intro")}
+        </p>
+      </header>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {annule && (
@@ -172,40 +188,26 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
             })}
           </p>
         )}
+        <OfferTabs locale={lang} packs={<>
         <div className="grid gap-6 pt-3 md:grid-cols-3">
           {packs.map((p) => (
             <PackCard key={p.id} pack={p} settings={site} order locale={lang} openOptions={details === p.id} />
           ))}
         </div>
-        <section className="mt-6 rounded-2xl border border-border bg-surface p-6 text-sm leading-relaxed text-muted" aria-labelledby="pack-details">
-          <h2 id="pack-details" className="font-semibold text-foreground">{t(lang, { fr: "Pour tous les packs", en: "For every package" })}</h2>
-          <p className="mt-3">{t(lang, { fr: "Overlays au choix : démarrage, pause, fin, discussion ou gameplay. Visuels prêts à utiliser, avec fond transparent lorsque nécessaire ; installation OBS sur devis séparé.", en: "Choose starting, break, ending, chatting or gameplay overlays. Ready-to-use visuals, with transparent backgrounds where needed; OBS setup quoted separately." })}</p>
-          <p className="mt-3">{t(lang, { fr: `Tu as déjà ton logo ? ${formatPrice(site.logoDiscount, lang)} de réduction sur Premier look et Identité signature, et une réduction définie sur le devis pour Univers complet. Fournis un fichier de qualité, idéalement vectoriel ; les retouches et refontes sont chiffrées séparément.`, en: `Already have a logo? Get ${formatPrice(site.logoDiscount, lang)} off First Look and Signature Identity, with a discount agreed in the quote for Full Universe. Supply a quality file, ideally vector artwork; retouching and redesign are quoted separately.` })}</p>
+        <section className="mt-8 text-center text-sm leading-relaxed text-muted" aria-labelledby="pack-value">
+          <h2 id="pack-value" className="font-semibold text-foreground">{texts.text("pricing.explanationTitle")}</h2>
+          <p className="mt-3 whitespace-pre-line">{texts.text("pricing.summary")}</p>
+          <p className="mt-4 font-medium text-foreground">{t(lang, { fr: `2 séries de corrections · Fichiers prêts à utiliser · Acompte de ${site.depositPercent} % possible`, en: `2 rounds of revisions · Ready-to-use files · ${site.depositPercent}% deposit available` })}</p>
         </section>
         <OfferGuide locale={lang} />
 
-        {lang === "en" ? (
-          <p className="mt-6 text-center text-sm text-muted">
-            Prices in euros — VAT not applicable, article 293 B of the French General Tax Code (sole trader exempt from VAT). Secure payment by Stripe, in
-            full or with a {site.depositPercent}% deposit (balance on delivery).
-          </p>
-        ) : (
-          <p className="mt-6 text-center text-sm text-muted">
-            Prix en euros — {legal.vatNote} (entrepreneur individuel non soumis à la TVA). Paiement sécurisé par Stripe, en une fois ou avec un acompte de{" "}
-            {site.depositPercent} % (solde à la livraison). Besoin d&apos;autre chose ?{" "}
-          </p>
-        )}
-
-        <section className="mt-20">
-          <h2 className="font-display text-3xl font-bold">{t(lang, { fr: "Les options à la carte", en: "À la carte add-ons" })}</h2>
-          <p className="mt-2 text-muted">
-            {t(lang, {
-              fr: "Les emotes sont créées dans le style défini ensemble ; les illustrations complexes font l'objet d'un devis adapté.",
-              en: "Emotes are created in the style we define together; complex illustrations are quoted individually.",
-            })}
-          </p>
-          <div className="mt-8 grid gap-5 sm:grid-cols-2">
-            {optionCategories.map((c) => {
+        </>} options={
+        <section>
+          <p className="mb-6 text-center text-sm leading-relaxed text-muted">{texts.text("pricing.optionsIntro")}</p>
+          <div className="grid items-start gap-5 sm:grid-cols-2">
+            {([["overlays", "emotes"], ["branding", "motion"]] as OptionCategory[][]).map((column, columnIndex) => (
+              <div key={columnIndex} className="space-y-5">
+            {column.map((category) => optionCategories.find((c) => c.id === category)!).map((c) => {
               const list = catalog.options.filter((o) => optionCategory(o) === c.id).map((o) => trDeep(lang, o));
               if (!list.length) return null;
               const look = categoryLooks[c.id];
@@ -244,8 +246,8 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
                       <p className="text-xs text-muted">{label.hint}</p>
                     </div>
                   </div>
-                  <ul className="relative mt-5 divide-y divide-border/70">
-                    {list.map((o) => {
+                  {(() => {
+                    const renderOption = (o: (typeof list)[number]) => {
                       const name = splitOptionName(o.name);
                       return (
                         <li
@@ -267,19 +269,52 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
                           </span>
                         </li>
                       );
-                    })}
-                  </ul>
+                    };
+                    if (c.id !== "emotes" && c.id !== "overlays") return <ul className="relative mt-5 divide-y divide-border/70">{list.map(renderOption)}</ul>;
+                    const isAnimated = (o: (typeof list)[number]) => /anim/i.test(o.id) || /anim/i.test(o.name);
+                    const grouped = c.id === "emotes" ? list : list.filter((o) => /overlay|alerte|alert/i.test(o.id) || /overlay|alerte|alert/i.test(o.name));
+                    const other = list.filter((o) => !grouped.includes(o));
+                    return (
+                      <div className="relative mt-5 divide-y divide-border/70">
+                        {[false, true].map((animated) => {
+                          const items = grouped.filter((o) => isAnimated(o) === animated);
+                          if (!items.length) return null;
+                          return (
+                            <OptionDisclosure key={String(animated)}
+                              label={animated ? t(lang, { fr: c.id === "emotes" ? "Animées" : "Animés", en: "Animated" }) : t(lang, { fr: "Statiques", en: "Static" })}
+                              price={
+                                <span
+                                  className="ml-auto shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-right font-semibold"
+                                  style={{ borderColor: "color-mix(in srgb, var(--cat) 45%, transparent)", background: "color-mix(in srgb, var(--cat) 12%, transparent)" }}
+                                >
+                                  <span className="mr-1 text-[0.7em] font-normal text-muted">{t(lang, { fr: "dès", en: "from" })}</span>
+                                  {formatPrice(Math.min(...items.map((o) => o.price)), lang)}
+                                </span>
+                              }>
+                              <ul className="mt-3 divide-y divide-border/70">{items.map(renderOption)}</ul>
+                            </OptionDisclosure>
+                          );
+                        })}
+                        {other.length > 0 && <ul className="divide-y divide-border/70">{other.map(renderOption)}</ul>}
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}
+              </div>
+            ))}
           </div>
-          <p className="mt-4 text-sm text-muted">
-            {t(lang, {
-              fr: "Livraison des visuels prêts à utiliser, avec fond transparent lorsque nécessaire. L'installation dans OBS peut être chiffrée séparément. Les options se cochent dans ton brief après la commande, ou dans ta demande de devis.",
-              en: "Visuals delivered ready to use, with transparent backgrounds where needed. Setup in OBS can be quoted separately. Add-ons are ticked in your brief after ordering, or in your quote request.",
-            })}
-          </p>
+          <div className="mt-8 text-center">
+            <Link href={href(lang, "/contact")} className="inline-flex rounded-full bg-accent px-8 py-3 text-sm font-semibold text-background transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">
+              {t(lang, { fr: "Demander un devis à la carte", en: "Request an à la carte quote" })}
+            </Link>
+            <p className="mt-3 text-sm text-muted">
+              {t(lang, { fr: "Indique les créations dont tu as besoin.", en: "Tell me which creations you need." })}
+            </p>
+          </div>
         </section>
+        } />
 
         <section className="mt-20">
           <h2 className="font-display text-3xl font-bold">{t(lang, { fr: "Questions fréquentes", en: "FAQ" })}</h2>

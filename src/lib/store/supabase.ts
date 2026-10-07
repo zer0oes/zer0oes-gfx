@@ -218,6 +218,7 @@ export const supabaseStore: Store = {
           price: o.price as number,
           priceFrom: (o.price_from as boolean) || undefined,
           unit: opt<string>(o.unit),
+          category: opt<Option["category"]>(o.category),
         }),
       ),
     };
@@ -348,12 +349,17 @@ export const supabaseStore: Store = {
   },
 
   async saveOptions(options) {
-    check(await db().from("options").delete().neq("id", ""));
+    // Vérifier le schéma avant toute écriture, puis enregistrer avant de supprimer.
+    const schema = await db().from("options").select("id, category").limit(0);
+    if (schema.error?.code === "PGRST204" || schema.error?.code === "42703") {
+      throw new Error("La base doit être mise à jour : lance npm run db:setup -- --yes, puis réessaie.");
+    }
+    check(schema);
     if (options.length) {
       check(
         await db()
           .from("options")
-          .insert(
+          .upsert(
             options.map((o, i) => ({
               id: o.id,
               position: i,
@@ -361,10 +367,15 @@ export const supabaseStore: Store = {
               price: o.price,
               price_from: Boolean(o.priceFrom),
               unit: o.unit ?? null,
+              category: o.category ?? null,
             })),
           ),
       );
     }
+    const existing = check(await db().from("options").select("id")) as { id: string }[];
+    const retained = new Set(options.map((option) => option.id));
+    const removed = existing.filter((option) => !retained.has(option.id)).map((option) => option.id);
+    if (removed.length) check(await db().from("options").delete().in("id", removed));
   },
 
   async saveStreamer(s, position) {

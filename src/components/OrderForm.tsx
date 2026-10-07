@@ -55,6 +55,7 @@ export function OrderForm({
           <span aria-hidden className="flex h-4 shrink-0 items-center text-lg leading-none text-accent">{formulaOpen ? "−" : "+"}</span>
         </button>
         <div id={`formula-${pack.id}`} hidden={!formulaOpen} className="mt-4">
+        <p className="mb-3 text-xs leading-relaxed text-muted">{t(locale, { fr: "Scènes au choix : démarrage, pause, fin, discussion ou gameplay. Tu les préciseras dans ton brief après la commande.", en: "Choose starting, break, ending, chatting or gameplay scenes in your brief after ordering." })}</p>
         {formulas.length > 1 ? (
           <fieldset className="space-y-2">
             <legend className="sr-only">{t(locale, { fr: "Formule", en: "Package" })}</legend>
@@ -98,6 +99,7 @@ export function OrderForm({
           </span>
           <span className="shrink-0 font-semibold">−{amount(site.logoDiscount)}</span>
         </label>
+        <p className="mt-2 text-xs leading-relaxed text-muted">{t(locale, { fr: "Fournis un logo de qualité, idéalement vectoriel. Les retouches et refontes sont chiffrées séparément.", en: "Supply a quality logo, ideally vector artwork. Retouching and redesign are quoted separately." })}</p>
         </div>
       </div>
 

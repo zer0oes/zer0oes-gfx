@@ -1,5 +1,8 @@
+import { OptionRows } from "@/components/admin/OptionRows";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
+import { homeDefaultsEn, offersPageFields, resolveHome } from "@/lib/home-content";
+import { saveOffersPageAction } from "../../portfolio-actions";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NetTable, priceCases } from "@/components/admin/NetTable";
@@ -191,7 +194,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
     store.getProtection(),
   ]);
   const euro = (cents: number) => formatPrice(cents);
-  const optionRows = [...options, undefined, undefined, undefined];
+
   const active = packs.filter((p) => !p.archived);
 
   // Simulateur : ventes par mois saisies (paramètres v_<offre>)
@@ -233,10 +236,39 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
 
       {tab === "offres" && (
         <section className="mt-6">
+          <details className={`${card} mb-6`}>
+          <summary className="cursor-pointer font-semibold">Textes de la page Offres</summary>
+          <form action={saveOffersPageAction} className="mt-4 space-y-4">
+            <h2 className="font-semibold">Textes de la page Offres</h2>
+            <p className="text-xs text-muted">En-tête et explication sous les cartes Packs. Un texte vidé reprend la version d’origine.</p>
+            {offersPageFields.map((field) => (
+              <Field key={field.key} label={field.label}>
+                <TranslationInput multiline={field.kind === "long"} translationKey={`en:${field.key}`} englishDefault={homeDefaultsEn[field.key]} name={`h:${field.key}`} defaultValue={resolveHome(translationContent).text(field.key)} rows={3} maxLength={field.max ?? 1200} className={input} />
+              </Field>
+            ))}
+            <button type="submit" className={save}>Enregistrer les textes</button>
+          </form>
+          </details>
           <Intro>Clique sur une offre pour la modifier. L&apos;ordre ici est celui du site.</Intro>
+          <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="px-4 py-3">#</th><th className="px-4 py-3">Offre</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th><th className="px-4 py-3">Ordre</th></tr></thead>
+              <tbody className="divide-y divide-border">
+                {packs.map((p, i) => (
+                  <tr key={p.id} className={`${openPack === p.id ? "bg-accent/10" : "hover:bg-surface/50"} ${p.archived ? "opacity-60" : ""}`}>
+                    <td className="px-4 py-3 text-muted">{i + 1}</td>
+                    <td className="px-4 py-3"><Link href={`/admin/offres?offre=${encodeURIComponent(p.id)}#offre-${p.id}`} className="font-semibold hover:text-accent">{p.name}</Link><p className="mt-1 text-xs text-muted">{p.tagline}</p></td>
+                    <td className="whitespace-nowrap px-4 py-3">{p.priceFrom ? "À partir de " : ""}{euro(p.price)}</td>
+                    <td className="px-4 py-3 text-muted">{p.archived ? "Archivée" : p.checkout ? "En ligne" : "Sur devis"}</td>
+                    <td className="px-4 py-3"><div className="flex gap-2">{(["up", "down"] as const).map((direction) => <form key={direction} action={movePackAction}><input type="hidden" name="id" value={p.id} /><button name="dir" value={direction} disabled={direction === "up" ? i === 0 : i === packs.length - 1} aria-label={`${direction === "up" ? "Monter" : "Descendre"} ${p.name}`} className="rounded border border-border px-2 py-1 text-accent disabled:opacity-30">{direction === "up" ? "↑" : "↓"}</button></form>)}</div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <div className="space-y-3">
             {packs.map((p, i) => (
-              <details key={p.id} id={`offre-${p.id}`} open={openPack === p.id} className={`group ${card} p-0 sm:p-0 ${p.archived ? "opacity-70" : ""}`}>
+              <details key={p.id} id={`offre-${p.id}`} hidden={openPack !== p.id} open={openPack === p.id} className={`group ${card} p-0 sm:p-0 ${p.archived ? "opacity-70" : ""}`}>
                 <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5 sm:px-6 [&::-webkit-details-marker]:hidden">
                   <span>
                     <span className="font-display text-lg font-bold">
@@ -280,18 +312,9 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
       {tab === "options" && (
         <section className="mt-6">
           <Intro>Options proposées en plus des offres (page Offres et commande).</Intro>
-          <form action={saveOptionsAction} className={`${card} space-y-3`}>
-            <p className="text-xs text-muted">Lignes vides ignorées. Cocher « Supprimer » pour retirer une option.</p>
-            {optionRows.map((o, i) => (
-              <div key={i} className="grid items-center gap-2 sm:grid-cols-[1fr_7rem_7rem_auto_auto]">
-                <input type="hidden" name={`id_${i}`} defaultValue={o?.id} />
-                <TranslationInput translationKey={`translation:option:${o?.id ?? "new"}:name`} name={`name_${i}`} defaultValue={o?.name} placeholder="Nouvelle option" aria-label="Nom de l'option" className={input} />
-                <input name={`price_${i}`} defaultValue={o ? euros(o.price) : ""} placeholder="€ HT" inputMode="decimal" aria-label="Prix" className={input} />
-                <TranslationInput translationKey={`translation:option:${o?.id ?? "new"}:unit`} name={`unit_${i}`} defaultValue={o?.unit} placeholder="unité (opt.)" aria-label="Unité" className={input} />
-                <Check name={`from_${i}`} label="À partir de" defaultChecked={o?.priceFrom} />
-                {o ? <Check name={`delete_${i}`} label="Supprimer" /> : <span />}
-              </div>
-            ))}
+          <form action={saveOptionsAction} className="space-y-4">
+            <p className="text-xs text-muted">Clique sur une option pour la modifier, ou sélectionne plusieurs options pour les supprimer.</p>
+            <OptionRows options={options} />
             <button type="submit" className={save}>
               Enregistrer les options
             </button>
