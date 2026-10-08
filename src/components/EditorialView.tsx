@@ -35,14 +35,11 @@ export function EditorialView({
   works,
   streamerName,
   quote,
-  context,
 }: {
   study: EditorialStudy;
   works: Work[];
   streamerName: string;
   quote?: React.ReactNode;
-  // Encart « Le contexte » (chaîne, jeux, besoin), affiché sous la scène d'ouverture
-  context?: React.ReactNode;
 }) {
   const byId = new Map(works.map((w) => [w.id, w]));
   const get = (id?: string) => (id ? byId.get(id) : undefined);
@@ -95,8 +92,6 @@ export function EditorialView({
           <figcaption className="mt-3 text-sm text-muted">{study.heroCaption}</figcaption>
         </figure>
       )}
-
-      {context}
 
       {study.blocks.map((b, i) => (
         <Block key={i} block={b} get={get} openWork={openWork} />

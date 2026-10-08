@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { defaultSettings, packs } from "@/data/packs";
 import { resolveHome } from "./home-content";
 import { packComparison } from "./pack-comparison";
-import { contextFromForm, projectContext, storedContext } from "./project-context";
+import { glossaryFor } from "./glossary";
 
 const texts = resolveHome(null, "fr");
 const row = (id: string) => packComparison(packs, defaultSettings, texts, "fr").find((r) => r.id === id)?.cells;
@@ -23,20 +23,10 @@ test("comparatif : déduit des livrables, options et formules des packs", () => 
   assert.equal(packComparison(edited, defaultSettings, texts, "fr").find((r) => r.id === "overlays")?.cells[0], "3 statiques");
 });
 
-test("contexte d'un projet : enregistré en FR et EN, vide = masqué", () => {
-  const form = new FormData();
-  form.set("channel", " Twitch · variété ");
-  form.set("en:channel", "");
-  form.set("need", "Une identité lisible");
-  form.set("en:need", "A readable identity");
-  form.set("games", "");
-  const content = contextFromForm({ "page:projet:x:games": "ancien", autre: "gardé" }, "x", form);
-  assert.equal(content.autre, "gardé");
-  assert.equal(content["page:projet:x:games"], undefined);
-  assert.equal(storedContext(content, "x").channel, "Twitch · variété");
-  assert.deepEqual(projectContext(content, "x", "en").lines.map((c) => c.value), ["Twitch · variété", "A readable identity"]);
-  assert.deepEqual(projectContext(content, "y", "fr").lines, []);
-  // Intitulés modifiés dans l'admin
-  assert.equal(projectContext({ ...content, "context.title": "Le projet" }, "x", "fr").title, "Le projet");
+test("bulles : textes modifiables, widgets distingués", () => {
   assert.equal(packComparison(packs, defaultSettings, resolveHome({ "compare.row.overlays": "Scènes" }, "fr"), "fr")[1].label, "Scènes");
+  assert.equal(glossaryFor("Widget interactif avancé (sur devis)", texts)?.id, "widgetAvance");
+  assert.equal(glossaryFor("Advanced interactive widget", resolveHome(null, "en"))?.id, "widgetAvance");
+  assert.equal(glossaryFor("Widget personnalisé (barre d’objectifs, tchat, sponsor, partenariats)", texts)?.id, "widget");
+  assert.equal(glossaryFor("5 overlays", resolveHome({ "glossary.overlay.text": "Mon texte" }, "fr"))?.text, "Mon texte");
 });

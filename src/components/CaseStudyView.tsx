@@ -24,14 +24,11 @@ export function CaseStudyView({
   works,
   streamerName,
   quote,
-  context,
 }: {
   study: CaseStudy;
   works: Work[];
   streamerName: string;
   quote?: React.ReactNode;
-  // Encart « Le contexte » (chaîne, jeux, besoin), affiché sous la scène d'ouverture
-  context?: React.ReactNode;
 }) {
   const byId = new Map(works.map((w) => [w.id, w]));
   const pieces = (list: CasePiece[] = []): Piece[] =>
@@ -82,8 +79,6 @@ export function CaseStudyView({
       {hero && (
         <Figure work={hero} onOpen={() => openWork(hero)} caption={study.heroCaption} aside={t(locale, { fr: "Vue d'ensemble", en: "Overview" })} priority className="mt-10" />
       )}
-
-      {context}
 
       {scenes.length > 0 && (
         <section aria-labelledby="scenes" className="mt-12">

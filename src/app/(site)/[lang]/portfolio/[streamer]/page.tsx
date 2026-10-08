@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProjectOverview } from "@/components/ProjectOverview";
 import { CaseStudyView } from "@/components/CaseStudyView";
-import { ProjectContext } from "@/components/ProjectContext";
 import { EditorialView } from "@/components/EditorialView";
 import { TestimonialQuote, testimonialImage } from "@/components/TestimonialQuote";
 import { WorkGrid } from "@/components/WorkGrid";
@@ -11,7 +10,6 @@ import { caseStudies } from "@/data/case-studies";
 import { categories, projectHref, type Category } from "@/data/portfolio";
 import { withStoredTexts, applyTexts } from "@/lib/case-study-texts";
 import { asLocale, href, t, type Locale } from "@/lib/i18n";
-import { projectContext } from "@/lib/project-context";
 import { languageAlternates } from "@/lib/seo";
 import { getStore } from "@/lib/store";
 import { tr, trDeep } from "@/lib/translations-en";
@@ -59,7 +57,6 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
         return translations?.[`translation:study:${streamer.id}:t:${path}`];
       })
     : translatedStudy;
-  const contextBox = <ProjectContext context={projectContext(translations, streamer.id, lang)} />;
   const back = (
     <Link href={to("/portfolio")} className="text-sm text-muted hover:text-foreground">
       {t(lang, { fr: "← Tous les projets", en: "← All projects" })}
@@ -70,9 +67,9 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
       <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
         {back}
         {"layout" in study ? (
-          <EditorialView study={study} works={own} streamerName={streamer.name} quote={quote} context={contextBox} />
+          <EditorialView study={study} works={own} streamerName={streamer.name} quote={quote} />
         ) : (
-          <CaseStudyView study={study} works={own} streamerName={streamer.name} quote={quote} context={contextBox} />
+          <CaseStudyView study={study} works={own} streamerName={streamer.name} quote={quote} />
         )}
       </div>
     );
@@ -102,8 +99,6 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
           </a>
         )}
       </header>
-
-      {contextBox}
 
       <nav aria-label={t(lang, { fr: "Types de réalisations", en: "Types of work" })} className="mt-10 border-b border-border">
         <ul className="-mb-px flex gap-1 overflow-x-auto">

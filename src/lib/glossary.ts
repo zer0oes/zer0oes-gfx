@@ -10,6 +10,7 @@ export const glossary = [
   { id: "overlay", match: /overlay/i },
   { id: "alertes", match: /alerte|alert/i },
   { id: "emotes", match: /emote/i },
+  { id: "widgetAvance", match: /widget.*(interacti|avancé|advanced)|(interacti|advanced).*widget/i },
   { id: "widget", match: /widget/i },
   { id: "stinger", match: /stinger/i },
   { id: "panneaux", match: /panneaux|panels/i },
