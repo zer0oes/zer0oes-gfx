@@ -32,7 +32,6 @@ export const metadata: Metadata = { title: "Offres et réglages" };
 // Textes de la page Offres, regroupés comme sur le site
 const offerTextGroups: { title: string; hint?: string; match: (f: HomeField) => boolean }[] = [
   { title: "En-tête et explication", match: (f) => f.key.startsWith("pricing.") },
-  { title: "Tableau comparatif", hint: "{n} est remplacé par le nombre lu dans le pack, {prix} par l’écart de prix entre formules, {acompte} par le pourcentage d’acompte.", match: (f) => f.key.startsWith("compare.") },
   { title: "Bulles « ? » des termes techniques", match: (f) => f.key.startsWith("glossary.") },
   { title: "Créations à la carte", match: (f) => f.key.startsWith("options.") },
 ];
