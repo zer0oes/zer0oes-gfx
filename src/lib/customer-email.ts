@@ -1,5 +1,9 @@
 import { siteOrigin } from "./site-origin";
 
+// Gmail fetches images remotely; localhost assets are unreachable even for local test mails.
+const emailAssetOrigin = /^https:\/\//.test(siteOrigin) && !/^https:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/i.test(siteOrigin)
+  ? siteOrigin : "https://www.zer0oes-gfx.com";
+
 export function escapeEmailHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
 }
@@ -55,16 +59,16 @@ export function customerEmailHtml(subject: string, text: string, contactReceipt 
 export function emailLayout(subject: string, body: string, { en = false, footer, admin = false }: { en?: boolean; footer: string; admin?: boolean }) {
   return `<!doctype html><html lang="${en ? "en" : "fr"}" xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="x-apple-disable-message-reformatting"><title>${escape(subject)}</title>
 <!--[if !mso]><!--><style>
-@font-face{font-family:Poppins;font-style:normal;font-weight:400;src:url('${escape(siteOrigin)}/fonts/email/Poppins-Regular.ttf') format('truetype')}
-@font-face{font-family:Poppins;font-style:normal;font-weight:700;src:url('${escape(siteOrigin)}/fonts/email/Poppins-Bold.ttf') format('truetype')}
-@font-face{font-family:Lexend;font-style:normal;font-weight:100 900;src:url('${escape(siteOrigin)}/fonts/email/Lexend-Variable.ttf') format('truetype')}
+@font-face{font-family:Poppins;font-style:normal;font-weight:400;src:url('${escape(emailAssetOrigin)}/fonts/email/Poppins-Regular.ttf') format('truetype')}
+@font-face{font-family:Poppins;font-style:normal;font-weight:700;src:url('${escape(emailAssetOrigin)}/fonts/email/Poppins-Bold.ttf') format('truetype')}
+@font-face{font-family:Lexend;font-style:normal;font-weight:100 900;src:url('${escape(emailAssetOrigin)}/fonts/email/Lexend-Variable.ttf') format('truetype')}
 </style><!--<![endif]-->
 <!--[if mso]><style>table{border-collapse:collapse}td,p,a,h1{font-family:Arial,sans-serif!important}</style><![endif]--></head>
 <body style="margin:0;padding:0;background-color:#39304f;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#39304f" style="background-color:#39304f;"><tr><td align="center" style="padding:32px 12px;">
 <!--[if mso]><table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0"><tr><td><![endif]-->
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#1d1a2b" style="width:100%;max-width:600px;background-color:#1d1a2b;border:1px solid #2a2640;border-radius:20px;border-collapse:separate;border-spacing:0;overflow:hidden;font-family:Poppins,Arial,Helvetica,sans-serif;color:#ece9f5;">
-<tr><td align="center" bgcolor="#15131f" style="background-color:#15131f;padding:30px 24px;border-bottom:1px solid #2a2640;border-radius:20px 20px 0 0;"><img src="${escape(siteOrigin)}/logo-zeroes-gfx.png" width="220" alt="zer0oes gfx" border="0" style="display:block;width:220px;max-width:100%;height:auto;color:#ece9f5;font-size:20px;"></td></tr>
+<tr><td align="center" bgcolor="#15131f" style="background-color:#15131f;background-image:linear-gradient(#15131f,#15131f);padding:30px 24px;border-bottom:1px solid #2a2640;border-radius:20px 20px 0 0;"><img src="${escape(emailAssetOrigin)}/logo-zeroes-gfx.png" width="220" alt="zer0oes gfx" border="0" style="display:block;width:220px;max-width:100%;height:auto;color:#ece9f5;font-size:20px;"></td></tr>
 <tr><td style="padding:32px 24px;"><p style="margin:0 0 12px;color:#a78bfa;font-size:11px;line-height:18px;font-weight:bold;letter-spacing:2px;">${admin ? "NOTIFICATION ADMIN" : "ZER0OES GFX"}</p><h1 style="font-family:Lexend,Poppins,Arial,Helvetica,sans-serif;margin:0 0 24px;color:#ece9f5;font-size:26px;line-height:34px;font-weight:bold;">${escape(subject)}</h1>${body}${admin ? "" : '<p style="margin:24px 0 0;color:#ece9f5;font-size:15px;line-height:26px;"><strong>Aurore</strong> <span style="color:#a39fb8;">· zer0oes gfx</span></p>'}</td></tr>
 <tr><td bgcolor="#15131f" style="background-color:#15131f;padding:20px 24px;border-top:1px solid #2a2640;text-align:center;border-radius:0 0 20px 20px;color:#a39fb8;font-size:12px;line-height:20px;">${footer}</td></tr></table>
 <!--[if mso]></td></tr></table><![endif]-->

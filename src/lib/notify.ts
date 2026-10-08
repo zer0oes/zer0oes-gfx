@@ -4,6 +4,16 @@
 
 import { customerEmailHtml } from "./customer-email";
 import { adminEmailHtml, nonEmptyNotificationFields } from "./admin-email";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+async function inlineLogo(html: string) {
+  const content = await readFile(path.join(process.cwd(), "public", "logo-zeroes-gfx.png"));
+  return {
+    html: html.replace(/src="https?:\/\/[^"\s]+\/logo-zeroes-gfx\.png"/, 'src="cid:zer0oes-logo"'),
+    attachment: { filename: "zer0oes-logo.png", content: content.toString("base64"), content_type: "image/png", content_id: "zer0oes-logo" },
+  };
+}
 
 type Message = {
   subject: string;
@@ -24,6 +34,7 @@ export async function notify({ subject, replyTo, fields }: Message) {
     return;
   }
 
+  const logo = await inlineLogo(adminEmailHtml(subject, fields, replyTo));
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -36,7 +47,8 @@ export async function notify({ subject, replyTo, fields }: Message) {
       reply_to: replyTo,
       subject,
       text,
-      html: adminEmailHtml(subject, fields, replyTo),
+      html: logo.html,
+      attachments: [logo.attachment],
     }),
   });
   if (!res.ok) {
@@ -67,6 +79,7 @@ export async function sendToCustomer({
     console.info(`[e-mail client → ${to}] ${subject}\n${text}${files}`);
     return { sent: false };
   }
+  const logo = await inlineLogo(customerEmailHtml(subject, text, contactReceipt));
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) },
@@ -76,8 +89,8 @@ export async function sendToCustomer({
       reply_to: process.env.NOTIFY_EMAIL,
       subject,
       text,
-      attachments: attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString("base64") })),
-      html: customerEmailHtml(subject, text, contactReceipt),
+      attachments: [...(attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString("base64") })) ?? []), logo.attachment],
+      html: logo.html,
     }),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);

@@ -31,7 +31,9 @@ test("all customer sends retain text, attachments and idempotency alongside HTML
     const payload = JSON.parse(String(request?.body));
     assert.equal(payload.text, 'Voici ta facture.');
     assert.ok(payload.html.includes('Voici ta facture.'));
-    assert.deepEqual(payload.attachments, [{ filename: 'facture.pdf', content: 'AQI=' }]);
+    assert.deepEqual(payload.attachments[0], { filename: 'facture.pdf', content: 'AQI=' });
+    assert.equal(payload.attachments[1].content_id, 'zer0oes-logo');
+    assert.ok(payload.html.includes('src="cid:zer0oes-logo"'));
     assert.equal((request?.headers as Record<string, string>)['Idempotency-Key'], 'invoice-test');
   } finally {
     globalThis.fetch = oldFetch;

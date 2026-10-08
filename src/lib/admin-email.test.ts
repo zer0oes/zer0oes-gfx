@@ -29,6 +29,7 @@ test("admin notifications retain recipient, reply address and plain text", async
     assert.equal(payload.reply_to, 'client@example.com');
     assert.equal(payload.text, 'Projet :\nLogo');
     assert.ok(String(payload.html).includes('Logo'));
+    assert.ok(String(payload.html).includes('src="cid:zer0oes-logo"'));
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = oldKey;
