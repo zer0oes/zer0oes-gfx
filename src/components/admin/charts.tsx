@@ -1,8 +1,9 @@
-// Graphiques du tableau de bord : SVG rendus côté serveur (aucun script), chacun avec
+// Graphiques du tableau de bord : SVG rendus côté serveur, chacun avec
 // une description pour les lecteurs d'écran et un tableau des données.
 import type { Declaration, SeriesPoint } from "@/lib/dashboard";
 import { declarationStateLabels, formatDay, kindLabels } from "@/lib/dashboard";
 import { formatPrice } from "@/lib/pricing";
+import { ChartTooltip } from "./ChartTooltip";
 
 export const colors = {
   acompte: "var(--accent)",
@@ -137,7 +138,7 @@ export function PaymentsChart({ points }: { points: SeriesPoint[] }) {
 
   return (
     <>
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={`Encaissements sur la période : ${formatPrice(total)} de chiffre d'affaires, remboursements déduits. Détail dans le tableau des données.`}>
+      <ChartTooltip><svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={`Encaissements sur la période : ${formatPrice(total)} de chiffre d'affaires, remboursements déduits. Détail dans le tableau des données.`}>
         <Axes max={max} min={min} labels={xLabels(points, x)} />
         {points.map((p, i) => {
           let top = 0;
@@ -151,19 +152,15 @@ export function PaymentsChart({ points }: { points: SeriesPoint[] }) {
               {segs
                 .filter((s) => s.to > s.from)
                 .map((s) => (
-                  <rect key={s.k} x={x(i) - bw / 2} width={bw} y={y(s.to)} height={y(s.from) - y(s.to)} fill={colors[s.k]}>
-                    <title>{`${p.label} — ${kindLabels[s.k]} : ${formatPrice(p[s.k])}`}</title>
-                  </rect>
+                  <rect key={s.k} x={x(i) - bw / 2} width={bw} y={y(s.to)} height={y(s.from) - y(s.to)} fill={colors[s.k]} tabIndex={0} aria-label={`${p.label} — ${kindLabels[s.k]} : ${formatPrice(p[s.k])}`} data-chart-label={`${p.label} · ${kindLabels[s.k]}`} data-chart-value={formatPrice(p[s.k])} data-chart-total={formatPrice(p.complet + p.acompte + p.solde)} data-chart-color={colors[s.k]} className="cursor-pointer outline-none focus:stroke-foreground focus:stroke-2" />
                 ))}
               {p.refunds > 0 && (
-                <rect x={x(i) - bw / 2} width={bw} y={y(0)} height={y(-p.refunds) - y(0)} fill={colors.remboursement}>
-                  <title>{`${p.label} — Remboursements : −${formatPrice(p.refunds)}`}</title>
-                </rect>
+                <rect x={x(i) - bw / 2} width={bw} y={y(0)} height={y(-p.refunds) - y(0)} fill={colors.remboursement} tabIndex={0} aria-label={`${p.label} — Remboursements : −${formatPrice(p.refunds)}`} data-chart-label={`${p.label} · Remboursements`} data-chart-value={`−${formatPrice(p.refunds)}`} data-chart-total={formatPrice(p.complet + p.acompte + p.solde)} data-chart-color={colors.remboursement} className="cursor-pointer outline-none focus:stroke-foreground focus:stroke-2" />
               )}
             </g>
           );
         })}
-      </svg>
+      </svg></ChartTooltip>
       <Legend
         items={[
           { label: kindLabels.complet, color: colors.complet },
@@ -194,7 +191,7 @@ export function CumulativeChart({ points }: { points: SeriesPoint[] }) {
 
   return (
     <>
-      <svg
+      <ChartTooltip><svg
         viewBox={`0 0 ${W} ${H}`}
         className="h-auto w-full"
         role="img"
@@ -206,13 +203,11 @@ export function CumulativeChart({ points }: { points: SeriesPoint[] }) {
             <polyline points={line(k)} fill="none" stroke={k === "cumulativeRevenue" ? colors.revenue : colors.net} strokeWidth="2.5" strokeLinejoin="round" />
             {points.length <= 31 &&
               past.map((p, i) => (
-                <circle key={p.key} cx={x(i)} cy={y(p[k])} r="3" fill={k === "cumulativeRevenue" ? colors.revenue : colors.net}>
-                  <title>{`${p.label} — ${k === "cumulativeRevenue" ? "Chiffre d'affaires" : "Net"} cumulé : ${formatPrice(p[k])}`}</title>
-                </circle>
+                <circle key={p.key} cx={x(i)} cy={y(p[k])} r="3" fill={k === "cumulativeRevenue" ? colors.revenue : colors.net} tabIndex={0} aria-label={`${p.label} : ${formatPrice(p[k])}`} data-chart-label={`${p.label} · ${k === "cumulativeRevenue" ? "CA" : "Net"}`} data-chart-value={formatPrice(p[k])} data-chart-color={k === "cumulativeRevenue" ? colors.revenue : colors.net} />
               ))}
           </g>
         ))}
-      </svg>
+      </svg></ChartTooltip>
       <Legend
         items={[
           { label: "Chiffre d'affaires cumulé", color: colors.revenue, line: true },

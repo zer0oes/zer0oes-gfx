@@ -2,6 +2,9 @@
 // Si RESEND_API_KEY et NOTIFY_EMAIL sont définies, un e-mail est envoyé via
 // l'API Resend. Sinon le message est seulement affiché dans les logs serveur.
 
+import { customerEmailHtml } from "./customer-email";
+import { adminEmailHtml, nonEmptyNotificationFields } from "./admin-email";
+
 type Message = {
   subject: string;
   replyTo?: string;
@@ -9,6 +12,7 @@ type Message = {
 };
 
 export async function notify({ subject, replyTo, fields }: Message) {
+  fields = nonEmptyNotificationFields(fields);
   const text = Object.entries(fields)
     .map(([k, v]) => `${k} :\n${v || "—"}`)
     .join("\n\n");
@@ -32,6 +36,7 @@ export async function notify({ subject, replyTo, fields }: Message) {
       reply_to: replyTo,
       subject,
       text,
+      html: adminEmailHtml(subject, fields, replyTo),
     }),
   });
   if (!res.ok) {
@@ -70,6 +75,7 @@ export async function sendToCustomer({
       subject,
       text,
       attachments: attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString("base64") })),
+      html: customerEmailHtml(subject, text),
     }),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);

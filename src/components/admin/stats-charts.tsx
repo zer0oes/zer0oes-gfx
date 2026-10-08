@@ -1,4 +1,5 @@
 // Graphiques de la page Statistiques : SVG rendus côté serveur, avec description et tableau des données.
+import { ChartTooltip } from "./ChartTooltip";
 import type { Ranked, StatsPoint } from "@/lib/stats";
 
 const W = 720;
@@ -29,7 +30,7 @@ export function VisitsChart({ points }: { points: StatsPoint[] }) {
 
   return (
     <>
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={`${nf(visitors)} visiteurs et ${nf(views)} pages vues sur la période. Détail dans le tableau des données.`}>
+      <ChartTooltip><svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={`${nf(visitors)} visiteurs et ${nf(views)} pages vues sur la période. Détail dans le tableau des données.`}>
         <g fontSize="15" fill="var(--muted)">
           {[max, max / 2, 0].map((t) => (
             <g key={t}>
@@ -50,18 +51,14 @@ export function VisitsChart({ points }: { points: StatsPoint[] }) {
         {points.map((p, i) => (
           <g key={p.key}>
             {p.views > 0 && (
-              <rect x={x(i) - bw / 2} width={bw} y={y(p.views)} height={y(0) - y(p.views)} rx="2" fill="var(--accent)" opacity="0.35">
-                <title>{`${p.label} : ${nf(p.views)} pages vues`}</title>
-              </rect>
+              <rect x={x(i) - bw / 2} width={bw} y={y(p.views)} height={y(0) - y(p.views)} rx="2" fill="var(--accent)" opacity="0.35" tabIndex={0} aria-label={`${p.label} : ${nf(p.views)} pages vues`} data-chart-label={p.label} data-chart-value={`${nf(p.views)} pages vues`} data-chart-color="var(--accent)" className="cursor-pointer focus:stroke-foreground focus:stroke-2" />
             )}
             {p.visitors > 0 && (
-              <rect x={x(i) - bw / 4} width={bw / 2} y={y(p.visitors)} height={y(0) - y(p.visitors)} rx="2" fill="var(--accent)">
-                <title>{`${p.label} : ${nf(p.visitors)} visiteurs`}</title>
-              </rect>
+              <rect x={x(i) - bw / 4} width={bw / 2} y={y(p.visitors)} height={y(0) - y(p.visitors)} rx="2" fill="var(--accent)" tabIndex={0} aria-label={`${p.label} : ${nf(p.visitors)} visiteurs`} data-chart-label={p.label} data-chart-value={`${nf(p.visitors)} visiteurs`} data-chart-color="var(--accent)" className="cursor-pointer focus:stroke-foreground focus:stroke-2" />
             )}
           </g>
         ))}
-      </svg>
+      </svg></ChartTooltip>
       <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted" aria-hidden="true">
         <li className="flex items-center gap-2">
           <span className="size-3 rounded-sm" style={{ background: "var(--accent)" }} />
@@ -106,9 +103,9 @@ export function RankList({ items, empty, color = "var(--accent-2)" }: { items: R
   const max = Math.max(1, ...items.map((i) => i.count));
   const total = items.reduce((s, i) => s + i.count, 0);
   return (
-    <ul className="space-y-3">
+    <ChartTooltip><ul className="space-y-3">
       {items.map((i) => (
-        <li key={i.label}>
+        <li key={i.label} tabIndex={0} data-chart-label={i.label} data-chart-value={`${nf(i.count)} (${Math.round((i.count / total) * 100)} %)`} data-chart-color={color} className="rounded-md outline-none focus-visible:ring-1 focus-visible:ring-accent">
           <div className="flex justify-between gap-4 text-sm">
             <span className="min-w-0 break-words">{i.label}</span>
             <span className="shrink-0 tabular-nums">
@@ -120,6 +117,6 @@ export function RankList({ items, empty, color = "var(--accent-2)" }: { items: R
           </span>
         </li>
       ))}
-    </ul>
+    </ul></ChartTooltip>
   );
 }

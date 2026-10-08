@@ -1,6 +1,10 @@
 import "server-only";
 import { getStore } from "@/lib/store";
 
+export async function countPendingQuotes() {
+  return (await getStore().listQuotes()).filter((quote) => quote.status === "demande").length;
+}
+
 export async function countPendingOrders() {
   const store = getStore();
   const [paid, briefReceived, waiting] = await Promise.all([
