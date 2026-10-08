@@ -199,6 +199,7 @@ export function quoteFromMetadata(m: Stripe.Metadata): CheckoutQuote | null {
 }
 
 export function paymentSummary(o: Pick<Order, "totalPrice" | "paymentType" | "depositPercent">) {
+  if (o.paymentType === "acompte" && o.depositPercent === 0) return `Devis accepté — règlement de ${formatPrice(o.totalPrice)}`;
   return paymentLabel(o.totalPrice, o.paymentType, {
     depositPercent: o.depositPercent,
     logoDiscount: 0,
@@ -325,6 +326,17 @@ export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
     return;
   }
 
+  if (m.kind === "devis_paiement" && m.orderId) {
+    const key = paymentIntentId(s) ?? s.id;
+    const amount = s.amount_total ?? 0;
+    if (!await store.recordQuotePayment(m.orderId, key, amount, fee)) throw new Error("Paiement du devis incohérent : vérification nécessaire.");
+    const order = await store.getOrder(m.orderId);
+    if (!order) throw new Error("Commande du devis introuvable.");
+    await invoiceForPayment(order.id, { key, kind: amount === order.totalPrice ? "complete" : "acompte", amount, paidAt: new Date(s.created * 1000).toISOString() });
+    await notify({ subject: `[Paiement devis] ${order.offerName}`, fields: { Commande: order.id, Client: order.customerEmail, Montant: formatPrice(amount) } });
+    return;
+  }
+
   const q = quoteFromMetadata(m);
   const customerEmail = s.customer_details?.email ?? "";
   const customerName = s.customer_details?.name ?? "";
@@ -358,6 +370,23 @@ export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
       Session: s.id,
     },
   });
+}
+
+// Reconcile the recorded Checkout session when a webhook is delayed or the local
+// server cannot receive it. Never trust the return URL as proof of payment.
+export async function syncQuotePayment(order: Order): Promise<Order> {
+  if (order.packId !== "sur-mesure" || !order.balanceSessionId?.startsWith("cs_") || balanceDue(order) <= 0) return order;
+  const stripe = getStripe();
+  if (!stripe) return order;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(order.balanceSessionId);
+    if (session.payment_status !== "paid" || session.currency !== "eur" || session.metadata?.orderId !== order.id) return order;
+    const key = paymentIntentId(session) ?? session.id;
+    if (session.metadata.kind === "devis_paiement" && order.paymentIntentId === key && await getStore().getInvoiceByKey(key)) return order;
+    if (session.metadata.kind !== "devis_paiement" && session.metadata.kind !== "solde") return order;
+    await handleCheckoutCompleted(session);
+  } catch (e) { console.error(e); }
+  return await getStore().getOrder(order.id) ?? order;
 }
 
 // Paiement différé refusé : seule Aurore est prévenue, rien n'est enregistré comme payé.
@@ -455,7 +484,7 @@ export async function attachBrief(sessionId: string, brief: Record<string, strin
   await store.updateOrder(order.id, {
     brief,
     briefReceivedAt: order.briefReceivedAt ?? new Date().toISOString(),
-    ...(order.status === "payee" ? { status: "brief_recu" as const } : {}),
+    ...(order.status === "payee" || order.status === "brief_attente" ? { status: "brief_recu" as const } : {}),
     // Commande de démo : l'e-mail du client arrive avec le brief.
     ...(!order.customerEmail && email ? { customerEmail: email } : {}),
   });
@@ -468,6 +497,11 @@ export async function markBalancePaid(orderId: string, amount: number, fee?: num
   const order = await store.getOrder(orderId);
   if (!order) return;
   const key = paymentKey ?? order.balanceSessionId ?? `solde_${orderId}`;
+  if (order.packId === "sur-mesure" && order.amountPaid === 0) {
+    if (!await store.recordQuotePayment(orderId, key, amount, fee)) throw new Error("Paiement du devis incohérent.");
+    await invoiceForPayment(orderId, { key, kind: amount === order.totalPrice ? "complete" : "acompte", amount, paidAt: new Date().toISOString() });
+    return;
+  }
   if (order.balancePaidAt) {
     // Webhook rejoué : la facture du solde est reprise si elle n'a pas abouti
     await invoiceForPayment(orderId, { key, kind: "solde", amount, paidAt: order.balancePaidAt });
@@ -496,7 +530,9 @@ export async function createBalanceLink(orderId: string, baseUrl: string, return
   const store = getStore();
   const order = await store.getOrder(orderId);
   if (!order) throw new Error("Commande introuvable.");
-  const due = balanceDue(order);
+  const initialQuote = order.packId === "sur-mesure" && order.amountPaid === 0;
+  const deposit = initialQuote && order.paymentType === "acompte" && order.depositPercent > 0;
+  const due = deposit ? Math.round(order.totalPrice * order.depositPercent / 100) : balanceDue(order);
   if (due <= 0) throw new Error("Aucun solde à régler pour cette commande.");
 
   const stripe = getStripe();
@@ -513,7 +549,7 @@ export async function createBalanceLink(orderId: string, baseUrl: string, return
             currency: "eur",
             unit_amount: due,
             product_data: {
-              name: locale === "en" ? `zer0oes gfx — ${trOfferName("en", order.offerName)} — Balance` : `zer0oes gfx — ${order.offerName} — Solde`,
+              name: `zer0oes gfx — ${trOfferName(locale, order.offerName)} — ${deposit ? (locale === "en" ? "Deposit" : "Acompte") : initialQuote ? (locale === "en" ? "Full payment" : "Règlement intégral") : (locale === "en" ? "Balance" : "Solde")}`,
               description:
                 locale === "en"
                   ? `Balance of the order of ${new Date(order.createdAt).toLocaleDateString("en-GB")}`
@@ -522,7 +558,7 @@ export async function createBalanceLink(orderId: string, baseUrl: string, return
           },
         },
       ],
-      metadata: { kind: "solde", orderId: order.id, amount: String(due) },
+      metadata: { kind: initialQuote ? "devis_paiement" : "solde", orderId: order.id, amount: String(due) },
       locale: locale === "en" ? "en" : "fr",
       success_url: `${baseUrl}${returnPath ? `${returnPath}?retour=solde` : "/merci/solde"}`,
       cancel_url: `${baseUrl}${returnPath ?? "/"}`,

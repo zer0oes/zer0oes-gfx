@@ -5,6 +5,26 @@ import { completionPatch, filesExpireAt, filesExpired, orderSteps, statusMessage
 const order = (o: Partial<Parameters<typeof orderSteps>[0]> = {}) => ({ status: "payee" as const, totalPrice: 99000, amountPaid: 29700, ...o });
 const states = (s: ReturnType<typeof orderSteps>) => s.map((x) => x.state[0]).join("");
 
+test("un devis payé avec demande initiale reste en attente du véritable brief", () => {
+  const steps = orderSteps(order({ status: "brief_recu", paymentType: "acompte", depositPercent: 30, amountPaid: 29700, brief: { Projet: "Demande initiale" }, briefCompleted: false }), []);
+  assert.deepEqual(steps.slice(0, 2).map((step) => step.id), ["acompte", "brief"]);
+  assert.equal(steps[0].state, "fait");
+  assert.equal(steps[1].label, "Brief à compléter");
+  assert.equal(steps[1].state, "en_cours");
+});
+
+test("l’acompte initial et le solde avant livraison sont deux étapes distinctes", () => {
+  const initial = order({ paymentType: "acompte", depositPercent: 30, amountPaid: 0, briefReceivedAt: "2026-10-08" });
+  const steps = orderSteps(initial, []);
+  assert.equal(steps.find((s) => s.id === "acompte")?.state, "en_cours");
+  assert.equal(steps.find((s) => s.id === "solde")?.state, "a_venir");
+  assert.match(statusMessage(steps), /acompte initial/);
+  const approved = orderSteps({ ...initial, status: "livree", amountPaid: 29700 }, [{ approvedAt: "x", storagePath: "logo.png" }]);
+  assert.equal(approved.find((s) => s.id === "acompte")?.state, "fait");
+  assert.equal(approved.find((s) => s.id === "solde")?.state, "en_cours");
+  assert.equal(approved.find((s) => s.id === "livraison")?.state, "a_venir");
+});
+
 test("étapes : du brief à la livraison", () => {
   assert.equal(states(orderSteps(order(), [])), "eaaaa"); // e = en cours, a = à venir, f = fait
   assert.equal(states(orderSteps(order({ status: "brief_recu" }), [])), "faaaa");

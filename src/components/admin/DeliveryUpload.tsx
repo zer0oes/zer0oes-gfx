@@ -27,6 +27,7 @@ export function DeliveryUpload({
   const [label, setLabel] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [alsoHd, setAlsoHd] = useState(false);
 
   async function send() {
     if (!file) return;
@@ -39,7 +40,7 @@ export function DeliveryUpload({
         const put = await fetch(ticket.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": ticket.contentType } });
         if (!put.ok) throw new Error(`Envoi vers S3 refusé (${put.status}).`);
         const done = previewFor
-          ? await attachDeliverablePreview({ orderId, id: previewFor, path: ticket.path })
+          ? await attachDeliverablePreview({ orderId, id: previewFor, path: ticket.path, alsoHd, hdLabel: file.name })
           : await finalizeDeliverable({ orderId, label: label || file.name, path: ticket.path, size: file.size, targetId });
         if ("error" in done && done.error) throw new Error(done.error);
       } else if (ticket.mode === "signed") {
@@ -49,7 +50,7 @@ export function DeliveryUpload({
           .uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type || "application/octet-stream" });
         if (error) throw new Error(error.message);
         const done = previewFor
-          ? await attachDeliverablePreview({ orderId, id: previewFor, path: ticket.path })
+          ? await attachDeliverablePreview({ orderId, id: previewFor, path: ticket.path, alsoHd, hdLabel: file.name })
           : await finalizeDeliverable({ orderId, label: label || file.name, path: ticket.path, size: file.size, targetId });
         if ("error" in done && done.error) throw new Error(done.error);
       } else {
@@ -57,6 +58,7 @@ export function DeliveryUpload({
         fd.set("orderId", orderId);
         fd.set("label", label || file.name);
         if (previewFor) fd.set("previewFor", previewFor);
+        if (previewFor && alsoHd) fd.set("alsoHd", "1");
         if (targetId) fd.set("targetId", targetId);
         fd.set("file", file);
         const res = await uploadDeliverableDirect(fd);
@@ -64,7 +66,7 @@ export function DeliveryUpload({
       }
       setFile(null);
       setLabel("");
-      setStatus(previewFor ? "Aperçu ajouté." : "Fichier ajouté.");
+      setStatus(previewFor ? alsoHd ? "Aperçu publié et original ajouté aux fichiers HD." : "Aperçu publié dans l’espace client." : "Fichier ajouté.");
       router.refresh();
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Échec de l'envoi.");
@@ -82,7 +84,7 @@ export function DeliveryUpload({
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="file"
-          accept="image/png,image/jpeg,image/webp"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg"
           aria-label="Aperçu (image ou vidéo basse résolution)"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           className={`${fileInput} max-w-xs text-xs`}
@@ -90,6 +92,7 @@ export function DeliveryUpload({
         <button type="button" onClick={send} disabled={!file || busy} className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40">
           {busy ? "Envoi…" : "Envoyer l'aperçu"}
         </button>
+        <label className="flex w-full items-start gap-2 text-xs"><input type="checkbox" checked={alsoHd} disabled={busy} onChange={(event) => setAlsoHd(event.target.checked)} className="mt-0.5 accent-[var(--accent)]" /><span>Utiliser aussi l’original comme fichier HD<span className="mt-1 block text-muted">L’aperçu reste protégé. L’original sera téléchargeable après validation et paiement intégral.</span></span></label>
         {status && (
           <span role="status" className="text-xs text-muted">
             {status}

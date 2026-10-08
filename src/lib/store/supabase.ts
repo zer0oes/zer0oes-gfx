@@ -77,6 +77,7 @@ function toWork(r: Row, emotes: Row[]): Work {
 
 function toOrder(r: Row, notes: Row[]): Order {
   return {
+    revisionsIncluded: Number(r.revisions_included ?? 2),
     id: r.id as string,
     createdAt: r.created_at as string,
     updatedAt: r.updated_at as string,
@@ -210,6 +211,44 @@ async function fetchOrders(filter: (q: OrdersQuery) => OrdersQuery) {
 }
 
 export const supabaseStore: Store = {
+  async reopenQuote(token) {
+    return Boolean(check(await db().rpc("reopen_project_quote", { quote_token: token })));
+  },
+  async recordQuotePayment(id, key, amount, fee) {
+    return Boolean(check(await db().rpc("record_quote_payment", { target_id: id, payment_key: key, paid_amount: amount, paid_fee: fee ?? null })));
+  },
+  async listQuotes() {
+    return (check(await db().from("project_quotes").select("content").order("created_at", { ascending: false })) as { content: import("@/lib/quotes").ProjectQuote }[]).map((r) => r.content);
+  },
+  async getQuote(id) {
+    const row = check(await db().from("project_quotes").select("content").eq("id", id).maybeSingle());
+    return row?.content as import("@/lib/quotes").ProjectQuote ?? null;
+  },
+  async getQuoteByToken(token) {
+    const row = check(await db().from("project_quotes").select("content").eq("token", token).maybeSingle());
+    return row?.content as import("@/lib/quotes").ProjectQuote ?? null;
+  },
+  async createQuote(q) { check(await db().from("project_quotes").insert({ id: q.id, token: q.token, content: q })); },
+  async deleteQuote(id, expected) {
+    const rows = check(await db().from("project_quotes").delete().eq("id", id)
+      .eq("content->>updatedAt", expected).neq("content->>status", "accepte")
+      .is("content->>orderId", null).select("id"));
+    return rows?.length === 1;
+  },
+  async proposeQuote(q, expected) {
+    const rows = check(await db().from("project_quotes").update({ content: q }).eq("id", q.id)
+      .eq("content->>updatedAt", expected).in("content->>status", ["demande", "propose"])
+      .is("content->>sentAt", null).is("content->>sendingAt", null).is("content->>orderId", null).select("id"));
+    return rows?.length === 1;
+  },
+  async saveQuoteMailState(q, expected) {
+    const rows = check(await db().from("project_quotes").update({ content: q }).eq("id", q.id)
+      .eq("content->>updatedAt", expected).select("id"));
+    return rows?.length === 1;
+  },
+  async respondQuote(token, accept, declineReason = "", brief = {}, payment) {
+    return check(await db().rpc("respond_project_quote", { quote_token: token, accepting: accept, decline_reason: declineReason.trim().slice(0, 2000), client_brief: brief, chosen_payment: payment ?? null })) as string | null;
+  },
   async listAffiliateLinks() {
     const result = await db().from("marketing_affiliate_links").select("content").order("id");
     if (result.error?.code === "PGRST205" || result.error?.code === "42P01") return [];

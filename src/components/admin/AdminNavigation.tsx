@@ -7,6 +7,7 @@ import { MaterialIcon, type MaterialIconName } from "./MaterialIcon";
 
 const nav: { href: string; label: string; icon: MaterialIconName }[] = [
   { href: "/admin", label: "Tableau de bord", icon: "dashboard" },
+  { href: "/admin/devis", label: "Devis", icon: "shopping_bag" },
   { href: "/admin/commandes", label: "Commandes", icon: "shopping_bag" },
   { href: "/admin/statistiques", label: "Statistiques", icon: "assessment" },
   { href: "/admin/accueil", label: "Page d'accueil", icon: "home" },
@@ -58,10 +59,10 @@ export function AdminNavigation({ collapsed = false, initialPendingOrders = 0 }:
           {item.href === "/admin/accueil" && <div role="separator" className="my-2 shrink-0 border-l border-border md:border-l-0 md:border-t" />}
           <Link href={item.href} aria-current={active ? "page" : undefined} title={collapsed ? item.label : undefined}
             style={{ position: "relative" }}
-            className={`flex shrink-0 items-center whitespace-nowrap rounded-lg text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent ${collapsed ? "mx-2 size-11 justify-center p-0 md:mx-auto" : "mx-2 gap-3 px-3 py-2.5 md:mx-3"} ${active ? "is-active bg-gradient-to-r from-accent-3/25 via-accent/25 to-accent-2/25 font-medium text-white ring-1 ring-inset ring-white/30" : "text-muted hover:bg-surface-2 hover:text-foreground"}`}>
+            className={`flex shrink-0 items-center whitespace-nowrap rounded-lg text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent ${collapsed ? "mx-2 size-11 justify-center p-0 md:mx-auto" : "mx-2 gap-3 px-3 py-2.5 md:mx-3"} ${active ? "is-active bg-accent/25 font-medium text-accent ring-1 ring-inset ring-accent/40" : "text-muted hover:bg-surface-2 hover:text-foreground"}`}>
             <MaterialIcon name={item.icon} /><span className={collapsed ? "sr-only" : undefined}>{item.label}</span>
             {item.href === "/admin/commandes" && pendingOrders > 0 && (
-              <span className={`flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-bold leading-5 text-white ${collapsed ? "absolute -right-1 -top-1" : "ml-auto"}`}>
+              <span className={`flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-r from-accent-3 via-accent to-accent-2 px-1 text-[10px] font-bold leading-none text-background ${collapsed ? "absolute -right-1 -top-1" : "ml-auto"}`}>
                 <span aria-hidden="true">{pendingOrders}</span>
                 <span className="sr-only">{pendingOrders} commande{pendingOrders > 1 ? "s" : ""} en attente</span>
               </span>

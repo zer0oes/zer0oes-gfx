@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ClickableRow } from "@/components/admin/ClickableRow";
+import { MaterialIcon } from "@/components/admin/MaterialIcon";
 import { OrdersBulkBar, SelectAllOrders } from "@/components/admin/OrdersBulk";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { parseSort, sortOrders, type SortKey } from "@/lib/order-sort";
 import { formatPrice } from "@/lib/pricing";
 import { balanceDue, getStore, isOrderStatus, orderStatuses } from "@/lib/store";
 import { bulkUpdateStatus } from "../../actions";
+import { syncQuotePayment } from "@/lib/orders";
 
 export const metadata: Metadata = { title: "Commandes" };
 
@@ -30,7 +33,8 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
   const error = one(sp.erreur)?.slice(0, 200);
 
   const store = getStore();
-  const [all, invoices] = await Promise.all([store.listOrders(), store.listInvoices()]);
+  const [storedOrders, invoices] = await Promise.all([store.listOrders(), store.listInvoices()]);
+  const all = await Promise.all(storedOrders.map(syncQuotePayment));
   const orders = sortOrders(status ? all.filter((o) => o.status === status) : all, key, dir);
   const pendingInvoice = new Set(invoices.filter((i) => i.status !== "emise").map((i) => i.orderId));
   const counts = Object.fromEntries(orderStatuses.map((s) => [s.id, all.filter((o) => o.status === s.id).length]));
@@ -115,7 +119,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
                 {orders.map((o) => {
                   const due = balanceDue(o);
                   return (
-                    <tr key={o.id} className="relative hover:bg-surface/60">
+                    <ClickableRow key={o.id} href={`/admin/commandes/${o.id}`}>
                       <td className="relative z-10 px-4 py-3">
                         <input type="checkbox" name="ids" value={o.id} aria-label={`Sélectionner la commande de ${o.customerEmail || "client inconnu"} du ${dateFmt.format(new Date(o.createdAt))}`} className="size-4 accent-[var(--accent)]" />
                       </td>
@@ -131,8 +135,8 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
                         {o.hasLogo && <span className="ml-1 text-xs text-muted">(logo fourni)</span>}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
-                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${o.briefReceivedAt || o.brief ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-amber-400/30 bg-amber-400/10 text-amber-300"}`}>
-                          {o.briefReceivedAt || o.brief ? "Reçu" : "Non reçu"}
+                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${o.status !== "brief_attente" && (o.briefReceivedAt || o.brief) ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-amber-400/30 bg-amber-400/10 text-amber-300"}`}>
+                          {o.status !== "brief_attente" && (o.briefReceivedAt || o.brief) ? "Reçu" : "Non reçu"}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
@@ -146,9 +150,9 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
                       </td>
 
                       <td className="px-4 py-3">
-                        <Link href={`/admin/commandes/${o.id}`} aria-label={`Voir la commande ${o.offerName} de ${o.customerEmail || "client inconnu"}`} className="inline-flex rounded-full border border-border px-3 py-1.5 text-sm font-semibold text-accent transition hover:border-accent hover:bg-accent/10">Voir →</Link>
+                        <Link href={`/admin/commandes/${o.id}`} title="Ouvrir la commande" aria-label={`Voir la commande ${o.offerName} de ${o.customerEmail || "client inconnu"}`} className="inline-flex size-9 items-center justify-center rounded-full border border-border text-accent transition hover:border-accent hover:bg-accent/10"><MaterialIcon name="open_in_new" /></Link>
                       </td>
-                    </tr>
+                    </ClickableRow>
                   );
                 })}
               </tbody>

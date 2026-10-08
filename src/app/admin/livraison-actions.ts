@@ -10,6 +10,13 @@ import { siteUrl } from "@/lib/site-url";
 import { s3Configured, s3DeliverableDelete, s3DeliverableUpload } from "@/lib/s3";
 import { getStore } from "@/lib/store";
 
+async function refreshDeliveryPages(orderId: string) {
+  revalidatePath(`/admin/commandes/${orderId}`);
+  revalidatePath("/admin/commandes");
+  const order = await getStore().getOrder(orderId);
+  if (order?.deliveryToken) revalidatePath(`/commande/${order.deliveryToken}`);
+}
+
 // Fichiers livrés stockés dans S3 : supprimés du bucket avec l'élément (ou à son remplacement)
 async function removeFromBucket(...paths: (string | undefined)[]) {
   if (!s3Configured()) return;
@@ -43,6 +50,7 @@ export async function addDeliveryLinkAction(formData: FormData) {
     if (!item) back(orderId, { error: "Livrable introuvable." });
     await store.updateDeliverable(item.id, { finalAssets: [...(item.finalAssets ?? []), { label, url }] });
   } else await getStore().addDeliverable({ orderId, kind: "lien", label, url });
+  await refreshDeliveryPages(orderId);
   back(orderId, { ok: "Lien ajouté." });
 }
 
@@ -82,6 +90,7 @@ export async function finalizeDeliverable(input: { orderId: string; label: strin
     const item = (await store.listDeliverables(input.orderId)).find((d) => d.id === input.targetId);
     if (!item) return { error: "Livrable introuvable." };
     await store.updateDeliverable(item.id, { finalAssets: [...(item.finalAssets ?? []), { path: input.path, label: input.label.trim().slice(0, 120) || input.path.split("/").pop()! }] });
+    await refreshDeliveryPages(input.orderId);
     revalidatePath(`/admin/commandes/${input.orderId}`);
     revalidatePath("/commande/[token]", "page");
     return { ok: true };
@@ -93,6 +102,7 @@ export async function finalizeDeliverable(input: { orderId: string; label: strin
     storagePath: input.path,
     sizeBytes: input.size,
   });
+  await refreshDeliveryPages(input.orderId);
   revalidatePath(`/admin/commandes/${input.orderId}`);
   revalidatePath("/commande/[token]", "page");
   return { ok: true };
@@ -110,10 +120,11 @@ export async function uploadDeliverableDirect(formData: FormData) {
   const previewFor = text(formData, "previewFor", 60);
   if (previewFor && !mediaKind(path)) return { error: "L'aperçu doit être une image ou une vidéo." };
   await store.saveDeliverableFile(path, new Uint8Array(await file.arrayBuffer()));
-  if (previewFor) return attachDeliverablePreview({ orderId, id: previewFor, path });
+  if (previewFor) return attachDeliverablePreview({ orderId, id: previewFor, path, alsoHd: formData.get("alsoHd") === "1", hdLabel: file.name });
   const targetId = text(formData, "targetId", 60);
   if (targetId) return finalizeDeliverable({ orderId, targetId, label: text(formData, "label", 120) || file.name, path, size: file.size });
   await store.addDeliverable({ orderId, kind: "fichier", label: text(formData, "label", 120) || file.name, storagePath: path, sizeBytes: file.size });
+  await refreshDeliveryPages(orderId);
   revalidatePath(`/admin/commandes/${orderId}`);
   revalidatePath("/commande/[token]", "page");
   return { ok: true };
@@ -148,20 +159,12 @@ export async function sendDeliveryAction(formData: FormData) {
   const token = order.deliveryToken ?? newDeliveryToken();
   const url = `${await siteUrl()}/commande/${token}`;
   await store.updateOrder(orderId, { deliveryToken: token });
-  for (const item of ready) {
-    const publishedAt = new Date().toISOString();
-    const path = pendingPreview(item)!;
-    const versions = item.previewVersions ?? [];
-    await store.updateDeliverable(item.id, { publishedAt, previewVersions: versions.at(-1)?.path === path ? versions : [...versions, { path, publishedAt }] });
-  }
   const mail = previewsEmail({ offerName: order.offerName, url, labels: ready.map((item) => item.label), paid: order.amountPaid >= order.totalPrice });
   const key = createHash("sha256").update(JSON.stringify(ready.map((item) => [item.id, pendingPreview(item)]).sort())).digest("hex");
   const sent = await sendToCustomer({ to: order.customerEmail, subject: mail.subject, text: mail.text, idempotencyKey: `previews-${order.id}-${key}` });
   if (sent.sent) for (const item of ready) await store.updateDeliverable(item.id, { notifiedPreview: pendingPreview(item)! });
   await store.updateOrder(orderId, {
     deliveryToken: token,
-    deliveredAt: new Date().toISOString(),
-    ...(["payee", "brief_recu", "en_cours"].includes(order.status) ? { status: "livree" as const } : {}),
   });
   await notify({ subject: `[Aperçus envoyés] ${order.offerName} — ${order.customerEmail}`, fields: { Commande: order.id, Lien: url } });
   back(orderId, { ok: sent.sent ? "Aperçus envoyés au client." : "Lien de livraison créé (e-mail affiché dans les logs : Resend n'est pas configuré)." });
@@ -182,16 +185,26 @@ export async function setDeliverableTypeAction(formData: FormData) {
 }
 
 // Aperçu envoyé (image ou vidéo basse résolution) : rattaché à l'élément livré
-export async function attachDeliverablePreview(input: { orderId: string; id: string; path: string }) {
+export async function attachDeliverablePreview(input: { orderId: string; id: string; path: string; alsoHd?: boolean; hdLabel?: string }) {
   await requireAdmin();
   if (!input.path.startsWith(`${input.orderId}/`)) return { error: "Chemin de fichier invalide." };
   const kind = mediaKind(input.path);
-  if (!kind) return { error: "L'aperçu doit être une image (PNG, JPG, WEBP) ou une vidéo (MP4, WEBM)." };
+  if (!kind) return { error: "L'aperçu doit être une image (PNG, JPG, WEBP, SVG) ou une vidéo (MP4, WEBM)." };
   if (kind === "video") return { error: "Utilise une image d’aperçu : les vidéos doivent être transcodées avant publication." };
-  const item = (await getStore().listDeliverables(input.orderId)).find((d) => d.id === input.id);
+  const store = getStore();
+  const order = await store.getOrder(input.orderId);
+  if (!order) return { error: "Commande introuvable." };
+  const item = (await store.listDeliverables(input.orderId)).find((d) => d.id === input.id);
   if (!item) return { error: "Élément introuvable." };
-  await getStore().updateDeliverable(input.id, { previewPath: input.path, previewType: kind, publishedAt: null });
+  const publishedAt = new Date().toISOString();
+  const versions = item.previewVersions ?? [];
+  await store.updateDeliverable(input.id, { previewPath: input.path, previewType: kind, publishedAt,
+    ...(input.alsoHd === true ? { finalAssets: [...(item.finalAssets ?? []).filter((asset) => asset.path !== input.path), { path: input.path, label: input.hdLabel?.trim().slice(0, 120) || item.label }] } : {}),
+    previewVersions: versions.at(-1)?.path === input.path ? versions : [...versions, { path: input.path, publishedAt }] });
   if (item.approvedAt) await getStore().setDeliverableApproval(item.id, false);
+  await store.updateOrder(order.id, { deliveryToken: order.deliveryToken ?? newDeliveryToken(), deliveredAt: order.deliveredAt ?? publishedAt,
+    ...(["payee", "brief_recu", "en_cours"].includes(order.status) ? { status: "livree" as const } : {}) });
+  await refreshDeliveryPages(input.orderId);
   revalidatePath(`/admin/commandes/${input.orderId}`);
   revalidatePath("/commande/[token]", "page");
   return { ok: true };

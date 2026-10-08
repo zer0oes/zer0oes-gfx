@@ -7,6 +7,11 @@ export function plannedDelivery(order: Pick<Order, "deliveryTemplate" | "brief" 
   const result: { key: string; label: string; itemType: string }[] = [];
   const animated = order.deliveryTemplate?.some((line) => /animation|overlays?.*anim/i.test(line));
   for (const line of order.deliveryTemplate ?? []) {
+    if (order.packId === "sur-mesure") {
+      const itemType = /overlay/i.test(line) ? "overlay" : /alerte/i.test(line) ? "alerte" : "visuel";
+      result.push({ key: `item-${result.length}`, label: line, itemType });
+      continue;
+    }
     if (order.packId === "options" || order.packId.startsWith("option:")) {
       result.push({ key: `item-${result.length}`, label: line, itemType: "visuel" });
       continue;

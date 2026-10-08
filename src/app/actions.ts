@@ -17,6 +17,7 @@ import { discountQuote } from "@/lib/orders";
 import { normalizeCode, validPromotion } from "@/lib/promotions";
 import { includedOverlays, validOverlaySelection } from "@/lib/brief-overlays";
 import { productBriefFields } from "@/lib/product-brief";
+import { recordQuoteRequest } from "@/lib/project-quotes";
 
 export type FormState = { ok: boolean; message: string } | null;
 
@@ -175,11 +176,13 @@ async function contactForm(
   const { request } = parsed;
 
   try {
+    const demand = await recordQuoteRequest(request, formLocale(formData));
+    revalidatePath("/admin/devis");
     await notify({
       subject: `[Projet] ${request.type} — ${request.name}`,
       replyTo: request.email,
-      fields: { ...request.fields, ...languageField(formLocale(formData)) },
-    });
+      fields: { ...request.fields, ...languageField(formLocale(formData)), Administration: `${await siteUrl()}/admin/devis/${demand.id}` },
+    }).catch((e) => console.error(e));
   } catch (e) {
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou écris-moi directement par e-mail." };
@@ -197,11 +200,13 @@ async function messageForm(_prev: FormState, formData: FormData): Promise<FormSt
   const { request } = parsed;
 
   try {
+    const demand = await recordQuoteRequest(request, formLocale(formData));
+    revalidatePath("/admin/devis");
     await notify({
       subject: `[Message] ${request.subject} — ${request.name}`,
       replyTo: request.email,
-      fields: { ...request.fields, ...languageField(formLocale(formData)) },
-    });
+      fields: { ...request.fields, ...languageField(formLocale(formData)), Administration: `${await siteUrl()}/admin/devis/${demand.id}` },
+    }).catch((e) => console.error(e));
   } catch (e) {
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou écris-moi directement par e-mail." };

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
+import { quoteBriefFields } from "@/lib/quote-brief";
 import { sendBrief } from "@/app/actions";
 import { href, type Locale } from "@/lib/i18n";
 import { overlayTypes } from "@/lib/pricing";
@@ -77,7 +78,19 @@ export function BriefForm({
   initialBrief,
   revisionsUsed = 0,
   purchasedProducts = [],
+  submitAction = sendBrief,
+  defaultBrief,
+  quoteToken,
+  optionalProducts = [],
+  fullWidthSections = false,
+  requiredFields,
 }: {
+  optionalProducts?: string[];
+  fullWidthSections?: boolean;
+  requiredFields?: string[];
+  submitAction?: typeof sendBrief;
+  defaultBrief?: Record<string, string>;
+  quoteToken?: string;
   purchasedProducts?: string[];
   revisionsUsed?: number;
   initialBrief?: Record<string, string>;
@@ -91,16 +104,15 @@ export function BriefForm({
   email?: string;
   overlayHint?: string;
 }) {
-  const [state, action, pending] = useActionState(sendBrief, null);
+  const [state, action, pending] = useActionState(submitAction, null);
+  const values = initialBrief ?? defaultBrief;
+  const isRequired = (name: string) => requiredFields ? requiredFields.includes(name) : ["email", "channel", "universe", ...(hasLogo ? ["logoLink"] : [])].includes(name);
   const locale = useLocale();
   const tx = texts[locale];
-  const [overlays, setOverlays] = useState<string[]>(() => overlayTypes.filter((o) => initialBrief?.["Overlays choisis"]?.includes(o)));
+  const [overlays, setOverlays] = useState<string[]>(() => overlayTypes.filter((o) => values?.["Overlays choisis"]?.includes(o)));
   const [missingFields, setMissingFields] = useState<string[]>([
-    ...(!(initialBrief?.["E-mail"] || email) ? [tx.email.replace(" *", "")] : []),
-    ...(!initialBrief?.["Chaîne"] ? [tx.channel.replace(" *", "")] : []),
-    ...(hasLogo && !initialBrief?.["Logo existant"] ? [tx.logo.replace(" *", "")] : []),
-    ...(!initialBrief?.["Univers / ambiance"] ? [tx.universe.replace(" *", "")] : []),
-    ...purchasedProducts.filter((line, index) => !initialBrief?.[`Création ${index + 1} : ${line}`]),
+    ...quoteBriefFields.filter((f) => isRequired(f.id) && !(values?.[f.key] || (f.id === "email" ? email : f.id === "platform" ? "Twitch" : ""))).map((f) => f.label),
+    ...purchasedProducts.filter((line, index) => !optionalProducts.includes(line) && !values?.[`Création ${index + 1} : ${line}`]),
   ]);
   const remaining = overlayCount === null ? 0 : overlayCount - overlays.length;
   const missing = [...missingFields, ...(remaining > 0 ? [locale === "en" ? `${remaining} overlay${remaining > 1 ? "s" : ""} to choose` : `${remaining} overlay${remaining > 1 ? "s" : ""} à choisir`] : [])];
@@ -128,13 +140,14 @@ export function BriefForm({
   return (
     <form action={action} className="space-y-5 [&_input::placeholder]:text-foreground/65 [&_label>span.text-xs]:text-sm [&_label>span.text-xs]:text-foreground/75" onInput={(event) => {
       const form = event.currentTarget;
-      const required = [["email", tx.email], ["channel", tx.channel], ...(hasLogo ? [["logoLink", tx.logo]] : []), ["universe", tx.universe], ...purchasedProducts.map((line, index) => [`productBrief_${index}`, line])];
+      const required = [...quoteBriefFields.filter((f) => isRequired(f.id)).map((f) => [f.id, f.label]), ...purchasedProducts.flatMap((line, index) => optionalProducts.includes(line) ? [] : [[`productBrief_${index}`, line]])];
       setMissingFields(required.filter(([name]) => {
-        const field = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(`input[name="${name}"], textarea[name="${name}"]`);
+        const field = form.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(`input[name="${name}"], textarea[name="${name}"], select[name="${name}"]`);
         return !field?.value.trim() || !field.validity.valid;
       }).map(([, label]) => label.replace(" *", "")));
     }}>
       <input type="hidden" name="sessionId" value={sessionId ?? ""} />
+      {quoteToken && <input type="hidden" name="token" value={quoteToken} />}
       <input type="hidden" name="editBrief" value={initialBrief ? "1" : "0"} />
       {initialBrief && <p className="rounded-xl border border-accent/40 bg-accent/10 p-3 text-sm">{locale === "en" ? `${revisionsUsed} / 2 updates used. Saving these changes uses one update and notifies me.` : `${revisionsUsed} / 2 modifications utilisées. Enregistrer ces changements utilise une modification et m’envoie une notification.`}</p>}
       <input type="hidden" name="packId" value={packId ?? ""} />
@@ -143,19 +156,19 @@ export function BriefForm({
       <input type="hidden" name="hasLogo" value={hasLogo ? "1" : ""} />
       <input type="hidden" name="lang" value={locale} />
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label={tx.email}>
-          <input name="email" type="email" required defaultValue={initialBrief?.["E-mail"] ?? email} className={inputClass} />
+        <Field label={tx.email.replace(" *", "") + (isRequired("email") ? " *" : "")}>
+          <input name="email" type="email" defaultValue={values?.["E-mail"] ?? email} className={inputClass} required={isRequired("email")} />
         </Field>
-        <Field label={tx.pseudo}>
-          <input name="pseudo" defaultValue={initialBrief?.["Pseudo"]} className={inputClass} />
+        <Field label={tx.pseudo.replace(" *", "") + (isRequired("pseudo") ? " *" : "")}>
+          <input name="pseudo" defaultValue={values?.["Pseudo"]} className={inputClass} required={isRequired("pseudo")} />
         </Field>
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label={tx.channel}>
-          <input name="channel" defaultValue={initialBrief?.["Chaîne"]} required placeholder="https://twitch.tv/…" className={inputClass} />
+        <Field label={tx.channel.replace(" *", "") + (isRequired("channel") ? " *" : "")}>
+          <input name="channel" defaultValue={values?.["Chaîne"]} placeholder="https://twitch.tv/…" className={inputClass} required={isRequired("channel")} />
         </Field>
-        <Field label={tx.platform}>
-          <select name="platform" className={inputClass} defaultValue={initialBrief?.["Plateforme"] || "Twitch"}>
+        <Field label={tx.platform.replace(" *", "") + (isRequired("platform") ? " *" : "")}>
+          <select name="platform" className={inputClass} defaultValue={values?.["Plateforme"] || "Twitch"} required={isRequired("platform")}>
             <option>Twitch</option>
             <option>YouTube</option>
             <option>Kick</option>
@@ -164,27 +177,27 @@ export function BriefForm({
           </select>
         </Field>
       </div>
-      {hasLogo && (
-        <Field label={tx.logo} hint={tx.logoHint}>
-          <input name="logoLink" defaultValue={initialBrief?.["Logo existant"]} required placeholder="https://…" className={inputClass} />
+      {(hasLogo || requiredFields?.includes("logoLink")) && (
+        <Field label={tx.logo.replace(" *", "") + (isRequired("logoLink") ? " *" : "")} hint={tx.logoHint}>
+          <input name="logoLink" defaultValue={values?.["Logo existant"]} placeholder="https://…" className={inputClass} required={isRequired("logoLink")} />
         </Field>
       )}
-      <Field label={tx.universe} hint={tx.universeHint}>
-        <textarea name="universe" defaultValue={initialBrief?.["Univers / ambiance"]} required rows={4} className={inputClass} />
+      <Field label={tx.universe.replace(" *", "") + (isRequired("universe") ? " *" : "")} hint={tx.universeHint}>
+        <textarea name="universe" defaultValue={values?.["Univers / ambiance"]} rows={4} className={inputClass} required={isRequired("universe")} />
       </Field>
-      <Field label={tx.colors} hint={tx.colorsHint}>
-        <input name="colors" defaultValue={initialBrief?.["Couleurs"]} className={inputClass} />
+      <Field label={tx.colors.replace(" *", "") + (isRequired("colors") ? " *" : "")} hint={tx.colorsHint}>
+        <input name="colors" defaultValue={values?.["Couleurs"]} className={inputClass} required={isRequired("colors")} />
       </Field>
-      <Field label={tx.references} hint={tx.referencesHint}>
-        <textarea name="references" defaultValue={initialBrief?.["Références"]} rows={3} className={inputClass} />
+      <Field label={tx.references.replace(" *", "") + (isRequired("references") ? " *" : "")} hint={tx.referencesHint}>
+        <textarea name="references" defaultValue={values?.["Références"]} rows={3} className={inputClass} required={isRequired("references")} />
       </Field>
-      <Field label={tx.elements} hint={tx.elementsHint}>
-        <textarea name="elements" defaultValue={initialBrief?.["Éléments à inclure"]} rows={3} className={inputClass} />
+      <Field label={tx.elements.replace(" *", "") + (isRequired("elements") ? " *" : "")} hint={tx.elementsHint}>
+        <textarea name="elements" defaultValue={values?.["Éléments à inclure"]} rows={3} className={inputClass} required={isRequired("elements")} />
       </Field>
-      {purchasedProducts.length > 0 && <fieldset className="space-y-5 rounded-xl border border-accent/30 p-4">
-        <legend className="px-2 font-semibold">{locale === "en" ? "Your purchased creations" : "Tes créations achetées"}</legend>
-        {purchasedProducts.map((line, index) => <Field key={index} label={`${line} *`} hint={productBriefHint(line, locale)}><textarea name={`productBrief_${index}`} required rows={3} defaultValue={initialBrief?.[`Création ${index + 1} : ${line}`]} className={inputClass} /></Field>)}
-      </fieldset>}
+      {purchasedProducts.length > 0 && <section className={fullWidthSections ? "-mx-4 space-y-5 border-t border-border px-4 pt-5 sm:-mx-5 sm:px-5" : "space-y-5 rounded-xl border border-accent/30 p-4"}>
+        <h3 className="font-semibold">{locale === "en" ? "Your purchased creations" : "Tes créations achetées"}</h3>
+        {purchasedProducts.map((line, index) => <Field key={index} label={`${line}${optionalProducts.includes(line) ? (locale === "en" ? " (optional)" : " (facultatif)") : " *"}`} hint={productBriefHint(line, locale)}><textarea name={`productBrief_${index}`} required={!optionalProducts.includes(line)} rows={3} defaultValue={values?.[`Création ${index + 1} : ${line}`]} className={inputClass} /></Field>)}
+      </section>}
       {overlayCount !== null && <fieldset>
         <legend className="text-sm font-medium">{tx.overlays}</legend>
         <p id="overlay-count" aria-live="polite" className="mt-1 text-sm text-foreground/75">{overlayHint} {overlays.length} / {overlayCount} {locale === "en" ? "selected" : "sélectionnés"}</p>
@@ -200,9 +213,9 @@ export function BriefForm({
         </div>
       </fieldset>}
       <div className="grid gap-5 sm:grid-cols-2">
-        <DatePicker defaultValue={initialBrief?.["Date souhaitée"]} name="deadline" label={tx.deadline} locale={locale} />
-        <Field label={tx.notes}>
-          <input name="notes" defaultValue={initialBrief?.["Remarques"]} className={inputClass} />
+        <DatePicker defaultValue={values?.["Date souhaitée"]} name="deadline" label={tx.deadline} locale={locale} />
+        <Field label={tx.notes.replace(" *", "") + (isRequired("notes") ? " *" : "")}>
+          <input name="notes" defaultValue={values?.["Remarques"]} className={inputClass} required={isRequired("notes")} />
         </Field>
       </div>
       <FormStatus state={state} />

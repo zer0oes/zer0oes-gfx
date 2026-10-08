@@ -2,6 +2,7 @@ import { statusLabel, type OrderStatus } from "@/lib/store/types";
 
 const tone: Record<OrderStatus, string> = {
   payee: "border-sky-500/40 bg-sky-500/10 text-sky-200",
+  brief_attente: "border-amber-500/40 bg-amber-500/10 text-amber-200",
   brief_recu: "border-violet-500/40 bg-violet-500/10 text-violet-200",
   en_cours: "border-amber-500/40 bg-amber-500/10 text-amber-200",
   livree: "border-cyan-500/40 bg-cyan-500/10 text-cyan-200",

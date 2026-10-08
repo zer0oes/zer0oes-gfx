@@ -8,19 +8,21 @@ import { allFinalsAccessed } from "./final-downloads";
 export const FILES_RETENTION_MONTHS = 6;
 
 export type StepState = "fait" | "en_cours" | "a_venir";
-export type Step = { id: "brief" | "creation" | "validation" | "solde" | "livraison"; label: string; state: StepState; detail?: string };
+export type Step = { id: "brief" | "acompte" | "creation" | "validation" | "solde" | "livraison"; label: string; state: StepState; detail?: string };
 
 type PortalOrder = {
   status: OrderStatus;
   totalPrice: number;
   amountPaid: number;
   paymentType?: "total" | "acompte";
+  depositPercent?: number;
+  briefCompleted?: boolean;
   brief?: Record<string, string>;
   briefReceivedAt?: string;
   completedAt?: string;
 };
 
-const rank: Record<OrderStatus, number> = { payee: 0, brief_recu: 1, en_cours: 2, livree: 3, solde_paye: 4, terminee: 5 };
+const rank: Record<OrderStatus, number> = { payee: 0, brief_attente: 0, brief_recu: 1, en_cours: 2, livree: 3, solde_paye: 4, terminee: 5 };
 
 export function filesExpireAt(order: Pick<PortalOrder, "completedAt">) {
   if (!order.completedAt) return null;
@@ -42,7 +44,7 @@ export function filesExpired(order: Pick<PortalOrder, "completedAt">, now = new 
 export function orderSteps(order: PortalOrder, items: { publishedAt?: string; approvedAt?: string; plannedKey?: string; storagePath?: string; url?: string; finalAssets?: { path?: string; url?: string; label: string }[]; accessedFinalAssets?: string[] }[], locale: "fr" | "en" = "fr"): Step[] {
   const en = locale === "en";
   const r = rank[order.status];
-  const briefDone = Boolean(order.brief || order.briefReceivedAt) || r >= 1;
+  const briefDone = order.briefCompleted ?? (order.status !== "brief_attente" && (Boolean(order.brief || order.briefReceivedAt) || r >= 1));
   const delivered = items.some(previewPublished);
   const validated = items.length > 0 && items.every((d) => d.approvedAt);
   const paid = order.totalPrice - order.amountPaid <= 0;
@@ -56,6 +58,15 @@ export function orderSteps(order: PortalOrder, items: { publishedAt?: string; ap
     { id: "solde", label: en ? "Balance" : "Solde", state: paid ? "fait" : validated ? "en_cours" : "a_venir" },
     { id: "livraison", label: en ? "Delivery" : "Livraison", state: finished ? "fait" : validated && paid ? "en_cours" : "a_venir" },
   ];
+  if (order.paymentType === "acompte" && (order.depositPercent ?? 0) > 0) {
+    const depositPaid = order.amountPaid >= Math.round(order.totalPrice * order.depositPercent! / 100);
+    steps.unshift({ id: "acompte", label: en ? "Deposit" : "Acompte", state: depositPaid ? "fait" : "en_cours" });
+    if (!depositPaid && !briefDone) steps.find((step) => step.id === "brief")!.state = "a_venir";
+    if (!depositPaid) {
+      const creation = steps.find((step) => step.id === "creation");
+      if (creation) creation.state = "a_venir";
+    }
+  }
   return order.paymentType === "total" ? steps.filter((step) => step.id !== "solde") : steps;
 }
 
@@ -67,6 +78,8 @@ export function statusMessage(steps: Step[], locale: "fr" | "en" = "fr", closed 
   }
   if (locale === "en") {
     switch (current?.id) {
+      case "acompte":
+        return "Your brief is complete. Pay the initial deposit to start creation. The balance is due before final delivery.";
       case "brief":
         return "Order confirmed! Next step: your brief, so I can get started.";
       case "creation":
@@ -82,6 +95,8 @@ export function statusMessage(steps: Step[], locale: "fr" | "en" = "fr", closed 
     }
   }
   switch (current?.id) {
+    case "acompte":
+      return "Ton brief est reçu. Règle l’acompte initial pour démarrer la création. Le solde sera à régler avant la livraison définitive.";
     case "brief":
       return "Commande confirmée ! Prochaine étape : ton brief, pour que je puisse commencer.";
     case "creation":

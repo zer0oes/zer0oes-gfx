@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { Collapse } from "../Collapse";
 
 export function ClientSpaceLinks({ url }: { url: string }) {
   const [message, setMessage] = useState("");
@@ -22,12 +23,12 @@ export function AddDeliveryElement({ linkForm, fileForm }: { linkForm: React.Rea
   const [kind, setKind] = useState<"link" | "file" | null>(null);
   return <div className="mt-6">
     <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)} className="rounded-full border border-accent px-5 py-2.5 text-sm font-semibold text-accent hover:bg-accent/10">{open ? "Fermer l’ajout" : "+ Ajouter un livrable supplémentaire"}</button>
-    {open && <div id={id} className="mt-4 space-y-4 rounded-xl border border-border bg-background/40 p-4">
+    <Collapse open={open} id={id}><div className="mt-4 space-y-4 rounded-xl border border-border bg-background/40 p-4">
       <div className="flex flex-wrap gap-2" role="group" aria-label="Type d’élément à ajouter">
         {(["link", "file"] as const).map((type) => <button key={type} type="button" aria-pressed={kind === type} onClick={() => setKind(type)} className={`rounded-lg border px-4 py-2 text-sm font-medium ${kind === type ? "border-accent bg-accent/10 text-accent" : "border-border hover:border-accent"}`}>{type === "link" ? "Lien d’import" : "Fichier"}</button>)}
       </div>
       <div hidden={kind !== "link"}>{linkForm}</div>
       <div hidden={kind !== "file"}>{fileForm}</div>
-    </div>}
+    </div></Collapse>
   </div>;
 }

@@ -1,4 +1,7 @@
 import { ArchiveDownload } from "@/components/ArchiveDownload";
+import { ApproveAllButton } from "@/components/ApproveAllButton";
+import { QuoteBrief } from "@/components/QuoteBrief";
+import { syncQuotePayment } from "@/lib/orders";
 import { DeliverableCard } from "@/components/DeliverableCard";
 import { allFinalsAccessed, hasFinalAccess } from "@/lib/final-downloads";
 import type { Metadata } from "next";
@@ -281,7 +284,7 @@ function Item({
   if (!published) return (
     <li id={`f-${d.id}`} className="flex scroll-mt-24 items-center justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3 text-sm">
       <span className="font-medium">{d.label}<span className="mt-1 block text-xs font-normal text-muted">{d.clientNotes?.length ?? 0}/{itemRevisionLimit(order)} {locale === "en" ? "corrections used" : "corrections utilisées"}</span>{finalCount > 0 && <span className="mt-1 block text-xs font-normal text-muted">{locale === "en" ? `${finalCount} final file(s) / link(s) prepared · locked` : `${finalCount} fichier(s) / lien(s) final(aux) préparé(s) · verrouillés`}</span>}</span>
-      <span className="shrink-0 text-xs text-muted">{locale === "en" ? "Preparing" : "À préparer"}</span>
+      <span className={`shrink-0 text-xs ${d.previewPath ? "text-accent" : "text-muted"}`}>{d.previewPath ? (locale === "en" ? "Preview awaiting publication" : "Aperçu en attente de publication") : (locale === "en" ? "Preparing" : "À préparer")}</span>
     </li>
   );
 
@@ -423,9 +426,9 @@ function Steps({ steps, tx }: { steps: Step[]; tx: Texts }) {
             }`}
           >
             <span className="hidden sm:inline">{i + 1}. </span>
-            {s.label}
+            {s.id === "brief" ? "Brief" : s.label}
           </p>
-          <p className="text-[11px] text-muted">{s.state === "fait" ? tx.done : s.state === "en_cours" ? tx.ongoing : tx.upcoming}</p>
+          <p className="text-[11px] text-muted">{s.id === "brief" && s.state === "en_cours" ? (tx.fillBrief === "Remplir mon brief" ? "À compléter" : "To complete") : s.state === "fait" ? tx.done : s.state === "en_cours" ? tx.ongoing : tx.upcoming}</p>
         </li>
       ))}
     </ol>
@@ -438,11 +441,15 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
   const locale = await requestLocale();
   const tx = texts[locale];
   const store = getStore();
-  const order = await store.getOrderByDeliveryToken(token);
+  let order = await store.getOrderByDeliveryToken(token);
   if (!order) notFound();
+  order = await syncQuotePayment(order);
+  const projectQuote = order.packId === "sur-mesure" ? await store.getQuoteByToken(token) : null;
   const items = await store.listDeliverables(order.id);
+  const briefLocked = Boolean(order.deliveredAt) || items.some(previewPublished) || (order.briefRevisions?.length ?? 0) >= 2 || order.status === "terminee";
+  const latestBriefAt = order.briefRevisions?.at(-1)?.at ?? order.briefReceivedAt;
   const progress = deliveryProgress(items);
-  const steps = orderSteps(order, items, locale);
+  const steps = orderSteps({ ...order, ...(projectQuote ? { briefCompleted: Boolean(projectQuote.briefCompletedAt) } : {}) }, items, locale);
   const due = balanceDue(order);
   const expired = filesExpired(order);
   const downloadedCount = items.filter(allFinalsAccessed).length;
@@ -460,6 +467,54 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
   const { retour, f } = await searchParams;
   const notice = typeof retour === "string" ? tx.notices[retour] : undefined;
   const block = "rounded-2xl border border-border bg-background p-4 sm:p-5";
+  const canApproveAll = items.length > 0 && items.every((item) => previewPublished(item) && !correctionPending(item) && (!item.plannedKey || item.previewPath));
+  const downloadsLockedByBalance = due > 0 && order.amountPaid > 0;
+  const paymentPanel = (
+      <>
+        {downloadsLockedByBalance && <section className="mt-4 rounded-2xl border border-accent/60 bg-accent/10 p-5 sm:p-6" aria-labelledby="unlock-downloads">
+          <h3 id="unlock-downloads" className="font-display text-xl font-bold">{locale === "en" ? "Unlock your HD files" : "Débloque tes fichiers HD"}</h3>
+          <p className="mt-2 text-sm leading-relaxed">{progress.complete ? (locale === "en" ? "Pay the remaining balance to download your approved files." : "Règle le solde restant pour télécharger tes fichiers validés.") : (locale === "en" ? "Your files will be available after approval and payment of the balance." : "Tes fichiers seront disponibles après validation et règlement du solde.")}</p>
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+            <div><p className="text-xs text-muted">{locale === "en" ? "Remaining balance" : "Solde à régler"}</p><p className="mt-1 font-display text-3xl font-bold text-accent">{price(due)}</p></div>
+            <form action={payBalanceAction}><input type="hidden" name="token" value={token} /><button className="rounded-full bg-accent px-6 py-3 text-sm font-semibold text-background hover:brightness-110">{locale === "en" ? "Pay the balance on Stripe" : "Régler le solde sur Stripe"}</button></form>
+          </div>
+          {retour === "paiement-erreur" && <p role="alert" className="mt-3 text-sm text-amber-300">{tx.balanceError}</p>}
+        </section>}
+        <details id="solde" className={`group/payment mt-4 scroll-mt-24 ${block}`}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-accent [&::-webkit-details-marker]:hidden">
+            {downloadsLockedByBalance ? (locale === "en" ? "Payment breakdown" : "Détail des paiements") : tx.payment}
+            {due > 0 && !downloadsLockedByBalance && <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold normal-case tracking-normal text-amber-300">{locale === "en" ? "Balance due" : "Solde restant"} : {price(due)}</span>}
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="ml-auto size-5 shrink-0 transition-transform group-open/payment:rotate-180"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" /></svg>
+          </summary>
+          <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div>
+              <dt className="text-xs text-muted">{tx.total}</dt>
+              <dd className="font-display text-lg font-bold">{price(order.totalPrice)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted">{order.paymentType === "acompte" && order.depositPercent > 0 && due > 0 ? tx.depositPaid(order.depositPercent) : tx.alreadyPaid}</dt>
+              <dd className="font-display text-lg font-bold text-emerald-300">{price(order.amountPaid)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted">{tx.balanceLeft}</dt>
+              <dd className={`font-display text-lg font-bold ${due > 0 ? "text-amber-300" : ""}`}>{due > 0 ? price(due) : tx.settled}</dd>
+            </div>
+          </dl>
+          {due > 0 && !downloadsLockedByBalance && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+              {order.packId === "sur-mesure" && order.amountPaid === 0 && order.paymentType === "acompte" && order.depositPercent > 0 && <p className="w-full text-sm text-accent">{locale === "en" ? "Deposit due now" : "Acompte à régler maintenant"} : {price(Math.round(order.totalPrice * order.depositPercent / 100))} ({order.depositPercent} %)</p>}
+              <p className="text-xs text-muted">{retour === "solde" ? tx.balancePaid : retour === "paiement-erreur" ? tx.balanceError : tx.balanceHint}</p>
+              {!downloadsLockedByBalance && (
+                <form action={payBalanceAction}>
+                  <input type="hidden" name="token" value={token} />
+                  <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background hover:brightness-110">{order.packId === "sur-mesure" && order.amountPaid === 0 ? order.paymentType === "acompte" && order.depositPercent > 0 ? (locale === "en" ? "Pay the deposit" : "Régler l’acompte") : (locale === "en" ? "Pay in full" : "Régler la totalité") : tx.payBalance}</button>
+                </form>
+              )}
+            </div>
+          )}
+        </details>
+      </>
+  );
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -480,7 +535,7 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
           <div className="mt-4">
             <Steps steps={steps} tx={tx} />
           </div>
-          {steps[0].state === "en_cours" && order.stripeSessionId && (
+          {!projectQuote && steps.find((step) => step.id === "brief")?.state === "en_cours" && order.stripeSessionId && (
             <a
               href={`${href(locale, "/merci")}?session_id=${encodeURIComponent(order.stripeSessionId)}`}
               className="mt-4 inline-block rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background hover:brightness-110"
@@ -490,10 +545,31 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
           )}
         </section>
 
+        {downloadsLockedByBalance && !progress.complete && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-400/10 p-4">
+          <p className="text-sm font-medium text-amber-200">{locale === "en" ? `HD downloads locked · ${price(due)} balance remaining` : `Téléchargements HD verrouillés · ${price(due)} de solde restant`}</p>
+          <a href="#solde" className="text-sm font-semibold text-accent underline underline-offset-4">{locale === "en" ? "View payment" : "Voir le paiement"}</a>
+        </div>}
+
+        {order.brief && (!projectQuote || projectQuote.briefCompletedAt) && <details className={`mt-4 ${block}`}>
+          <summary className="cursor-pointer font-display text-lg font-bold">{locale === "en" ? "Your brief" : "Ton brief"}</summary>
+          {!briefLocked && <p className="mt-2 text-sm text-muted">{locale === "en" ? "Need to clarify your ideas? Edit your brief: I’ll be notified of your changes." : "Besoin de préciser tes idées ? Modifie ton brief : je serai informée de tes changements."}</p>}
+          <p className="mt-2 text-sm text-muted">{order.briefRevisions?.length ?? 0} / 2 {locale === "en" ? "updates used" : "modifications utilisées"}</p>
+          {briefLocked ? <div className="-mx-4 mt-4 border-t border-border px-4 pt-4 sm:-mx-5 sm:px-5">
+            <h3 className="text-sm font-semibold">{locale === "en" ? "Latest brief received · Read only" : "Dernière version reçue · Lecture seule"}</h3>
+            {latestBriefAt && <p className="mt-1 text-xs text-muted">{new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }).format(new Date(latestBriefAt))}</p>}
+            <dl className="mt-4 space-y-4">{Object.entries(order.brief).filter(([, value]) => value).map(([label, value]) => <div key={label}><dt className="text-xs font-medium text-muted">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed">{value}</dd></div>)}</dl>
+            <p className="mt-4 text-xs text-muted">{locale === "en" ? "This brief is locked. Contact me for any further clarification." : "Ce brief est verrouillé. Contacte-moi pour toute précision supplémentaire."}</p>
+          </div> : <a href={`${href(locale, "/merci")}?session_id=${encodeURIComponent(order.stripeSessionId)}&modifier=1`} className="mt-3 inline-block rounded-full border border-accent px-5 py-2.5 text-sm font-semibold text-accent hover:bg-accent/10">{locale === "en" ? "Edit my brief" : "Modifier mon brief"}</a>}
+        </details>}
+        {projectQuote && !projectQuote.briefCompletedAt && <details open className={`mt-4 ${block}`}>
+          <summary className="cursor-pointer font-display text-lg font-bold">{locale === "en" ? "Your brief" : "Ton brief"}</summary>
+          {order.amountPaid > 0 ? <QuoteBrief requiredFields={projectQuote.requiredBriefFields ?? ["email", "channel", "universe"]} optionalProducts={projectQuote.optionalBriefDeliverables} token={token} email={order.customerEmail} request={projectQuote.request} deliverables={projectQuote.deliverables} /> : <p className="mt-3 text-sm text-muted">{locale === "en" ? "Complete your brief after payment confirmation." : "Le brief sera accessible après confirmation du paiement."}</p>}
+        </details>}
+
         {/* Livrables */}
         <section aria-labelledby="elements" className="mt-8">
           <h2 id="elements" className="font-display text-xl font-bold">
-            {finalFilesAvailable ? (locale === "en" ? "Your files" : "Tes fichiers") : items.length && !items.some(previewPublished) ? (locale === "en" ? "Planned deliverables" : "Livrables prévus") : items.length ? tx.toApproveTitle : tx.yourCreation}
+            {progress.complete || finalFilesAvailable ? (locale === "en" ? "Your files" : "Tes fichiers") : items.length && !items.some(previewPublished) ? (locale === "en" ? "Planned deliverables" : "Livrables prévus") : items.length ? tx.toApproveTitle : tx.yourCreation}
           </h2>
           {items.length === 0 ? (
             <p className="mt-2 text-sm text-muted">{tx.previewsSoon}</p>
@@ -511,11 +587,14 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
                 <div role="progressbar" aria-label={locale === "en" ? "Downloaded deliverables" : "Livrables téléchargés"} aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={downloadedCount} className="mt-4 h-2 overflow-hidden rounded-full bg-surface-2">
                   <div className={`h-full rounded-full transition-all ${allDownloaded ? "bg-emerald-400" : "bg-accent"}`} style={{ width: `${items.length ? downloadedCount / items.length * 100 : 0}%` }} />
                 </div>
-              </div> : items.some(previewPublished) && <div className={`mt-3 ${block}`}>
-                <p className="text-sm"><strong className="font-display text-lg">{progress.done} / {progress.total}</strong> {tx.validated(progress.total)}</p>
+              </div> : items.some(previewPublished) && <div className={`mt-3 flex flex-wrap items-center justify-between gap-3 ${block}`}>
+                <div className="flex flex-col justify-center gap-1"><p className="text-sm"><strong className="font-display text-lg">{progress.done} / {progress.total}</strong> {tx.validated(progress.total)}</p>{progress.complete && <p className="text-xs text-muted">{due > 0 ? (locale === "en" ? "Unlocked after balance payment" : "Débloqué après règlement du solde") : (locale === "en" ? "Final files are being prepared" : "Fichiers définitifs en préparation")}</p>}</div>
+                {progress.complete && <button type="button" disabled title={due > 0 ? (locale === "en" ? "Available after balance payment" : "Disponible après règlement du solde") : (locale === "en" ? "Final files are being prepared" : "Fichiers définitifs en préparation")} className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background opacity-40"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="size-4 shrink-0"><path d="M18 8h-1V6a5 5 0 0 0-10 0v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2ZM9 6a3 3 0 0 1 6 0v2H9Zm3 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z" /></svg>{locale === "en" ? "Download ZIP" : "Télécharger le ZIP"}</button>}
+                {!progress.complete && <ApproveAllButton token={token} disabled={!canApproveAll} en={locale === "en"} />}
               </div>}
-              {progress.complete && <ClientTestimonialForm token={token} testimonial={order.testimonial} en={locale === "en"} />}
-              {(expired || expiresAt || !finalFilesAvailable) && <p className="mt-3 text-sm text-muted">{expired ? tx.expired : expiresAt ? tx.expiresAt(dateFmt.format(expiresAt)) : due <= 0 ? (locale === "en" ? "Your payment is settled: HD files will be available after approval." : "Ton paiement est réglé : les fichiers HD seront accessibles après validation.") : tx.protectedHint}</p>}
+              {progress.complete && paymentPanel}
+              {progress.complete && due <= 0 && allDownloaded && <ClientTestimonialForm token={token} testimonial={order.testimonial} en={locale === "en"} />}
+              {(expired || expiresAt || (!finalFilesAvailable && !progress.complete)) && <p className="mt-3 text-sm text-muted">{expired ? tx.expired : expiresAt ? tx.expiresAt(dateFmt.format(expiresAt)) : due <= 0 ? (locale === "en" ? "Your payment is settled: HD files will be available after approval." : "Ton paiement est réglé : les fichiers HD seront accessibles après validation.") : tx.protectedHint}</p>}
               <ul className="mt-4 space-y-4">
                 {items.map((d) => (
                   <Item key={d.id} d={d} order={order} token={token} expired={expired} notice={f === d.id ? notice : undefined} tx={tx} locale={locale} />
@@ -524,44 +603,10 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
             </>
           )}
         </section>
-        {order.brief && <details className={`mt-4 ${block}`}>
-          <summary className="cursor-pointer font-display text-lg font-bold">{locale === "en" ? "Your brief" : "Ton brief"}</summary>
-          <p className="mt-2 text-sm text-muted">{locale === "en" ? "Need to clarify your ideas? Edit your brief: I’ll be notified of your changes." : "Besoin de préciser tes idées ? Modifie ton brief : je serai informée de tes changements."}</p>
-          <p className="mt-2 text-sm text-muted">{order.briefRevisions?.length ?? 0} / 2 {locale === "en" ? "updates used" : "modifications utilisées"}</p>
-          {items.some(previewPublished) || order.deliveredAt ? <p className="mt-3 text-sm text-muted">{locale === "en" ? "Your brief is locked since the first previews were sent. Request corrections on each item above." : "Ton brief est verrouillé depuis l’envoi des premiers aperçus. Tu peux demander des corrections sur chaque élément ci-dessus."}</p> : (order.briefRevisions?.length ?? 0) < 2 ? <a href={`${href(locale, "/merci")}?session_id=${encodeURIComponent(order.stripeSessionId)}&modifier=1`} className="mt-3 inline-block rounded-full border border-accent px-5 py-2.5 text-sm font-semibold text-accent hover:bg-accent/10">{locale === "en" ? "Edit my brief" : "Modifier mon brief"}</a> : <p className="mt-3 text-sm">{locale === "en" ? "Contact me for further changes." : "Contacte-moi pour tout autre changement."}</p>}
-        </details>}
+
 
         {/* Paiement */}
-        <details id="solde" className={`mt-4 scroll-mt-24 ${block}`}>
-          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-            {tx.payment}
-          </summary>
-          <dl className="mt-3 grid gap-3 sm:grid-cols-3">
-            <div>
-              <dt className="text-xs text-muted">{tx.total}</dt>
-              <dd className="font-display text-lg font-bold">{price(order.totalPrice)}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted">{order.paymentType === "acompte" && due > 0 ? tx.depositPaid(order.depositPercent) : tx.alreadyPaid}</dt>
-              <dd className="font-display text-lg font-bold text-emerald-300">{price(order.amountPaid)}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted">{tx.balanceLeft}</dt>
-              <dd className={`font-display text-lg font-bold ${due > 0 ? "text-amber-300" : ""}`}>{due > 0 ? price(due) : tx.settled}</dd>
-            </div>
-          </dl>
-          {due > 0 && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-              <p className="text-xs text-muted">{retour === "solde" ? tx.balancePaid : retour === "paiement-erreur" ? tx.balanceError : tx.balanceHint}</p>
-              {retour !== "solde" && (
-                <form action={payBalanceAction}>
-                  <input type="hidden" name="token" value={token} />
-                  <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background hover:brightness-110">{tx.payBalance}</button>
-                </form>
-              )}
-            </div>
-          )}
-        </details>
+        {!progress.complete && paymentPanel}
 
       </div>
     </div>

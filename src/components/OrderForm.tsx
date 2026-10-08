@@ -1,5 +1,7 @@
 "use client";
 
+import { Collapse } from "./Collapse";
+
 import Link from "next/link";
 import { useState } from "react";
 import { createCheckout } from "@/app/actions";
@@ -77,7 +79,7 @@ function OrderFormFields({
           </span>
           <span aria-hidden className="flex h-4 shrink-0 items-center text-lg leading-none text-accent">{formulaOpen ? "−" : "+"}</span>
         </button>
-        <div id={`formula-${pack.id}`} hidden={!formulaOpen} className="mt-4">
+        <Collapse open={formulaOpen} id={`formula-${pack.id}`}><div className="mt-4">
         <p className="mb-3 text-xs leading-relaxed text-muted">{t(locale, { fr: "Scènes au choix : démarrage, pause, fin, discussion ou gameplay. Tu les préciseras dans ton brief après la commande.", en: "Choose starting, break, ending, chatting or gameplay scenes in your brief after ordering." })}</p>
         {formulas.length > 1 ? (
           <fieldset className="space-y-2">
@@ -124,7 +126,7 @@ function OrderFormFields({
           <span className="shrink-0 font-semibold">−{amount(site.logoDiscount)}</span>
         </label>
         <p className="mt-2 text-xs leading-relaxed text-muted">{t(locale, { fr: "Fournis un logo de qualité, idéalement vectoriel. Les retouches et refontes sont chiffrées séparément.", en: "Supply a quality logo, ideally vector artwork. Retouching and redesign are quoted separately." })}</p>
-        </div>
+        </div></Collapse>
       </div>
 
       <div className="mt-6 relative before:absolute before:-left-6 before:-right-6 before:top-0 before:border-t before:border-border pt-5">
@@ -135,7 +137,7 @@ function OrderFormFields({
           </span>
           <span aria-hidden className="flex h-4 shrink-0 items-center text-lg leading-none text-accent">{paymentOpen ? "−" : "+"}</span>
         </button>
-        <div id={`payment-${pack.id}`} hidden={!paymentOpen} className="mt-4">
+        <Collapse open={paymentOpen} id={`payment-${pack.id}`}><div className="mt-4">
         <fieldset className="space-y-2">
           <legend className="sr-only">{t(locale, { fr: "Paiement", en: "Payment" })}</legend>
           <label className={choiceClass}>
@@ -161,7 +163,7 @@ function OrderFormFields({
             </p>
           )}
         </fieldset>
-        </div>
+        </div></Collapse>
       </div>
 
       <div className="mt-6 space-y-4 relative before:absolute before:-left-6 before:-right-6 before:top-0 before:border-t before:border-border pt-5">

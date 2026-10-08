@@ -2,7 +2,7 @@
 // qui ne retient que les valeurs de ces listes) et mise en forme de la demande.
 
 // Onglet « Projet sur-mesure »
-export const requestTypes = ["Projet sur mesure", "Question sur une offre", "Suivi d'une commande", "Collaboration / partenariat", "Autre demande", "Devis Univers complet"];
+export const requestTypes = ["Projet sur mesure", "Demande de devis", "Question sur une offre", "Suivi d'une commande", "Collaboration / partenariat", "Autre demande", "Devis Univers complet"];
 // Onglet « Message simple »
 export const messageSubjects = ["Question sur une offre", "Collaboration / partenariat", "Autre"];
 export const budgets = ["Moins de 500 €", "500 à 1 000 €", "1 000 à 2 000 €", "Plus de 2 000 €"];
@@ -16,6 +16,7 @@ export const MAX_REFERENCES = 5;
 // Affichage en anglais des choix (la valeur envoyée reste la valeur française ci-dessus)
 const choicesEn: Record<string, string> = {
   "Projet sur mesure": "Custom project",
+  "Demande de devis": "Quote request",
   "Suivi d'une commande": "Order follow-up",
   "Autre demande": "Other enquiry",
   "Devis Univers complet": "Full Universe quote",

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { canCancelApproval, correctionPending, itemRevisionLimit, cleanNote, deliveryProgress, isDeliveryToken, previewPublished } from "@/lib/delivery";
-import { hasFinalAccess } from "@/lib/final-downloads";
+import { allFinalsAccessed, hasFinalAccess } from "@/lib/final-downloads";
 import { notify } from "@/lib/notify";
 import { createBalanceLink } from "@/lib/orders";
 import { requestLocale } from "@/lib/request-locale";
@@ -38,7 +38,8 @@ const who = (o: { offerName: string; customerEmail: string }) => `${o.offerName}
 
 export async function saveClientTestimonialAction(_state: { status: string }, formData: FormData) {
   const { store, order, token } = await orderFor(formData);
-  if (!deliveryProgress(await store.listDeliverables(order.id)).complete) return { status: "unapproved" };
+  const deliverables = await store.listDeliverables(order.id);
+  if (!deliveryProgress(deliverables).complete || balanceDue(order) > 0 || !deliverables.every(allFinalsAccessed)) return { status: "unapproved" };
   const author = typeof formData.get("author") === "string" ? (formData.get("author") as string).trim() : "";
   const quote = typeof formData.get("quote") === "string" ? (formData.get("quote") as string).trim() : "";
   if (!author || author.length > 80 || !quote || quote.length > 600) return { status: "invalid" };
@@ -102,6 +103,21 @@ export async function setClientApprovalAction(formData: FormData) {
 }
 
 // Règlement du solde depuis la page de livraison (paiement Stripe, retour sur la page)
+export async function approveAllDeliverablesAction(formData: FormData) {
+  const { store, order, token } = await orderFor(formData);
+  const items = await store.listDeliverables(order.id);
+  if (!items.length || items.some((item) => !previewPublished(item) || correctionPending(item) || (item.plannedKey && !item.previewPath))) back(token, "", "attente");
+  for (const item of items.filter((item) => !item.approvedAt)) {
+    const current = (await store.listDeliverables(order.id)).find((d) => d.id === item.id);
+    if (!current || current.previewPath !== item.previewPath || correctionPending(current) || !previewPublished(current)) back(token, "", "attente");
+    await store.setDeliverableApproval(item.id, true);
+  }
+  revalidatePath(`/admin/commandes/${order.id}`);
+  revalidatePath("/admin/commandes");
+  revalidatePath(`/commande/${token}`);
+  redirect(`/commande/${token}?retour=valide#elements`);
+}
+
 export async function payBalanceAction(formData: FormData) {
   const { order, token } = await orderFor(formData);
   if (balanceDue(order) <= 0) redirect(`/commande/${token}`);

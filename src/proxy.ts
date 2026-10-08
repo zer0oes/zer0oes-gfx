@@ -41,7 +41,7 @@ export async function proxy(request: NextRequest) {
 
 // Pages publiques du site (hors admin, API, espace client et fichiers)
 function isPublicPage(pathname: string) {
-  return !/^\/(admin|api|commande|livraison|_next)(\/|$)/.test(pathname) && !/\.[a-z0-9]+$/i.test(pathname);
+  return !/^\/(admin|api|commande|devis|livraison|_next)(\/|$)/.test(pathname) && !/\.[a-z0-9]+$/i.test(pathname);
 }
 
 // Langue des pages publiques :

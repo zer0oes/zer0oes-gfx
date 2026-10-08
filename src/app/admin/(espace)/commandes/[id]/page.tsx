@@ -1,4 +1,5 @@
 import { OrderBriefPanel } from "@/components/admin/OrderBriefPanel";
+import { QuoteBriefRequirements } from "@/components/admin/QuoteBriefRequirements";
 import { previewPublished } from "@/lib/delivery";
 
 import type { Metadata } from "next";
@@ -36,6 +37,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
   const store = getStore();
   const [order, finance, invoices] = await Promise.all([store.getOrder(id), store.getFinance(), store.listInvoices(id)]);
   if (!order) notFound();
+  const projectQuote = order.deliveryToken && order.packId === "sur-mesure" ? await store.getQuoteByToken(order.deliveryToken) : null;
   await ensureDeliveryPlan(order);
   const deliverables = await store.listDeliverables(id);
   const due = balanceDue(order);
@@ -69,6 +71,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
       </header>
       <div className="mt-6 space-y-6">
         <OrderBriefPanel unread={Boolean(order.briefRevisions?.some((revision) => !revision.consultedAt && !revision.acknowledgedAt))} defaultOpen={!order.deliveredAt && !deliverables.some(previewPublished)} summary={["Brief", order.brief?.Pseudo || order.customerName, order.brief?.Plateforme, order.briefReceivedAt ? `Reçu le ${new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(new Date(order.briefReceivedAt))}` : "À compléter"].filter(Boolean).join(" · ")}>
+            {projectQuote && !projectQuote.briefCompletedAt && <QuoteBriefRequirements key={projectQuote.updatedAt} quote={projectQuote} />}
+            {sp.brief === "1" && <p role="status" className="mt-3 text-sm text-emerald-300">Champs obligatoires enregistrés.</p>}
             {!!order.briefRevisions?.length && <div className="mt-3 space-y-3">
 
               {order.briefRevisions.map((revision, i) => <details key={revision.at}>
@@ -88,7 +92,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
             {order.brief ? (
               <>
                 <p className="mt-1 text-xs text-muted">
-                  Reçu le {order.briefReceivedAt ? dateFmt.format(new Date(order.briefReceivedAt)) : "?"}
+                  {projectQuote && !projectQuote.briefCompletedAt ? "Brief en attente — les informations ci-dessous proviennent de la demande initiale et du devis accepté." : `Dernière version reçue le ${dateFmt.format(new Date(order.briefRevisions?.at(-1)?.at ?? order.briefReceivedAt ?? order.createdAt))}`}
                 </p>
                 <BriefSummary brief={order.brief} orderId={order.id} logoPreview={order.briefLogoPreview} />
               </>

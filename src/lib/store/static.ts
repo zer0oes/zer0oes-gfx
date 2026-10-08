@@ -21,6 +21,12 @@ const readOnly = async (): Promise<never> => {
 // Sans base de données : le site public fonctionne sur les données statiques,
 // les commandes ne sont pas enregistrées (seulement notifiées par e-mail).
 export const staticStore: Store = {
+  listQuotes: async () => [], getQuote: async () => null, getQuoteByToken: async () => null,
+  createQuote: readOnly, proposeQuote: readOnly, respondQuote: readOnly,
+  deleteQuote: readOnly,
+  saveQuoteMailState: readOnly,
+  recordQuotePayment: readOnly,
+  reopenQuote: readOnly,
   listBanners: async () => [],
   listAffiliateLinks: async () => [],
   saveAffiliateLink: readOnly,

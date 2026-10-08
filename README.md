@@ -21,6 +21,17 @@ le client remplit ensuite son brief, et tout se gère depuis un espace d'adminis
 
 ## Technique
 
+Les demandes des formulaires projet et message sont enregistrées dans **Admin → Devis**.
+Ouvre une demande, saisis la prestation, les livrables, le montant HT et la validité,
+puis publie la proposition et envoie son lien privé par e-mail depuis cette page.
+Le client choisit un acompte ou le règlement intégral dans `/devis/<jeton>`, puis
+accepte le devis et paie sur Stripe. Il complète ensuite le même brief que pour
+les packs dans son espace commande. Les champs obligatoires se configurent dans
+la commande côté admin. Les fichiers définitifs sont accessibles après validation
+des livrables et paiement intégral ; les aperçus se publient sans envoi automatique d’e-mail.
+Les migrations jusqu’à `20261008004000_legacy_a_la_carte_revisions.sql` doivent être appliquées à Supabase.
+Les demandes reçues avant cette migration ne sont pas importées depuis les e-mails.
+
 | Brique | Rôle |
 | --- | --- |
 | [Next.js 16](https://nextjs.org) (App Router, TypeScript) | Site et admin. Attention : version récente, la doc de référence est dans `node_modules/next/dist/docs/`. |

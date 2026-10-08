@@ -23,6 +23,7 @@ export type Testimonial = {
 // Cycle de vie d'une commande.
 export const orderStatuses = [
   { id: "payee", label: "Payée" },
+  { id: "brief_attente", label: "Brief en attente" },
   { id: "brief_recu", label: "Brief reçu" },
   { id: "en_cours", label: "En cours" },
   { id: "livree", label: "Livrée" },
@@ -102,6 +103,7 @@ export type DeliverablePatch = { previewVersions?: Deliverable["previewVersions"
 export type DeliverableNote = { at: string; body: string };
 
 export type Order = {
+  revisionsIncluded?: number;
   briefLogoPreview?: string;
   deliveryTemplate?: string[];
   briefRevisions?: { at: string; changes: Record<string, { before: string; after: string }>; consultedAt?: string; acknowledgedAt?: string }[];
@@ -200,6 +202,16 @@ export function balanceDue(o: Pick<Order, "totalPrice" | "amountPaid">) {
 }
 
 export interface Store {
+  listQuotes(): Promise<import("@/lib/quotes").ProjectQuote[]>;
+  getQuote(id: string): Promise<import("@/lib/quotes").ProjectQuote | null>;
+  getQuoteByToken(token: string): Promise<import("@/lib/quotes").ProjectQuote | null>;
+  createQuote(quote: import("@/lib/quotes").ProjectQuote): Promise<void>;
+  deleteQuote(id: string, expectedUpdatedAt: string): Promise<boolean>;
+  proposeQuote(quote: import("@/lib/quotes").ProjectQuote, expectedUpdatedAt: string): Promise<boolean>;
+  saveQuoteMailState(quote: import("@/lib/quotes").ProjectQuote, expectedUpdatedAt: string): Promise<boolean>;
+  respondQuote(token: string, accept: boolean, declineReason?: string, brief?: Record<string, string>, payment?: "total" | "acompte"): Promise<string | null>;
+  reopenQuote(token: string): Promise<boolean>;
+  recordQuotePayment(id: string, key: string, amount: number, fee?: number): Promise<boolean>;
   listBanners(): Promise<Banner[]>;
   listAffiliateLinks(): Promise<AffiliateLink[]>;
   saveAffiliateLink(link: AffiliateLink): Promise<void>;

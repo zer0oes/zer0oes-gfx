@@ -85,7 +85,8 @@ export function deliveryEmail({ offerName, url, links, files }: { offerName: str
 
 // Remarques du client sur un fichier livré (page /livraison/<jeton>)
 export const MAX_NOTES = 30;
-export function itemRevisionLimit(order: { packId: string }): number {
+export function itemRevisionLimit(order: { packId: string; revisionsIncluded?: number }): number {
+  if (order.packId === "sur-mesure" && order.revisionsIncluded === 1) return 1;
   if (order.packId === "options" || order.packId.startsWith("option:")) return 1;
   return order.packId === "univers-complet" ? 3 : 2;
 }
@@ -122,7 +123,7 @@ export function isDeliverableType(v: unknown): v is DeliverableType {
 }
 
 const VIDEO_EXT = /\.(mp4|webm|mov|m4v)$/i;
-const IMAGE_EXT = /\.(png|jpe?g|webp|gif|avif)$/i;
+const IMAGE_EXT = /\.(png|jpe?g|webp|gif|avif|svg)$/i;
 
 export function mediaKind(path?: string): "image" | "video" | null {
   if (!path) return null;

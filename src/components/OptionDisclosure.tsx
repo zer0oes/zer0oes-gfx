@@ -12,7 +12,7 @@ export function OptionDisclosure({ label, price, children }: { label: ReactNode;
         {!open && price}
         <span aria-hidden className={`${open ? "ml-auto " : ""}shrink-0 text-accent`}>{open ? "−" : "+"}</span>
       </button>
-      <div id={id} aria-hidden={!open} inert={!open} className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out motion-reduce:transition-none ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+      <div id={id} aria-hidden={!open} inert={!open} className={`grid transition-[grid-template-rows,opacity] duration-[260ms] ease-out motion-reduce:transition-none ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
         <div className="min-h-0 overflow-hidden">{children}</div>
       </div>
     </div>

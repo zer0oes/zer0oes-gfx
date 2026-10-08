@@ -1,3 +1,4 @@
+import { quoteEditable, quoteExpired, type ProjectQuote } from "@/lib/quotes";
 import { reviewedRevisions } from "@/lib/brief-review";
 import { hasFinalAccess, readyToClose } from "@/lib/final-downloads";
 import "server-only";
@@ -21,6 +22,7 @@ type Data = Catalog & Portfolio & {
   banners?: Banner[];
   affiliateLinks?: AffiliateLink[];
   promotions?: Promotion[];
+  quotes?: ProjectQuote[];
   orders: Order[];
   invoices?: Invoice[];
   deliverables?: Deliverable[];
@@ -79,6 +81,65 @@ function upsertAt<T extends { id: string }>(list: T[], item: T, position?: numbe
 }
 
 export const localStore: Store = {
+  reopenQuote: (token) => mutate((d) => {
+    const q = d.quotes?.find((item) => item.token === token);
+    if (!q || q.status !== "refuse" || q.orderId || quoteExpired(q)) return false;
+    q.status = "propose";
+    delete q.declineReason;
+    q.updatedAt = new Date().toISOString();
+    return true;
+  }),
+  recordQuotePayment: (id, key, amount, fee) => mutate((d) => {
+    const o = d.orders.find((item) => item.id === id);
+    if (!o || o.packId !== "sur-mesure") return false;
+    if (o.paymentIntentId === key) return true;
+    const deposit = Math.round(o.totalPrice * o.depositPercent / 100);
+    if (o.amountPaid || (amount !== o.totalPrice && (o.paymentType !== "acompte" || amount !== deposit))) return false;
+    Object.assign(o, { amountPaid: amount, paymentIntentId: key, feesPaid: fee, updatedAt: new Date().toISOString() });
+    if (amount === o.totalPrice) o.paymentType = "total";
+    return true;
+  }),
+  listQuotes: async () => [...((await load()).quotes ?? [])].reverse(),
+  getQuote: async (id) => (await load()).quotes?.find((q) => q.id === id) ?? null,
+  getQuoteByToken: async (token) => (await load()).quotes?.find((q) => q.token === token) ?? null,
+  createQuote: (q) => mutate((d) => { (d.quotes ??= []).push(q); }),
+  deleteQuote: (id, expected) => mutate((d) => {
+    const q = d.quotes?.find((item) => item.id === id);
+    if (!q || q.updatedAt !== expected || q.status === "accepte" || q.orderId) return false;
+    d.quotes = d.quotes?.filter((item) => item.id !== id);
+    return true;
+  }),
+  proposeQuote: (q, expected) => mutate((d) => {
+    const current = d.quotes?.find((x) => x.id === q.id);
+    if (!current || current.updatedAt !== expected || !quoteEditable(current)) return false;
+    Object.assign(current, q); return true;
+  }),
+  saveQuoteMailState: (q, expected) => mutate((d) => {
+    const current = d.quotes?.find((x) => x.id === q.id);
+    if (!current || current.updatedAt !== expected) return false;
+    Object.assign(current, q); return true;
+  }),
+  respondQuote: (token, accept, declineReason = "", brief = {}, payment) => mutate((d) => {
+    const q = d.quotes?.find((x) => x.token === token);
+    if (q?.status === "accepte") return q.orderId ?? null;
+    if (!q || q.status !== "propose" || quoteExpired(q)) throw new Error("Devis indisponible ou expiré.");
+    if (accept && payment === "acompte") {
+      const percent = q.depositPercent || 30;
+      const amount = Math.round(q.totalPrice * percent / 100);
+      if (!Number.isInteger(percent) || percent < 1 || percent > 99 || amount < 50 || q.totalPrice - amount < 50) throw new Error("Acompte invalide.");
+    }
+    q.updatedAt = new Date().toISOString();
+    if (!accept) { q.status = "refuse"; q.declineReason = declineReason.trim().slice(0, 2000); return null; }
+    const id = randomUUID();
+    d.orders.unshift({ id, createdAt: q.updatedAt, updatedAt: q.updatedAt, stripeSessionId: `devis_${q.id}`,
+      demo: false, packId: "sur-mesure", revisionsIncluded: q.revisionsIncluded ?? 2, formulaId: "base", offerName: q.title, paymentType: payment ?? q.paymentType ?? "acompte",
+      hasLogo: false, listPrice: q.totalPrice, totalPrice: q.totalPrice, amountPaid: 0, depositPercent: payment === "acompte" ? q.depositPercent || 30 : payment === "total" ? 0 : q.depositPercent ?? 0,
+      logoDiscount: 0, customerName: q.name, customerEmail: q.email, status: "brief_attente", notes: [],
+      brief: { ...q.request, ...brief, "Proposition acceptée": q.description }, briefReceivedAt: q.updatedAt,
+      deliveryTemplate: q.deliverables, deliveryToken: q.token });
+    q.status = "accepte"; q.orderId = id; q.acceptedAt = q.updatedAt;
+    return id;
+  }),
   listAffiliateLinks: async () => (await load()).affiliateLinks ?? [],
   saveAffiliateLink: (link) => mutate((d) => upsertAt(d.affiliateLinks ??= [], link)),
   deleteAffiliateLink: (id) => mutate((d) => void (d.affiliateLinks = (d.affiliateLinks ?? []).filter((l) => l.id !== id))),

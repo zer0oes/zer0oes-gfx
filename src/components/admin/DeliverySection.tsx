@@ -133,7 +133,7 @@ export async function DeliverySection({ order, items, message }: { order: Order;
         <form action={sendDeliveryAction} className="flex shrink-0 flex-col items-start sm:items-end">
           <input type="hidden" name="orderId" value={order.id} />
           <button disabled={!newCount || !order.customerEmail} className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background disabled:opacity-40">
-            Envoyer les aperçus prêts
+            Prévenir le client
           </button>
           {!order.customerEmail && <p className="mt-2 text-xs text-amber-300">Pas d&apos;e-mail client sur cette commande.</p>}
         </form>

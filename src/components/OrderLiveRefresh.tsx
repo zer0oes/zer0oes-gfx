@@ -6,11 +6,11 @@ import { useEffect, useTransition } from "react";
 // Actualisation du rendu serveur sans perdre les champs en cours de saisie.
 export function OrderLiveRefresh() {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     const refresh = () => {
-      if (document.visibilityState === "visible" && !pending) {
+      if (document.visibilityState === "visible") {
         startTransition(() => router.refresh());
       }
     };
@@ -22,7 +22,7 @@ export function OrderLiveRefresh() {
       document.removeEventListener("visibilitychange", refresh);
       window.removeEventListener("focus", refresh);
     };
-  }, [router, pending]);
+  }, [router]);
 
   return null;
 }
