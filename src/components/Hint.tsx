@@ -88,7 +88,7 @@ export function Hint({ hint }: { hint?: GlossaryHint }) {
           }}
           className="fixed z-[70] rounded-xl font-sans border border-border bg-surface-2 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-foreground shadow-xl"
         >
-          <span className="mb-1 block font-semibold text-accent">{hint.term}</span>
+          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-widest text-accent">{hint.term}</span>
           {hint.text}
         </span>,
         document.body,
