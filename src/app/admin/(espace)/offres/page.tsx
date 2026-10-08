@@ -219,6 +219,9 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const sim = simulate(active, qty, finance);
 
   const translationContent = await getStore().getHomeContent();
+  // Options affichées sur la même carte que o (même regroupement)
+  const groupOf = (o: (typeof options)[number]) => optionContentFor(o, translationContent, "fr").group;
+  const cardMates = (o: (typeof options)[number]) => (groupOf(o) ? options.filter((x) => x.id !== o.id && groupOf(x) === groupOf(o)) : []);
 
   return (
     <TranslationTabs stored={translationValues(translationContent)}>
@@ -349,7 +352,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                   return (
                     <DrawerRow key={o.id} drawer={`option-${o.id}`} label={`Modifier ${o.name}`} className={openOption === o.id ? "bg-accent/10" : ""}>
                       <td className="px-4 py-3 text-muted">{i + 1}</td>
-                      <td className="px-4 py-3"><span className="font-semibold">{o.name}</span><p className="mt-1 line-clamp-1 max-w-md text-xs text-muted">{optionContentFor(o, translationContent, "fr").description}</p></td>
+                      <td className="px-4 py-3"><span className="font-semibold">{o.name}</span><p className="mt-1 line-clamp-1 max-w-md text-xs text-muted">{optionContentFor(o, translationContent, "fr").description}</p>{cardMates(o).length > 0 && <p className="mt-1 text-xs text-accent">Même carte que : {cardMates(o).map((m) => m.name).join(", ")}</p>}</td>
                       <td className="px-4 py-3"><span style={{ color: optionThemeColors[category], borderColor: `color-mix(in srgb, ${optionThemeColors[category]} 45%, transparent)`, background: `color-mix(in srgb, ${optionThemeColors[category]} 10%, transparent)` }} className="inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium">{optionCategories.find((c) => c.id === category)?.label}</span></td>
                       <td className="whitespace-nowrap px-4 py-3">{o.priceFrom ? "À partir de " : ""}{euro(o.price)}{o.unit ? ` / ${o.unit}` : ""}</td>
                       <td className="px-4 py-3 text-muted">{o.priceFrom ? "Sur devis" : "En ligne"}</td>
@@ -379,6 +382,20 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                     <label className="flex items-start gap-2 text-sm"><input type="checkbox" name="priceFrom" defaultChecked={o.priceFrom} className="mt-1 accent-[var(--accent)]" /> Prix « à partir de » : sur devis (bouton « Demander un devis » au lieu d&apos;« Ajouter »)</label>
                     <Field label="Description sur la carte"><TranslationInput multiline translationKey={`translation:option-description:${o.id}`} englishDefault={english.description} name="description" defaultValue={content.description} rows={3} maxLength={1200} className={input} /></Field>
                     <Field label="Ce que le client reçoit" hint="Une ligne par élément livré. Vide : la liste « Tu reçois » n'apparaît pas sur la carte."><TranslationInput multiline translationKey={`translation:option-files:${o.id}`} englishDefault={english.files.join("\n")} name="files" defaultValue={content.files.join("\n")} rows={4} maxLength={1200} className={input} /></Field>
+                    <fieldset className="space-y-3 rounded-xl border border-border p-4">
+                      <legend className="px-1 text-sm font-medium">Carte sur la page Offres</legend>
+                      <Field label="Regrouper avec" hint="Les options regroupées partagent une carte, avec un bouton Statique / Animé et, si leurs nombres diffèrent, un menu du nombre.">
+                        <select name="groupWith" defaultValue={cardMates(o)[0]?.id ?? ""} className={input}>
+                          <option value="">Carte seule</option>
+                          {options.filter((x) => x.id !== o.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Nom de la carte" hint="Titre de la carte partagée sur la page Offres (commun aux options regroupées). Vide : nom d'origine."><TranslationInput translationKey={`translation:option-group:${content.group ?? o.id}`} englishDefault={english.groupName} name="groupName" defaultValue={content.group ? content.groupName : ""} placeholder="Ex. Overlay" maxLength={80} className={input} /></Field>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <fieldset><legend className="mb-1 text-sm font-medium">Variante</legend><div className="flex gap-4 pt-1">{([["statique", "Statique"], ["anime", "Animée"]] as const).map(([v, l]) => <label key={v} className="flex items-center gap-2 text-sm"><input type="radio" name="variant" value={v} defaultChecked={(v === "anime") === content.animated} className="accent-[var(--accent)]" /> {l}</label>)}</div></fieldset>
+                        <Field label="Nombre" hint="Ex. 5 pour un pack de 5 emotes."><input name="count" type="number" min={1} max={999} defaultValue={content.count} className={input} /></Field>
+                      </div>
+                    </fieldset>
                     <fieldset>
                       <legend className="mb-2 text-sm font-medium">Compatible avec <span className="font-normal text-muted">(logos affichés sur la carte)</span></legend>
                       <div className="flex flex-wrap gap-4">{platforms.map((p) => <label key={p.id} className="flex items-center gap-2 text-sm"><input type="checkbox" name={`compat_${p.id}`} defaultChecked={content.compat.includes(p.id)} className="accent-[var(--accent)]" /> {p.name}</label>)}</div>

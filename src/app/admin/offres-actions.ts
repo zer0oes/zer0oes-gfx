@@ -10,7 +10,7 @@ import type { Formula, Option, Pack } from "@/lib/pricing";
 import { optionCategories, type OptionCategory } from "@/lib/pricing";
 import { isWatermarkLevel } from "@/lib/protection";
 import { getStore } from "@/lib/store";
-import { optionContentFromForm, withoutOptionContent } from "@/lib/option-content";
+import { optionContentFromForm, withGroupName, withGrouping, withoutOptionContent } from "@/lib/option-content";
 
 // Conversion « 490 », « 490,50 » ou « 1 990 » (€) → centimes. null si invalide.
 function parseEuros(raw: FormDataEntryValue | null): number | null {
@@ -249,7 +249,8 @@ export async function saveOptionAction(formData: FormData) {
   };
   await store.saveOptions(options.map((o) => (o.id === id ? next : o)));
   await saveAdminTranslations(formData, `option:${id}`, ["name", "unit"]);
-  await store.saveHomeContent(optionContentFromForm(await store.getHomeContent(), id, formData));
+  const content = optionContentFromForm(await store.getHomeContent(), id, formData);
+  await store.saveHomeContent(withGroupName(withGrouping(content, options, id, text(formData, "groupWith", 60)), next, formData));
   done(optionTab(id));
 }
 
