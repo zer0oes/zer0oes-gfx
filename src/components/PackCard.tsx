@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { href, t, type Locale } from "@/lib/i18n";
 import { type Pack, type PricingSettings } from "@/lib/pricing";
+import { glossaryFor } from "@/lib/glossary";
+import type { HomeContent } from "@/lib/home-content";
 import { trDeep } from "@/lib/translations-en";
+import { Hint } from "./Hint";
 import { OfferPrice, SaleBadge, discountPercent } from "./ui";
 import { OrderForm } from "./OrderForm";
 
@@ -22,6 +25,7 @@ export function PackCard({
   compact = false,
   openOptions = false,
   locale = "fr",
+  texts,
 }: {
   pack: Pack;
   settings: PricingSettings;
@@ -30,6 +34,8 @@ export function PackCard({
   // Version courte (accueil) : prix, bénéfice, trois livrables et bouton
   compact?: boolean;
   locale?: Locale;
+  // Textes de la page (bulles « ? » des termes techniques) ; absents sur l'accueil
+  texts?: HomeContent;
 }) {
   // Textes de l'offre dans la langue de la page
   const translated = trDeep(locale, original);
@@ -92,7 +98,10 @@ export function PackCard({
               <span className="text-accent-2" aria-hidden>
                 ✓
               </span>
-              <span>{f}</span>
+              <span>
+                {f}
+                {texts && <Hint hint={glossaryFor(f, texts)} />}
+              </span>
             </li>
           ))}
         </ul>

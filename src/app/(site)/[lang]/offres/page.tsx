@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { OfferGuide } from "@/components/OfferGuide";
 import { OfferTabs } from "@/components/OfferTabs";
 import { OptionCatalog } from "@/components/OptionCatalog";
+import { glossaryHints } from "@/lib/glossary";
+import { resolveOptionFiles } from "@/lib/option-files";
 import { PackCard } from "@/components/PackCard";
 import { resolveHome } from "@/lib/home-content";
 import { asLocale, t, type Locale } from "@/lib/i18n";
@@ -117,7 +119,8 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
   const catalog = await getPublicCatalog();
   const { settings: site } = catalog;
   const packs = activePacks(catalog.packs);
-  const texts = resolveHome(await getStore().getHomeContent(), lang);
+  const stored = await getStore().getHomeContent();
+  const texts = resolveHome(stored, lang);
 
   return (
     <>
@@ -146,7 +149,7 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
         <OfferTabs locale={lang} packs={<>
         <div className="grid gap-6 pt-3 md:grid-cols-3">
           {packs.map((p) => (
-            <PackCard key={p.id} pack={p} settings={site} order locale={lang} openOptions={details === p.id} />
+            <PackCard key={p.id} pack={p} settings={site} order locale={lang} openOptions={details === p.id} texts={texts} />
           ))}
         </div>
         <section className="mt-8 text-center text-sm leading-relaxed text-muted" aria-labelledby="pack-value">
@@ -157,7 +160,7 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
         <OfferGuide locale={lang} />
 
         </>} options={
-          <OptionCatalog settings={site} packs={packs.map((p) => trDeep(lang, p))} options={catalog.options.map((o) => trDeep(lang, o))} locale={lang} />
+          <OptionCatalog settings={site} packs={packs.map((p) => trDeep(lang, p))} options={catalog.options.map((o) => trDeep(lang, o))} locale={lang} texts={{ hints: glossaryHints(texts), files: resolveOptionFiles(catalog.options, stored, lang), receive: texts.text("options.receive") }} />
         } />
 
         <section className="mt-20">

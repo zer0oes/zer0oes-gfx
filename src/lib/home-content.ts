@@ -127,7 +127,35 @@ export const offersPageFields: HomeField[] = [
   { key: "pricing.explanationTitle", label: "Titre de l’explication des packs", kind: "text", max: 120 },
   { key: "pricing.summary", label: "Phrase courte sous le titre des packs", kind: "long" },
   { key: "pricing.optionsIntro", label: "Introduction de l’onglet À la carte", kind: "long" },
+  ...glossaryFields(),
+  { key: "options.receive", label: "Cartes à la carte — titre de la liste des fichiers livrés", kind: "text", max: 40 },
 ];
+
+// Bulles « ? » des termes techniques : nom affiché en tête de bulle et explication
+function glossaryFields(): HomeField[] {
+  return [
+  { key: "glossary.declinaisons.term", label: "Bulle « Déclinaisons du logo » — terme", kind: "text", max: 40 },
+  { key: "glossary.declinaisons.text", label: "Bulle « Déclinaisons du logo » — explication", kind: "long" },
+  { key: "glossary.overlay.term", label: "Bulle « Overlay » — terme", kind: "text", max: 40 },
+  { key: "glossary.overlay.text", label: "Bulle « Overlay » — explication", kind: "long" },
+  { key: "glossary.alertes.term", label: "Bulle « Alertes » — terme", kind: "text", max: 40 },
+  { key: "glossary.alertes.text", label: "Bulle « Alertes » — explication", kind: "long" },
+  { key: "glossary.emotes.term", label: "Bulle « Emotes » — terme", kind: "text", max: 40 },
+  { key: "glossary.emotes.text", label: "Bulle « Emotes » — explication", kind: "long" },
+  { key: "glossary.widgetAvance.term", label: "Bulle « Widget interactif avancé » — terme", kind: "text", max: 40 },
+  { key: "glossary.widgetAvance.text", label: "Bulle « Widget interactif avancé » — explication", kind: "long" },
+  { key: "glossary.widget.term", label: "Bulle « Widget personnalisé » — terme", kind: "text", max: 40 },
+  { key: "glossary.widget.text", label: "Bulle « Widget personnalisé » — explication", kind: "long" },
+  { key: "glossary.stinger.term", label: "Bulle « Stinger » — terme", kind: "text", max: 40 },
+  { key: "glossary.stinger.text", label: "Bulle « Stinger » — explication", kind: "long" },
+  { key: "glossary.panneaux.term", label: "Bulle « Panneaux Twitch » — terme", kind: "text", max: 40 },
+  { key: "glossary.panneaux.text", label: "Bulle « Panneaux Twitch » — explication", kind: "long" },
+  { key: "glossary.banniere.term", label: "Bulle « Bannière » — terme", kind: "text", max: 40 },
+  { key: "glossary.banniere.text", label: "Bulle « Bannière » — explication", kind: "long" },
+  { key: "glossary.corrections.term", label: "Bulle « Corrections » — terme", kind: "text", max: 40 },
+  { key: "glossary.corrections.text", label: "Bulle « Corrections » — explication", kind: "long" },
+  ];
+}
 
 export const homeDefaults: Record<string, string> = {
   "pricing.kicker": "Packs & à la carte",
@@ -184,6 +212,27 @@ export const homeDefaults: Record<string, string> = {
   "portfolio.title": "Des univers, pas juste des écrans.",
   "portfolio.intro": "Chaque projet est pensé autour de la personnalité du créateur, de son contenu et de son identité.",
   "portfolio.link": "Explorer l’univers →",
+  "options.receive": "Tu reçois",
+  "glossary.declinaisons.term": "Déclinaisons du logo",
+  "glossary.declinaisons.text": "Versions du logo adaptées à chaque usage : icône seule, version horizontale, version une couleur… pour qu'il reste lisible partout.",
+  "glossary.overlay.term": "Overlay",
+  "glossary.overlay.text": "Habillage affiché par-dessus ton live dans OBS : écran de démarrage, de pause, de fin, discussion ou cadre autour du jeu et de la caméra.",
+  "glossary.alertes.term": "Alertes",
+  "glossary.alertes.text": "Petites animations qui apparaissent à l'écran quand quelqu'un suit ta chaîne, s'abonne, lance un raid, envoie des bits ou un don.",
+  "glossary.emotes.term": "Emotes",
+  "glossary.emotes.text": "Petites images à ton effigie que ta communauté utilise dans le tchat (Twitch, YouTube, Discord).",
+  "glossary.widgetAvance.term": "Widget interactif avancé",
+  "glossary.widgetAvance.text": "Widget avec une logique sur mesure : il réagit aux événements du live (follow, sub, dons…), affiche des éléments selon des conditions ou se met à jour à partir de données externes. Développement chiffré sur devis.",
+  "glossary.widget.term": "Widget personnalisé",
+  "glossary.widget.text": "Un widget au fonctionnement classique, habillé à ton image : barre d'objectif, tchat affiché à l'écran, encart sponsor… Tu choisis son contenu et son apparence, sans développement sur mesure.",
+  "glossary.stinger.term": "Stinger",
+  "glossary.stinger.text": "Courte animation de transition qui recouvre l'écran pendant le passage d'une scène à l'autre.",
+  "glossary.panneaux.term": "Panneaux Twitch",
+  "glossary.panneaux.text": "Encadrés sous ta vidéo sur Twitch : à propos, planning, réseaux, règles du tchat…",
+  "glossary.banniere.term": "Bannière",
+  "glossary.banniere.text": "Grande image en haut de ta page de chaîne, sur Twitch ou YouTube.",
+  "glossary.corrections.term": "Corrections",
+  "glossary.corrections.text": "Allers-retours pour ajuster une création après ma première proposition : couleurs, texte, détails.",
 };
 
 // Version anglaise des textes (/en). Les visuels et les noms d'emotes sont communs aux deux langues.
@@ -238,6 +287,27 @@ export const homeDefaultsEn: Record<string, string> = {
   "portfolio.title": "Universes, not just screens.",
   "portfolio.intro": "Every project is built around the creator's personality, content and identity.",
   "portfolio.link": "Explore the universe →",
+  "options.receive": "You receive",
+  "glossary.declinaisons.term": "Logo variations",
+  "glossary.declinaisons.text": "Versions of the logo for each use: icon only, horizontal, single colour… so it stays readable everywhere.",
+  "glossary.overlay.term": "Overlay",
+  "glossary.overlay.text": "Graphics shown over your live in OBS: starting, break and ending screens, just chatting, or a frame around your game and camera.",
+  "glossary.alertes.term": "Alerts",
+  "glossary.alertes.text": "Short on-screen pop-ups when someone follows, subscribes, raids, cheers bits or sends a tip.",
+  "glossary.emotes.term": "Emotes",
+  "glossary.emotes.text": "Small custom images your community uses in chat (Twitch, YouTube, Discord).",
+  "glossary.widgetAvance.term": "Advanced interactive widget",
+  "glossary.widgetAvance.text": "A widget with custom logic: it reacts to live events (follows, subs, tips…), shows elements based on conditions or updates from external data. Development priced on quote.",
+  "glossary.widget.term": "Custom widget",
+  "glossary.widget.text": "A standard widget styled to match your look: goal bar, on-screen chat, sponsor panel… You choose its content and appearance, with no custom development.",
+  "glossary.stinger.term": "Stinger",
+  "glossary.stinger.text": "A short transition animation that covers the screen while switching scenes.",
+  "glossary.panneaux.term": "Twitch panels",
+  "glossary.panneaux.text": "The boxes under your video on Twitch: about, schedule, socials, chat rules…",
+  "glossary.banniere.term": "Banner",
+  "glossary.banniere.text": "The large image at the top of your channel page, on Twitch or YouTube.",
+  "glossary.corrections.term": "Revisions",
+  "glossary.corrections.text": "Rounds of changes to adjust a creation after my first proposal: colours, text, details.",
 };
 
 const homeFields = homeSections.flatMap((s) => s.fields);
