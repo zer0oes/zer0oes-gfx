@@ -6,13 +6,14 @@ import { tr } from "@/lib/translations-en";
 const LanguageContext = createContext<"fr" | "en">("fr");
 const ContentContext = createContext<Record<string, string>>({});
 
-export function TranslationTabs({ stored, children }: { stored: Record<string, string>; children: ReactNode }) {
+// compact : dans un panneau latéral, onglets collés au haut du panneau
+export function TranslationTabs({ stored, children, compact = false }: { stored: Record<string, string>; children: ReactNode; compact?: boolean }) {
   const [language, setLanguage] = useState<"fr" | "en">("fr");
   const id = useId();
   return (
     <ContentContext.Provider value={stored}>
       <LanguageContext.Provider value={language}>
-        <div role="tablist" aria-label="Langue des textes" className="my-6 flex gap-6 border-b border-border">
+        <div role="tablist" aria-label="Langue des textes" className={`${compact ? "mb-4" : "my-6"} flex gap-6 border-b border-border`}>
           {(["fr", "en"] as const).map((locale) => (
             <button key={locale} id={`${id}-${locale}`} type="button" role="tab" aria-selected={language === locale}
               aria-controls={`${id}-panel`} tabIndex={language === locale ? 0 : -1} onClick={() => setLanguage(locale)}

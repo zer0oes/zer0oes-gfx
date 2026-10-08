@@ -5,7 +5,7 @@ import { translationValues } from "@/lib/admin-translations";
 import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@/lib/home-content";
 import { optionContentFor, platforms } from "@/lib/option-content";
 import { optionThemeColors } from "@/lib/option-products";
-import { Drawer, DrawerButton, DrawerRow } from "@/components/admin/Drawer";
+import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "@/components/admin/Drawer";
 import { saveOffersPageAction } from "../../portfolio-actions";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -364,11 +364,11 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
             const content = optionContentFor(o, translationContent, "fr");
             const english = optionContentFor(o, translationContent, "en");
             return (
-              <Drawer key={o.id} id={`option-${o.id}`} kicker="Option à la carte" title={o.name} openOnLoad={openOption === o.id}>
+              <Drawer key={o.id} id={`option-${o.id}`} kicker="Option à la carte" title={o.name} openOnLoad={openOption === o.id} footer={<><ConfirmDelete action={deleteOptionAction} id={o.id} label="Supprimer l'option" /><button type="submit" form={`save-${o.id}`} className={save}>Enregistrer l&apos;option</button></>}>
                 {openOption === o.id && enregistre && <p role="status" className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">Enregistré.</p>}
                 {openOption === o.id && typeof erreur === "string" && <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{erreur}</p>}
-                <TranslationTabs stored={translationValues(translationContent)}>
-                  <form action={saveOptionAction} className="space-y-5">
+                <TranslationTabs compact stored={translationValues(translationContent)}>
+                  <form id={`save-${o.id}`} action={saveOptionAction} className="space-y-5">
                     <input type="hidden" name="id" value={o.id} />
                     <Field label="Nom"><TranslationInput translationKey={`translation:option:${o.id}:name`} name="name" defaultValue={o.name} required className={input} /></Field>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -383,26 +383,19 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                       <legend className="mb-2 text-sm font-medium">Compatible avec <span className="font-normal text-muted">(logos affichés sur la carte)</span></legend>
                       <div className="flex flex-wrap gap-4">{platforms.map((p) => <label key={p.id} className="flex items-center gap-2 text-sm"><input type="checkbox" name={`compat_${p.id}`} defaultChecked={content.compat.includes(p.id)} className="accent-[var(--accent)]" /> {p.name}</label>)}</div>
                     </fieldset>
-                    <button type="submit" className={save}>Enregistrer l&apos;option</button>
                   </form>
                 </TranslationTabs>
-                <form action={deleteOptionAction} className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4 text-xs text-muted">
-                  <input type="hidden" name="id" value={o.id} />
-                  <label className="flex items-center gap-1"><input type="checkbox" name="confirm" /> confirmer</label>
-                  <button type="submit" className="rounded-full border border-red-500/40 px-3 py-1.5 text-red-300 hover:bg-red-500/10">Supprimer l&apos;option</button>
-                </form>
               </Drawer>
             );
           })}
-          <Drawer id="option-nouvelle" kicker="Option à la carte" title="Nouvelle option">
-            <form action={createOptionAction} className="space-y-4">
+          <Drawer id="option-nouvelle" kicker="Option à la carte" title="Nouvelle option" footer={<><span /><button type="submit" form="option-creer" className={save}>Créer l&apos;option</button></>}>
+            <form id="option-creer" action={createOptionAction} className="space-y-4">
               <Field label="Nom"><input name="name" required className={input} /></Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Catégorie"><select name="category" className={input}>{optionCategories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
                 <Field label="Prix (€)"><input name="price" required inputMode="decimal" className={input} /></Field>
               </div>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="priceFrom" className="accent-[var(--accent)]" /> Sur devis (« à partir de »)</label>
-              <button type="submit" className={save}>Créer l&apos;option</button>
               <p className="text-xs text-muted">Sa fiche s&apos;ouvre ensuite pour compléter sa description, ce que le client reçoit et la traduction.</p>
             </form>
           </Drawer>
