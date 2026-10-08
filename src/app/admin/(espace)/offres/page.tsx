@@ -6,6 +6,7 @@ import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@
 import { optionContentFor, platforms } from "@/lib/option-content";
 import { optionThemeColors } from "@/lib/option-products";
 import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "@/components/admin/Drawer";
+import { SortHandle, SortableRows } from "@/components/admin/SortableRows";
 import { saveOffersPageAction } from "../../portfolio-actions";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -23,7 +24,7 @@ import {
   saveProtectionAction,
   createOptionAction,
   deleteOptionAction,
-  moveOptionAction,
+  reorderOptionsAction,
   saveOptionAction,
   savePackAction,
   saveSettingsAction,
@@ -277,7 +278,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
             <button type="submit" className={save}>Enregistrer les textes</button>
           </form>
           </details>
-          <Intro>Clique sur une offre pour la modifier. L&apos;ordre ici est celui du site.</Intro>
+          <Intro>Clique sur une offre pour la modifier. Glisse les lignes par leur poignée pour changer l&apos;ordre du site.</Intro>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="px-4 py-3">#</th><th className="px-4 py-3">Offre</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th><th className="px-4 py-3">Ordre</th></tr></thead>
@@ -345,22 +346,22 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           </div>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="px-4 py-3">#</th><th className="px-4 py-3">Option</th><th className="px-4 py-3">Catégorie</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th><th className="px-4 py-3">Ordre</th></tr></thead>
-              <tbody className="divide-y divide-border">
-                {options.map((o, i) => {
+              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Option</th><th className="px-4 py-3">Carte</th><th className="px-4 py-3">Catégorie</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th></tr></thead>
+              <SortableRows onReorder={reorderOptionsAction}>
+                {options.map((o) => {
                   const category = optionCategory(o);
                   return (
-                    <DrawerRow key={o.id} drawer={`option-${o.id}`} label={`Modifier ${o.name}`} className={openOption === o.id ? "bg-accent/10" : ""}>
-                      <td className="px-4 py-3 text-muted">{i + 1}</td>
-                      <td className="px-4 py-3"><span className="font-semibold">{o.name}</span><p className="mt-1 line-clamp-1 max-w-md text-xs text-muted">{optionContentFor(o, translationContent, "fr").description}</p>{cardMates(o).length > 0 && <p className="mt-1 text-xs text-accent">Même carte que : {cardMates(o).map((m) => m.name).join(", ")}</p>}</td>
+                    <DrawerRow key={o.id} sortId={o.id} drawer={`option-${o.id}`} label={`Modifier ${o.name}`} className={openOption === o.id ? "bg-accent/10" : ""}>
+                      <td className="px-2 py-3"><SortHandle label={o.name} /></td>
+                      <td className="px-4 py-3"><span className="font-semibold">{o.name}</span><p className="mt-1 line-clamp-1 max-w-md text-xs text-muted">{optionContentFor(o, translationContent, "fr").description}</p></td>
+                      <td className="px-4 py-3">{cardMates(o).length > 0 ? <span title={`Avec : ${cardMates(o).map((m) => m.name).join(", ")}`} className="whitespace-nowrap font-medium">{optionContentFor(o, translationContent, "fr").groupName || "Carte sans nom"}</span> : <span className="text-muted">Seule</span>}</td>
                       <td className="px-4 py-3"><span style={{ color: optionThemeColors[category], borderColor: `color-mix(in srgb, ${optionThemeColors[category]} 45%, transparent)`, background: `color-mix(in srgb, ${optionThemeColors[category]} 10%, transparent)` }} className="inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium">{optionCategories.find((c) => c.id === category)?.label}</span></td>
                       <td className="whitespace-nowrap px-4 py-3">{o.priceFrom ? "À partir de " : ""}{euro(o.price)}{o.unit ? ` / ${o.unit}` : ""}</td>
                       <td className="px-4 py-3 text-muted">{o.priceFrom ? "Sur devis" : "En ligne"}</td>
-                      <td className="px-4 py-3"><div className="flex gap-2">{(["up", "down"] as const).map((direction) => <form key={direction} action={moveOptionAction}><input type="hidden" name="id" value={o.id} /><button name="dir" value={direction} disabled={direction === "up" ? i === 0 : i === options.length - 1} aria-label={`${direction === "up" ? "Monter" : "Descendre"} ${o.name}`} className="rounded border border-border px-2 py-1 text-accent disabled:opacity-30">{direction === "up" ? "↑" : "↓"}</button></form>)}</div></td>
                     </DrawerRow>
                   );
                 })}
-              </tbody>
+              </SortableRows>
             </table>
           </div>
           {options.map((o) => {

@@ -292,3 +292,14 @@ export async function deleteOptionAction(formData: FormData) {
   await store.saveHomeContent(withoutOptionContent(await store.getHomeContent(), id));
   done(TAB.options);
 }
+
+// Nouvel ordre des options (glisser-déposer dans le tableau de l'admin)
+export async function reorderOptionsAction(ids: string[]) {
+  await requireAdmin();
+  const store = getStore();
+  const { options } = await store.getCatalog();
+  const rank = new Map(ids.map((id, i) => [id, i]));
+  const next = [...options].sort((a, b) => (rank.get(a.id) ?? options.length) - (rank.get(b.id) ?? options.length));
+  await store.saveOptions(next);
+  revalidatePath("/", "layout");
+}

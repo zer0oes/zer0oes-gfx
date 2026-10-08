@@ -39,13 +39,15 @@ export function Drawer({ id, kicker, title, openOnLoad = false, footer, children
 const openDrawer = (id: string) => (document.getElementById(id) as HTMLDialogElement | null)?.showModal();
 
 // Ligne de tableau cliquable : ouvre le panneau, sauf sur ses boutons et liens (ordre, etc.)
-export function DrawerRow({ drawer, label, className = "", children }: { drawer: string; label: string; className?: string; children: React.ReactNode }) {
+// sortId : ligne réordonnable (voir SortableRows)
+export function DrawerRow({ drawer, label, className = "", sortId, children }: { drawer: string; label: string; className?: string; sortId?: string; children: React.ReactNode }) {
   return (
     <tr
       tabIndex={0}
       aria-label={label}
+      data-sort-id={sortId}
       onClick={(event) => {
-        if (!(event.target as HTMLElement).closest("button, a, input, select, form")) openDrawer(drawer);
+        if (!(event.target as HTMLElement).closest("button, a, input, select, form, [data-sort-handle]")) openDrawer(drawer);
       }}
       onKeyDown={(event) => {
         if ((event.key === "Enter" || event.key === " ") && event.target === event.currentTarget) {
