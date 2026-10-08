@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { href, t, type Locale } from "@/lib/i18n";
 import { type Pack, type PricingSettings } from "@/lib/pricing";
+import { glossaryFor } from "@/lib/glossary";
 import { trDeep } from "@/lib/translations-en";
+import { Hint } from "./Hint";
 import { OfferPrice, SaleBadge, discountPercent } from "./ui";
 import { OrderForm } from "./OrderForm";
 
@@ -92,7 +94,10 @@ export function PackCard({
               <span className="text-accent-2" aria-hidden>
                 ✓
               </span>
-              <span>{f}</span>
+              <span>
+                {f}
+                <Hint hint={glossaryFor(f, locale)} />
+              </span>
             </li>
           ))}
         </ul>

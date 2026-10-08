@@ -3,6 +3,7 @@ import { OfferGuide } from "@/components/OfferGuide";
 import { OfferTabs } from "@/components/OfferTabs";
 import { OptionCatalog } from "@/components/OptionCatalog";
 import { PackCard } from "@/components/PackCard";
+import { PackComparison } from "@/components/PackComparison";
 import { resolveHome } from "@/lib/home-content";
 import { asLocale, t, type Locale } from "@/lib/i18n";
 import {
@@ -149,7 +150,8 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
             <PackCard key={p.id} pack={p} settings={site} order locale={lang} openOptions={details === p.id} />
           ))}
         </div>
-        <section className="mt-8 text-center text-sm leading-relaxed text-muted" aria-labelledby="pack-value">
+        <PackComparison packs={packs} settings={site} locale={lang} />
+        <section className="mt-12 text-center text-sm leading-relaxed text-muted" aria-labelledby="pack-value">
           <h2 id="pack-value" className="font-semibold text-foreground">{texts.text("pricing.explanationTitle")}</h2>
           <p className="mt-3 whitespace-pre-line">{texts.text("pricing.summary")}</p>
           <p className="mt-4 font-medium text-foreground">{t(lang, { fr: `Corrections incluses par élément · Fichiers prêts à utiliser · Acompte de ${site.depositPercent} % possible`, en: `Included corrections per item · Ready-to-use files · ${site.depositPercent}% deposit available` })}</p>

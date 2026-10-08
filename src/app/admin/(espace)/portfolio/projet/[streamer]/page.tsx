@@ -5,8 +5,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { caseStudies } from "@/data/case-studies";
 import { categories } from "@/data/portfolio";
+import { contextFields, storedContext } from "@/lib/project-context";
 import { getStore } from "@/lib/store";
-import { deleteStreamerAction, moveWorkAction, saveStreamerAction, saveTestimonialAction } from "../../../../portfolio-actions";
+import { deleteStreamerAction, moveWorkAction, saveProjectContextAction, saveStreamerAction, saveTestimonialAction } from "../../../../portfolio-actions";
 
 export const metadata: Metadata = { title: "Projet" };
 
@@ -26,6 +27,7 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
   const review = testimonials.find((x) => x.streamerId === s.id);
 
   const translationContent = await getStore().getHomeContent();
+  const context = storedContext(translationContent, s.id);
 
   return (
     <TranslationTabs stored={translationValues(translationContent)}>
@@ -68,6 +70,36 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
             </label>
             <button type="submit" className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">
               Enregistrer
+            </button>
+          </form>
+        </section>
+
+        <section className={card} aria-labelledby="contexte">
+          <h2 id="contexte" className="font-semibold">
+            Le contexte <span className="font-normal text-muted">(facultatif)</span>
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Affiché en encart sur la page du projet, sous la scène d&apos;ouverture. Un champ vide n&apos;apparaît pas ; sans
+            traduction, la version anglaise reprend le français.
+          </p>
+          <form action={saveProjectContextAction} className="mt-4 space-y-3">
+            <input type="hidden" name="streamerId" value={s.id} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              {contextFields.filter((f) => !f.multiline).map((f) => (
+                <label key={f.key} className="block">
+                  <span className="mb-1 block text-xs text-muted">{f.admin}</span>
+                  <TranslationInput translationKey={`translation:project:${s.id}:${f.key}`} englishDefault="" name={f.key} defaultValue={context[f.key]} maxLength={f.max} className={input} />
+                </label>
+              ))}
+            </div>
+            {contextFields.filter((f) => f.multiline).map((f) => (
+              <label key={f.key} className="block">
+                <span className="mb-1 block text-xs text-muted">{f.admin}</span>
+                <TranslationInput multiline translationKey={`translation:project:${s.id}:${f.key}`} englishDefault="" name={f.key} defaultValue={context[f.key]} rows={3} maxLength={f.max} placeholder="Ce que le client voulait, son point de départ, sa contrainte principale…" className={input} />
+              </label>
+            ))}
+            <button type="submit" className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110">
+              Enregistrer le contexte
             </button>
           </form>
         </section>

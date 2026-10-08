@@ -63,3 +63,35 @@ export function productBriefHint(line: string, locale: Locale) {
   if (/banni/i.test(line)) return en ? "Platform, text, social handles and elements to include." : "Plateforme, textes, réseaux sociaux et éléments à afficher.";
   return en ? "Describe the requested visual and the elements to include." : "Décris le visuel souhaité et les éléments à inclure.";
 }
+
+// Fichiers concrètement livrés pour une création à prix fixe (liste « Tu reçois »).
+// Les créations sur devis n'en ont pas : leurs livrables sont fixés dans le devis.
+export function optionFiles(option: Option, locale: Locale): string[] {
+  if (option.priceFrom) return [];
+  const en = locale === "en";
+  const animated = animatedOption(option);
+  const guide = en ? "Step-by-step setup guide" : "Guide d’installation pas à pas";
+  const key = option.id + " " + option.name;
+  if (optionCategory(option) === "emotes")
+    return animated
+      ? [en ? "Animated GIF files at Twitch sizes (112, 56 and 28 px)" : "Fichiers GIF animés aux tailles Twitch (112, 56 et 28 px)", en ? "A large version for Discord and YouTube" : "Une version grand format pour Discord et YouTube"]
+      : [en ? "PNG files with a transparent background, at Twitch sizes (112, 56 and 28 px)" : "Fichiers PNG à fond transparent, aux tailles Twitch (112, 56 et 28 px)", en ? "A large version for Discord and YouTube" : "Une version grand format pour Discord et YouTube"];
+  if (/overlay/i.test(key))
+    return [
+      animated
+        ? en ? "A looping 1920 × 1080 WEBM video with a transparent background" : "Une vidéo WEBM 1920 × 1080 en boucle, à fond transparent"
+        : en ? "A 1920 × 1080 PNG with a transparent background" : "Un PNG 1920 × 1080 à fond transparent",
+      en ? "Ready to add in OBS" : "Prêt à ajouter dans OBS",
+      guide,
+    ];
+  if (/alerte|alert/i.test(key))
+    return [
+      en ? "Alerts ready to import into StreamElements, or code for Streamlabs" : "Alertes prêtes à importer dans StreamElements, ou code pour Streamlabs",
+      animated ? (en ? "Animations as transparent WEBM" : "Animations en WEBM à fond transparent") : en ? "Visuals as transparent PNG" : "Visuels en PNG à fond transparent",
+      guide,
+    ];
+  if (/panneau|panel/i.test(key)) return [en ? "6 PNG panels at Twitch format" : "6 panneaux PNG au format Twitch"];
+  if (/banni|banner/i.test(key)) return [en ? "A PNG at the size of your platform (Twitch or YouTube)" : "Un PNG aux dimensions de ta plateforme (Twitch ou YouTube)"];
+  if (/avatar/i.test(key)) return [en ? "A high-resolution square PNG, readable small and in a circle" : "Un PNG carré haute définition, lisible en petit et en rond"];
+  return [];
+}

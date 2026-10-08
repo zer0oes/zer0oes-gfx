@@ -11,6 +11,7 @@ import type { Emote, Work } from "@/data/portfolio";
 import { requireAdmin } from "@/lib/auth";
 import { textGroups, textsFromForm } from "@/lib/case-study-texts";
 import { homeFromForm, resetGroup } from "@/lib/home-content";
+import { contextFromForm } from "@/lib/project-context";
 import { s3Configured, s3Delete, s3SignedUpload } from "@/lib/s3";
 import { getStore } from "@/lib/store";
 import { checkUpload, sniffType, storagePath, type MediaKind } from "@/lib/uploads";
@@ -100,6 +101,17 @@ export async function saveTestimonialAction(formData: FormData) {
   });
   await saveAdminTranslations(formData, `review:${streamerId}`, ["author", "role"]);
   done(back);
+}
+
+// --- Contexte du projet ----------------------------------------------------------
+
+// Encart « Le contexte » de la page projet (chaîne, jeux, besoin), en français et en anglais.
+export async function saveProjectContextAction(formData: FormData) {
+  await requireAdmin();
+  const id = text(formData, "streamerId", 60);
+  const store = getStore();
+  await store.saveHomeContent(contextFromForm(await store.getHomeContent(), id, formData));
+  done(projectAdmin(id));
 }
 
 // --- Réalisations ----------------------------------------------------------------
