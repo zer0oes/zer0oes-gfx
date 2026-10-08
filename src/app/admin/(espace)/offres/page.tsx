@@ -1,17 +1,15 @@
-import { OptionRows } from "@/components/admin/OptionRows";
 import { MarketingPanel } from "@/components/admin/MarketingPanel";
 import { AffiliatePanel } from "@/components/admin/AffiliatePanel";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
 import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@/lib/home-content";
-import { filesTranslationKey, optionFilesFor, optionsWithFiles } from "@/lib/option-files";
-import { optionFiles } from "@/lib/option-products";
+import { optionContentFor, platforms } from "@/lib/option-content";
 import { saveOffersPageAction } from "../../portfolio-actions";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NetTable, priceCases } from "@/components/admin/NetTable";
 import { chargesRate, formatRate, netBreakdown, type FinanceSettings } from "@/lib/finance";
-import { formatPrice, type Pack, type PricingSettings } from "@/lib/pricing";
+import { formatPrice, optionCategories, optionCategory, type Pack, type PricingSettings } from "@/lib/pricing";
 import { watermarkLevels } from "@/lib/protection";
 import { getStore } from "@/lib/store";
 import {
@@ -21,8 +19,10 @@ import {
   movePackAction,
   saveFinanceAction,
   saveProtectionAction,
-  saveOptionFilesAction,
-  saveOptionsAction,
+  createOptionAction,
+  deleteOptionAction,
+  moveOptionAction,
+  saveOptionAction,
   savePackAction,
   saveSettingsAction,
 } from "../../offres-actions";
@@ -199,6 +199,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const { enregistre, erreur } = sp;
   const openPack = one(sp.offre);
+  const openOption = one(sp.option);
   const tab: Tab = tabs.some((t) => t.id === one(sp.onglet)) ? (one(sp.onglet) as Tab) : "offres";
 
   const store = getStore();
@@ -333,29 +334,73 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
 
       {tab === "options" && (
         <section className="mt-6">
-          <Intro>Options proposées en plus des offres (page Offres et commande).</Intro>
-          <form action={saveOptionsAction} className="space-y-4">
-            <p className="text-xs text-muted">Clique sur une option pour la modifier, ou sélectionne plusieurs options pour les supprimer.</p>
-            <OptionRows options={options} />
-            <button type="submit" className={save}>
-              Enregistrer les options
-            </button>
-          </form>
-          <details className={`${card} mt-6`}>
-            <summary className="cursor-pointer font-semibold">Ce que le client reçoit (liste « Tu reçois » des cartes)</summary>
-            <form action={saveOptionFilesAction} className="mt-4 space-y-4">
-              <p className="text-xs text-muted">
-                Une ligne par fichier ou élément livré, pour chaque création à prix fixe (les créations sur devis n&apos;ont pas de liste).
-                Un champ vidé reprend la liste d&apos;origine.
-              </p>
-              {optionsWithFiles(options).map((o) => (
-                <Field key={o.id} label={o.name}>
-                  <TranslationInput multiline translationKey={filesTranslationKey(o.id)} englishDefault={optionFiles(o, "en").join("\n")} name={`files:${o.id}`} defaultValue={optionFilesFor(o, translationContent, "fr").join("\n")} rows={3} maxLength={600} className={input} />
-                </Field>
-              ))}
-              <button type="submit" className={save}>Enregistrer les listes</button>
-            </form>
-          </details>
+          <Intro>Créations à la carte de la page Offres. Clique sur une option pour modifier tout ce qui s&apos;affiche sur sa carte. L&apos;ordre ici est celui du site.</Intro>
+          <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="px-4 py-3">#</th><th className="px-4 py-3">Option</th><th className="px-4 py-3">Catégorie</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th><th className="px-4 py-3">Ordre</th></tr></thead>
+              <tbody className="divide-y divide-border">
+                {options.map((o, i) => (
+                  <tr key={o.id} className={openOption === o.id ? "bg-accent/10" : "hover:bg-surface/50"}>
+                    <td className="px-4 py-3 text-muted">{i + 1}</td>
+                    <td className="px-4 py-3"><Link href={`/admin/offres?onglet=options&option=${encodeURIComponent(o.id)}#option-${o.id}`} className="font-semibold hover:text-accent">{o.name}</Link><p className="mt-1 line-clamp-1 max-w-md text-xs text-muted">{optionContentFor(o, translationContent, "fr").description}</p></td>
+                    <td className="px-4 py-3 text-muted">{optionCategories.find((c) => c.id === optionCategory(o))?.label}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{o.priceFrom ? "À partir de " : ""}{euro(o.price)}{o.unit ? ` / ${o.unit}` : ""}</td>
+                    <td className="px-4 py-3 text-muted">{o.priceFrom ? "Sur devis" : "En ligne"}</td>
+                    <td className="px-4 py-3"><div className="flex gap-2">{(["up", "down"] as const).map((direction) => <form key={direction} action={moveOptionAction}><input type="hidden" name="id" value={o.id} /><button name="dir" value={direction} disabled={direction === "up" ? i === 0 : i === options.length - 1} aria-label={`${direction === "up" ? "Monter" : "Descendre"} ${o.name}`} className="rounded border border-border px-2 py-1 text-accent disabled:opacity-30">{direction === "up" ? "↑" : "↓"}</button></form>)}</div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="space-y-3">
+            {options.map((o) => {
+              const content = optionContentFor(o, translationContent, "fr");
+              const english = optionContentFor(o, translationContent, "en");
+              return (
+                <details key={o.id} id={`option-${o.id}`} hidden={openOption !== o.id} open={openOption === o.id} className={`group ${card} p-0 sm:p-0`}>
+                  <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5 sm:px-6 [&::-webkit-details-marker]:hidden">
+                    <span className="font-display text-lg font-bold">{o.name} — {o.priceFrom ? "à partir de " : ""}{euro(o.price)}</span>
+                    <span className="text-sm text-accent"><span className="group-open:hidden">Modifier ↓</span><span className="hidden group-open:inline">Fermer ↑</span></span>
+                  </summary>
+                  <div className="space-y-6 px-5 pb-5 sm:px-6 sm:pb-6">
+                    <form action={saveOptionAction} className="space-y-5">
+                      <input type="hidden" name="id" value={o.id} />
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Field label="Nom"><TranslationInput translationKey={`translation:option:${o.id}:name`} name="name" defaultValue={o.name} required className={input} /></Field>
+                        <Field label="Catégorie"><select name="category" defaultValue={optionCategory(o)} className={input}>{optionCategories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
+                        <Field label="Prix (€)"><input name="price" defaultValue={euros(o.price)} inputMode="decimal" required className={input} /></Field>
+                        <Field label="Unité (facultative)" hint="Ex. « visuel »."><TranslationInput translationKey={`translation:option:${o.id}:unit`} name="unit" defaultValue={o.unit} className={input} /></Field>
+                        <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="priceFrom" defaultChecked={o.priceFrom} className="accent-[var(--accent)]" /> Prix « à partir de » : sur devis (bouton « Demander un devis » au lieu d&apos;« Ajouter »)</label>
+                      </div>
+                      <Field label="Description sur la carte"><TranslationInput multiline translationKey={`translation:option-description:${o.id}`} englishDefault={english.description} name="description" defaultValue={content.description} rows={3} maxLength={1200} className={input} /></Field>
+                      <Field label="Ce que le client reçoit" hint="Une ligne par élément livré. Vide : la liste « Tu reçois » n'apparaît pas sur la carte."><TranslationInput multiline translationKey={`translation:option-files:${o.id}`} englishDefault={english.files.join("\n")} name="files" defaultValue={content.files.join("\n")} rows={4} maxLength={1200} className={input} /></Field>
+                      <fieldset>
+                        <legend className="mb-2 text-sm font-medium">Compatible avec <span className="font-normal text-muted">(logos affichés sur la carte)</span></legend>
+                        <div className="flex flex-wrap gap-4">{platforms.map((p) => <label key={p.id} className="flex items-center gap-2 text-sm"><input type="checkbox" name={`compat_${p.id}`} defaultChecked={content.compat.includes(p.id)} className="accent-[var(--accent)]" /> {p.name}</label>)}</div>
+                      </fieldset>
+                      <button type="submit" className={save}>Enregistrer l&apos;option</button>
+                    </form>
+                    <form action={deleteOptionAction} className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4 text-xs text-muted">
+                      <input type="hidden" name="id" value={o.id} />
+                      <label className="flex items-center gap-1"><input type="checkbox" name="confirm" /> confirmer</label>
+                      <button type="submit" className="rounded-full border border-red-500/40 px-3 py-1.5 text-red-300 hover:bg-red-500/10">Supprimer l&apos;option</button>
+                    </form>
+                  </div>
+                </details>
+              );
+            })}
+            <details className={`${card} p-0 sm:p-0`}>
+              <summary className="cursor-pointer list-none p-5 font-semibold text-accent sm:px-6 [&::-webkit-details-marker]:hidden">+ Nouvelle option</summary>
+              <form action={createOptionAction} className="grid gap-3 px-5 pb-5 sm:grid-cols-[2fr_1fr_1fr_auto_auto] sm:items-end sm:px-6 sm:pb-6">
+                <Field label="Nom"><input name="name" required className={input} /></Field>
+                <Field label="Catégorie"><select name="category" className={input}>{optionCategories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
+                <Field label="Prix (€)"><input name="price" required inputMode="decimal" className={input} /></Field>
+                <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name="priceFrom" className="accent-[var(--accent)]" /> Sur devis</label>
+                <button type="submit" className={save}>Créer</button>
+              </form>
+              <p className="px-5 pb-5 text-xs text-muted sm:px-6">La fiche de l&apos;option s&apos;ouvre ensuite pour compléter sa description, ce que le client reçoit et la traduction.</p>
+            </details>
+          </div>
         </section>
       )}
 

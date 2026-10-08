@@ -10,7 +10,7 @@ import type { Formula, Option, Pack } from "@/lib/pricing";
 import { optionCategories, type OptionCategory } from "@/lib/pricing";
 import { isWatermarkLevel } from "@/lib/protection";
 import { getStore } from "@/lib/store";
-import { filesFromForm } from "@/lib/option-files";
+import { optionContentFromForm, withoutOptionContent } from "@/lib/option-content";
 
 // Conversion « 490 », « 490,50 » ou « 1 990 » (€) → centimes. null si invalide.
 function parseEuros(raw: FormDataEntryValue | null): number | null {
@@ -116,48 +116,6 @@ export async function savePackAction(formData: FormData) {
   done(`/admin/offres?offre=${encodeURIComponent(id)}`);
 }
 
-export async function saveOptionsAction(formData: FormData) {
-  await requireAdmin();
-  const deleting = formData.get("bulkDelete") === "1";
-  const options: Option[] = [];
-  const indices = [...new Set([...formData.keys()].flatMap((key) => {
-    const match = /^name_(\d+)$/.exec(key);
-    return match ? [Number(match[1])] : [];
-  }))].sort((a, b) => {
-    const position = (index: number) => {
-      const raw = formData.get(`position_${index}`);
-      const value = raw === null ? index : Number(raw);
-      return Number.isSafeInteger(value) && value >= 0 ? value : index;
-    };
-    return position(a) - position(b) || a - b;
-  });
-  for (const i of indices) {
-    const name = text(formData, `name_${i}`, 200);
-    if (!name || (deleting && formData.get(`delete_${i}`) === "on")) continue;
-    const price = parseEuros(formData.get(`price_${i}`));
-    if (price === null) done(TAB.options, `Option « ${name} » : prix invalide.`);
-    let id = slug(text(formData, `id_${i}`, 60) || name);
-    while (options.some((o) => o.id === id)) id = `${id}-2`;
-    options.push({
-      id,
-      name,
-      price,
-      priceFrom: formData.get(`from_${i}`) === "on" || undefined,
-      unit: text(formData, `unit_${i}`, 30) || undefined,
-      category: optionCategories.find((c) => c.id === formData.get(`category_${i}`))?.id as OptionCategory | undefined,
-    });
-  }
-  await getStore().saveOptions(options);
-  const translatedFields: Record<string, string> = {};
-  let optionIndex = 0;
-  for (const i of indices) {
-    if (!text(formData, `name_${i}`, 200) || (deleting && formData.get(`delete_${i}`) === "on")) continue;
-    const option = options[optionIndex++];
-    for (const field of ["name", "unit"]) translatedFields[`${field}_${i}`] = `translation:option:${option.id}:${field}`;
-  }
-  await saveTranslationFields(formData, translatedFields);
-  done(TAB.options);
-}
 
 // --- Revenu net : taux et frais ------------------------------------------------
 
@@ -264,11 +222,72 @@ export async function deletePackAction(formData: FormData) {
   done(TAB.offres);
 }
 
-// Listes « Tu reçois » des créations à la carte (français et anglais)
-export async function saveOptionFilesAction(formData: FormData) {
+
+// --- Options à la carte : une fiche par option -------------------------------------
+
+const optionTab = (id?: string) => `${TAB.options}${id ? `&option=${encodeURIComponent(id)}#option-${id}` : ""}`;
+
+// Fiche d'une option : réglages (catalogue), textes FR/EN, contenu de la carte (description, « Tu reçois », compatibilité)
+export async function saveOptionAction(formData: FormData) {
   await requireAdmin();
   const store = getStore();
-  const [{ options }, stored] = await Promise.all([store.getCatalog(), store.getHomeContent()]);
-  await store.saveHomeContent(filesFromForm(stored, options, formData));
+  const id = text(formData, "id", 60);
+  const { options } = await store.getCatalog();
+  const current = options.find((o) => o.id === id);
+  if (!current) done(TAB.options, "Option introuvable.");
+  const name = text(formData, "name", 200);
+  if (!name) done(optionTab(id), "Le nom de l'option est obligatoire.");
+  const price = parseEuros(formData.get("price"));
+  if (price === null) done(optionTab(id), "Prix invalide.");
+  const next: Option = {
+    ...current,
+    name,
+    price,
+    priceFrom: formData.get("priceFrom") === "on" || undefined,
+    unit: text(formData, "unit", 30) || undefined,
+    category: optionCategories.find((c) => c.id === formData.get("category"))?.id as OptionCategory | undefined,
+  };
+  await store.saveOptions(options.map((o) => (o.id === id ? next : o)));
+  await saveAdminTranslations(formData, `option:${id}`, ["name", "unit"]);
+  await store.saveHomeContent(optionContentFromForm(await store.getHomeContent(), id, formData));
+  done(optionTab(id));
+}
+
+export async function createOptionAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const name = text(formData, "name", 200);
+  const price = parseEuros(formData.get("price"));
+  if (!name || price === null) done(TAB.options, "Indique un nom et un prix valides.");
+  const { options } = await store.getCatalog();
+  let id = slug(name) || "option";
+  while (options.some((o) => o.id === id)) id = `${id}-2`;
+  const category = optionCategories.find((c) => c.id === formData.get("category"))?.id as OptionCategory | undefined;
+  await store.saveOptions([...options, { id, name, price, priceFrom: formData.get("priceFrom") === "on" || undefined, category }]);
+  done(optionTab(id));
+}
+
+export async function moveOptionAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const id = text(formData, "id", 60);
+  const { options } = await store.getCatalog();
+  const i = options.findIndex((o) => o.id === id);
+  const j = formData.get("dir") === "up" ? i - 1 : i + 1;
+  if (i < 0 || j < 0 || j >= options.length) done(TAB.options);
+  const next = [...options];
+  [next[i], next[j]] = [next[j], next[i]];
+  await store.saveOptions(next);
+  done(TAB.options);
+}
+
+export async function deleteOptionAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const id = text(formData, "id", 60);
+  if (formData.get("confirm") !== "on") done(optionTab(id), "Coche la case de confirmation pour supprimer.");
+  const { options } = await store.getCatalog();
+  await store.saveOptions(options.filter((o) => o.id !== id));
+  await store.saveHomeContent(withoutOptionContent(await store.getHomeContent(), id));
   done(TAB.options);
 }
