@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { formMessage, parseContact, parseMessage } from "@/lib/contact-form";
 import { asLocale, href, type Locale } from "@/lib/i18n";
-import { notify } from "@/lib/notify";
+import { notify, sendToCustomer } from "@/lib/notify";
+import { contactReceiptMessage } from "@/lib/contact-receipt";
 import { recordFormSent } from "@/lib/stats-server";
 import { attachBrief, paymentSummary, quote, quoteMetadata, recordDemoOrder } from "@/lib/orders";
 import { formatPrice, getPack, logoDiscountLabel, paymentLabel } from "@/lib/pricing";
@@ -183,6 +184,7 @@ async function contactForm(
       replyTo: request.email,
       fields: { ...request.fields, ...languageField(formLocale(formData)), Administration: `${await siteUrl()}/admin/devis/${demand.id}` },
     }).catch((e) => console.error(e));
+    await sendToCustomer({ to: request.email, ...contactReceiptMessage(request.name, request.fields, formLocale(formData)), contactReceipt: true, idempotencyKey: `contact-receipt-${demand.id}` }).catch((e) => console.error("Accusé de réception contact :", e));
   } catch (e) {
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou écris-moi directement par e-mail." };
@@ -207,6 +209,7 @@ async function messageForm(_prev: FormState, formData: FormData): Promise<FormSt
       replyTo: request.email,
       fields: { ...request.fields, ...languageField(formLocale(formData)), Administration: `${await siteUrl()}/admin/devis/${demand.id}` },
     }).catch((e) => console.error(e));
+    await sendToCustomer({ to: request.email, ...contactReceiptMessage(request.name, request.fields, formLocale(formData)), contactReceipt: true, idempotencyKey: `contact-receipt-${demand.id}` }).catch((e) => console.error("Accusé de réception contact :", e));
   } catch (e) {
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou écris-moi directement par e-mail." };

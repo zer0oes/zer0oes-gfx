@@ -26,7 +26,7 @@ export function emailButton(url: string, label: string) {
 }
 
 /** Common client template. Text remains authoritative and is also sent as plain text. */
-export function customerEmailHtml(subject: string, text: string) {
+export function customerEmailHtml(subject: string, text: string, contactReceipt = false) {
   const en = /^Your\b/i.test(subject);
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const body: string[] = [];
@@ -47,7 +47,7 @@ export function customerEmailHtml(subject: string, text: string) {
     }
   }
   flush();
-  const footer = en ? "Keep your order link private: it gives access to your personal space.<br>Any questions? Simply reply to this email."
+  const footer = contactReceipt ? (en ? "Want to add something? Simply reply to this email." : "Une précision à ajouter ? Réponds simplement à ce mail.") : en ? "Keep your order link private: it gives access to your personal space.<br>Any questions? Simply reply to this email."
     : "Garde ton lien de commande pour toi : il donne accès à ton espace privé.<br>Une question ? Réponds simplement à ce mail.";
   return emailLayout(subject, body.join("\n"), { en, footer });
 }

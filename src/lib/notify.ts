@@ -52,12 +52,14 @@ export async function sendToCustomer({
   text,
   attachments,
   idempotencyKey,
+  contactReceipt = false,
 }: {
   to: string;
   subject: string;
   text: string;
   attachments?: { filename: string; content: Uint8Array }[];
   idempotencyKey?: string;
+  contactReceipt?: boolean;
 }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -75,7 +77,7 @@ export async function sendToCustomer({
       subject,
       text,
       attachments: attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString("base64") })),
-      html: customerEmailHtml(subject, text),
+      html: customerEmailHtml(subject, text, contactReceipt),
     }),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
