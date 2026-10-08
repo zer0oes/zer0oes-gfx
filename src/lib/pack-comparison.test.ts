@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { defaultSettings, packs } from "@/data/packs";
+import { resolveHome } from "./home-content";
 import { packComparison } from "./pack-comparison";
 import { contextFromForm, projectContext, storedContext } from "./project-context";
 
-const row = (id: string) => packComparison(packs, defaultSettings, "fr").find((r) => r.id === id)?.cells;
+const texts = resolveHome(null, "fr");
+const row = (id: string) => packComparison(packs, defaultSettings, texts, "fr").find((r) => r.id === id)?.cells;
 
 test("comparatif : déduit des livrables, options et formules des packs", () => {
   assert.deepEqual(row("overlays"), ["2 statiques", "5 statiques", "5 animés"]);
@@ -18,7 +20,7 @@ test("comparatif : déduit des livrables, options et formules des packs", () => 
   assert.deepEqual(row("banniere-avatar"), [true, true, true]);
   // Un livrable modifié dans l'admin change le tableau
   const edited = packs.map((p) => (p.id === "premier-look" ? { ...p, deliverables: p.deliverables.map((l) => l.replace("2 overlays", "3 overlays")) } : p));
-  assert.equal(packComparison(edited, defaultSettings, "fr").find((r) => r.id === "overlays")?.cells[0], "3 statiques");
+  assert.equal(packComparison(edited, defaultSettings, texts, "fr").find((r) => r.id === "overlays")?.cells[0], "3 statiques");
 });
 
 test("contexte d'un projet : enregistré en FR et EN, vide = masqué", () => {
@@ -32,6 +34,9 @@ test("contexte d'un projet : enregistré en FR et EN, vide = masqué", () => {
   assert.equal(content.autre, "gardé");
   assert.equal(content["page:projet:x:games"], undefined);
   assert.equal(storedContext(content, "x").channel, "Twitch · variété");
-  assert.deepEqual(projectContext(content, "x", "en").map((c) => c.value), ["Twitch · variété", "A readable identity"]);
-  assert.deepEqual(projectContext(content, "y", "fr"), []);
+  assert.deepEqual(projectContext(content, "x", "en").lines.map((c) => c.value), ["Twitch · variété", "A readable identity"]);
+  assert.deepEqual(projectContext(content, "y", "fr").lines, []);
+  // Intitulés modifiés dans l'admin
+  assert.equal(projectContext({ ...content, "context.title": "Le projet" }, "x", "fr").title, "Le projet");
+  assert.equal(packComparison(packs, defaultSettings, resolveHome({ "compare.row.overlays": "Scènes" }, "fr"), "fr")[1].label, "Scènes");
 });

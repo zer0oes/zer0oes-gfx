@@ -3,7 +3,9 @@ import { MarketingPanel } from "@/components/admin/MarketingPanel";
 import { AffiliatePanel } from "@/components/admin/AffiliatePanel";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
-import { homeDefaultsEn, offersPageFields, resolveHome } from "@/lib/home-content";
+import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@/lib/home-content";
+import { filesTranslationKey, optionFilesFor, optionsWithFiles } from "@/lib/option-files";
+import { optionFiles } from "@/lib/option-products";
 import { saveOffersPageAction } from "../../portfolio-actions";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -19,12 +21,21 @@ import {
   movePackAction,
   saveFinanceAction,
   saveProtectionAction,
+  saveOptionFilesAction,
   saveOptionsAction,
   savePackAction,
   saveSettingsAction,
 } from "../../offres-actions";
 
 export const metadata: Metadata = { title: "Offres et réglages" };
+
+// Textes de la page Offres, regroupés comme sur le site
+const offerTextGroups: { title: string; hint?: string; match: (f: HomeField) => boolean }[] = [
+  { title: "En-tête et explication", match: (f) => f.key.startsWith("pricing.") },
+  { title: "Tableau comparatif", hint: "{n} est remplacé par le nombre lu dans le pack, {prix} par l’écart de prix entre formules, {acompte} par le pourcentage d’acompte.", match: (f) => f.key.startsWith("compare.") },
+  { title: "Bulles « ? » des termes techniques", match: (f) => f.key.startsWith("glossary.") },
+  { title: "Créations à la carte", match: (f) => f.key.startsWith("options.") },
+];
 
 const euros = (cents: number) => (cents / 100).toString().replace(".", ",");
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
@@ -246,11 +257,17 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           <summary className="cursor-pointer font-semibold">Textes de la page Offres</summary>
           <form action={saveOffersPageAction} className="mt-4 space-y-4">
             <h2 className="font-semibold">Textes de la page Offres</h2>
-            <p className="text-xs text-muted">En-tête et explication sous les cartes Packs. Un texte vidé reprend la version d’origine.</p>
-            {offersPageFields.map((field) => (
-              <Field key={field.key} label={field.label}>
-                <TranslationInput multiline={field.kind === "long"} translationKey={`en:${field.key}`} englishDefault={homeDefaultsEn[field.key]} name={`h:${field.key}`} defaultValue={resolveHome(translationContent).text(field.key)} rows={3} maxLength={field.max ?? 1200} className={input} />
-              </Field>
+            <p className="text-xs text-muted">Tous les textes de la page, en français et en anglais. Un texte vidé reprend la version d’origine.</p>
+            {offerTextGroups.map((group) => (
+              <fieldset key={group.title} className="space-y-4 border-t border-border pt-4">
+                <legend className="pr-2 text-sm font-semibold text-accent">{group.title}</legend>
+                {group.hint && <p className="text-xs text-muted">{group.hint}</p>}
+                {offersPageFields.filter((field) => group.match(field)).map((field) => (
+                  <Field key={field.key} label={field.label}>
+                    <TranslationInput multiline={field.kind === "long"} translationKey={`en:${field.key}`} englishDefault={homeDefaultsEn[field.key]} name={`h:${field.key}`} defaultValue={resolveHome(translationContent).text(field.key)} rows={3} maxLength={field.max ?? 1200} className={input} />
+                  </Field>
+                ))}
+              </fieldset>
             ))}
             <button type="submit" className={save}>Enregistrer les textes</button>
           </form>
@@ -325,6 +342,21 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
               Enregistrer les options
             </button>
           </form>
+          <details className={`${card} mt-6`}>
+            <summary className="cursor-pointer font-semibold">Ce que le client reçoit (liste « Tu reçois » des cartes)</summary>
+            <form action={saveOptionFilesAction} className="mt-4 space-y-4">
+              <p className="text-xs text-muted">
+                Une ligne par fichier ou élément livré, pour chaque création à prix fixe (les créations sur devis n&apos;ont pas de liste).
+                Un champ vidé reprend la liste d&apos;origine.
+              </p>
+              {optionsWithFiles(options).map((o) => (
+                <Field key={o.id} label={o.name}>
+                  <TranslationInput multiline translationKey={filesTranslationKey(o.id)} englishDefault={optionFiles(o, "en").join("\n")} name={`files:${o.id}`} defaultValue={optionFilesFor(o, translationContent, "fr").join("\n")} rows={3} maxLength={600} className={input} />
+                </Field>
+              ))}
+              <button type="submit" className={save}>Enregistrer les listes</button>
+            </form>
+          </details>
         </section>
       )}
 

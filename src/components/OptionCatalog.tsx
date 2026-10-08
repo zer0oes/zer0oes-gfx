@@ -6,8 +6,8 @@ import { useFormStatus } from "react-dom";
 import { createCheckout } from "@/app/actions";
 import { href, t, type Locale } from "@/lib/i18n";
 import { formatPrice, optionCategories, type Option, type Pack, type PricingSettings } from "@/lib/pricing";
-import { glossaryFor } from "@/lib/glossary";
-import { animatedOption, emoteCount, optionFiles, optionIncludes, optionProducts, optionProductTitle, optionThemeColors } from "@/lib/option-products";
+import { glossaryIdFor, type GlossaryHint } from "@/lib/glossary";
+import { animatedOption, emoteCount, optionIncludes, optionProducts, optionProductTitle, optionThemeColors } from "@/lib/option-products";
 import { recommendPack } from "@/lib/pack-recommendation";
 import { Hint } from "./Hint";
 import { ProductPreview } from "./ProductPreview";
@@ -29,7 +29,10 @@ function Quantity({ value, onChange, label, className = "flex flex-col gap-1" }:
   </div></div>;
 }
 
-function ProductCard({ product, locale, add }: { product: ReturnType<typeof optionProducts>[number]; locale: Locale; add: (option: Option, quantity: number) => void }) {
+// Textes modifiables dans l'admin, lus côté serveur : bulles « ? », fichiers livrés et titre de leur liste
+export type CatalogTexts = { hints: Record<string, GlossaryHint>; files: Record<string, string[]>; receive: string };
+
+function ProductCard({ product, locale, add, texts }: { product: ReturnType<typeof optionProducts>[number]; locale: Locale; add: (option: Option, quantity: number) => void; texts: CatalogTexts }) {
   const variantGroup = useId();
   const [variantId, setVariantId] = useState(product.variants[0].id);
   const [quantity, setQuantity] = useState(1);
@@ -44,14 +47,14 @@ function ProductCard({ product, locale, add }: { product: ReturnType<typeof opti
       <SaleBadge item={option} locale={locale} className="absolute right-3 top-3" />
     </div>
     <div className="flex flex-col gap-2.5 p-4">
-      <div><h3 className="font-display text-lg font-bold">{emotes ? "Emotes" : title.main}<Hint hint={glossaryFor(option.name, locale)} /></h3>{!emotes && title.detail && <p className="mt-1 text-xs text-muted">{title.detail}</p>}</div>
+      <div><h3 className="font-display text-lg font-bold">{emotes ? "Emotes" : title.main}<Hint hint={texts.hints[glossaryIdFor(option.name) ?? ""]} /></h3>{!emotes && title.detail && <p className="mt-1 text-xs text-muted">{title.detail}</p>}</div>
       {product.variants.length > 1 && <fieldset aria-label={t(locale, { fr: "Variante", en: "Variant" })} className="grid grid-cols-2 gap-1 rounded-full border border-border bg-background p-1">{[false, true].map((animated) => {
         const variant = variants.find((v) => animatedOption(v) === animated);
         const active = animatedOption(option) === animated;
         return <label key={String(animated)} className={`relative rounded-full px-3 py-2 text-center text-xs font-semibold transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${!variant ? "opacity-35" : "cursor-pointer"} ${active ? "bg-[var(--product-color)] text-background shadow-sm" : "text-muted hover:text-foreground"}`}><input type="radio" name={variantGroup} value={variant?.id ?? String(animated)} checked={active} disabled={!variant} onChange={() => variant && setVariantId(variant.id)} className="sr-only" />{t(locale, { fr: animated ? "Animé" : "Statique", en: animated ? "Animated" : "Static" })}</label>;
       })}</fieldset>}
       <p className="text-sm leading-relaxed text-muted">{optionIncludes(option, locale)}</p>
-      {optionFiles(option, locale).length > 0 && <div className="text-xs"><p className="font-semibold text-foreground">{t(locale, { fr: "Tu reçois", en: "You receive" })}</p><ul className="mt-1.5 space-y-1 text-muted">{optionFiles(option, locale).map((line) => <li key={line} className="flex gap-2"><span aria-hidden className="text-[var(--product-color)]">✓</span><span>{line}</span></li>)}</ul></div>}
+      {(texts.files[option.id]?.length ?? 0) > 0 && <div className="text-xs"><p className="font-semibold text-foreground">{texts.receive}</p><ul className="mt-1.5 space-y-1 text-muted">{texts.files[option.id].map((line) => <li key={line} className="flex gap-2"><span aria-hidden className="text-[var(--product-color)]">✓</span><span>{line}</span></li>)}</ul></div>}
       <ProductCompatibility option={option} locale={locale} />
       <p className="text-xs font-medium text-[var(--product-color)]">{t(locale, { fr: "1 modification incluse par création", en: "1 revision included per creation" })}</p>
       {emotes && variants.length === 1 && <p className="text-xs text-muted">{t(locale, { fr: "Seule cette variante est disponible pour ce nombre d’emotes.", en: "Only this variant is available for this number of emotes." })}</p>}
@@ -65,7 +68,7 @@ function ProductCard({ product, locale, add }: { product: ReturnType<typeof opti
   </article>;
 }
 
-export function OptionCatalog({ options, packs, settings, locale }: { options: Option[]; packs: Pack[]; settings: PricingSettings; locale: Locale }) {
+export function OptionCatalog({ options, packs, settings, locale, texts }: { options: Option[]; packs: Pack[]; settings: PricingSettings; locale: Locale; texts: CatalogTexts }) {
   const showPack = useOfferNavigation();
   const [filter, setFilter] = useState("all");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -88,7 +91,7 @@ export function OptionCatalog({ options, packs, settings, locale }: { options: O
     <div className="mb-3 flex flex-wrap gap-2" aria-label={t(locale, { fr: "Filtrer les créations", en: "Filter creations" })}>
       {["all", ...optionCategories.map((c) => c.id)].map((id) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} style={id !== "all" ? { "--filter-color": optionThemeColors[id as keyof typeof optionThemeColors] } as CSSProperties : undefined} className={`rounded-full border px-4 py-2 text-sm font-medium ${filter === id ? id === "all" ? "border-accent bg-accent text-background" : "border-[var(--filter-color)] bg-[var(--filter-color)] text-background" : id === "all" ? "border-border bg-surface text-muted hover:text-foreground" : "border-[color-mix(in_srgb,var(--filter-color)_40%,var(--border))] bg-surface text-[var(--filter-color)]"}`}>{labels[id]}</button>)}
     </div>
-      <div className="grid items-start gap-4 sm:grid-cols-2">{products.map((product, index) => <Fragment key={product.id}>{product.variants.every((v) => v.priceFrom) && (index === 0 || !products[index - 1].variants.every((v) => v.priceFrom)) && <h3 className="col-span-full mt-3 border-t border-border pt-4 font-display text-base font-semibold">{t(locale, { fr: "Créations sur devis", en: "Creations by quote" })}</h3>}<ProductCard product={product} locale={locale} add={(option, quantity) => {
+      <div className="grid items-start gap-4 sm:grid-cols-2">{products.map((product, index) => <Fragment key={product.id}>{product.variants.every((v) => v.priceFrom) && (index === 0 || !products[index - 1].variants.every((v) => v.priceFrom)) && <h3 className="col-span-full mt-3 border-t border-border pt-4 font-display text-base font-semibold">{t(locale, { fr: "Créations sur devis", en: "Creations by quote" })}</h3>}<ProductCard product={product} locale={locale} texts={texts} add={(option, quantity) => {
         const next = (quantities[option.id] ?? 0) + quantity;
         if (next > 20) { setMessage(t(locale, { fr: "Maximum 20 exemplaires par produit. Contacte-moi pour une commande plus importante.", en: "Maximum 20 of each product. Contact me for larger orders." })); return; }
         change(option.id, next);

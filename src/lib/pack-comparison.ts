@@ -1,7 +1,9 @@
 // Tableau comparatif des packs, déduit des livrables, options et formules saisis dans l'admin :
 // changer « 5 overlays » en « 6 overlays » ou le prix d'une formule met le tableau à jour.
-import { formatPrice, type Pack, type PricingSettings, packPricingSettings } from "./pricing";
+// Les libellés (« {n} statiques », « En option, {prix} »…) se modifient dans Admin > Offres.
+import type { HomeContent } from "./home-content";
 import type { Locale } from "./i18n";
+import { formatPrice, type Pack, type PricingSettings, packPricingSettings } from "./pricing";
 
 // Valeur d'une case : true = inclus (✓), false = non inclus (—), texte = précision
 export type Cell = boolean | string;
@@ -15,78 +17,77 @@ const count = (lines: string[], re: RegExp) => {
   return undefined;
 };
 
-const plus = (cents: number, locale: Locale) => `+${formatPrice(cents, locale)}`;
-
-export function packComparison(packs: Pack[], settings: PricingSettings, locale: Locale): ComparisonRow[] {
-  const en = locale === "en";
-  const L = (fr: string, english: string) => (en ? english : fr);
+export function packComparison(packs: Pack[], settings: PricingSettings, texts: HomeContent, locale: Locale): ComparisonRow[] {
+  const fill = (key: string, values: Record<string, string | number> = {}) =>
+    texts.text(key).replace(/\{(\w+)\}/g, (all, name: string) => (name in values ? String(values[name]) : all));
+  const plus = (cents: number) => `+${formatPrice(cents, locale)}`;
   const formula = (p: Pack, id: string) => p.formulas?.find((f) => f.id === id);
 
   const rows: ComparisonRow[] = [
     {
       id: "logo",
-      label: "Logo",
+      label: fill("compare.row.logo"),
       hint: "declinaisons",
       cells: packs.map((p) => {
         const line = p.deliverables.find((l) => /logo/i.test(l));
         if (!line) return false;
-        return /déclinaison/i.test(line) ? L("Logo + déclinaisons", "Logo + variations") : L("Logo", "Logo");
+        return /déclinaison/i.test(line) ? fill("compare.logo.variations") : fill("compare.logo.plain");
       }),
     },
     {
       id: "overlays",
-      label: "Overlays",
+      label: fill("compare.row.overlays"),
       hint: "overlay",
       cells: packs.map((p) => {
         const o = count(p.deliverables, /(\d+)\s+overlays?/i);
         if (!o) return false;
-        return /anim/i.test(o.line) ? L(`${o.n} animés`, `${o.n} animated`) : L(`${o.n} statiques`, `${o.n} static`);
+        return fill(/anim/i.test(o.line) ? "compare.overlays.animated" : "compare.overlays.static", { n: o.n });
       }),
     },
     {
       id: "animation",
-      label: L("Animation des overlays", "Overlay animation"),
+      label: fill("compare.row.animation"),
       cells: packs.map((p) => {
-        if (p.deliverables.some((l) => /overlays?\s+animés|animated overlays/i.test(l))) return L("Légère, incluse", "Light, included");
+        if (p.deliverables.some((l) => /overlays?\s+animés|animated overlays/i.test(l))) return fill("compare.animation.included");
         const anim = formula(p, "emotes-animations");
         const emotes = formula(p, "emotes");
-        if (anim && emotes) return L(`En option, ${plus(anim.price - emotes.price, locale)}`, `Add-on, ${plus(anim.price - emotes.price, locale)}`);
+        if (anim && emotes) return fill("compare.animation.option", { prix: plus(anim.price - emotes.price) });
         return false;
       }),
     },
     {
       id: "alertes",
-      label: L("Alertes", "Alerts"),
+      label: fill("compare.row.alerts"),
       hint: "alertes",
       cells: packs.map((p) => {
         const a = count(p.deliverables, /(\d+)\s+alertes?/i);
-        if (a) return /anim/i.test(a.line) ? L(`${a.n} animées`, `${a.n} animated`) : L(`${a.n} statiques`, `${a.n} static`);
-        return p.checkout ? false : L("Sur devis", "On quote");
+        if (a) return fill(/anim/i.test(a.line) ? "compare.alerts.animated" : "compare.alerts.static", { n: a.n });
+        return p.checkout ? false : fill("compare.onQuote");
       }),
     },
     {
       id: "banniere-avatar",
-      label: L("Bannière et avatar", "Banner and avatar"),
+      label: fill("compare.row.bannerAvatar"),
       hint: "banniere",
       cells: packs.map((p) => p.deliverables.some((l) => /banni/i.test(l)) && p.deliverables.some((l) => /avatar/i.test(l))),
     },
     {
       id: "emotes",
-      label: "Emotes",
+      label: fill("compare.row.emotes"),
       hint: "emotes",
       cells: packs.map((p) => {
         const included = count(p.deliverables, /(\d+)\s+emotes?/i);
-        if (included) return /statique|static/i.test(included.line) ? L(`${included.n} statiques incluses`, `${included.n} static, included`) : L(`${included.n} incluses`, `${included.n} included`);
+        if (included) return fill(/statique|static/i.test(included.line) ? "compare.emotes.includedStatic" : "compare.emotes.included", { n: included.n });
         const extra = count(p.extras ?? [], /(\d+)\s+emotes?/i);
         const emotes = formula(p, "emotes");
         const base = p.formulas?.[0];
-        if (extra && emotes && base) return L(`${extra.n} en option, ${plus(emotes.price - base.price, locale)}`, `${extra.n} as add-on, ${plus(emotes.price - base.price, locale)}`);
-        return extra ? L(`${extra.n} en option`, `${extra.n} as add-on`) : false;
+        if (!extra) return false;
+        return fill("compare.emotes.option", { n: extra.n, prix: emotes && base ? plus(emotes.price - base.price) : "" }).replace(/,\s*$/, "");
       }),
     },
     {
       id: "corrections",
-      label: L("Corrections par élément", "Revisions per item"),
+      label: fill("compare.row.corrections"),
       hint: "corrections",
       cells: packs.map((p) => {
         const c = count(p.deliverables, /(\d+)\s+corrections?/i);
@@ -95,17 +96,17 @@ export function packComparison(packs: Pack[], settings: PricingSettings, locale:
     },
     {
       id: "logo-fourni",
-      label: L("Tu as déjà ton logo", "You already have a logo"),
-      cells: packs.map((p) => (p.checkout ? `−${formatPrice(packPricingSettings(settings, p.id).logoDiscount, locale)}` : L("Remise sur devis", "Discount on quote"))),
+      label: fill("compare.row.logoSupplied"),
+      cells: packs.map((p) => (p.checkout ? `−${formatPrice(packPricingSettings(settings, p.id).logoDiscount, locale)}` : fill("compare.logoSupplied.quote"))),
     },
     {
       id: "commande",
-      label: L("Commande", "Ordering"),
-      cells: packs.map((p) => (p.checkout ? L("En ligne", "Online") : L("Sur devis", "On quote"))),
+      label: fill("compare.row.order"),
+      cells: packs.map((p) => fill(p.checkout ? "compare.order.online" : "compare.order.quote")),
     },
     {
       id: "acompte",
-      label: L(`Acompte de ${settings.depositPercent} % possible`, `${settings.depositPercent}% deposit available`),
+      label: fill("compare.row.deposit", { acompte: settings.depositPercent }),
       cells: packs.map(() => true),
     },
   ];

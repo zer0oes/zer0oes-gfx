@@ -59,7 +59,7 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
         return translations?.[`translation:study:${streamer.id}:t:${path}`];
       })
     : translatedStudy;
-  const contextBox = <ProjectContext context={projectContext(translations, streamer.id, lang)} locale={lang} />;
+  const contextBox = <ProjectContext context={projectContext(translations, streamer.id, lang)} />;
   const back = (
     <Link href={to("/portfolio")} className="text-sm text-muted hover:text-foreground">
       {t(lang, { fr: "← Tous les projets", en: "← All projects" })}

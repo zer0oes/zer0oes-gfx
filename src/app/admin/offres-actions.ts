@@ -10,6 +10,7 @@ import type { Formula, Option, Pack } from "@/lib/pricing";
 import { optionCategories, type OptionCategory } from "@/lib/pricing";
 import { isWatermarkLevel } from "@/lib/protection";
 import { getStore } from "@/lib/store";
+import { filesFromForm } from "@/lib/option-files";
 
 // Conversion « 490 », « 490,50 » ou « 1 990 » (€) → centimes. null si invalide.
 function parseEuros(raw: FormDataEntryValue | null): number | null {
@@ -261,4 +262,13 @@ export async function deletePackAction(formData: FormData) {
   }
   await store.deletePack(id);
   done(TAB.offres);
+}
+
+// Listes « Tu reçois » des créations à la carte (français et anglais)
+export async function saveOptionFilesAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const [{ options }, stored] = await Promise.all([store.getCatalog(), store.getHomeContent()]);
+  await store.saveHomeContent(filesFromForm(stored, options, formData));
+  done(TAB.options);
 }

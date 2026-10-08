@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { OfferGuide } from "@/components/OfferGuide";
 import { OfferTabs } from "@/components/OfferTabs";
 import { OptionCatalog } from "@/components/OptionCatalog";
+import { glossaryHints } from "@/lib/glossary";
+import { resolveOptionFiles } from "@/lib/option-files";
 import { PackCard } from "@/components/PackCard";
 import { PackComparison } from "@/components/PackComparison";
 import { resolveHome } from "@/lib/home-content";
@@ -118,7 +120,8 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
   const catalog = await getPublicCatalog();
   const { settings: site } = catalog;
   const packs = activePacks(catalog.packs);
-  const texts = resolveHome(await getStore().getHomeContent(), lang);
+  const stored = await getStore().getHomeContent();
+  const texts = resolveHome(stored, lang);
 
   return (
     <>
@@ -147,10 +150,10 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
         <OfferTabs locale={lang} packs={<>
         <div className="grid gap-6 pt-3 md:grid-cols-3">
           {packs.map((p) => (
-            <PackCard key={p.id} pack={p} settings={site} order locale={lang} openOptions={details === p.id} />
+            <PackCard key={p.id} pack={p} settings={site} order locale={lang} openOptions={details === p.id} texts={texts} />
           ))}
         </div>
-        <PackComparison packs={packs} settings={site} locale={lang} />
+        <PackComparison packs={packs} settings={site} texts={texts} locale={lang} />
         <section className="mt-12 text-center text-sm leading-relaxed text-muted" aria-labelledby="pack-value">
           <h2 id="pack-value" className="font-semibold text-foreground">{texts.text("pricing.explanationTitle")}</h2>
           <p className="mt-3 whitespace-pre-line">{texts.text("pricing.summary")}</p>
@@ -159,7 +162,7 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
         <OfferGuide locale={lang} />
 
         </>} options={
-          <OptionCatalog settings={site} packs={packs.map((p) => trDeep(lang, p))} options={catalog.options.map((o) => trDeep(lang, o))} locale={lang} />
+          <OptionCatalog settings={site} packs={packs.map((p) => trDeep(lang, p))} options={catalog.options.map((o) => trDeep(lang, o))} locale={lang} texts={{ hints: glossaryHints(texts), files: resolveOptionFiles(catalog.options, stored, lang), receive: texts.text("options.receive") }} />
         } />
 
         <section className="mt-20">

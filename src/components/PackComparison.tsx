@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { glossaryEntry } from "@/lib/glossary";
+import type { HomeContent } from "@/lib/home-content";
 import { href, t, type Locale } from "@/lib/i18n";
 import { packComparison } from "@/lib/pack-comparison";
 import type { Pack, PricingSettings } from "@/lib/pricing";
@@ -9,22 +10,19 @@ import { OfferPrice } from "./ui";
 
 // Tableau comparatif des packs (sous les cartes). Sur mobile, la colonne des critères reste fixe
 // et les packs défilent horizontalement.
-export function PackComparison({ packs, settings, locale }: { packs: Pack[]; settings: PricingSettings; locale: Locale }) {
+export function PackComparison({ packs, settings, texts, locale }: { packs: Pack[]; settings: PricingSettings; texts: HomeContent; locale: Locale }) {
   if (packs.length < 2) return null;
-  const rows = packComparison(packs, settings, locale);
+  const rows = packComparison(packs, settings, texts, locale);
   const names = packs.map((p) => trDeep(locale, p));
   const highlight = (i: number) => (packs[i].highlight ? "bg-accent/[0.07]" : "");
 
   return (
     <section data-reveal aria-labelledby="comparatif" className="mt-16">
       <h2 id="comparatif" className="text-center font-display text-2xl font-bold sm:text-3xl">
-        {t(locale, { fr: "Comparer les packs", en: "Compare the packages" })}
+        {texts.text("compare.title")}
       </h2>
       <p className="mx-auto mt-2 max-w-xl text-center text-sm text-muted">
-        {t(locale, {
-          fr: "Tout ce que contient chaque pack, ligne par ligne. Survole ou touche les « ? » pour le détail d'un terme.",
-          en: "Everything each package contains, line by line. Hover or tap the “?” for the meaning of a term.",
-        })}
+        {texts.text("compare.intro")}
       </p>
       <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-surface">
         <table className="w-full min-w-[40rem] border-collapse text-sm">
@@ -34,9 +32,9 @@ export function PackComparison({ packs, settings, locale }: { packs: Pack[]; set
               <td className="sticky left-0 z-10 bg-surface p-4" />
               {names.map((p, i) => (
                 <th key={p.id} scope="col" className={`p-4 text-center align-bottom ${highlight(i)}`}>
-                  {p.highlight && (
+                  {p.highlight && texts.text("compare.badge") && (
                     <span className="mb-2 inline-block rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-background">
-                      {t(locale, { fr: "Le plus choisi", en: "Most popular" })}
+                      {texts.text("compare.badge")}
                     </span>
                   )}
                   <span className="block font-display text-base font-bold">{p.name}</span>
@@ -53,7 +51,7 @@ export function PackComparison({ packs, settings, locale }: { packs: Pack[]; set
                 <th scope="row" className="sticky left-0 z-10 bg-surface p-4 text-left font-medium">
                   <span className="inline-flex items-center">
                     {row.label}
-                    {row.hint && <Hint hint={glossaryEntry(row.hint, locale)} />}
+                    {row.hint && <Hint hint={glossaryEntry(row.hint, texts)} />}
                   </span>
                 </th>
                 {row.cells.map((cell, i) => (
@@ -77,7 +75,7 @@ export function PackComparison({ packs, settings, locale }: { packs: Pack[]; set
                     href={p.checkout ? `#offre-${p.id}` : href(locale, `/contact?offre=${p.id}`)}
                     className="inline-block rounded-full border border-border px-4 py-2 text-xs font-semibold transition hover:border-accent hover:text-accent"
                   >
-                    {p.checkout ? t(locale, { fr: "Choisir ce pack", en: "Choose this package" }) : t(locale, { fr: "Demander un devis", en: "Request a quote" })}
+                    {texts.text(p.checkout ? "compare.choose" : "compare.quote")}
                   </Link>
                 </td>
               ))}

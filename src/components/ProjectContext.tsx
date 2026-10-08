@@ -1,11 +1,10 @@
-import { t, type Locale } from "@/lib/i18n";
 import type { ProjectContext as Context } from "@/lib/project-context";
 
 // Encart « Le contexte » : la chaîne, les jeux ou contenus et le besoin, saisis dans l'admin
-export function ProjectContext({ context, locale }: { context: Context; locale: Locale }) {
-  if (!context.length) return null;
-  const short = context.filter((c) => c.key !== "need");
-  const need = context.find((c) => c.key === "need");
+export function ProjectContext({ context }: { context: Context }) {
+  if (!context.lines.length) return null;
+  const short = context.lines.filter((c) => c.key !== "need");
+  const need = context.lines.find((c) => c.key === "need");
   return (
     <section
       data-reveal
@@ -14,7 +13,7 @@ export function ProjectContext({ context, locale }: { context: Context; locale: 
     >
       <div>
         <h2 id="contexte" className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-          {t(locale, { fr: "Le contexte", en: "The context" })}
+          {context.title}
         </h2>
         {short.length > 0 && (
           <dl className="mt-4 space-y-4">
