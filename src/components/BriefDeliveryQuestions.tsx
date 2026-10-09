@@ -1,72 +1,73 @@
 "use client";
 
-import { overlayDeliveryChoices, streamToolChoices } from "@/lib/brief-delivery";
+import { installChoices, orderStreamToolChoices, streamToolChoices } from "@/lib/brief-delivery";
 
 const texts = {
   fr: {
     streamTool: "Plateforme de tes widgets et alertes",
-    streamToolHint: "Le service où tes widgets et alertes seront installés.",
+    streamToolHint: "Le service où tes widgets, alertes et overlays seront installés.",
     both: "Les deux",
-    overlayDelivery: "Comment veux-tu recevoir tes overlays ?",
-    supplement: "Supplément pour le développement StreamElements, chiffré dans ton devis.",
-    choices: [
-      ["Widget StreamElements prêt à intégrer", "Je prépare tes overlays sur StreamElements : tu ajoutes simplement le lien dans OBS (source navigateur), sans rien configurer."],
-      ["Fichiers à configurer toi-même", "Tu reçois les fichiers (images, vidéos, page HTML) et tu les mets en place toi-même dans OBS ou ton logiciel de live."],
+    install: "Installation",
+    installChoices: [
+      ["J’ajoute moi-même le code", "Tu reçois le HTML, le CSS et le JavaScript à coller dans ta plateforme."],
+      ["Installation par zer0oes_GFX", "Tu invites le compte zer0oes_GFX comme éditeur de ta plateforme et j’installe tout pour toi."],
     ],
+    supplement: "Supplément pour l’installation, chiffré dans ton devis.",
   },
   en: {
     streamTool: "Platform for your widgets and alerts",
-    streamToolHint: "The service where your widgets and alerts will be installed.",
+    streamToolHint: "The service where your widgets, alerts and overlays will be installed.",
     both: "Both",
-    overlayDelivery: "How would you like to receive your overlays?",
-    supplement: "Extra charge for the StreamElements development, included in your quote.",
-    choices: [
-      ["StreamElements widget, ready to add", "I set up your overlays on StreamElements: you simply add the link in OBS (browser source), no configuration needed."],
-      ["Files to set up yourself", "You receive the files (images, videos, HTML page) and set them up yourself in OBS or your streaming software."],
+    install: "Installation",
+    installChoices: [
+      ["I’ll add the code myself", "You receive the HTML, CSS and JavaScript to paste into your platform."],
+      ["Installation by zer0oes_GFX", "You invite the zer0oes_GFX account as an editor of your platform and I install everything for you."],
     ],
+    supplement: "Extra charge for the installation, included in your quote.",
   },
 } as const;
 
-// Questions du brief selon le contenu de la commande : plateforme des widgets / alertes et livraison des overlays.
-// Contrôlées (value + onChange) ou libres (valeurs initiales seulement).
-// quote : demande de devis (questions facultatives, supplément StreamElements annoncé)
-export function BriefDeliveryQuestions({ needs, en, quote = false, streamTool, overlayDelivery, onStreamTool, onOverlayDelivery }: {
-  needs: { platform: boolean; overlays: boolean };
+// Questions d'installation selon le contenu de la commande.
+// mode « brief » : plateforme StreamElements ou Streamlabs, obligatoire, avec une note (intégration incluse, invitation…)
+// mode « quote-brief » : brief d'un devis accepté (« Les deux » possible), obligatoire
+// mode « quote-request » : demande de devis, facultatif, plateforme + mode d'installation (supplément annoncé)
+export function BriefDeliveryQuestions({ needs, en, mode, note, streamTool, onStreamTool }: {
+  needs: { platform: boolean; install: boolean };
   en: boolean;
-  quote?: boolean;
+  mode: "brief" | "quote-brief" | "quote-request";
+  note?: string;
   streamTool?: string;
-  overlayDelivery?: string;
   onStreamTool?: (value: string) => void;
-  onOverlayDelivery?: (value: string) => void;
 }) {
   const tx = texts[en ? "en" : "fr"];
-  const mark = quote ? "" : " *";
-  const checked = (current: string | undefined, value: string, onChange?: (value: string) => void) =>
-    onChange ? { checked: current === value, onChange: () => onChange(value) } : { defaultChecked: current === value };
+  const required = mode !== "quote-request";
+  const choices = mode === "brief" ? orderStreamToolChoices : streamToolChoices;
+  const checked = (value: string) => (onStreamTool ? { checked: streamTool === value, onChange: () => onStreamTool(value) } : { defaultChecked: streamTool === value });
   return (
     <>
       {needs.platform && <fieldset>
-        <legend className="text-sm font-medium">{tx.streamTool}{mark}</legend>
+        <legend className="text-sm font-medium">{tx.streamTool}{required ? " *" : ""}</legend>
         <p className="mt-1 text-sm text-foreground/75">{tx.streamToolHint}</p>
         <div className="mt-2 inline-grid auto-cols-fr grid-flow-col gap-1 rounded-full border border-border bg-background p-1">
-          {streamToolChoices.map((choice) => (
+          {choices.map((choice) => (
             <label key={choice} className="cursor-pointer rounded-full px-4 py-1.5 text-center text-sm font-medium text-muted transition-colors hover:text-foreground has-[:checked]:bg-accent has-[:checked]:text-background has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent">
-              <input type="radio" name="streamTool" value={choice} required={!quote} className="sr-only" {...checked(streamTool, choice, onStreamTool)} />
+              <input type="radio" name="streamTool" value={choice} required={required} className="sr-only" {...checked(choice)} />
               {choice === "Les deux" ? tx.both : choice}
             </label>
           ))}
         </div>
+        {note && <p className="mt-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-foreground/85">{note}</p>}
       </fieldset>}
-      {needs.overlays && <fieldset>
-        <legend className="text-sm font-medium">{tx.overlayDelivery}{mark}</legend>
+      {mode === "quote-request" && needs.install && <fieldset>
+        <legend className="text-sm font-medium">{tx.install}</legend>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          {overlayDeliveryChoices.map((choice, index) => (
+          {installChoices.map((choice, index) => (
             <label key={choice} className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-surface p-4 text-sm transition-colors hover:border-accent/60 has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent">
-              <input type="radio" name="overlayDelivery" value={choice} required={!quote} className="mt-0.5 accent-[var(--accent)]" {...checked(overlayDelivery, choice, onOverlayDelivery)} />
+              <input type="radio" name="install" value={choice} className="mt-0.5 accent-[var(--accent)]" />
               <span>
-                <span className="block font-semibold">{tx.choices[index][0]}</span>
-                <span className="mt-1 block text-foreground/75">{tx.choices[index][1]}</span>
-                {quote && index === 0 && <span className="mt-2 block text-xs font-semibold text-accent">{tx.supplement}</span>}
+                <span className="block font-semibold">{tx.installChoices[index][0]}</span>
+                <span className="mt-1 block text-foreground/75">{tx.installChoices[index][1]}</span>
+                {index === 1 && <span className="mt-2 block text-xs font-semibold text-accent">{tx.supplement}</span>}
               </span>
             </label>
           ))}

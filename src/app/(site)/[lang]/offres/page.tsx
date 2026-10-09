@@ -16,6 +16,7 @@ import { pageMetadata } from "@/lib/seo";
 import { getStore } from "@/lib/store";
 import { getPublicCatalog } from "@/lib/public-catalog";
 import { trDeep } from "@/lib/translations-en";
+import { INSTALL_OPTION_ID } from "@/lib/brief-delivery";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/offres">): Promise<Metadata> {
   return pageMetadata(asLocale((await params).lang), "/offres", {
@@ -160,7 +161,7 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
         <OfferGuide locale={lang} />
 
         </>} options={
-          <OptionCatalog settings={site} packs={packs.map((p) => trDeep(lang, p))} options={catalog.options.map((o) => trDeep(lang, o))} locale={lang} texts={{
+          <OptionCatalog settings={site} packs={packs.map((p) => trDeep(lang, p))} options={catalog.options.filter((o) => o.id !== INSTALL_OPTION_ID).map((o) => trDeep(lang, o))} installOption={catalog.options.find((o) => o.id === INSTALL_OPTION_ID)} locale={lang} texts={{
             hints: glossaryHints(texts),
             content: resolveOptionContent(catalog.options, stored, lang),
             labels: Object.fromEntries((["receive", "revision", "add", "quote", "quoteHeading", "custom", "customLink"] as const).map((k) => [k, texts.text(`options.${k}`)])) as CatalogTexts["labels"],

@@ -1,4 +1,4 @@
-import { briefDeliveryAnswers, briefDeliveryNeeds } from "./brief-delivery";
+import { briefDeliveryNeeds, briefPlatformAnswer, streamToolChoices } from "./brief-delivery";
 
 export const quoteBriefFields = [
   { id: "email", label: "E-mail", key: "E-mail" }, { id: "pseudo", label: "Pseudo", key: "Pseudo" },
@@ -23,8 +23,8 @@ export function parseQuoteBrief(data: FormData, deliverables: string[], optional
     if (!description && !optional.includes(label)) return null;
     brief[`Création ${i + 1} — ${label}`] = description;
   }
-  // Plateforme des widgets / alertes et livraison des overlays, selon les produits du devis
-  const answers = briefDeliveryAnswers((name) => field(name, 100) || undefined, briefDeliveryNeeds(deliverables));
+  // Plateforme d'installation des widgets, alertes et overlays, selon les produits du devis
+  const answers = briefPlatformAnswer(field("streamTool", 100) || undefined, briefDeliveryNeeds(deliverables).platform, streamToolChoices);
   if (!answers) return null;
   return { ...brief, ...answers };
 }

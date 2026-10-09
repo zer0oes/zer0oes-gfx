@@ -1,29 +1,30 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { briefDeliveryAnswers, briefDeliveryNeeds, overlayDeliveryChoices, pickChoice, streamToolChoices } from "./brief-delivery";
+import { INSTALL_LINE, briefDeliveryNeeds, briefPlatformAnswer, hasInstallLine, pickChoice, streamToolChoices, withoutInstallLine } from "./brief-delivery";
 
-test("brief : questions de plateforme et de livraison selon le contenu de la commande", () => {
-  assert.deepEqual(briefDeliveryNeeds(["Widget personnalisé (barre d’objectifs)"]), { platform: true, overlays: false });
-  assert.deepEqual(briefDeliveryNeeds(["Alertes néon — 5 alertes : follow, sub, raid, cheer, tips"]), { platform: true, overlays: false });
-  assert.deepEqual(briefDeliveryNeeds(["Overlay fixe (unité)"]), { platform: false, overlays: true });
-  assert.deepEqual(briefDeliveryNeeds(["Scènes « Gaming » et « Just Chatting »", "Alertes électriques"]), { platform: true, overlays: true });
-  assert.deepEqual(briefDeliveryNeeds(["Logo", "Bannière et avatar"]), { platform: false, overlays: false });
-  // pack avec overlays au choix
-  assert.deepEqual(briefDeliveryNeeds([], 3), { platform: false, overlays: true });
+test("installation : plateforme demandée selon le contenu de la commande", () => {
+  assert.equal(briefDeliveryNeeds(["Widget personnalisé (barre d’objectifs)"]).platform, true);
+  assert.equal(briefDeliveryNeeds(["Alertes néon — 5 alertes : follow, sub, raid, cheer, tips"]).platform, true);
+  assert.equal(briefDeliveryNeeds(["Overlay fixe (unité)"]).platform, true);
+  assert.equal(briefDeliveryNeeds(["Scènes « Gaming » et « Just Chatting »"]).platform, true);
+  assert.equal(briefDeliveryNeeds(["Logo", "Bannière et avatar"]).platform, false);
+  // pack avec overlays au choix ; la ligne d'installation seule ne compte pas
+  assert.equal(briefDeliveryNeeds([], 5).platform, true);
+  assert.equal(briefDeliveryNeeds([INSTALL_LINE]).platform, false);
 });
 
-test("brief : seules les réponses proposées sont conservées", () => {
-  assert.equal(pickChoice("Streamlabs", streamToolChoices), "Streamlabs");
+test("installation : ligne du supplément repérée et retirée des créations à décrire", () => {
+  const lines = ["Overlay fixe (unité)", INSTALL_LINE];
+  assert.equal(hasInstallLine(lines), true);
+  assert.deepEqual(withoutInstallLine(lines), ["Overlay fixe (unité)"]);
+  assert.equal(hasInstallLine(["Overlay fixe (unité)"]), false);
+});
+
+test("brief : plateforme obligatoire si demandée, « Les deux » réservé aux devis", () => {
+  assert.deepEqual(briefPlatformAnswer("Streamlabs", true), { "Plateforme des widgets et alertes": "Streamlabs" });
+  assert.equal(briefPlatformAnswer("Les deux", true), null);
+  assert.deepEqual(briefPlatformAnswer("Les deux", true, streamToolChoices), { "Plateforme des widgets et alertes": "Les deux" });
+  assert.equal(briefPlatformAnswer(undefined, true), null);
+  assert.deepEqual(briefPlatformAnswer(undefined, false), {});
   assert.equal(pickChoice("OBS", streamToolChoices), "");
-  assert.equal(pickChoice(undefined, overlayDeliveryChoices), "");
-  assert.equal(pickChoice("Fichiers à configurer soi-même", overlayDeliveryChoices), "Fichiers à configurer soi-même");
-});
-
-test("brief : réponses enregistrées, refus si une question affichée reste vide", () => {
-  const form = (v: Record<string, string>) => (name: string) => v[name];
-  assert.deepEqual(briefDeliveryAnswers(form({ streamTool: "Les deux", overlayDelivery: "Widget StreamElements prêt à intégrer" }), { platform: true, overlays: true }),
-    { "Plateforme des widgets et alertes": "Les deux", "Livraison des overlays": "Widget StreamElements prêt à intégrer" });
-  assert.equal(briefDeliveryAnswers(form({ overlayDelivery: "Fichiers à configurer soi-même" }), { platform: true, overlays: true }), null);
-  assert.deepEqual(briefDeliveryAnswers(form({}), { platform: false, overlays: false }), {});
-  assert.deepEqual(briefDeliveryAnswers(form({ streamTool: "OBS" }), { platform: false, overlays: false }), {});
 });

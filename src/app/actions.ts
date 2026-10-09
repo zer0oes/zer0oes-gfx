@@ -19,7 +19,7 @@ import { normalizeCode, validPromotion } from "@/lib/promotions";
 import { includedOverlays, validOverlaySelection } from "@/lib/brief-overlays";
 import { productBriefFields } from "@/lib/product-brief";
 import { recordQuoteRequest } from "@/lib/project-quotes";
-import { briefDeliveryAnswers, briefDeliveryNeeds } from "@/lib/brief-delivery";
+import { briefDeliveryNeeds, briefPlatformAnswer, withoutInstallLine } from "@/lib/brief-delivery";
 
 export type FormState = { ok: boolean; message: string } | null;
 
@@ -245,7 +245,7 @@ async function briefForm(
     }
     if (packId === "options" || packId?.startsWith("option:")) {
       if (!deliveryTemplate?.length) return { ok: false, message: locale === "en" ? "Unable to verify your products. Please refresh." : "Impossible de vérifier tes créations. Actualise la page." };
-      const fields = productBriefFields(deliveryTemplate, (name) => field(formData, name));
+      const fields = productBriefFields(withoutInstallLine(deliveryTemplate), (name) => field(formData, name));
       if (!fields) return { ok: false, message: locale === "en" ? "Describe each purchased creation before sending your brief." : "Précise ta demande pour chaque création achetée avant d’envoyer ton brief." };
       productFields = fields;
     } else {
@@ -255,9 +255,9 @@ async function briefForm(
       if (!validOverlaySelection(formData.getAll("overlays"), count)) return { ok: false, message: locale === "en" ? `Choose exactly ${count} different overlays included in your package.` : `Choisis exactement ${count} overlays différents, inclus dans ton pack.` };
       deliveryTemplate ??= pack.deliverables;
     }
-    // Plateforme des widgets / alertes et livraison des overlays, selon le contenu de la commande
-    const answers = briefDeliveryAnswers((name) => field(formData, name, 100) || undefined, briefDeliveryNeeds(deliveryTemplate ?? [], formData.getAll("overlays").length || null));
-    if (!answers) return { ok: false, message: locale === "en" ? "Choose the platform for your widgets and alerts, and how you’d like to receive your overlays." : "Choisis la plateforme de tes widgets et alertes, et la façon de recevoir tes overlays." };
+    // Plateforme d'installation des widgets, alertes et overlays, selon le contenu de la commande
+    const answers = briefPlatformAnswer(field(formData, "streamTool", 100) || undefined, briefDeliveryNeeds(deliveryTemplate ?? [], formData.getAll("overlays").length || null).platform);
+    if (!answers) return { ok: false, message: locale === "en" ? "Choose the platform for your widgets, alerts and overlays: StreamElements or Streamlabs." : "Choisis la plateforme de tes widgets, alertes et overlays : StreamElements ou Streamlabs." };
     deliveryAnswers = answers;
   } catch (e) {
     console.error(e);

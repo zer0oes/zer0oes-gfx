@@ -349,7 +349,7 @@ export function ContactForm({
               </details>
             )}
             {/* Widgets, alertes ou overlays demandés : plateforme et mode de livraison */}
-            <BriefDeliveryQuestions quote needs={briefDeliveryNeeds(selectedOptions)} en={locale === "en"} />
+            <BriefDeliveryQuestions mode="quote-request" needs={briefDeliveryNeeds(selectedOptions)} en={locale === "en"} />
 
           </Section>
 

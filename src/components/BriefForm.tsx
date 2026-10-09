@@ -7,7 +7,7 @@ import { sendBrief } from "@/app/actions";
 import { href, type Locale } from "@/lib/i18n";
 import { overlayTypes } from "@/lib/pricing";
 import { productBriefHint } from "@/lib/option-products";
-import { BRIEF_OVERLAY_DELIVERY_KEY, BRIEF_PLATFORM_KEY, briefDeliveryNeeds } from "@/lib/brief-delivery";
+import { BRIEF_PLATFORM_KEY, briefDeliveryNeeds, hasInstallLine } from "@/lib/brief-delivery";
 import { BriefDeliveryQuestions } from "./BriefDeliveryQuestions";
 import { useLocale } from "./I18nProvider";
 import { DatePicker } from "./DatePicker";
@@ -121,9 +121,16 @@ export function BriefForm({
   // Questions techniques selon le contenu de la commande (widgets / alertes, overlays)
   const needs = briefDeliveryNeeds(productLines ?? purchasedProducts, overlayCount);
   const [streamTool, setStreamTool] = useState(values?.[BRIEF_PLATFORM_KEY] ?? "");
-  const [overlayDelivery, setOverlayDelivery] = useState(values?.[BRIEF_OVERLAY_DELIVERY_KEY] ?? "");
+  // Note d'installation : incluse dans les packs ; à la carte, installation achetée ou code à ajouter soi-même
+  const lines = productLines ?? purchasedProducts;
+  const alaCarte = packId === "options" || packId?.startsWith("option:");
+  const installNote = quoteToken ? undefined : !alaCarte
+    ? (locale === "en" ? "Installation on your platform is included in your package: you’ll invite the zer0oes_GFX account as an editor so I can set everything up." : "L’intégration sur ta plateforme est incluse dans ton pack : tu inviteras le compte zer0oes_GFX comme éditeur pour que j’installe tout.")
+    : hasInstallLine(lines)
+      ? (locale === "en" ? "You chose installation by zer0oes_GFX: you’ll invite the zer0oes_GFX account as an editor of your platform." : "Tu as choisi l’installation par zer0oes_GFX : tu inviteras le compte zer0oes_GFX comme éditeur de ta plateforme.")
+      : (locale === "en" ? "You’ll receive the code (HTML, CSS, JavaScript) to add to your platform yourself." : "Tu recevras le code (HTML, CSS, JavaScript) à ajouter toi-même sur ta plateforme.");
   const remaining = overlayCount === null ? 0 : overlayCount - overlays.length;
-  const missing = [...missingFields, ...(needs.platform && !streamTool ? [locale === "en" ? "platform for widgets and alerts" : "plateforme des widgets et alertes"] : []), ...(needs.overlays && !overlayDelivery ? [locale === "en" ? "overlay delivery" : "livraison des overlays"] : []), ...(remaining > 0 ? [locale === "en" ? `${remaining} overlay${remaining > 1 ? "s" : ""} to choose` : `${remaining} overlay${remaining > 1 ? "s" : ""} à choisir`] : [])];
+  const missing = [...missingFields, ...(needs.platform && !streamTool ? [locale === "en" ? "platform for widgets and alerts" : "plateforme des widgets et alertes"] : []), ...(remaining > 0 ? [locale === "en" ? `${remaining} overlay${remaining > 1 ? "s" : ""} to choose` : `${remaining} overlay${remaining > 1 ? "s" : ""} à choisir`] : [])];
 
   useEffect(() => {
     if (!state?.ok || !portalUrl) return;
@@ -190,7 +197,7 @@ export function BriefForm({
           <input name="logoLink" defaultValue={values?.["Logo existant"]} placeholder="https://…" className={inputClass} required={isRequired("logoLink")} />
         </Field>
       )}
-      <BriefDeliveryQuestions needs={needs} en={locale === "en"} streamTool={streamTool} overlayDelivery={overlayDelivery} onStreamTool={setStreamTool} onOverlayDelivery={setOverlayDelivery} />
+      <BriefDeliveryQuestions mode={quoteToken ? "quote-brief" : "brief"} note={installNote} needs={needs} en={locale === "en"} streamTool={streamTool} onStreamTool={setStreamTool} />
       <Field label={tx.universe.replace(" *", "") + (isRequired("universe") ? " *" : "")} hint={tx.universeHint}>
         <textarea name="universe" defaultValue={values?.["Univers / ambiance"]} rows={4} className={inputClass} required={isRequired("universe")} />
       </Field>
