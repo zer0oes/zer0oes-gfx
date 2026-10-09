@@ -5,6 +5,7 @@ import { fieldValues, jsonObject, parseFields, parseLabContent } from "./model";
 import { DEFAULT_OVERLAY, type OverlayItem } from "./overlay";
 import { PLATFORM_STREAM_ELEMENTS, PLATFORM_STREAMLABS, type Platform } from "./platformEvents";
 import { buildLabPreview, labLoadMessage } from "./preview";
+import { widgetInstance } from "./widget-instance";
 import type { LabContent } from "./types";
 import { buildAlertboxExport, buildPlatformExport, slugifyWidgetName, type AlertboxExportCode } from "./widgetExport";
 import { createZip } from "./zip";
@@ -67,7 +68,7 @@ function itemHtml(item: OverlayItem, sources: Record<string, LabContent>, platfo
   }
   const source = item.widgetId ? sources[item.widgetId] : undefined;
   if (!source) return "";
-  const preview = buildLabPreview(source, platform, { transparent: true });
+  const preview = buildLabPreview(widgetInstance(source, item.props, platform), platform, { transparent: true });
   if (!preview.source) return "";
   frames.push({ id: item.id, message: labLoadMessage(preview, platform) });
   return `<iframe data-frame="${esc(item.id)}" sandbox="allow-scripts" allow="autoplay" srcdoc="${esc(preview.source)}"></iframe>`;

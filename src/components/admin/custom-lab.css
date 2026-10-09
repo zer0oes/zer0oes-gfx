@@ -82,6 +82,7 @@
 .cl-fields-heading h2 { font-size: 14px; font-weight: 600; }
 .cl-fields-heading span { font-size: 9px; color: var(--muted); }
 .cl-fields-list { display: grid; gap: 16px; margin-top: 20px; }
+.cl-widget-settings .cl-fields { position: static; padding: 0; border: 0; background: transparent; max-height: none; overflow: visible; }
 .cl-fields-list p, .cl-field-hint { font-size: 11px; color: var(--cl-muted); }
 .cl-fields input[type=color] { width: 100%; height: 32px; }
 .cl-fields input[type=range] { width: 100%; accent-color: var(--cl-accent); }

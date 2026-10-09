@@ -6,6 +6,7 @@ import { saveLabAction } from "@/app/admin/custom-lab-actions";
 import { parseLabContent } from "@/lib/custom-lab/model";
 import { DEFAULT_OVERLAY, ITEM_LABELS, MIN_ITEM_SIZE, createItem, itemLabel, newItemId, snapPosition, snapTargets, type OverlayData, type OverlayItem, type OverlayItemType } from "@/lib/custom-lab/overlay";
 import { buildLabPreview, labEventMessage, labLoadMessage } from "@/lib/custom-lab/preview";
+import { widgetInstance } from "@/lib/custom-lab/widget-instance";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
 import type { LabContent, LabDocument } from "@/lib/custom-lab/types";
 import { slugifyWidgetName } from "@/lib/custom-lab/widgetExport";
@@ -14,7 +15,8 @@ import { CustomLabMedia, openLabMedia } from "./CustomLabMedia";
 import { CustomLabSimulator } from "./CustomLabSimulator";
 import { usePointerSort } from "./usePointerSort";
 import "./custom-lab.css";
-import { MaterialIcon } from "./MaterialIcon";
+import { MaterialIcon, type MaterialIconName } from "./MaterialIcon";
+import { CustomLabWidgetSettings } from "./CustomLabWidgetSettings";
 import { CustomLabActions } from "./CustomLabActions";
 import { CustomLabProjectField } from "./CustomLabProjectField";
 
@@ -44,6 +46,11 @@ function download(data: BlobPart, name: string, type: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+const TYPE_ICONS: Record<OverlayItemType, MaterialIconName> = { text: "title", image: "image", video: "movie", shape: "category", widget: "widgets" };
+
+// Réglages propres à un calque widget (au moins une valeur modifiée sur une plateforme)
+const hasOverrides = (item: OverlayItem) => Object.values((item.props.widgetOverrides ?? {}) as Record<string, Record<string, unknown>>).some((o) => o && Object.keys(o).length > 0);
 
 // Contenu d'un calque dans la scène
 function ItemContent({ item, source, platform, register }: { item: OverlayItem; source?: OverlaySource; platform: Platform; register: (id: string, el: HTMLIFrameElement | null) => void }) {
@@ -96,7 +103,9 @@ function Placeholder({ label }: { label: string }) {
 
 // Widget ou pack d'alertes de la bibliothèque, rendu dans une iframe isolée (comme dans l'éditeur de widgets)
 function WidgetFrame({ item, source, platform, register }: { item: OverlayItem; source?: OverlaySource; platform: Platform; register: (id: string, el: HTMLIFrameElement | null) => void }) {
-  const preview = useMemo(() => (source ? buildLabPreview(source.content, platform, { transparent: true }) : null), [source, platform]);
+  // Réglages propres au calque (surcharges par plateforme) appliqués au modèle, comme dans la page livrée
+  const overrides = JSON.stringify(item.props.widgetOverrides ?? null);
+  const preview = useMemo(() => (source ? buildLabPreview(widgetInstance(source.content, { widgetOverrides: JSON.parse(overrides) }, platform), platform, { transparent: true }) : null), [source, platform, overrides]);
   const frame = useRef<HTMLIFrameElement | null>(null);
   if (!source) return <Placeholder label="Widget : choisis une création" />;
   if (!preview?.source) return <Placeholder label={preview?.error || "Aperçu indisponible"} />;
@@ -130,6 +139,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
   const [status, setStatus] = useState("");
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
   const [panel, setPanel] = useState<"layers" | "props">("layers");
   const [platform, setPlatform] = useState<Platform>("streamelements");
   const [guides, setGuides] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
@@ -432,10 +442,21 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
                     key={item.id}
                     onPointerDown={(e) => startDrag(e, item)}
                     onDoubleClick={() => setPanel("props")}
+                    onPointerEnter={() => setHovered(item.id)}
+                    onPointerLeave={() => setHovered((h) => (h === item.id ? null : h))}
                     className={`absolute select-none ${item.locked ? "" : "cursor-move"}`}
                     style={{ left: item.x, top: item.y, width: item.w, height: item.h, zIndex: item.z }}
                   >
                     <ItemContent item={item} source={item.widgetId ? byId.get(item.widgetId) : undefined} platform={platform} register={register} />
+                    {/* Contour discret de chaque calque, plus marqué au survol (scène ou liste des calques) */}
+                    {selected !== item.id && (
+                      <div className={`pointer-events-none absolute inset-0 ${hovered === item.id ? "outline-dashed outline-[var(--cl-accent)]" : "outline-dashed outline-white/25"}`} style={{ outlineWidth: (hovered === item.id ? 2 : 1) / scale }} />
+                    )}
+                    {(selected === item.id || hovered === item.id) && (
+                      <span className="pointer-events-none absolute left-0 flex items-center gap-1 whitespace-nowrap rounded bg-[var(--cl-accent)] font-semibold text-[#0d0f13]" style={{ ...(item.y < 24 / scale ? { top: 4 / scale, left: 4 / scale } : { bottom: "100%", marginBottom: 4 / scale }), fontSize: 12 / scale, padding: `${2 / scale}px ${6 / scale}px`, zIndex: 1 }}>
+                        <MaterialIcon name={TYPE_ICONS[item.type]} className="size-[1.1em]" />{itemLabel(item, widgetName)}
+                      </span>
+                    )}
                     {selected === item.id && (
                       <div className="pointer-events-none absolute inset-0 outline outline-[3px] outline-[var(--cl-accent)]" style={{ outlineWidth: 2 / scale }}>
                         {!item.locked &&
@@ -466,15 +487,16 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
           </div>
 
           {panel === "layers" ? (
-            <ul data-sort-list className="mt-4 space-y-1">
+            <ul data-sort-list className="mt-4 space-y-1.5">
               {layers.map((item, i) => {
                 const handle = sort.handle(i);
                 return (
-                  <li key={item.id} className={`flex items-center gap-1.5 rounded-md border px-1.5 py-1 text-xs ${selected === item.id ? "border-[var(--cl-accent)] bg-[#ac8bfa1a]" : "border-[var(--cl-line)]"} ${sort.drag?.from === i ? "opacity-40" : ""}`}>
+                  <li key={item.id} onPointerEnter={() => setHovered(item.id)} onPointerLeave={() => setHovered((h) => (h === item.id ? null : h))} className={`flex items-center gap-2 rounded-lg border px-2 py-2 text-sm ${selected === item.id ? "border-[var(--cl-accent)] bg-[#ac8bfa1f]" : hovered === item.id ? "border-[var(--cl-accent)]/60 bg-white/5" : "border-[var(--cl-line)] bg-[#151720]"} ${item.hidden ? "opacity-60" : ""} ${sort.drag?.from === i ? "opacity-40" : ""}`}>
                     <span {...handle} role="button" tabIndex={0} aria-label={`Déplacer le calque ${itemLabel(item, widgetName)}`} className="inline-flex cursor-grab text-[var(--cl-muted)]"><MaterialIcon name="drag_indicator" className="size-4" /></span>
-                    <button type="button" onClick={() => { setSelected(item.id); setPanel("props"); }} className="min-w-0 flex-1 truncate text-left">
-                      <span className="mr-1 text-[10px] text-[var(--cl-muted)]">{ITEM_LABELS[item.type]}</span>
-                      {itemLabel(item, widgetName)}
+                    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-white/5 text-[var(--cl-accent)]" title={ITEM_LABELS[item.type]}><MaterialIcon name={TYPE_ICONS[item.type]} className="size-4" /></span>
+                    <button type="button" onClick={() => { setSelected(item.id); setPanel("props"); }} className="grid min-w-0 flex-1 text-left leading-tight">
+                      <span className="truncate font-medium text-[#e3e5ec]">{itemLabel(item, widgetName)}</span>
+                      <span className="text-[10px] text-[var(--cl-muted)]">{ITEM_LABELS[item.type]}{item.type === "widget" && hasOverrides(item) ? " · réglages personnalisés" : ""}</span>
                     </button>
                     <button type="button" onClick={() => updateItem(item.id, { hidden: !item.hidden })} title={item.hidden ? "Afficher" : "Masquer"} aria-label={item.hidden ? "Afficher le calque" : "Masquer le calque"} className={`inline-flex ${item.hidden ? "text-[var(--cl-muted)]" : ""}`}><MaterialIcon name={item.hidden ? "visibility_off" : "visibility"} className="size-4" /></button>
                     <button type="button" onClick={() => updateItem(item.id, { locked: !item.locked })} title={item.locked ? "Déverrouiller" : "Verrouiller"} aria-label={item.locked ? "Déverrouiller le calque" : "Verrouiller le calque"} className={`inline-flex ${item.locked ? "text-[var(--cl-accent)]" : "text-[var(--cl-muted)]"}`}><MaterialIcon name={item.locked ? "lock" : "lock_open"} className="size-4" /></button>
@@ -548,10 +570,11 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
 
               {current.type === "widget" && (
                 <>
-                  <label className="grid gap-1">Création affichée<select className={input} value={current.widgetId ?? ""} onChange={(e) => updateItem(current.id, { widgetId: e.target.value || undefined })}><option value="">— Choisir —</option>{sources.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.project}</option>)}</select></label>
+                  <label className="grid gap-1">Création affichée<select className={input} value={current.widgetId ?? ""} onChange={(e) => updateItem(current.id, { widgetId: e.target.value || undefined, props: { ...current.props, widgetOverrides: {} } })}><option value="">— Choisir —</option>{sources.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.project}</option>)}</select></label>
                   {currentSize && <button type="button" className={toolButton} onClick={() => updateItem(current.id, { w: currentSize.width, h: currentSize.height })}><MaterialIcon name="fullscreen" className="size-4" />Taille d’origine ({currentSize.width} × {currentSize.height})</button>}
                   {current.widgetId && <Link href={`/admin/laboratoire/${current.widgetId}`} className="inline-flex items-center gap-1 text-[var(--cl-accent)] hover:underline">Ouvrir cette création dans l’éditeur<MaterialIcon name="arrow_forward" className="size-4" /></Link>}
-                  <p className="cl-field-hint">Le widget s’affiche avec ses réglages actuels. Les événements simulés (bouton en bas à droite) lui sont envoyés.</p>
+                  <p className="cl-field-hint">Les événements simulés (bouton en bas à droite) sont envoyés à tous les widgets de la scène.</p>
+                  {current.widgetId && byId.get(current.widgetId) && <CustomLabWidgetSettings content={byId.get(current.widgetId)!.content} props={current.props} platform={platform} onChange={(patch) => updateProps(current.id, patch)} />}
                 </>
               )}
 
