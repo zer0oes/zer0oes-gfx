@@ -154,7 +154,7 @@ export function CustomLabEditor({ initial }: { initial: LabDocument }) {
   }, [code, variant.settings, platform]);
 
   return <div className={`cl-root ${fieldsCollapsed ? "cl-fields-collapsed" : ""}`}>
-    <Link href="/admin/streamerlab" onClick={(event) => { if (dirty && !window.confirm("Quitter sans enregistrer les modifications ?")) event.preventDefault(); }} className="text-sm text-muted hover:text-accent">← Laboratoire</Link>
+    <Link href="/admin/laboratoire" onClick={(event) => { if (dirty && !window.confirm("Quitter sans enregistrer les modifications ?")) event.preventDefault(); }} className="text-sm text-muted hover:text-accent">← Laboratoire</Link>
     <header className="cl-topbar">
       <div><h1>{content.name}</h1><p>{content.kind === "alertbox" ? "Pack d’alertes" : "Widget"} · {dirty ? "Modifications à enregistrer" : "Enregistré"}</p></div>
       <div className="cl-actions">

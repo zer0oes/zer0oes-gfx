@@ -14,23 +14,23 @@ export async function createLabAction(form: FormData) {
     const document = await saveLabDocument(newLabContent(form.get("kind") === "alertbox" ? "alertbox" : "widget"));
     id = document.id;
   } catch (error) {
-    redirect(`/admin/streamerlab?error=${error instanceof LabStorageError && error.reason === "setup" ? "setup" : "create"}`);
+    redirect(`/admin/laboratoire?error=${error instanceof LabStorageError && error.reason === "setup" ? "setup" : "create"}`);
   }
-  revalidatePath("/admin/streamerlab");
-  redirect(`/admin/streamerlab/${id}`);
+  revalidatePath("/admin/laboratoire");
+  redirect(`/admin/laboratoire/${id}`);
 }
 
 export async function importLabAction(form: FormData) {
   await requireAdmin();
   const file = form.get("file");
-  if (!(file instanceof File) || file.size > LAB_MAX_BYTES) redirect("/admin/streamerlab?error=import");
+  if (!(file instanceof File) || file.size > LAB_MAX_BYTES) redirect("/admin/laboratoire?error=import");
   let id: string;
   try {
     const document = await saveLabDocument(parseLabContent(JSON.parse(await file.text())));
     id = document.id;
-  } catch (error) { redirect(`/admin/streamerlab?error=${error instanceof LabStorageError ? error.reason === "setup" ? "setup" : "storage" : "import"}`); }
-  revalidatePath("/admin/streamerlab");
-  redirect(`/admin/streamerlab/${id}`);
+  } catch (error) { redirect(`/admin/laboratoire?error=${error instanceof LabStorageError ? error.reason === "setup" ? "setup" : "storage" : "import"}`); }
+  revalidatePath("/admin/laboratoire");
+  redirect(`/admin/laboratoire/${id}`);
 }
 
 export async function saveLabAction(id: string, revision: number, raw: unknown): Promise<{ ok: true; revision: number } | { ok: false; message: string }> {
@@ -38,7 +38,7 @@ export async function saveLabAction(id: string, revision: number, raw: unknown):
   try {
     const content = parseLabContent(raw);
     const document = await saveLabDocument(content, { id, revision });
-    revalidatePath("/admin/streamerlab");
+    revalidatePath("/admin/laboratoire");
     return { ok: true, revision: document.revision };
   } catch (error) {
     return { ok: false, message: error instanceof LabConflictError || error instanceof LabStorageError ? error.message : "Enregistrement impossible. Vérifie les JSON et la configuration du stockage." };
