@@ -242,3 +242,25 @@ export async function createPortalLinkAction(formData: FormData) {
   if (!order.deliveryToken) await getStore().updateOrder(orderId, { deliveryToken: newDeliveryToken() });
   back(orderId, { ok: "Lien de l'espace commande créé." });
 }
+
+// Retire un fichier définitif d'un livrable (et du stockage) : refusé si le client l'a déjà téléchargé
+// ou si la commande est entièrement validée.
+export async function removeFinalAssetAction(formData: FormData) {
+  await requireAdmin();
+  const orderId = text(formData, "orderId", 60);
+  const id = text(formData, "id", 60);
+  const index = Number(text(formData, "index", 4));
+  const store = getStore();
+  const [order, items] = await Promise.all([store.getOrder(orderId), store.listDeliverables(orderId)]);
+  const item = items.find((d) => d.id === id);
+  const asset = item?.finalAssets?.[index];
+  if (!order || !item || !asset) back(orderId, { error: "Fichier introuvable." });
+  if (deliveryLocked(order, items)) back(orderId, { error: deliveryLockedMessage });
+  if (order.status === "terminee") back(orderId, { error: "La commande est terminée : ses fichiers ne peuvent plus être retirés." });
+  if (item.approvedAt && asset.path && item.accessedFinalAssets?.includes(asset.path)) back(orderId, { error: "Ce fichier a déjà été téléchargé par le client : il ne peut plus être retiré." });
+  await store.updateDeliverable(id, { finalAssets: item.finalAssets!.filter((_, i) => i !== index) });
+  // Le même fichier peut servir d'aperçu : on ne le supprime du stockage que s'il n'est plus utilisé
+  if (asset.path && asset.path !== item.previewPath && asset.path !== item.storagePath && !item.finalAssets!.some((a, i) => i !== index && a.path === asset.path)) await removeFromBucket(asset.path);
+  await refreshDeliveryPages(orderId);
+  back(orderId, { ok: "Fichier retiré." });
+}

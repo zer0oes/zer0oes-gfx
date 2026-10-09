@@ -71,18 +71,27 @@ export function DrawerButton({ drawer, className, children }: { drawer: string; 
 }
 
 // Suppression confirmée dans une petite modale (le formulaire n'est envoyé qu'après « Supprimer »)
-export function ConfirmDelete({ action, id, label = "Supprimer", question = "Es-tu sûre de vouloir supprimer ?" }: { action: (form: FormData) => void | Promise<void>; id: string; label?: string; question?: string }) {
+// fields : champs cachés supplémentaires envoyés avec la suppression (ex. identifiant de la commande)
+// icon : simple poubelle au lieu d'un bouton texte (label sert alors d'intitulé accessible)
+export function ConfirmDelete({ action, id, label = "Supprimer", question = "Es-tu sûre de vouloir supprimer ?", fields = {}, icon = false }: { action: (form: FormData) => void | Promise<void>; id: string; label?: string; question?: string; fields?: Record<string, string>; icon?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   return (
     <>
-      <button type="button" onClick={() => dialog.current?.showModal()} className="rounded-full border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10">
-        {label}
-      </button>
+      {icon ? (
+        <button type="button" onClick={() => dialog.current?.showModal()} aria-label={label || question} title={label || "Retirer"} className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-red-500/10 hover:text-red-300">
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" /></svg>
+        </button>
+      ) : (
+        <button type="button" onClick={() => dialog.current?.showModal()} className="rounded-full border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10">
+          {label}
+        </button>
+      )}
       <dialog ref={dialog} aria-label={question} onClick={(event) => { if (event.target === event.currentTarget) dialog.current?.close(); }} className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-border bg-surface p-6 text-foreground shadow-2xl backdrop:bg-black/70">
         <p className="font-display text-lg font-bold">{question}</p>
         <form action={action} className="mt-6 flex justify-end gap-3">
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="confirm" value="on" />
+          {Object.entries(fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
           <button type="button" onClick={() => dialog.current?.close()} className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">Annuler</button>
           <button type="submit" className="rounded-full bg-red-500/90 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Supprimer</button>
         </form>
