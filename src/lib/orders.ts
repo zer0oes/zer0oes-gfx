@@ -25,6 +25,7 @@ import { getStripe } from "@/lib/stripe";
 import { trOfferName } from "@/lib/translations-en";
 import { discountedPrice, type Promotion } from "@/lib/promotions";
 import { plannedDelivery } from "@/lib/delivery-plan";
+import { INSTALL_LINE, INSTALL_OPTION_ID, briefDeliveryNeeds, hasInstallLine } from "@/lib/brief-delivery";
 
 // Commande calculée côté serveur à partir des identifiants envoyés par le formulaire.
 export type CheckoutQuote = {
@@ -53,7 +54,7 @@ export function discountQuote(q: CheckoutQuote, promotion: Promotion): CheckoutQ
 
 export function quote(
   catalog: Catalog,
-  input: { packId?: string | null; optionId?: string | null; optionItems?: { id: string; quantity: number }[]; formulaId?: string | null; payment?: unknown; hasLogo?: boolean },
+  input: { packId?: string | null; optionId?: string | null; optionItems?: { id: string; quantity: number }[]; formulaId?: string | null; payment?: unknown; hasLogo?: boolean; allowInstall?: boolean },
 ): CheckoutQuote | null {
   if (input.optionItems || input.packId === "options") {
     let items = input.optionItems;
@@ -68,14 +69,22 @@ export function quote(
     for (const item of items) {
       if (!item || typeof item.id !== "string" || seen.has(item.id) || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || item.quantity > 20) return null;
       seen.add(item.id);
-      const q = quote(catalog, { optionId: item.id });
+      const q = quote(catalog, { optionId: item.id, allowInstall: true });
       if (!q) return null;
       totalPrice += q.totalPrice * item.quantity;
       listPrice += q.listPrice * item.quantity;
-      const line = q.deliveryTemplate?.[0] ?? q.offerName;
-      lines.push(item.quantity > 1 ? `${line} × ${item.quantity}` : line);
+      // Supplément d'installation : une seule fois, avec une ligne fixe (repérée par le brief et la livraison)
+      if (item.id === INSTALL_OPTION_ID) {
+        if (item.quantity !== 1) return null;
+        lines.push(INSTALL_LINE);
+      } else {
+        const line = q.deliveryTemplate?.[0] ?? q.offerName;
+        lines.push(item.quantity > 1 ? `${line} × ${item.quantity}` : line);
+      }
       if (q.promoCode) codes.add(q.promoCode);
     }
+    // L'installation n'existe qu'avec un widget, des alertes ou un overlay à installer
+    if (hasInstallLine(lines) && !briefDeliveryNeeds(lines).platform) return null;
     const formulaId = JSON.stringify(items);
     if (formulaId.length > 500 || lines.some((line) => line.length > 500) || !Number.isSafeInteger(totalPrice)) return null;
     return {
@@ -90,6 +99,8 @@ export function quote(
   if (optionId) {
     const option = catalog.options.find((o) => o.id === optionId);
     if (!option || option.priceFrom || !Number.isSafeInteger(option.price) || option.price < 50) return null;
+    // Le supplément d'installation ne se commande pas seul
+    if (option.id === INSTALL_OPTION_ID && !input.allowInstall) return null;
     return {
       packId: `option:${option.id}`,
       formulaId: "base",

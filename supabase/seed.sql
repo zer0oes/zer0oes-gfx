@@ -39,7 +39,8 @@ insert into public.options (id, position, name, price, price_from, unit) values
   ('banniere', 17, 'Bannière pour YouTube / Twitch', 8500, false, null),
   ('avatar', 18, 'Avatar', 3000, false, null),
   ('panneaux-twitch', 19, 'Pack de 6 panneaux Twitch', 9000, false, null),
-  ('animation-logo', 20, 'Animation du logo', 18000, true, null)
+  ('animation-logo', 20, 'Animation du logo', 18000, true, null),
+  ('installation-plateforme', 21, 'Installation par zer0oes_GFX (StreamElements ou Streamlabs)', 2000, false, null)
 on conflict (id) do update set position = excluded.position, name = excluded.name, price = excluded.price, price_from = excluded.price_from, unit = excluded.unit;
 insert into public.streamers (id, position, name, description, url) values
   ('tomavega', 0, 'TomaVega', 'Identité électrique sur fond minéral : écran de lancement, tchat et alertes.', null),

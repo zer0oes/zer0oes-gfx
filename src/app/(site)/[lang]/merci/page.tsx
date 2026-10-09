@@ -11,6 +11,7 @@ import { trOfferName } from "@/lib/translations-en";
 import { getStripe } from "@/lib/stripe";
 import { includedOverlays } from "@/lib/brief-overlays";
 import { OrderedPackCard } from "@/components/OrderedPackCard";
+import { withoutInstallLine } from "@/lib/brief-delivery";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/merci">): Promise<Metadata> {
   const lang = asLocale((await params).lang);
@@ -188,7 +189,8 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
             portalUrl={portal ? `/commande/${portal}` : undefined}
             initialBrief={editBrief ? order?.brief ?? {} : undefined}
             revisionsUsed={revisionsUsed}
-            purchasedProducts={view?.packId === "options" || view?.packId.startsWith("option:") ? view.deliveryTemplate : undefined}
+            purchasedProducts={view?.packId === "options" || view?.packId.startsWith("option:") ? withoutInstallLine(view.deliveryTemplate) : undefined}
+            productLines={view?.deliveryTemplate}
           />
           </>}
         </div>
