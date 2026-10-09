@@ -3,19 +3,26 @@ import type { Locale } from "./i18n";
 
 export const optionThemeColors = { overlays: "#A78BFA", emotes: "#E879C6", branding: "#818CF8", motion: "#67D4E8" };
 
-// A product groups only known variants; custom admin options remain visible individually.
+// Regroupements d'origine (une carte par famille) ; modifiables dans la fiche de chaque option (admin).
 const families = [
   ["overlay-fixe-unite", "overlay-anime-unite"],
   ["alertes-fixes", "alertes-animees"],
   ["emote-statique", "emote-animee", "emotes-3", "emotes-animees-3", "emotes-5", "emotes-animees-5", "emotes-10", "emotes-animees-10"],
 ] as const;
 
-export function optionProducts(options: Option[]) {
+const familyKeys = ["overlay", "alertes", "emotes"];
+export function defaultGroup(option: Option): string | null {
+  const i = families.findIndex((ids) => ids.some((id) => id === option.id));
+  return i < 0 ? null : familyKeys[i];
+}
+
+// Une carte par regroupement (les options sans regroupement ont leur propre carte), dans l'ordre du catalogue
+export function optionProducts(options: Option[], groupOf: (o: Option) => string | null = defaultGroup) {
   const seen = new Set<string>();
   return options.flatMap((option) => {
     if (seen.has(option.id)) return [];
-    const family = families.find((ids) => ids.some((id) => id === option.id));
-    const variants = family ? family.flatMap((id) => options.filter((o) => o.id === id)) : [option];
+    const group = groupOf(option);
+    const variants = group ? options.filter((o) => groupOf(o) === group) : [option];
     variants.forEach((o) => seen.add(o.id));
     return [{ id: variants[0].id, category: optionCategory(option), variants }];
   });

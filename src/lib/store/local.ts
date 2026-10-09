@@ -11,6 +11,7 @@ import { defaultProtection, type ProtectionSettings } from "@/lib/protection";
 import { MAX_NOTES } from "@/lib/delivery";
 import { assertNotProduction } from "@/lib/env";
 import type { StoredTexts } from "@/lib/case-study-texts";
+import type { StoredPage } from "@/lib/page-builder";
 import { staticCatalog, staticPortfolio } from "./static";
 import type { StatEvent } from "@/lib/stats";
 import type { AffiliateLink, Banner, Promotion } from "@/lib/promotions";
@@ -28,7 +29,7 @@ type Data = Catalog & Portfolio & {
   deliverables?: Deliverable[];
   finance?: FinanceSettings;
   protection?: ProtectionSettings;
-  caseStudyTexts?: Record<string, StoredTexts>;
+  caseStudyTexts?: Record<string, StoredTexts | StoredPage>;
   home?: Record<string, string>;
   stats?: StatEvent[];
   testimonials?: Testimonial[];

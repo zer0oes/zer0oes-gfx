@@ -6,10 +6,9 @@ import { homeSections, portfolioPageFields, offersPageFields, type ContentGroup 
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { caseStudies } from "@/data/case-studies";
 import type { Emote, Work } from "@/data/portfolio";
 import { requireAdmin } from "@/lib/auth";
-import { textGroups, textsFromForm } from "@/lib/case-study-texts";
+import { storedPage, toStored } from "@/lib/page-builder";
 import { homeFromForm, resetGroup } from "@/lib/home-content";
 import { s3Configured, s3Delete, s3SignedUpload } from "@/lib/s3";
 import { getStore } from "@/lib/store";
@@ -280,28 +279,6 @@ export async function finalizeUpload(input: { path: string; kind: MediaKind; pub
   return { url };
 }
 
-// --- Textes des pages projet ------------------------------------------------------
-
-export async function saveCaseStudyTextsAction(formData: FormData) {
-  await requireAdmin();
-  const id = text(formData, "streamer", 60);
-  const study = caseStudies[id];
-  const back = `/admin/portfolio/textes/${id}`;
-  if (!study || !("layout" in study)) done(projectAdmin(id), "Ce projet n'a pas de page à textes modifiables.");
-  if (formData.get("reset") === "1") {
-    if (formData.get("confirm") !== "on") done(back, "Coche la case de confirmation.");
-    await getStore().saveCaseStudyTexts(id, null);
-    const store = getStore();
-    const content = await store.getHomeContent();
-    if (content && typeof content === "object") {
-      await store.saveHomeContent(Object.fromEntries(Object.entries(content).filter(([key, value]) => !key.startsWith(`translation:study:${id}:`) && typeof value === "string")));
-    }
-    done(back);
-  }
-  await saveAdminTranslations(formData, `study:${id}`, textGroups(study, () => undefined).flatMap((group) => group.fields.map((field) => `t:${field.path}`)));
-  await getStore().saveCaseStudyTexts(id, textsFromForm(study, (path) => formData.get(`t:${path}`)?.toString()));
-  done(back);
-}
 
 // --- Page d'accueil -----------------------------------------------------------------
 
@@ -332,4 +309,32 @@ export async function savePortfolioPageAction(formData: FormData) {
 
 export async function saveOffersPageAction(formData: FormData) {
   await saveContent(formData, "offres", "/admin/offres");
+}
+
+// --- Mise en page des projets (constructeur de blocs) ------------------------------
+
+export type PageSaveResult = { ok: true; savedAt: string } | { ok: false; error: string };
+
+// Page envoyée par l'éditeur : vérifiée (dispositions connues, visuels du projet, longueurs) puis enregistrée.
+export async function saveProjectPageAction(id: string, page: unknown): Promise<PageSaveResult> {
+  await requireAdmin();
+  const store = getStore();
+  const { streamers, works } = await store.getPortfolio();
+  if (!streamers.some((s) => s.id === id)) return { ok: false, error: "Projet introuvable." };
+  const clean = storedPage(toStored(page as never));
+  if (!clean) return { ok: false, error: "Mise en page illisible." };
+  const own = new Set(works.filter((w) => w.streamer === id).map((w) => w.id));
+  clean.blocks = clean.blocks.map((b) => ({ ...b, slots: b.slots.filter((s) => own.has(s.work)) }));
+  if (clean.header.hero && !own.has(clean.header.hero)) clean.header.hero = undefined;
+  await store.saveCaseStudyTexts(id, toStored(clean));
+  revalidatePath("/", "layout");
+  return { ok: true, savedAt: new Date().toISOString() };
+}
+
+// Retour à la mise en page d'origine (ou à aucune page dédiée pour un nouveau projet)
+export async function resetProjectPageAction(id: string): Promise<PageSaveResult> {
+  await requireAdmin();
+  await getStore().saveCaseStudyTexts(id, null);
+  revalidatePath("/", "layout");
+  return { ok: true, savedAt: new Date().toISOString() };
 }
