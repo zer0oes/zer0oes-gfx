@@ -13,6 +13,8 @@ export const metadata = { title: "Laboratoire" };
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
 const kinds = { widget: { label: "Widget", tone: "border-violet-400/40 bg-violet-400/10 text-violet-300" }, alertbox: { label: "Pack d’alertes", tone: "border-pink-400/40 bg-pink-400/10 text-pink-300" }, overlay: { label: "Overlay", tone: "border-cyan-400/40 bg-cyan-400/10 text-cyan-300" } } as const;
 const errorMessages: Record<string, string> = {
+  details: "Enregistrement impossible : vérifie le nom et les dimensions de la création.",
+  conflict: "Cette création a été modifiée ailleurs. Recharge la page avant de réessayer.",
   setup: "Le Laboratoire n’est pas encore initialisé dans la base : sa migration doit être appliquée.",
   create: "Création impossible pour le moment. Réessaie dans un instant.",
   storage: "Le stockage est indisponible. Réessaie dans un instant.",
@@ -103,7 +105,9 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
                   <thead className="bg-surface text-xs uppercase tracking-wider text-muted">
                     <tr>
                       <th scope="col" className="px-4 py-3 font-medium">Création</th>
+                      <th scope="col" className="px-4 py-3 font-medium">Description</th>
                       <th scope="col" className="w-48 px-4 py-3 font-medium">Type</th>
+                      <th scope="col" className="w-40 px-4 py-3 font-medium">Dimensions</th>
                       <th scope="col" className="w-56 px-4 py-3 font-medium">Modifiée le</th>
                     </tr>
                   </thead>
@@ -111,11 +115,13 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
                     {docs.map((doc) => (
                       <ClickableRow key={doc.id} href={`/admin/laboratoire/${doc.id}`}>
                         <td className="px-4 py-3 font-medium">{doc.name}</td>
+                        <td className="max-w-md whitespace-pre-line px-4 py-3 text-muted">{doc.description || "—"}</td>
                         <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${kinds[doc.kind].tone}`}>{kinds[doc.kind].label}</span></td>
+                        <td className="whitespace-nowrap px-4 py-3 tabular-nums text-muted">{doc.size.width} × {doc.size.height} px</td>
                         <td className="whitespace-nowrap px-4 py-3 text-muted">{dateFmt.format(new Date(doc.updatedAt))}</td>
                       </ClickableRow>
                     ))}
-                    {!docs.length && <tr><td colSpan={3} className="px-4 py-4 text-center text-sm text-muted">Aucune création dans ce projet.</td></tr>}
+                    {!docs.length && <tr><td colSpan={5} className="px-4 py-4 text-center text-sm text-muted">Aucune création dans ce projet.</td></tr>}
                   </tbody>
                 </table>
               </div>

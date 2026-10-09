@@ -23,6 +23,7 @@ export type LabVariant = {
 export type LabSize = { width: number; height: number };
 export type LabContent = {
   name: string;
+  description?: string;
   project: string;
   kind: "widget" | "alertbox" | "overlay";
   // overlay : scène composée de calques (les variantes restent présentes mais ne servent pas)
@@ -37,4 +38,4 @@ export type LabDocument = LabContent & {
   createdAt: string;
   updatedAt: string;
 };
-export type LabSummary = Pick<LabDocument, "id" | "name" | "project" | "kind" | "revision" | "updatedAt">;
+export type LabSummary = Pick<LabDocument, "id" | "name" | "description" | "project" | "kind" | "revision" | "updatedAt"> & { size: LabSize };

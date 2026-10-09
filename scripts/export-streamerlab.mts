@@ -55,6 +55,7 @@ for (const project of await fs.readdir(root, { withFileTypes: true })) {
         const widget = JSON.parse(await read(itemRoot, ["widget.json"], "{}"));
         const content = newLabContent(widget.kind === "alertbox" ? "alertbox" : "widget");
         content.name = widget.name || entry.name;
+        if (typeof widget.description === "string") content.description = widget.description.slice(0, 500);
         content.project = metadata.name || project.name;
         for (const platform of LAB_PLATFORMS) {
           const variant = content.variants[platform];

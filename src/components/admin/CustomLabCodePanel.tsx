@@ -10,7 +10,7 @@ import type { Platform } from "@/lib/custom-lab/platformEvents";
 import { MaterialIcon } from "./MaterialIcon";
 
 export function CustomLabPlatformSwitch({ platform, onChange }: { platform: Platform; onChange: (platform: Platform) => void }) {
-  return <div className="cl-platform-switch" role="group" aria-label="Plateforme du code et de la simulation">{(["streamelements", "streamlabs"] as const).map((value) => <button key={value} type="button" aria-pressed={platform === value} aria-label={value === "streamlabs" ? "Streamlabs" : "StreamElements"} title={value === "streamlabs" ? "Streamlabs" : "StreamElements"} onClick={() => onChange(value)}><Image unoptimized src={`/streamerlab/platforms/${value}-icon.svg`} alt="" width={24} height={24} /></button>)}</div>;
+  return <div className="cl-platform-switch" role="group" aria-label="Plateforme du code et de la simulation">{(["streamelements", "streamlabs"] as const).map((value) => <button key={value} data-platform={value} type="button" aria-pressed={platform === value} aria-label={value === "streamlabs" ? "Streamlabs" : "StreamElements"} title={value === "streamlabs" ? "Streamlabs" : "StreamElements"} onClick={() => onChange(value)}><Image unoptimized src={value === "streamlabs" && platform === "streamlabs" ? "/streamerlab/platforms/streamlabs-icon-active.svg" : `/streamerlab/platforms/${value}-icon.svg`} alt="" width={24} height={24} /></button>)}</div>;
 }
 
 export function CustomLabCodePanel({ tab, value, platform, dirty, pending, alertbox, onTab, onChange, onStatus }: {

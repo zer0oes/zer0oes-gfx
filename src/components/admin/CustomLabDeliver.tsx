@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { deliverLabAction, listLabDeliveryTargetsAction, type LabDeliveryTarget } from "@/app/admin/custom-lab-actions";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
 import type { LabContent } from "@/lib/custom-lab/types";
@@ -13,7 +13,7 @@ const input = "w-full rounded-lg border border-border bg-background px-3 py-2 te
 
 // Livraison d'une création dans une commande : panneau latéral (commande, livrable nouveau ou existant, plateformes).
 // Le fichier est généré côté serveur à partir de la version enregistrée et déposé comme fichier HD du livrable.
-export function CustomLabDeliver({ id, kind, name, platform, dirty, className }: { id: string; kind: LabContent["kind"]; name: string; platform: Platform; dirty: boolean; className: string }) {
+export function CustomLabDeliver({ id, kind, name, platform, dirty, className, renderTrigger }: { id: string; kind: LabContent["kind"]; name: string; platform: Platform; dirty: boolean; className: string; renderTrigger?: (open: () => void) => ReactNode }) {
   const [targets, setTargets] = useState<LabDeliveryTarget[] | null>(null);
   const [orderId, setOrderId] = useState("");
   const [mode, setMode] = useState<"new" | "existing">("new");
@@ -63,9 +63,9 @@ export function CustomLabDeliver({ id, kind, name, platform, dirty, className }:
   const what = kind === "overlay" ? "la page HTML de l’overlay (source navigateur OBS)" : kind === "alertbox" ? "le zip du pack d’alertes" : "le zip du widget";
   return (
     <>
-      <button type="button" onClick={open} disabled={dirty} title={dirty ? "Enregistrement en cours : la livraison utilise la version enregistrée" : "Livrer dans une commande"} className={className}>
+      {renderTrigger ? renderTrigger(() => { void open(); }) : <button type="button" onClick={open} disabled={dirty} title={dirty ? "Enregistrement en cours : la livraison utilise la version enregistrée" : "Livrer dans une commande"} className={className}>
         Livrer
-      </button>
+      </button>}
       <Drawer
         id={DRAWER}
         kicker="Laboratoire"

@@ -15,13 +15,14 @@ import { CustomLabSimulator } from "./CustomLabSimulator";
 import { usePointerSort } from "./usePointerSort";
 import "./custom-lab.css";
 import { MaterialIcon } from "./MaterialIcon";
-import { CustomLabDeliver } from "./CustomLabDeliver";
+import { CustomLabActions } from "./CustomLabActions";
+import { CustomLabProjectField } from "./CustomLabProjectField";
 
 // Création utilisable dans un calque « widget » (widget ou pack d'alertes de la bibliothèque)
 export type OverlaySource = { id: string; name: string; project: string; content: LabContent };
 
-const input = "w-full rounded-md border border-[var(--cl-line)] bg-[#0d0f13] px-2 py-1.5 text-xs";
-const toolButton = "inline-flex items-center gap-1 rounded-full border border-[var(--cl-line)] bg-[#151720] px-3 py-1.5 text-xs font-semibold text-[#dddfea] hover:border-[var(--cl-accent)]";
+const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
+const toolButton = "inline-flex items-center gap-1 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground hover:border-accent";
 const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const;
 type Handle = (typeof HANDLES)[number];
 const handlePos: Record<Handle, string> = {
@@ -121,7 +122,7 @@ function WidgetFrame({ item, source, platform, register }: { item: OverlayItem; 
 // aimantation, calques réordonnables, propriétés par type, annuler / rétablir, enregistrement automatique.
 export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { initial: LabDocument; sources: OverlaySource[]; projects?: string[] }) {
   const { id } = initial;
-  const initialContent: LabContent = { name: initial.name, project: initial.project, kind: "overlay", variants: initial.variants, overlay: initial.overlay ?? DEFAULT_OVERLAY };
+  const initialContent: LabContent = { name: initial.name, description: initial.description ?? "", project: initial.project, kind: "overlay", variants: initial.variants, overlay: initial.overlay ?? DEFAULT_OVERLAY };
   const [content, setContent] = useState<LabContent>(initialContent);
   const [saved, setSaved] = useState(JSON.stringify(initialContent));
   const revision = useRef(initial.revision);
@@ -385,7 +386,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
 
   return (
     <div className="cl-root">
-      <Link href="/admin/laboratoire" onClick={(event) => { if (dirty && !window.confirm("Quitter sans enregistrer les modifications ?")) event.preventDefault(); }} className="inline-flex items-center gap-1 text-sm text-muted hover:text-accent"><MaterialIcon name="arrow_back" className="size-4" />Laboratoire</Link>
+      <Link href="/admin/laboratoire" onClick={(event) => { if (dirty && !window.confirm("Quitter sans enregistrer les modifications ?")) event.preventDefault(); }} className="text-sm text-muted hover:text-foreground">← Laboratoire</Link>
       <header className="cl-topbar">
         <div>
           <h1>{content.name}</h1>
@@ -393,9 +394,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
         </div>
         <div className="cl-actions">
           <CustomLabPlatformSwitch platform={platform} onChange={setPlatform} />
-          <button type="button" onClick={() => openLabMedia()} className="cl-secondary">Médias</button>
-          <CustomLabDeliver id={id} kind={"overlay"} name={content.name} platform={platform} dirty={dirty} className="cl-secondary disabled:cursor-not-allowed disabled:opacity-50" />
-          <button type="button" onClick={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} className="cl-secondary">Sauvegarde du projet</button>
+          <CustomLabActions id={id} kind={content.kind} name={content.name} platform={platform} dirty={dirty} onMedia={() => openLabMedia()} onBackup={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} />
         </div>
       </header>
       {status && <p role="status" className="cl-status">{status}</p>}
@@ -403,7 +402,8 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
         <summary>Nom, projet et format</summary>
         <div>
           <label>Nom<input className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={content.name} maxLength={120} onChange={(e) => setContent({ ...content, name: e.target.value })} /></label>
-          <label>Projet<input className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" list="cl-projects" value={content.project} maxLength={120} onChange={(e) => setContent({ ...content, project: e.target.value })} /><datalist id="cl-projects">{projects.map((name) => <option key={name} value={name} />)}</datalist></label>
+          <label>Description<textarea className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={content.description ?? ""} maxLength={500} rows={2} onChange={(e) => setContent({ ...content, description: e.target.value })} /></label>
+          <CustomLabProjectField value={content.project} projects={projects} onChange={(project) => setContent((current) => ({ ...current, project }))} />
           <label>Format<select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={`${data.width}x${data.height}`} onChange={(e) => { const [w, h] = e.target.value.split("x").map(Number); setData((d) => ({ ...d, width: w, height: h })); }}>{[[1920, 1080], [1280, 720], [2560, 1440], [1080, 1920]].map(([w, h]) => <option key={`${w}x${h}`} value={`${w}x${h}`}>{w} × {h}{h > w ? " (vertical)" : ""}</option>)}</select></label>
         </div>
       </details>

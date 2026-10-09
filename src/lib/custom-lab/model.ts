@@ -46,6 +46,7 @@ function parseCode(raw: unknown): LabCode {
 export function parseLabContent(raw: unknown): LabContent {
   if (new TextEncoder().encode(JSON.stringify(raw)).byteLength > LAB_MAX_BYTES) throw new Error("Le projet dépasse 2 Mo.");
   const input = object(raw);
+  if (input.description !== undefined && (typeof input.description !== "string" || input.description.length > 500)) throw new Error("Description invalide (500 caractères maximum).");
   if (typeof input.name !== "string" || !input.name.trim() || input.name.length > 120) throw new Error("Nom requis (120 caractères maximum).");
   if (typeof input.project !== "string" || !input.project.trim() || input.project.length > 120) throw new Error("Projet requis (120 caractères maximum).");
   if (input.kind !== "widget" && input.kind !== "alertbox" && input.kind !== "overlay") throw new Error("Type de création invalide.");
@@ -60,7 +61,7 @@ export function parseLabContent(raw: unknown): LabContent {
     if (input.kind === "alertbox" && alertboxAlerts(platform).some(({ type }) => !alerts[type])) throw new Error("Chaque alerte doit posséder son code.");
     return [platform, { code: parseCode(variant.code), settings: variant.settings, alerts: Object.fromEntries(Object.entries(alerts).map(([key, code]) => [key, parseCode(code)])) }];
   })) as LabContent["variants"];
-  return { name: input.name.trim(), project: input.project.trim(), kind: input.kind, variants: parsed, ...(input.kind === "overlay" ? { overlay: parseOverlay(input.overlay) } : { size: parseLabSize(input.size, input.kind) }) };
+  return { name: input.name.trim(), ...(typeof input.description === "string" ? { description: input.description.trim() } : {}), project: input.project.trim(), kind: input.kind, variants: parsed, ...(input.kind === "overlay" ? { overlay: parseOverlay(input.overlay) } : { size: parseLabSize(input.size, input.kind) }) };
 }
 
 // Taille par défaut d'un widget et d'un pack d'alertes (pixels)

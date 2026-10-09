@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { assertNotProduction, localStoreAllowed, supabaseConfigured, supabaseSecretKey, supabaseUrl } from "@/lib/env";
-import { parseLabContent, validLabId } from "./model";
+import { parseLabContent, parseLabSize, validLabId } from "./model";
 import type { LabContent, LabDocument, LabSummary } from "./types";
 import { LabStorageError } from "./errors";
 
@@ -13,7 +13,11 @@ const directory = path.join(process.cwd(), ".data", "custom-lab");
 const file = path.join(directory, "library.json");
 let queue: Promise<unknown> = Promise.resolve();
 const database = () => createClient(supabaseUrl()!, supabaseSecretKey()!, { auth: { persistSession: false, autoRefreshToken: false } });
-const summary = ({ id, name, project, kind, revision, updatedAt }: LabDocument): LabSummary => ({ id, name, project, kind, revision, updatedAt });
+const summary = (document: LabDocument): LabSummary => {
+  const { id, name, description, project, kind, revision, updatedAt } = document;
+  const size = kind === "overlay" && document.overlay ? { width: document.overlay.width, height: document.overlay.height } : parseLabSize(document.size, kind === "alertbox" ? "alertbox" : "widget");
+  return { id, name, description, project, kind, revision, updatedAt, size };
+};
 const fromRow = (row: Record<string, unknown>): LabDocument => ({ ...parseLabContent(row.content), id: row.id as string, revision: row.revision as number, createdAt: row.created_at as string, updatedAt: row.updated_at as string });
 
 async function localRead(): Promise<LabDocument[]> {

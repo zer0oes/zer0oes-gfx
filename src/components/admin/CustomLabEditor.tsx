@@ -16,7 +16,8 @@ import { CustomLabFields } from "./CustomLabFields";
 import { CustomLabMedia, openLabMedia } from "./CustomLabMedia";
 import "./custom-lab.css";
 import { MaterialIcon } from "./MaterialIcon";
-import { CustomLabDeliver } from "./CustomLabDeliver";
+import { CustomLabActions } from "./CustomLabActions";
+import { CustomLabProjectField } from "./CustomLabProjectField";
 import { CustomLabSizedStage, CustomLabSizeField } from "./CustomLabSizedStage";
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
@@ -30,7 +31,7 @@ function download(data: BlobPart, name: string, type: string) {
 // projects : noms des projets existants, proposés dans le champ « Projet »
 export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocument; projects?: string[] }) {
   const { id, revision: initialRevision } = initial;
-  const initialContent: LabContent = { name: initial.name, project: initial.project, kind: initial.kind, variants: initial.variants, ...(initial.size ? { size: initial.size } : {}) };
+  const initialContent: LabContent = { name: initial.name, description: initial.description ?? "", project: initial.project, kind: initial.kind, variants: initial.variants, ...(initial.size ? { size: initial.size } : {}) };
   const [content, setContent] = useState<LabContent>(initialContent);
   const [saved, setSaved] = useState(JSON.stringify(initialContent));
   const revision = useRef(initialRevision);
@@ -180,19 +181,17 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
   }, [code, variant.settings, platform]);
 
   return <div className={`cl-root ${fieldsCollapsed ? "cl-fields-collapsed" : ""}`}>
-    <Link href="/admin/laboratoire" onClick={(event) => { if (dirty && !window.confirm("Quitter sans enregistrer les modifications ?")) event.preventDefault(); }} className="inline-flex items-center gap-1 text-sm text-muted hover:text-accent"><MaterialIcon name="arrow_back" className="size-4" />Laboratoire</Link>
+    <Link href="/admin/laboratoire" onClick={(event) => { if (dirty && !window.confirm("Quitter sans enregistrer les modifications ?")) event.preventDefault(); }} className="text-sm text-muted hover:text-foreground">← Laboratoire</Link>
     <header className="cl-topbar">
       <div><h1>{content.name}</h1><p>{content.kind === "alertbox" ? "Pack d’alertes" : "Widget"} · {pending ? "Enregistrement…" : dirty ? "Modifications à enregistrer" : "Enregistré"}</p></div>
       <div className="cl-actions">
         <CustomLabPlatformSwitch platform={platform} onChange={switchPlatform} />
-        <button type="button" onClick={() => openLabMedia()} className="cl-secondary">Médias</button>
-          <CustomLabDeliver id={id} kind={content.kind} name={content.name} platform={platform} dirty={dirty} className="cl-secondary disabled:cursor-not-allowed disabled:opacity-50" />
-        <button type="button" onClick={exportZip} className="cl-secondary">Exporter pour {platform === "streamlabs" ? "Streamlabs" : "StreamElements"}</button>
-        <button type="button" onClick={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} className="cl-secondary">Sauvegarde du projet</button>
+        <CustomLabActions id={id} kind={content.kind} name={content.name} platform={platform} dirty={dirty} onMedia={() => openLabMedia()} onExport={exportZip} onBackup={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} />
       </div>
     </header>
     {status && <p role="status" className="cl-status">{status}</p>}
-    <details className="cl-metadata"><summary>Nom, projet et taille</summary><div><label>Nom<input className={input} value={content.name} maxLength={120} onChange={(event) => setContent({ ...content, name: event.target.value })} /></label><label>Projet<input className={input} list="cl-projects" value={content.project} maxLength={120} onChange={(event) => setContent({ ...content, project: event.target.value })} /><datalist id="cl-projects">{projects.map((name) => <option key={name} value={name} />)}</datalist></label><CustomLabSizeField size={size} onChange={(next) => setContent({ ...content, size: next })} /></div></details>
+    <details className="cl-metadata"><summary>Nom, projet et taille</summary><div><label>Nom<input className={input} value={content.name} maxLength={120} onChange={(event) => setContent({ ...content, name: event.target.value })} /></label><label>Description<textarea className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={content.description ?? ""} maxLength={500} rows={2} onChange={(e) => setContent({ ...content, description: e.target.value })} /></label>
+          <CustomLabProjectField value={content.project} projects={projects} onChange={(project) => setContent((current) => ({ ...current, project }))} /><CustomLabSizeField size={size} onChange={(next) => setContent({ ...content, size: next })} /></div></details>
     <div className={`cl-workspace ${fieldsCollapsed ? "is-collapsed" : ""}`}>
       <div className="cl-main">
         <section aria-label="Aperçu du widget">
