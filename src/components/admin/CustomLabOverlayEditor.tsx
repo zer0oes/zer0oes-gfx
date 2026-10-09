@@ -588,9 +588,9 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
                 </>
               )}
 
-              <div className="-mx-[18px] flex flex-wrap gap-2 border-t border-[var(--cl-line)] px-[18px] pt-3">
-                <button type="button" className={toolButton} onClick={() => duplicate(current.id)}><MaterialIcon name="content_copy" className="size-4" />Dupliquer</button>
-                <button type="button" className={`${toolButton} hover:!border-red-400 hover:text-red-300`} onClick={() => remove(current.id)}><MaterialIcon name="delete" className="size-4" />Supprimer le calque</button>
+              <div className="-mx-[18px] flex gap-2 border-t border-[var(--cl-line)] px-[18px] pt-3">
+                <button type="button" className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-2 text-xs font-semibold border-border bg-surface text-foreground hover:border-accent" onClick={() => duplicate(current.id)}><MaterialIcon name="content_copy" className="size-4" />Dupliquer</button>
+                <button type="button" className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-2 text-xs font-semibold border-red-400/50 bg-red-500/10 text-red-300 hover:border-red-400 hover:bg-red-500/20" onClick={() => remove(current.id)}><MaterialIcon name="delete" className="size-4" />Supprimer le calque</button>
               </div>
             </div>
           )}

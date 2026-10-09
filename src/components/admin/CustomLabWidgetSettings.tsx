@@ -21,6 +21,6 @@ export function CustomLabWidgetSettings({ content, props, platform, onChange }: 
       if (content.kind === "alertbox") { const alerts = (current.alerts ?? {}) as Record<string, Record<string, unknown>>; update({ alerts: { ...alerts, [alert]: { ...alerts[alert], [key]: value } } }); }
       else update({ fields: { ...(current.fields as Record<string, unknown> ?? {}), [key]: value } });
     }} onSettings={(settings) => update({ settings })} />
-    <button type="button" className="cl-secondary inline-flex items-center gap-1.5" title="Reprendre les réglages du modèle de la bibliothèque" onClick={() => onChange({ widgetOverrides: { ...all, [platform]: {} } })}><MaterialIcon name="restart_alt" className="size-4" />Réinitialiser</button>
+    <button type="button" className="cl-secondary mx-auto flex items-center gap-1.5" title="Reprendre les réglages du modèle de la bibliothèque" onClick={() => onChange({ widgetOverrides: { ...all, [platform]: {} } })}><MaterialIcon name="restart_alt" className="size-4" />Réinitialiser</button>
   </section>;
 }
