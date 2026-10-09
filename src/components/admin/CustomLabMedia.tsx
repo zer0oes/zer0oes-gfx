@@ -6,6 +6,7 @@ import type { LabMedia } from "@/lib/custom-lab/media";
 import { formatBytes } from "@/lib/delivery";
 import { Drawer } from "./Drawer";
 import { FileDrop } from "./FileDrop";
+import { MaterialIcon } from "./MaterialIcon";
 
 const DRAWER = "laboratoire-medias";
 type Kind = "image" | "audio" | "video";
@@ -119,7 +120,7 @@ export function CustomLabMedia() {
                   {picking && <button type="button" onClick={() => choose(m)} className="rounded-full bg-accent px-3 py-1 font-semibold text-background">Utiliser</button>}
                   <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(m.url); setMessage("Adresse copiée."); } catch { setMessage(m.url); } }} className="rounded-full border border-border px-3 py-1 hover:border-accent">Copier l’adresse</button>
                   <button type="button" onClick={() => remove(m)} aria-label={`Supprimer ${m.name}`} title="Supprimer" className="ml-auto inline-flex size-7 items-center justify-center rounded-lg text-muted hover:bg-red-500/10 hover:text-red-300">
-                    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" /></svg>
+                    <MaterialIcon name="delete" className="size-4" />
                   </button>
                 </div>
               </div>

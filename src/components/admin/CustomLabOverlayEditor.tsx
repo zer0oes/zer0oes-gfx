@@ -14,12 +14,13 @@ import { CustomLabMedia, openLabMedia } from "./CustomLabMedia";
 import { CustomLabSimulator } from "./CustomLabSimulator";
 import { usePointerSort } from "./usePointerSort";
 import "./custom-lab.css";
+import { MaterialIcon } from "./MaterialIcon";
 
 // Création utilisable dans un calque « widget » (widget ou pack d'alertes de la bibliothèque)
 export type OverlaySource = { id: string; name: string; project: string; content: LabContent };
 
 const input = "w-full rounded-md border border-[var(--cl-line)] bg-[#0d0f13] px-2 py-1.5 text-xs";
-const toolButton = "rounded-full border border-[var(--cl-line)] bg-[#151720] px-3 py-1.5 text-xs font-semibold text-[#dddfea] hover:border-[var(--cl-accent)]";
+const toolButton = "inline-flex items-center gap-1 rounded-full border border-[var(--cl-line)] bg-[#151720] px-3 py-1.5 text-xs font-semibold text-[#dddfea] hover:border-[var(--cl-accent)]";
 const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const;
 type Handle = (typeof HANDLES)[number];
 const handlePos: Record<Handle, string> = {
@@ -376,7 +377,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
 
   return (
     <div className="cl-root">
-      <Link href="/admin/laboratoire" onClick={(event) => { if (dirty && !window.confirm("Quitter sans enregistrer les modifications ?")) event.preventDefault(); }} className="text-sm text-muted hover:text-accent">← Laboratoire</Link>
+      <Link href="/admin/laboratoire" onClick={(event) => { if (dirty && !window.confirm("Quitter sans enregistrer les modifications ?")) event.preventDefault(); }} className="inline-flex items-center gap-1 text-sm text-muted hover:text-accent"><MaterialIcon name="arrow_back" className="size-4" />Laboratoire</Link>
       <header className="cl-topbar">
         <div>
           <h1>{content.name}</h1>
@@ -408,8 +409,8 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
           {sources.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.project} · {s.content.kind === "alertbox" ? "alertes" : "widget"}</option>)}
         </select>
         <span className="mx-1 h-5 w-px bg-[var(--cl-line)]" />
-        <button type="button" className={toolButton} onClick={undo} disabled={!hist.undo} title="Annuler (Ctrl + Z)">↶ Annuler</button>
-        <button type="button" className={toolButton} onClick={redo} disabled={!hist.redo} title="Rétablir (Ctrl + Y)">↷ Rétablir</button>
+        <button type="button" className={toolButton} onClick={undo} disabled={!hist.undo} title="Annuler (Ctrl + Z)"><MaterialIcon name="undo" className="size-4" />Annuler</button>
+        <button type="button" className={toolButton} onClick={redo} disabled={!hist.redo} title="Rétablir (Ctrl + Y)"><MaterialIcon name="redo" className="size-4" />Rétablir</button>
         <span className="ml-auto text-[11px] text-[var(--cl-muted)]">Zoom {Math.round(scale * 100)} % · Alt : sans aimantation · Maj : proportions</span>
       </div>
 
@@ -462,13 +463,13 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
                 const handle = sort.handle(i);
                 return (
                   <li key={item.id} className={`flex items-center gap-1.5 rounded-md border px-1.5 py-1 text-xs ${selected === item.id ? "border-[var(--cl-accent)] bg-[#ac8bfa1a]" : "border-[var(--cl-line)]"} ${sort.drag?.from === i ? "opacity-40" : ""}`}>
-                    <span {...handle} role="button" tabIndex={0} aria-label={`Déplacer le calque ${itemLabel(item, widgetName)}`} className="cursor-grab px-1 text-[var(--cl-muted)]">⋮⋮</span>
+                    <span {...handle} role="button" tabIndex={0} aria-label={`Déplacer le calque ${itemLabel(item, widgetName)}`} className="inline-flex cursor-grab text-[var(--cl-muted)]"><MaterialIcon name="drag_indicator" className="size-4" /></span>
                     <button type="button" onClick={() => { setSelected(item.id); setPanel("props"); }} className="min-w-0 flex-1 truncate text-left">
                       <span className="mr-1 text-[10px] text-[var(--cl-muted)]">{ITEM_LABELS[item.type]}</span>
                       {itemLabel(item, widgetName)}
                     </button>
-                    <button type="button" onClick={() => updateItem(item.id, { hidden: !item.hidden })} title={item.hidden ? "Afficher" : "Masquer"} aria-label={item.hidden ? "Afficher le calque" : "Masquer le calque"} className={item.hidden ? "text-[var(--cl-muted)]" : ""}>{item.hidden ? "◌" : "◉"}</button>
-                    <button type="button" onClick={() => updateItem(item.id, { locked: !item.locked })} title={item.locked ? "Déverrouiller" : "Verrouiller"} aria-label={item.locked ? "Déverrouiller le calque" : "Verrouiller le calque"} className={item.locked ? "text-[var(--cl-accent)]" : "text-[var(--cl-muted)]"}>{item.locked ? "🔒" : "🔓"}</button>
+                    <button type="button" onClick={() => updateItem(item.id, { hidden: !item.hidden })} title={item.hidden ? "Afficher" : "Masquer"} aria-label={item.hidden ? "Afficher le calque" : "Masquer le calque"} className={`inline-flex ${item.hidden ? "text-[var(--cl-muted)]" : ""}`}><MaterialIcon name={item.hidden ? "visibility_off" : "visibility"} className="size-4" /></button>
+                    <button type="button" onClick={() => updateItem(item.id, { locked: !item.locked })} title={item.locked ? "Déverrouiller" : "Verrouiller"} aria-label={item.locked ? "Déverrouiller le calque" : "Verrouiller le calque"} className={`inline-flex ${item.locked ? "text-[var(--cl-accent)]" : "text-[var(--cl-muted)]"}`}><MaterialIcon name={item.locked ? "lock" : "lock_open"} className="size-4" /></button>
                   </li>
                 );
               })}
@@ -485,9 +486,9 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
                 ))}
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className={toolButton} onClick={() => updateItem(current.id, { x: Math.round((data.width - current.w) / 2) })}>Centrer ↔</button>
-                <button type="button" className={toolButton} onClick={() => updateItem(current.id, { y: Math.round((data.height - current.h) / 2) })}>Centrer ↕</button>
-                <button type="button" className={toolButton} onClick={() => updateItem(current.id, { x: 0, y: 0, w: data.width, h: data.height })}>Plein écran</button>
+                <button type="button" className={toolButton} onClick={() => updateItem(current.id, { x: Math.round((data.width - current.w) / 2) })}><MaterialIcon name="align_horizontal_center" className="size-4" />Centrer</button>
+                <button type="button" className={toolButton} onClick={() => updateItem(current.id, { y: Math.round((data.height - current.h) / 2) })}><MaterialIcon name="align_vertical_center" className="size-4" />Centrer</button>
+                <button type="button" className={toolButton} onClick={() => updateItem(current.id, { x: 0, y: 0, w: data.width, h: data.height })}><MaterialIcon name="fullscreen" className="size-4" />Plein écran</button>
               </div>
 
               {current.type === "text" && (
@@ -540,7 +541,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
               {current.type === "widget" && (
                 <>
                   <label className="grid gap-1">Création affichée<select className={input} value={current.widgetId ?? ""} onChange={(e) => updateItem(current.id, { widgetId: e.target.value || undefined })}><option value="">— Choisir —</option>{sources.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.project}</option>)}</select></label>
-                  {current.widgetId && <Link href={`/admin/laboratoire/${current.widgetId}`} className="text-[var(--cl-accent)] hover:underline">Ouvrir cette création dans l’éditeur →</Link>}
+                  {current.widgetId && <Link href={`/admin/laboratoire/${current.widgetId}`} className="inline-flex items-center gap-1 text-[var(--cl-accent)] hover:underline">Ouvrir cette création dans l’éditeur<MaterialIcon name="arrow_forward" className="size-4" /></Link>}
                   <p className="cl-field-hint">Le widget s’affiche avec ses réglages actuels. Les événements simulés (bouton en bas à droite) lui sont envoyés.</p>
                 </>
               )}

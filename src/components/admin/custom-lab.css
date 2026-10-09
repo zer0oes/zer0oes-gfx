@@ -52,7 +52,7 @@
 .cl-code-highlight code { font: inherit; }
 .cl-code-body textarea { z-index: 2; color: transparent; background: transparent; caret-color: #d7dbe4; resize: none; }
 .cl-code-body textarea::selection { background: #9772e555; }
-.cl-copy { position: absolute; z-index: 3; right: 28px; top: 10px; width: 28px; height: 28px; border: 1px solid var(--cl-line); border-radius: 4px; background: #171923e0; color: #b2b9c7; }
+.cl-copy { display: grid; place-items: center; position: absolute; z-index: 3; right: 28px; top: 10px; width: 28px; height: 28px; border: 1px solid var(--cl-line); border-radius: 4px; background: #171923e0; color: #b2b9c7; }
 .cl-code-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 9px 13px; border-top: 1px solid var(--cl-line); color: #717988; font-size: 9px; }
 .cl-code-footer code { color: #aab0bc; }
 .cl-code .tok-comment { color: #6a7180; font-style: italic; }
@@ -85,7 +85,7 @@
 .cl-simulator-body { padding: 18px; }
 .cl-field-label { font-size: 10px; color: #939bad; margin-bottom: 8px; }
 .cl-event-item { border: 1px solid var(--cl-line); border-radius: 5px; background: #11141b; margin-bottom: 6px; }
-.cl-event-item summary { display: flex; gap: 10px; padding: 11px; cursor: pointer; font-size: 11px; list-style: none; }
+.cl-event-item summary { display: flex; align-items: center; gap: 10px; padding: 11px; cursor: pointer; font-size: 11px; list-style: none; }
 .cl-event-item summary > span:first-child { color: var(--cl-accent); width: 16px; text-align: center; }
 .cl-chevron { margin-left: auto; color: #717988; }
 .cl-event-item[open] .cl-chevron { transform: rotate(180deg); }

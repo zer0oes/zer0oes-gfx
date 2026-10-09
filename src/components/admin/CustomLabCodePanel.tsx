@@ -7,6 +7,7 @@ import { CODE_FILES } from "@/lib/custom-lab/model";
 import { highlightSource } from "@/lib/custom-lab/syntaxHighlight";
 import type { CodeFile } from "@/lib/custom-lab/types";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
+import { MaterialIcon } from "./MaterialIcon";
 
 export function CustomLabPlatformSwitch({ platform, onChange }: { platform: Platform; onChange: (platform: Platform) => void }) {
   return <div className="cl-platform-switch" role="group" aria-label="Plateforme du code et de la simulation">{(["streamelements", "streamlabs"] as const).map((value) => <button key={value} type="button" aria-pressed={platform === value} aria-label={value === "streamlabs" ? "Streamlabs" : "StreamElements"} title={value === "streamlabs" ? "Streamlabs" : "StreamElements"} onClick={() => onChange(value)}><Image unoptimized src={`/streamerlab/platforms/${value}.svg`} alt="" width={94} height={24} /></button>)}</div>;
@@ -38,7 +39,7 @@ export function CustomLabCodePanel({ tab, value, platform, dirty, pending, alert
       <textarea ref={textarea} aria-label={`Code ${tab} du widget`} wrap="off" autoComplete="off" autoCapitalize="off" spellCheck={false} value={value} onChange={(event) => onChange(event.target.value)} onScroll={(event) => { if (highlight.current) { highlight.current.scrollTop = event.currentTarget.scrollTop; highlight.current.scrollLeft = event.currentTarget.scrollLeft; } }} onKeyDown={(event) => {
         if (event.key === "Tab") { event.preventDefault(); const element = event.currentTarget; const start = element.selectionStart; const end = element.selectionEnd; onChange(`${value.slice(0, start)}  ${value.slice(end)}`); requestAnimationFrame(() => { textarea.current?.setSelectionRange(start + 2, start + 2); }); }
       }} />
-      <button type="button" className="cl-copy" aria-label="Copier le code" title="Copier le code" onClick={async () => { try { await navigator.clipboard.writeText(value); onStatus("Code copié."); } catch { onStatus("Copie indisponible. Sélectionne le code pour le copier."); } }}>⧉</button>
+      <button type="button" className="cl-copy" aria-label="Copier le code" title="Copier le code" onClick={async () => { try { await navigator.clipboard.writeText(value); onStatus("Code copié."); } catch { onStatus("Copie indisponible. Sélectionne le code pour le copier."); } }}><MaterialIcon name="content_copy" className="size-4" /></button>
     </div>}<footer className="cl-code-footer"><code>{filename}</code><span>Enregistrement automatique · Ctrl + S pour enregistrer tout de suite</span></footer>
   </section>;
 }

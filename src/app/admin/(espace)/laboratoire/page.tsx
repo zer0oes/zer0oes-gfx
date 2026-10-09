@@ -1,9 +1,10 @@
 import { requireAdmin } from "@/lib/auth";
 import { listLabDocuments } from "@/lib/custom-lab/store";
-import { createLabAction, deleteLabProjectAction, importLabAction, saveLabProjectAction } from "@/app/admin/custom-lab-actions";
+import { deleteLabProjectAction, importLabAction, saveLabProjectAction } from "@/app/admin/custom-lab-actions";
 import { listLabProjects, type LabProject } from "@/lib/custom-lab/projects";
 import { LabStorageError } from "@/lib/custom-lab/errors";
 import { ClickableRow } from "@/components/admin/ClickableRow";
+import { LabNewMenu } from "@/components/admin/LabNewMenu";
 import { ConfirmDelete, Drawer, DrawerButton } from "@/components/admin/Drawer";
 
 export const metadata = { title: "Laboratoire" };
@@ -70,13 +71,7 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
           <p className="mt-2 text-sm text-muted">Compose tes overlays, crée et teste tes widgets et packs d’alertes pour StreamElements et Streamlabs.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {(["overlay", "widget", "alertbox"] as const).map((kind) => (
-            <form key={kind} action={createLabAction}>
-              <input type="hidden" name="kind" value={kind} />
-              <button disabled={Boolean(message)} className={small}>+ {kind === "widget" ? "Nouveau widget" : kind === "overlay" ? "Nouvel overlay" : "Nouveau pack d’alertes"}</button>
-            </form>
-          ))}
-          <DrawerButton drawer="laboratoire-projet-nouveau" className={small}>+ Nouveau projet</DrawerButton>
+          <LabNewMenu disabled={Boolean(message)} className={small} projectDrawer="laboratoire-projet-nouveau" />
           <DrawerButton drawer="laboratoire-import" className={small}>Importer</DrawerButton>
         </div>
       </div>

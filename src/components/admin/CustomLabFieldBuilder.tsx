@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FieldDefinition } from "@/lib/custom-lab/types";
+import { MaterialIcon } from "./MaterialIcon";
 
 // Types de champs reconnus par StreamElements et Streamlabs (les autres restent modifiables en JSON)
 export const fieldTypes = [
@@ -83,15 +84,15 @@ export function CustomLabFieldBuilder({ value, onChange }: { value: string; onCh
           <div key={key} className="rounded-md border border-[var(--cl-line)] bg-[#11131a]">
             <div className="flex items-center gap-2 px-2 py-1.5">
               <button type="button" onClick={() => setOpen(isOpen ? null : key)} aria-expanded={isOpen} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                <span aria-hidden className="text-[var(--cl-muted)]">{isOpen ? "▾" : "▸"}</span>
+                <span className={`inline-flex text-[var(--cl-muted)] transition-transform ${isOpen ? "" : "-rotate-90"}`}><MaterialIcon name="expand_more" className="size-4" /></span>
                 <span className="truncate font-semibold">{field.label || key}</span>
                 <code className="text-[10px] text-[var(--cl-muted)]">{key}</code>
                 <span className="ml-auto shrink-0 rounded-full border border-[var(--cl-line)] px-2 py-0.5 text-[10px] text-[var(--cl-muted)]">{typeLabel}</span>
               </button>
-              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Monter ${key}`} className="cl-icon-button disabled:opacity-30">↑</button>
-              <button type="button" onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label={`Descendre ${key}`} className="cl-icon-button disabled:opacity-30">↓</button>
+              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Monter ${key}`} className="cl-icon-button disabled:opacity-30"><MaterialIcon name="arrow_upward" className="size-4" /></button>
+              <button type="button" onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label={`Descendre ${key}`} className="cl-icon-button disabled:opacity-30"><MaterialIcon name="arrow_downward" className="size-4" /></button>
               <button type="button" onClick={() => window.confirm(`Supprimer le champ « ${field.label || key} » ?`) && commit(rows.filter((_, k) => k !== i))} aria-label={`Supprimer ${key}`} title="Supprimer" className="cl-icon-button hover:text-red-300">
-                <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" /></svg>
+                <MaterialIcon name="delete" className="size-4" />
               </button>
             </div>
             {isOpen && (

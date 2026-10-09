@@ -15,6 +15,7 @@ import { CustomLabSimulator } from "./CustomLabSimulator";
 import { CustomLabFields } from "./CustomLabFields";
 import { CustomLabMedia, openLabMedia } from "./CustomLabMedia";
 import "./custom-lab.css";
+import { MaterialIcon } from "./MaterialIcon";
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 function download(data: BlobPart, name: string, type: string) {
@@ -176,7 +177,7 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
   }, [code, variant.settings, platform]);
 
   return <div className={`cl-root ${fieldsCollapsed ? "cl-fields-collapsed" : ""}`}>
-    <Link href="/admin/laboratoire" onClick={(event) => { if (dirty && !window.confirm("Quitter sans enregistrer les modifications ?")) event.preventDefault(); }} className="text-sm text-muted hover:text-accent">← Laboratoire</Link>
+    <Link href="/admin/laboratoire" onClick={(event) => { if (dirty && !window.confirm("Quitter sans enregistrer les modifications ?")) event.preventDefault(); }} className="inline-flex items-center gap-1 text-sm text-muted hover:text-accent"><MaterialIcon name="arrow_back" className="size-4" />Laboratoire</Link>
     <header className="cl-topbar">
       <div><h1>{content.name}</h1><p>{content.kind === "alertbox" ? "Pack d’alertes" : "Widget"} · {dirty ? "Modifications à enregistrer" : "Enregistré"}</p></div>
       <div className="cl-actions">
@@ -193,9 +194,9 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
       <div className="cl-main">
         <section aria-label="Aperçu du widget">
           <header className="cl-preview-toolbar"><div><h2>Aperçu du {content.kind === "alertbox" ? "pack d’alertes" : "widget"}</h2><p>{platform === "streamlabs" ? "Streamlabs" : "StreamElements"} · simulation locale</p></div><div className="cl-preview-actions">
-            <button type="button" className="cl-icon-button" aria-label="Afficher le damier" aria-pressed={checker} title="Afficher le damier" onClick={() => setChecker(!checker)}>▦</button>
-            <button type="button" className="cl-icon-button" aria-label="Recharger l’aperçu" title="Recharger l’aperçu" onClick={() => { setPreview(content); setPreviewKey((key) => key + 1); }}>↻</button>
-            <button type="button" className="cl-icon-button" aria-label={fieldsCollapsed ? "Afficher les champs" : "Replier les champs"} aria-expanded={!fieldsCollapsed} title={fieldsCollapsed ? "Afficher les champs" : "Replier les champs"} onClick={() => setFieldsCollapsed(!fieldsCollapsed)}>☷</button>
+            <button type="button" className="cl-icon-button" aria-label="Afficher le damier" aria-pressed={checker} title="Afficher le damier" onClick={() => setChecker(!checker)}><MaterialIcon name="grid_on" className="size-4" /></button>
+            <button type="button" className="cl-icon-button" aria-label="Recharger l’aperçu" title="Recharger l’aperçu" onClick={() => { setPreview(content); setPreviewKey((key) => key + 1); }}><MaterialIcon name="refresh" className="size-4" /></button>
+            <button type="button" className="cl-icon-button" aria-label={fieldsCollapsed ? "Afficher les champs" : "Replier les champs"} aria-expanded={!fieldsCollapsed} title={fieldsCollapsed ? "Afficher les champs" : "Replier les champs"} onClick={() => setFieldsCollapsed(!fieldsCollapsed)}><MaterialIcon name="view_sidebar" className="size-4" /></button>
           </div></header>
           {rendered.error ? <p role="alert" className="cl-error">{rendered.error}</p> : <iframe key={previewKey} ref={frame} title="Aperçu isolé du Laboratoire" sandbox="allow-scripts" allow="autoplay" referrerPolicy="no-referrer" srcDoc={rendered.source} onLoad={loadPreview} className="cl-preview-frame" />}
         </section>

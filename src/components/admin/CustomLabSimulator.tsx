@@ -5,16 +5,17 @@ import { applySubscriberFields, subscriberAmountLabel, subscriberNameLabel } fro
 import { randomChatBadges, randomChatMessage, randomEventAmount, randomEventName, chatRoleBadges } from "@/lib/custom-lab/eventSimulatorData";
 import { toStreamlabsEvent, type Platform } from "@/lib/custom-lab/platformEvents";
 import { jsonObject } from "@/lib/custom-lab/model";
+import { MaterialIcon } from "./MaterialIcon";
 
 const events = [
-  { key: "message", label: "Chat message", symbol: "◌", message: true },
-  { key: "follower-latest", label: "Follower event", symbol: "♡" },
-  { key: "subscriber-latest", label: "Subscriber event", symbol: "☆", sub: true },
-  { key: "tip-latest", label: "Tipper event", symbol: "€", amount: "Montant (€)", message: true },
-  { key: "cheer-latest", label: "Cheer event", symbol: "◇", amount: "Montant (bits)", message: true },
-  { key: "raid-latest", label: "Raid event", symbol: "↗", amount: "Viewers" },
-  { key: "purchase-latest", label: "Purchase event", symbol: "▢", amount: "Montant (€)", message: true, item: true },
-  { key: "charityCampaignDonation-latest", label: "Charity donation event", symbol: "♥", amount: "Montant (€)", message: true },
+  { key: "message", label: "Chat message", icon: "chat_bubble_outline", message: true },
+  { key: "follower-latest", label: "Follower event", icon: "favorite_border" },
+  { key: "subscriber-latest", label: "Subscriber event", icon: "star_border", sub: true },
+  { key: "tip-latest", label: "Tipper event", icon: "euro", amount: "Montant (€)", message: true },
+  { key: "cheer-latest", label: "Cheer event", icon: "diamond", amount: "Montant (bits)", message: true },
+  { key: "raid-latest", label: "Raid event", icon: "group_add", amount: "Viewers" },
+  { key: "purchase-latest", label: "Purchase event", icon: "shopping_cart", amount: "Montant (€)", message: true, item: true },
+  { key: "charityCampaignDonation-latest", label: "Charity donation event", icon: "volunteer_activism", amount: "Montant (€)", message: true },
 ] as const;
 type EventForm = { name: string; amount: string; message: string; subType: string; sender: string; item: string; broadcaster: boolean };
 const blank = (): EventForm => ({ name: "", amount: "", message: "", subType: "tier1", sender: "", item: "", broadcaster: false });
@@ -44,11 +45,11 @@ export function CustomLabSimulator({ platform, dispatch, onStatus }: { platform:
   }
   return <>
     {open && <section className="cl-simulator" aria-labelledby="cl-simulator-title" id="cl-simulator">
-      <header className="cl-panel-heading"><div><span className="cl-eyebrow">SIMULATION LOCALE</span><h2 id="cl-simulator-title">Déclencher un événement</h2></div><button type="button" className="cl-icon-button" aria-label="Fermer la simulation" onClick={() => { setOpen(false); toggle.current?.focus(); }}>×</button></header>
+      <header className="cl-panel-heading"><div><span className="cl-eyebrow">SIMULATION LOCALE</span><h2 id="cl-simulator-title">Déclencher un événement</h2></div><button type="button" className="cl-icon-button" aria-label="Fermer la simulation" onClick={() => { setOpen(false); toggle.current?.focus(); }}><MaterialIcon name="close" className="size-5" /></button></header>
       <div className="cl-simulator-body"><p className="cl-field-label">Événement</p>{events.map((entry) => {
         const form = forms[entry.key];
         const sub = "sub" in entry;
-        return <details key={entry.key} className="cl-event-item" open={entry.key === "message" ? true : undefined}><summary><span aria-hidden="true">{entry.symbol}</span>{entry.label}<span className="cl-chevron">⌄</span></summary><div className="cl-event-body">
+        return <details key={entry.key} className="cl-event-item" open={entry.key === "message" ? true : undefined}><summary><MaterialIcon name={entry.icon} className="size-4" />{entry.label}<span className="cl-chevron inline-flex"><MaterialIcon name="expand_more" className="size-4" /></span></summary><div className="cl-event-body">
           <label>{sub ? subscriberNameLabel(form.subType) : "Pseudo"}<input value={form.name} placeholder="Aléatoire si vide" onChange={(e) => update(entry.key, "name", e.target.value)} /></label>
           {entry.key === "message" && <label className="cl-checkbox">Diffuseur (pseudo de la chaîne)<input type="checkbox" checked={form.broadcaster} onChange={(e) => update(entry.key, "broadcaster", e.target.checked)} /></label>}
           {sub && <label>Type d’abonnement<select value={form.subType} onChange={(e) => update(entry.key, "subType", e.target.value)}><option value="tier1">Sub classique</option><option value="prime">Sub Prime</option><option value="gift">Sub-Gift</option><option value="communitygift">Community Gift</option></select></label>}
@@ -61,6 +62,6 @@ export function CustomLabSimulator({ platform, dispatch, onStatus }: { platform:
       })}</div>
       <details className="cl-advanced"><summary>Événement JSON personnalisé</summary><label>Detail de onEventReceived<textarea aria-label="Événement JSON personnalisé" rows={7} spellCheck={false} value={custom} onChange={(e) => setCustom(e.target.value)} /></label><button type="button" className="cl-secondary" onClick={() => { try { dispatch(jsonObject(custom)); } catch { onStatus("Événement JSON invalide."); } }}>Envoyer le JSON</button></details>
     </section>}
-    <button ref={toggle} type="button" className="cl-event-fab" aria-label="Simuler un événement" title="Simuler un événement" aria-expanded={open} aria-controls="cl-simulator" onClick={() => setOpen(!open)}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 8v5l3 2M4 3 1 6m19-3 3 3M7 21l-1 2m11-2 1 2" /></svg></button>
+    <button ref={toggle} type="button" className="cl-event-fab" aria-label="Simuler un événement" title="Simuler un événement" aria-expanded={open} aria-controls="cl-simulator" onClick={() => setOpen(!open)}><MaterialIcon name="alarm" className="size-[26px]" /></button>
   </>;
 }
