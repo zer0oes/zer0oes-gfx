@@ -4,7 +4,14 @@ import { requireAdmin } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { LAB_MAX_BYTES, newLabContent, parseLabContent } from "@/lib/custom-lab/model";
-import { LabConflictError, saveLabDocument } from "@/lib/custom-lab/store";
+import { randomUUID } from "node:crypto";
+import { getLabDocument, LabConflictError, listLabSources, saveLabDocument } from "@/lib/custom-lab/store";
+import { labOverlayHtml, labPlatformZip, type LabExportFile } from "@/lib/custom-lab/export";
+import type { Platform } from "@/lib/custom-lab/platformEvents";
+import { deliverablePath, deliveryLocked } from "@/lib/delivery";
+import { s3Configured, s3DeliverableDelete } from "@/lib/s3";
+import { getStore } from "@/lib/store";
+import { orderStatuses } from "@/lib/store/types";
 import { LabStorageError } from "@/lib/custom-lab/errors";
 import { createLabProject, deleteLabProject, updateLabProject } from "@/lib/custom-lab/projects";
 import { addLabMedia, deleteLabMedia, labMediaAvailable, labMediaCheck, labMediaUrl, listLabMedia, signLabMediaUpload, type LabMedia } from "@/lib/custom-lab/media";
@@ -118,4 +125,83 @@ export async function deleteLabProjectAction(form: FormData) {
   }
   revalidatePath("/admin/laboratoire");
   redirect("/admin/laboratoire");
+}
+
+// --- Livraison d'une création dans une commande -------------------------------------------
+
+export type LabDeliveryTarget = { id: string; label: string; status: string; deliverables: { id: string; label: string }[] };
+
+// Commandes pouvant recevoir un livrable : ni terminées, ni entièrement validées
+export async function listLabDeliveryTargetsAction(): Promise<LabDeliveryTarget[]> {
+  await requireAdmin();
+  const store = getStore();
+  const orders = (await store.listOrders()).filter((o) => o.status !== "terminee").sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const targets = await Promise.all(orders.map(async (o): Promise<LabDeliveryTarget | null> => {
+    const items = await store.listDeliverables(o.id);
+    if (deliveryLocked(o, items)) return null;
+    const status = orderStatuses.find((s) => s.id === o.status)?.label ?? o.status;
+    return { id: o.id, label: `${o.customerName} · ${o.offerName}`, status, deliverables: items.map((d) => ({ id: d.id, label: d.label })) };
+  }));
+  return targets.filter((t): t is LabDeliveryTarget => t !== null);
+}
+
+// Génère les fichiers de la création (zip par plateforme, ou page HTML d'un overlay) et les dépose comme
+// fichiers HD d'un livrable : nouveau (avec un nom) ou existant. Un fichier du même nom est remplacé,
+// sauf s'il a déjà été téléchargé par le client (le nouveau est alors ajouté à côté).
+export async function deliverLabAction(input: { id: string; orderId: string; targetId?: string; name?: string; platforms: Platform[] }): Promise<{ ok: true; message: string } | { ok: false; message: string }> {
+  await requireAdmin();
+  const store = getStore();
+  const [document, order] = await Promise.all([getLabDocument(input.id), store.getOrder(input.orderId)]);
+  if (!document) return { ok: false, message: "Création introuvable." };
+  if (!order) return { ok: false, message: "Commande introuvable." };
+  if (!store.saveDeliverableFile) return { ok: false, message: "Aucun stockage de livrables configuré." };
+  const items = await store.listDeliverables(order.id);
+  if (order.status === "terminee" || deliveryLocked(order, items)) return { ok: false, message: "Cette commande est terminée ou entièrement validée : repasse son statut à « En cours » pour y ajouter un fichier." };
+  const target = input.targetId ? items.find((d) => d.id === input.targetId) : undefined;
+  if (input.targetId && !target) return { ok: false, message: "Livrable introuvable." };
+  const name = (input.name ?? "").trim().slice(0, 120);
+  if (!target && !name) return { ok: false, message: "Donne un nom au livrable." };
+  const platforms = [...new Set(input.platforms)].filter((p) => p === "streamelements" || p === "streamlabs");
+  if (!platforms.length) return { ok: false, message: "Choisis au moins une plateforme." };
+
+  let files: LabExportFile[];
+  try {
+    if (document.kind === "overlay") {
+      const sources = Object.fromEntries((await listLabSources()).map((d) => [d.id, { name: d.name, project: d.project, kind: d.kind, variants: d.variants }]));
+      files = [labOverlayHtml(document, sources, platforms[0])];
+    } else files = platforms.map((p) => labPlatformZip(document, p));
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? `Création invalide : ${error.message}` : "Création invalide." };
+  }
+
+  const uploaded: { path: string; label: string }[] = [];
+  try {
+    for (const file of files) {
+      const path = deliverablePath(order.id, file.filename, randomUUID().slice(0, 8));
+      await store.saveDeliverableFile(path, file.data);
+      uploaded.push({ path, label: file.label });
+    }
+  } catch (error) {
+    console.error(error);
+    return { ok: false, message: "Envoi vers le stockage impossible. Réessaie dans un instant." };
+  }
+
+  if (target) {
+    const assets = [...(target.finalAssets ?? [])];
+    const replaced: string[] = [];
+    for (const file of uploaded) {
+      const i = assets.findIndex((a) => a.label === file.label && a.path && !target.accessedFinalAssets?.includes(a.path));
+      if (i >= 0) { replaced.push(assets[i].path!); assets[i] = file; } else assets.push(file);
+    }
+    await store.updateDeliverable(target.id, { finalAssets: assets });
+    // Anciens fichiers remplacés : retirés du stockage s'ils ne servent plus (aperçu, autre fichier)
+    if (s3Configured()) for (const p of replaced) if (p !== target.previewPath && p !== target.storagePath && !assets.some((a) => a.path === p)) await s3DeliverableDelete(p).catch((e) => console.error(e));
+  } else {
+    await store.addDeliverable({ orderId: order.id, kind: "fichier", label: name, itemType: document.kind === "alertbox" ? "alerte" : document.kind, finalAssets: uploaded });
+  }
+  revalidatePath(`/admin/commandes/${order.id}`);
+  revalidatePath("/admin/commandes");
+  if (order.deliveryToken) revalidatePath(`/commande/${order.deliveryToken}`);
+  const count = uploaded.length > 1 ? `${uploaded.length} fichiers ajoutés` : "Fichier ajouté";
+  return { ok: true, message: `${count} au livrable « ${target?.label ?? name} » de la commande de ${order.customerName}.` };
 }

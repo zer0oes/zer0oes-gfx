@@ -16,6 +16,7 @@ import { CustomLabFields } from "./CustomLabFields";
 import { CustomLabMedia, openLabMedia } from "./CustomLabMedia";
 import "./custom-lab.css";
 import { MaterialIcon } from "./MaterialIcon";
+import { CustomLabDeliver } from "./CustomLabDeliver";
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 function download(data: BlobPart, name: string, type: string) {
@@ -184,6 +185,7 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
         <CustomLabPlatformSwitch platform={platform} onChange={switchPlatform} />
         <button type="button" onClick={() => save()} disabled={pending || !dirty} className="cl-primary">{pending ? "Enregistrement…" : "Enregistrer"}</button>
         <button type="button" onClick={() => openLabMedia()} className="cl-secondary">Médias</button>
+          <CustomLabDeliver id={id} kind={content.kind} name={content.name} platform={platform} dirty={dirty} className="cl-secondary disabled:cursor-not-allowed disabled:opacity-50" />
         <button type="button" onClick={exportZip} className="cl-secondary">Exporter pour {platform === "streamlabs" ? "Streamlabs" : "StreamElements"}</button>
         <button type="button" onClick={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} className="cl-secondary">Sauvegarde du projet</button>
       </div>
