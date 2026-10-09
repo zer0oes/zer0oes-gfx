@@ -1,4 +1,4 @@
-export type MaterialIconName = "dashboard" | "assessment" | "shopping_bag" | "tune" | "home" | "collections" | "open_in_new" | "logout" | "chevron_left" | "chevron_right" | "person" | "gavel";
+export type MaterialIconName = "dashboard" | "assessment" | "shopping_bag" | "tune" | "home" | "collections" | "open_in_new" | "logout" | "chevron_left" | "chevron_right" | "person" | "gavel" | "science";
 
 // SVG Material Icons officiels, servis localement et teintés avec la couleur du lien.
 export function MaterialIcon({ name }: { name: MaterialIconName }) {

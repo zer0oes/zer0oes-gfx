@@ -1,0 +1,79 @@
+import { alertboxAlerts } from "./alertbox";
+import type { LabCode, LabContent, LabVariant, FieldDefinitions } from "./types";
+
+export const LAB_MAX_BYTES = 2 * 1024 * 1024;
+export const LAB_PLATFORMS = ["streamelements", "streamlabs"] as const;
+export const CODE_FILES = ["html", "css", "js", "fields", "data"] as const;
+export const validLabId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+export function jsonObject(source: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(source);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Le JSON doit être un objet.");
+  return parsed as Record<string, unknown>;
+}
+
+export function parseFields(source: string): FieldDefinitions {
+  const fields = jsonObject(source);
+  for (const [key, value] of Object.entries(fields)) {
+    if (["__proto__", "constructor", "prototype"].includes(key) || !value || typeof value !== "object" || Array.isArray(value) || typeof (value as Record<string, unknown>).type !== "string") throw new Error(`Champ invalide : ${key}`);
+  }
+  return fields as FieldDefinitions;
+}
+
+export function fieldValues(code: LabCode) {
+  const defaults = Object.fromEntries(Object.entries(parseFields(code.fields)).map(([key, field]) => [key, field.value]));
+  return { ...defaults, ...jsonObject(code.data) };
+}
+
+function object(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Document invalide.");
+  return value as Record<string, unknown>;
+}
+
+function parseCode(raw: unknown): LabCode {
+  const code = object(raw);
+  const result = Object.fromEntries(CODE_FILES.map((key) => {
+    const value = code[key];
+    if (typeof value !== "string" || value.length > 1_000_000) throw new Error(`Fichier ${key} invalide ou trop volumineux.`);
+    return [key, value];
+  })) as LabCode;
+  parseFields(result.fields);
+  jsonObject(result.data);
+  return result;
+}
+
+export function parseLabContent(raw: unknown): LabContent {
+  if (new TextEncoder().encode(JSON.stringify(raw)).byteLength > LAB_MAX_BYTES) throw new Error("Le projet dépasse 2 Mo.");
+  const input = object(raw);
+  if (typeof input.name !== "string" || !input.name.trim() || input.name.length > 120) throw new Error("Nom requis (120 caractères maximum).");
+  if (typeof input.project !== "string" || !input.project.trim() || input.project.length > 120) throw new Error("Projet requis (120 caractères maximum).");
+  if (input.kind !== "widget" && input.kind !== "alertbox") throw new Error("Type de création invalide.");
+  const variants = object(input.variants);
+  const parsed = Object.fromEntries(LAB_PLATFORMS.map((platform) => {
+    const variant = object(variants[platform]);
+    if (typeof variant.settings !== "string") throw new Error("Réglages invalides.");
+    jsonObject(variant.settings);
+    const alerts = object(variant.alerts);
+    const allowed = new Set(alertboxAlerts(platform).map((alert) => alert.type));
+    if (Object.keys(alerts).some((key) => !allowed.has(key as never))) throw new Error("Type d'alerte inconnu.");
+    if (input.kind === "alertbox" && alertboxAlerts(platform).some(({ type }) => !alerts[type])) throw new Error("Chaque alerte doit posséder son code.");
+    return [platform, { code: parseCode(variant.code), settings: variant.settings, alerts: Object.fromEntries(Object.entries(alerts).map(([key, code]) => [key, parseCode(code)])) }];
+  })) as LabContent["variants"];
+  return { name: input.name.trim(), project: input.project.trim(), kind: input.kind, variants: parsed };
+}
+
+export function newLabContent(kind: LabContent["kind"] = "widget"): LabContent {
+  const code: LabCode = {
+    html: '<div id="alert">Prêt pour le live</div>',
+    css: '#alert { font: bold 36px sans-serif; color: #fff; background: #6d28d9; padding: 24px; border-radius: 16px; }',
+    js: 'window.addEventListener("onEventReceived", (e) => { const event = e.detail.event || e.detail; document.getElementById("alert").textContent = "Merci " + (event.name || "Viewer") + " !"; });',
+    fields: '{"accent":{"type":"colorpicker","label":"Couleur","value":"#6d28d9"}}',
+    data: '{}',
+  };
+  const variant = (platform: typeof LAB_PLATFORMS[number]): LabVariant => ({
+    code: { ...code, ...(platform === "streamlabs" ? { js: code.js.replace('window.addEventListener', 'document.addEventListener') } : {}) },
+    settings: '{}',
+    alerts: Object.fromEntries(alertboxAlerts(platform).map(({ type }) => [type, { ...code, html: '<div id="alert">{name}</div>', js: '' }])),
+  });
+  return { name: kind === "widget" ? "Nouveau widget" : "Nouveau pack d’alertes", project: "Bibliothèque", kind, variants: { streamelements: variant("streamelements"), streamlabs: variant("streamlabs") } };
+}
