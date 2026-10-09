@@ -5,6 +5,7 @@ import { listLabProjects, type LabProject } from "@/lib/custom-lab/projects";
 import { LabStorageError } from "@/lib/custom-lab/errors";
 import { ClickableRow } from "@/components/admin/ClickableRow";
 import { LabNewMenu } from "@/components/admin/LabNewMenu";
+import { MaterialIcon } from "@/components/admin/MaterialIcon";
 import { ConfirmDelete, Drawer, DrawerButton } from "@/components/admin/Drawer";
 
 export const metadata = { title: "Laboratoire" };
@@ -79,51 +80,49 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
       {message && <p role="alert" className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">{message}</p>}
       {!message && params.error && errorMessages[params.error] && <p role="alert" className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{errorMessages[params.error]}</p>}
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-border">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-surface text-xs uppercase tracking-wider text-muted">
-            <tr>
-              <th scope="col" className="px-4 py-3 font-medium">Création</th>
-              <th scope="col" className="px-4 py-3 font-medium">Type</th>
-              <th scope="col" className="px-4 py-3 font-medium">Modifiée le</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {groups.map(({ name, project }) => {
-              const docs = documents.filter((d) => d.project === name);
-              return [
-                <tr key={`g-${name}`} className="bg-surface-2/60">
-                  <td colSpan={3} className="px-4 py-2.5">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="font-display font-bold">{name}</span>
-                      <span className="text-xs text-muted">{docs.length} création{docs.length > 1 ? "s" : ""}</span>
-                      {project?.archived && <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted">Archivé</span>}
-                      {project?.description && <span className="hidden truncate text-xs text-muted sm:inline">· {project.description}</span>}
-                      {project ? (
-                        <DrawerButton drawer={`laboratoire-projet-${project.id}`} className="ml-auto text-xs text-accent hover:underline">Modifier le projet</DrawerButton>
-                      ) : (
-                        <form action={saveLabProjectAction} className="ml-auto"><input type="hidden" name="name" value={name} /><button className="text-xs text-accent hover:underline">Enregistrer comme projet</button></form>
-                      )}
-                    </div>
-                  </td>
-                </tr>,
-                ...docs.map((doc) => (
-              <ClickableRow key={doc.id} href={`/admin/laboratoire/${doc.id}`}>
-                <td className="px-4 py-3 pl-8 font-medium">{doc.name}</td>
-                <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${kinds[doc.kind].tone}`}>{kinds[doc.kind].label}</span></td>
-                <td className="whitespace-nowrap px-4 py-3 text-muted">{dateFmt.format(new Date(doc.updatedAt))}</td>
-              </ClickableRow>
-                )),
-                ...(docs.length ? [] : [<tr key={`e-${name}`}><td colSpan={3} className="px-4 py-3 pl-8 text-xs text-muted">Aucune création dans ce projet.</td></tr>]),
-              ];
-            })}
-            {!groups.length && (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-muted">Aucune création pour l’instant : commence par un nouveau widget ou importe un projet.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      {/* Un bloc par projet : titre et actions au-dessus, puis le tableau de ses créations */}
+      <div className="mt-8 space-y-10">
+        {groups.map(({ name, project }) => {
+          const docs = documents.filter((d) => d.project === name);
+          return (
+            <section key={name} aria-label={`Projet ${name}`}>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <MaterialIcon name="folder" className="size-5 text-accent" />
+                <h2 className="font-display text-xl font-bold">{name}</h2>
+                <span className="text-sm text-muted">{docs.length} création{docs.length > 1 ? "s" : ""}</span>
+                {project?.archived && <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted">Archivé</span>}
+                {project ? (
+                  <DrawerButton drawer={`laboratoire-projet-${project.id}`} className="ml-auto text-sm text-accent hover:underline">Modifier le projet</DrawerButton>
+                ) : (
+                  <form action={saveLabProjectAction} className="ml-auto"><input type="hidden" name="name" value={name} /><button className="text-sm text-accent hover:underline">Enregistrer comme projet</button></form>
+                )}
+              </div>
+              {project?.description && <p className="mt-1 text-sm text-muted">{project.description}</p>}
+              <div className="mt-3 overflow-x-auto rounded-2xl border border-border">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-surface text-xs uppercase tracking-wider text-muted">
+                    <tr>
+                      <th scope="col" className="px-4 py-3 font-medium">Création</th>
+                      <th scope="col" className="w-48 px-4 py-3 font-medium">Type</th>
+                      <th scope="col" className="w-56 px-4 py-3 font-medium">Modifiée le</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {docs.map((doc) => (
+                      <ClickableRow key={doc.id} href={`/admin/laboratoire/${doc.id}`}>
+                        <td className="px-4 py-3 font-medium">{doc.name}</td>
+                        <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${kinds[doc.kind].tone}`}>{kinds[doc.kind].label}</span></td>
+                        <td className="whitespace-nowrap px-4 py-3 text-muted">{dateFmt.format(new Date(doc.updatedAt))}</td>
+                      </ClickableRow>
+                    ))}
+                    {!docs.length && <tr><td colSpan={3} className="px-4 py-4 text-center text-sm text-muted">Aucune création dans ce projet.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          );
+        })}
+        {!groups.length && <p className="rounded-2xl border border-border px-4 py-6 text-center text-muted">Aucune création pour l’instant : commence par un nouveau widget ou importe un projet.</p>}
       </div>
 
       <ProjectDrawer drawer="laboratoire-projet-nouveau" />

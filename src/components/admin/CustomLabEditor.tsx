@@ -8,7 +8,7 @@ import { buildWidgetSrcdoc } from "@/lib/custom-lab/widgetSrcdoc";
 import { buildAlertboxExport, buildPlatformExport, slugifyWidgetName, type AlertboxExportCode } from "@/lib/custom-lab/widgetExport";
 import { buildStreamlabsLoadDetail, type Platform } from "@/lib/custom-lab/platformEvents";
 import { createZip } from "@/lib/custom-lab/zip";
-import { fieldValues, jsonObject, parseFields, parseLabContent } from "@/lib/custom-lab/model";
+import { DEFAULT_LAB_SIZE, fieldValues, jsonObject, parseFields, parseLabContent } from "@/lib/custom-lab/model";
 import type { CodeFile, LabContent, LabDocument } from "@/lib/custom-lab/types";
 import { CustomLabCodePanel, CustomLabPlatformSwitch } from "./CustomLabCodePanel";
 import { CustomLabSimulator } from "./CustomLabSimulator";
@@ -17,6 +17,7 @@ import { CustomLabMedia, openLabMedia } from "./CustomLabMedia";
 import "./custom-lab.css";
 import { MaterialIcon } from "./MaterialIcon";
 import { CustomLabDeliver } from "./CustomLabDeliver";
+import { CustomLabSizedStage, CustomLabSizeField } from "./CustomLabSizedStage";
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 function download(data: BlobPart, name: string, type: string) {
@@ -29,7 +30,7 @@ function download(data: BlobPart, name: string, type: string) {
 // projects : noms des projets existants, proposés dans le champ « Projet »
 export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocument; projects?: string[] }) {
   const { id, revision: initialRevision } = initial;
-  const initialContent: LabContent = { name: initial.name, project: initial.project, kind: initial.kind, variants: initial.variants };
+  const initialContent: LabContent = { name: initial.name, project: initial.project, kind: initial.kind, variants: initial.variants, ...(initial.size ? { size: initial.size } : {}) };
   const [content, setContent] = useState<LabContent>(initialContent);
   const [saved, setSaved] = useState(JSON.stringify(initialContent));
   const revision = useRef(initialRevision);
@@ -47,6 +48,7 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
   const mockStore = useRef<Record<string, unknown>>({});
   const saving = useRef(false);
   const dirty = JSON.stringify(content) !== saved;
+  const size = content.size ?? DEFAULT_LAB_SIZE[content.kind === "alertbox" ? "alertbox" : "widget"];
   const variant = content.variants[platform];
   const code = content.kind === "alertbox" ? variant.alerts[alertType] : variant.code;
 
@@ -191,16 +193,16 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
       </div>
     </header>
     {status && <p role="status" className="cl-status">{status}</p>}
-    <details className="cl-metadata"><summary>Nom et projet</summary><div><label>Nom<input className={input} value={content.name} maxLength={120} onChange={(event) => setContent({ ...content, name: event.target.value })} /></label><label>Projet<input className={input} list="cl-projects" value={content.project} maxLength={120} onChange={(event) => setContent({ ...content, project: event.target.value })} /><datalist id="cl-projects">{projects.map((name) => <option key={name} value={name} />)}</datalist></label></div></details>
+    <details className="cl-metadata"><summary>Nom, projet et taille</summary><div><label>Nom<input className={input} value={content.name} maxLength={120} onChange={(event) => setContent({ ...content, name: event.target.value })} /></label><label>Projet<input className={input} list="cl-projects" value={content.project} maxLength={120} onChange={(event) => setContent({ ...content, project: event.target.value })} /><datalist id="cl-projects">{projects.map((name) => <option key={name} value={name} />)}</datalist></label><CustomLabSizeField size={size} onChange={(next) => setContent({ ...content, size: next })} /></div></details>
     <div className={`cl-workspace ${fieldsCollapsed ? "is-collapsed" : ""}`}>
       <div className="cl-main">
         <section aria-label="Aperçu du widget">
-          <header className="cl-preview-toolbar"><div><h2>Aperçu du {content.kind === "alertbox" ? "pack d’alertes" : "widget"}</h2><p>{platform === "streamlabs" ? "Streamlabs" : "StreamElements"} · simulation locale</p></div><div className="cl-preview-actions">
+          <header className="cl-preview-toolbar"><div><h2>Aperçu du {content.kind === "alertbox" ? "pack d’alertes" : "widget"}</h2><p>{platform === "streamlabs" ? "Streamlabs" : "StreamElements"} · {size.width} × {size.height} px · simulation locale</p></div><div className="cl-preview-actions">
             <button type="button" className="cl-icon-button" aria-label="Afficher le damier" aria-pressed={checker} title="Afficher le damier" onClick={() => setChecker(!checker)}><MaterialIcon name="grid_on" className="size-4" /></button>
             <button type="button" className="cl-icon-button" aria-label="Recharger l’aperçu" title="Recharger l’aperçu" onClick={() => { setPreview(content); setPreviewKey((key) => key + 1); }}><MaterialIcon name="refresh" className="size-4" /></button>
             <button type="button" className="cl-icon-button" aria-label={fieldsCollapsed ? "Afficher les champs" : "Replier les champs"} aria-expanded={!fieldsCollapsed} title={fieldsCollapsed ? "Afficher les champs" : "Replier les champs"} onClick={() => setFieldsCollapsed(!fieldsCollapsed)}><MaterialIcon name="view_sidebar" className="size-4" /></button>
           </div></header>
-          {rendered.error ? <p role="alert" className="cl-error">{rendered.error}</p> : <iframe key={previewKey} ref={frame} title="Aperçu isolé du Laboratoire" sandbox="allow-scripts" allow="autoplay" referrerPolicy="no-referrer" srcDoc={rendered.source} onLoad={loadPreview} className="cl-preview-frame" />}
+          {rendered.error ? <p role="alert" className="cl-error">{rendered.error}</p> : <CustomLabSizedStage size={size}><iframe key={previewKey} ref={frame} title="Aperçu isolé du Laboratoire" sandbox="allow-scripts" allow="autoplay" referrerPolicy="no-referrer" srcDoc={rendered.source} onLoad={loadPreview} className="block h-full w-full border-0 bg-[#11141a]" style={{ colorScheme: "normal" }} /></CustomLabSizedStage>}
         </section>
         <CustomLabCodePanel tab={tab} value={tab === "settings" ? variant.settings : code[tab]} platform={platform} dirty={dirty} pending={pending} alertbox={content.kind === "alertbox"} onTab={setTab} onChange={edit} onStatus={setStatus} />
         <section className="cl-console" aria-label="Console"><header><h2>Console · {lines.length}</h2><button type="button" onClick={() => setLines([])}>Effacer</button></header><pre>{lines.join("\n") || "Aucun message."}</pre></section>

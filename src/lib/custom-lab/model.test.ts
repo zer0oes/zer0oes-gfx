@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fieldValues, newLabContent, parseLabContent } from "./model";
+import { fieldValues, newLabContent, parseLabContent, parseLabSize } from "./model";
 import { buildPlatformExport, buildAlertboxExport } from "./widgetExport";
 import { alertboxAlerts, normalizeAlertboxConfig } from "./alertbox";
 import { buildWidgetSrcdoc } from "./widgetSrcdoc";
@@ -61,4 +61,15 @@ test("le code JS contenant une fermeture script reste dans la chaîne exécutabl
   const source = buildWidgetSrcdoc({ html: "<p>Widget</p>", css: "", js: 'console.log("</script>")' }, {});
   assert.ok(!source.includes('console.log("</script>")'));
   assert.match(source, /\\u003c/);
+});
+
+test("taille d'un widget ou d'un pack d'alertes : valeur par défaut et bornes", () => {
+  assert.deepEqual(newLabContent("widget").size, { width: 600, height: 300 });
+  assert.deepEqual(newLabContent("alertbox").size, { width: 800, height: 600 });
+  assert.equal(newLabContent("overlay").size, undefined);
+  assert.deepEqual(parseLabSize({ width: 99999, height: 1.6 }, "widget"), { width: 7680, height: 20 });
+  assert.deepEqual(parseLabSize("x", "alertbox"), { width: 800, height: 600 });
+  const { size, ...old } = newLabContent("widget");
+  assert.ok(size);
+  assert.deepEqual(parseLabContent(old).size, { width: 600, height: 300 });
 });

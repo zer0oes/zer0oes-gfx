@@ -20,12 +20,15 @@ export type LabVariant = {
   alerts: Record<string, LabCode>;
   settings: string;
 };
+export type LabSize = { width: number; height: number };
 export type LabContent = {
   name: string;
   project: string;
   kind: "widget" | "alertbox" | "overlay";
   // overlay : scène composée de calques (les variantes restent présentes mais ne servent pas)
   overlay?: OverlayData;
+  // widget / pack d'alertes : taille d'affichage (aperçu, calque d'overlay, réglage de la source)
+  size?: LabSize;
   variants: Record<Platform, LabVariant>;
 };
 export type LabDocument = LabContent & {

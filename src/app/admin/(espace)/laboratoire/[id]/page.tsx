@@ -15,7 +15,7 @@ export default async function LabEditorPage({ params }: { params: Promise<{ id: 
   const projects = (await listLabProjects().catch(() => [])).filter((p) => !p.archived).map((p) => p.name);
   if (document.kind === "overlay") {
     // Widgets et packs d'alertes de la bibliothèque, à placer dans les calques de l'overlay
-    const sources = (await listLabSources()).map((d) => ({ id: d.id, name: d.name, project: d.project, content: { name: d.name, project: d.project, kind: d.kind, variants: d.variants } }));
+    const sources = (await listLabSources()).map((d) => ({ id: d.id, name: d.name, project: d.project, content: { name: d.name, project: d.project, kind: d.kind, variants: d.variants, ...(d.size ? { size: d.size } : {}) } }));
     return <CustomLabOverlayEditor initial={document} sources={sources} projects={projects} />;
   }
   return <CustomLabEditor initial={document} projects={projects} />;

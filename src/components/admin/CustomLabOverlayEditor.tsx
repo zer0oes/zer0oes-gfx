@@ -143,6 +143,8 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
   const dirty = JSON.stringify(content) !== saved;
   const byId = useMemo(() => new Map(sources.map((s) => [s.id, s])), [sources]);
   const current = data.items.find((it) => it.id === selected) ?? null;
+  // Taille d'origine de la création affichée dans le calque widget sélectionné
+  const currentSize = current?.type === "widget" && current.widgetId ? byId.get(current.widgetId)?.content.size : undefined;
 
   // --- Données et historique ---
   // Scène la plus récente (lue par les gestes et l'historique, mise à jour à chaque modification)
@@ -178,6 +180,11 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
     setHist({ undo: past.current.length, redo: future.current.length });
   }, [apply]);
 
+  // Taille d'une création de la bibliothèque, centrée dans la scène
+  const sourceSize = (widgetId: string) => {
+    const size = byId.get(widgetId)?.content.size;
+    return size ? { w: size.width, h: size.height, x: Math.round((data.width - size.width) / 2), y: Math.round((data.height - size.height) / 2) } : {};
+  };
   const add = (type: OverlayItemType, extra: Partial<OverlayItem> = {}) => {
     const item = createItem(data, type, extra);
     setData((d) => ({ ...d, items: [...d.items, item] }));
@@ -406,7 +413,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
         {(["text", "image", "video", "shape"] as const).map((type) => (
           <button key={type} type="button" className={toolButton} onClick={() => type === "image" || type === "video" ? openLabMedia(type === "image" ? "image" : "video", (url) => add(type, { props: { ...createItem(data, type).props, src: url } })) : add(type)}>+ {ITEM_LABELS[type]}</button>
         ))}
-        <select aria-label="Ajouter un widget de la bibliothèque" className={`${toolButton} !w-auto pr-8`} value="" onChange={(e) => { if (e.target.value) add("widget", { widgetId: e.target.value, name: byId.get(e.target.value)?.name }); }}>
+        <select aria-label="Ajouter un widget de la bibliothèque" className={`${toolButton} !w-auto pr-8`} value="" onChange={(e) => { if (e.target.value) add("widget", { widgetId: e.target.value, name: byId.get(e.target.value)?.name, ...sourceSize(e.target.value) }); }}>
           <option value="">+ Widget ou alertes…</option>
           {sources.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.project} · {s.content.kind === "alertbox" ? "alertes" : "widget"}</option>)}
         </select>
@@ -543,6 +550,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
               {current.type === "widget" && (
                 <>
                   <label className="grid gap-1">Création affichée<select className={input} value={current.widgetId ?? ""} onChange={(e) => updateItem(current.id, { widgetId: e.target.value || undefined })}><option value="">— Choisir —</option>{sources.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.project}</option>)}</select></label>
+                  {currentSize && <button type="button" className={toolButton} onClick={() => updateItem(current.id, { w: currentSize.width, h: currentSize.height })}><MaterialIcon name="fullscreen" className="size-4" />Taille d’origine ({currentSize.width} × {currentSize.height})</button>}
                   {current.widgetId && <Link href={`/admin/laboratoire/${current.widgetId}`} className="inline-flex items-center gap-1 text-[var(--cl-accent)] hover:underline">Ouvrir cette création dans l’éditeur<MaterialIcon name="arrow_forward" className="size-4" /></Link>}
                   <p className="cl-field-hint">Le widget s’affiche avec ses réglages actuels. Les événements simulés (bouton en bas à droite) lui sont envoyés.</p>
                 </>

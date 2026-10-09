@@ -22,6 +22,7 @@ export type MaterialIconName =
   | "euro"
   | "expand_more"
   | "favorite_border"
+  | "folder"
   | "fullscreen"
   | "gavel"
   | "grid_on"

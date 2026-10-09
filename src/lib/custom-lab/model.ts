@@ -1,6 +1,6 @@
 import { alertboxAlerts } from "./alertbox";
 import { DEFAULT_OVERLAY, parseOverlay } from "./overlay";
-import type { LabCode, LabContent, LabVariant, FieldDefinitions } from "./types";
+import type { LabCode, LabContent, LabSize, LabVariant, FieldDefinitions } from "./types";
 
 export const LAB_MAX_BYTES = 2 * 1024 * 1024;
 export const LAB_PLATFORMS = ["streamelements", "streamlabs"] as const;
@@ -60,7 +60,17 @@ export function parseLabContent(raw: unknown): LabContent {
     if (input.kind === "alertbox" && alertboxAlerts(platform).some(({ type }) => !alerts[type])) throw new Error("Chaque alerte doit posséder son code.");
     return [platform, { code: parseCode(variant.code), settings: variant.settings, alerts: Object.fromEntries(Object.entries(alerts).map(([key, code]) => [key, parseCode(code)])) }];
   })) as LabContent["variants"];
-  return { name: input.name.trim(), project: input.project.trim(), kind: input.kind, variants: parsed, ...(input.kind === "overlay" ? { overlay: parseOverlay(input.overlay) } : {}) };
+  return { name: input.name.trim(), project: input.project.trim(), kind: input.kind, variants: parsed, ...(input.kind === "overlay" ? { overlay: parseOverlay(input.overlay) } : { size: parseLabSize(input.size, input.kind) }) };
+}
+
+// Taille par défaut d'un widget et d'un pack d'alertes (pixels)
+export const DEFAULT_LAB_SIZE = { widget: { width: 600, height: 300 }, alertbox: { width: 800, height: 600 } } as const;
+export const LAB_SIZE_PRESETS = [[1920, 1080], [1280, 720], [800, 600], [600, 300], [500, 500], [400, 150]] as const;
+
+export function parseLabSize(raw: unknown, kind: "widget" | "alertbox"): LabSize {
+  const o = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const n = (v: unknown, max: number, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(20, Math.round(v))) : fallback);
+  return { width: n(o.width, 7680, DEFAULT_LAB_SIZE[kind].width), height: n(o.height, 4320, DEFAULT_LAB_SIZE[kind].height) };
 }
 
 export function newLabContent(kind: LabContent["kind"] = "widget"): LabContent {
@@ -77,5 +87,5 @@ export function newLabContent(kind: LabContent["kind"] = "widget"): LabContent {
     alerts: Object.fromEntries(alertboxAlerts(platform).map(({ type }) => [type, { ...code, html: '<div id="alert">{name}</div>', js: '' }])),
   });
   const name = kind === "widget" ? "Nouveau widget" : kind === "overlay" ? "Nouvel overlay" : "Nouveau pack d’alertes";
-  return { name, project: "Bibliothèque", kind, variants: { streamelements: variant("streamelements"), streamlabs: variant("streamlabs") }, ...(kind === "overlay" ? { overlay: { ...DEFAULT_OVERLAY, items: [] } } : {}) };
+  return { name, project: "Bibliothèque", kind, variants: { streamelements: variant("streamelements"), streamlabs: variant("streamlabs") }, ...(kind === "overlay" ? { overlay: { ...DEFAULT_OVERLAY, items: [] } } : { size: { ...DEFAULT_LAB_SIZE[kind] } }) };
 }
