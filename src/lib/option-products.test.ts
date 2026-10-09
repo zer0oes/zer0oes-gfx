@@ -11,7 +11,7 @@ test("chaque option apparaît dans une seule carte, avec ses variantes disponibl
   assert.equal(new Set(ids).size, options.length);
   const emotes = products.filter((p) => p.category === "emotes");
   assert.equal(emotes.length, 1);
-  assert.deepEqual(emotes[0].variants.map((v) => [emoteCount(v), /anim/i.test(v.id)]), [[1, false], [1, true], [3, false], [3, true], [5, false], [5, true], [10, false], [10, true]]);
+  assert.deepEqual(emotes[0].variants.map((v) => [emoteCount(v), /anim/i.test(v.id)]).sort((a, b) => Number(a[0]) - Number(b[0]) || Number(a[1]) - Number(b[1])), [[1, false], [1, true], [3, false], [3, true], [5, false], [5, true], [10, false], [10, true]]);
 });
 
 test("les créations admin et les variantes isolées restent visibles", () => {

@@ -1,17 +1,18 @@
-import { OptionRows } from "@/components/admin/OptionRows";
 import { MarketingPanel } from "@/components/admin/MarketingPanel";
 import { AffiliatePanel } from "@/components/admin/AffiliatePanel";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
 import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@/lib/home-content";
-import { filesTranslationKey, optionFilesFor, optionsWithFiles } from "@/lib/option-files";
-import { optionFiles } from "@/lib/option-products";
+import { optionContentFor, platforms } from "@/lib/option-content";
+import { optionProductTitle, optionThemeColors } from "@/lib/option-products";
+import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "@/components/admin/Drawer";
+import { SortHandle, SortableRows } from "@/components/admin/SortableRows";
 import { saveOffersPageAction } from "../../portfolio-actions";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NetTable, priceCases } from "@/components/admin/NetTable";
 import { chargesRate, formatRate, netBreakdown, type FinanceSettings } from "@/lib/finance";
-import { formatPrice, type Pack, type PricingSettings } from "@/lib/pricing";
+import { formatPrice, optionCategories, optionCategory, type Pack, type PricingSettings } from "@/lib/pricing";
 import { watermarkLevels } from "@/lib/protection";
 import { getStore } from "@/lib/store";
 import {
@@ -21,8 +22,10 @@ import {
   movePackAction,
   saveFinanceAction,
   saveProtectionAction,
-  saveOptionFilesAction,
-  saveOptionsAction,
+  createOptionAction,
+  deleteOptionAction,
+  reorderOptionsAction,
+  saveOptionAction,
   savePackAction,
   saveSettingsAction,
 } from "../../offres-actions";
@@ -199,6 +202,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const { enregistre, erreur } = sp;
   const openPack = one(sp.offre);
+  const openOption = one(sp.option);
   const tab: Tab = tabs.some((t) => t.id === one(sp.onglet)) ? (one(sp.onglet) as Tab) : "offres";
 
   const store = getStore();
@@ -216,6 +220,9 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const sim = simulate(active, qty, finance);
 
   const translationContent = await getStore().getHomeContent();
+  // Options affichées sur la même carte que o (même regroupement)
+  const groupOf = (o: (typeof options)[number]) => optionContentFor(o, translationContent, "fr").group;
+  const cardMates = (o: (typeof options)[number]) => (groupOf(o) ? options.filter((x) => x.id !== o.id && groupOf(x) === groupOf(o)) : []);
 
   return (
     <TranslationTabs stored={translationValues(translationContent)}>
@@ -333,29 +340,83 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
 
       {tab === "options" && (
         <section className="mt-6">
-          <Intro>Options proposées en plus des offres (page Offres et commande).</Intro>
-          <form action={saveOptionsAction} className="space-y-4">
-            <p className="text-xs text-muted">Clique sur une option pour la modifier, ou sélectionne plusieurs options pour les supprimer.</p>
-            <OptionRows options={options} />
-            <button type="submit" className={save}>
-              Enregistrer les options
-            </button>
-          </form>
-          <details className={`${card} mt-6`}>
-            <summary className="cursor-pointer font-semibold">Ce que le client reçoit (liste « Tu reçois » des cartes)</summary>
-            <form action={saveOptionFilesAction} className="mt-4 space-y-4">
-              <p className="text-xs text-muted">
-                Une ligne par fichier ou élément livré, pour chaque création à prix fixe (les créations sur devis n&apos;ont pas de liste).
-                Un champ vidé reprend la liste d&apos;origine.
-              </p>
-              {optionsWithFiles(options).map((o) => (
-                <Field key={o.id} label={o.name}>
-                  <TranslationInput multiline translationKey={filesTranslationKey(o.id)} englishDefault={optionFiles(o, "en").join("\n")} name={`files:${o.id}`} defaultValue={optionFilesFor(o, translationContent, "fr").join("\n")} rows={3} maxLength={600} className={input} />
-                </Field>
-              ))}
-              <button type="submit" className={save}>Enregistrer les listes</button>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="max-w-2xl text-sm text-muted">Créations à la carte de la page Offres. Clique sur une ligne pour modifier tout ce qui s&apos;affiche sur sa carte. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
+            <DrawerButton drawer="option-nouvelle" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouvelle option</DrawerButton>
+          </div>
+          <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Option</th><th className="px-4 py-3">Carte</th><th className="px-4 py-3">Catégorie</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th></tr></thead>
+              <SortableRows onReorder={reorderOptionsAction}>
+                {options.map((o) => {
+                  const category = optionCategory(o);
+                  return (
+                    <DrawerRow key={o.id} sortId={o.id} drawer={`option-${o.id}`} label={`Modifier ${o.name}`} className={openOption === o.id ? "bg-accent/10" : ""}>
+                      <td className="px-2 py-3"><SortHandle id={o.id} label={o.name} /></td>
+                      <td className="px-4 py-3"><span className="font-semibold">{o.name}</span><p className="mt-1 line-clamp-1 max-w-md text-xs text-muted">{optionContentFor(o, translationContent, "fr").description}</p></td>
+                      <td className="px-4 py-3">{cardMates(o).length > 0 ? <span title={`Avec : ${cardMates(o).map((m) => m.name).join(", ")}`} className="whitespace-nowrap font-medium">{optionContentFor(o, translationContent, "fr").groupName || optionProductTitle(cardMates(o)[0].name).main}</span> : <span className="whitespace-nowrap text-muted">{optionProductTitle(o.name).main}</span>}</td>
+                      <td className="px-4 py-3"><span style={{ color: optionThemeColors[category], borderColor: `color-mix(in srgb, ${optionThemeColors[category]} 45%, transparent)`, background: `color-mix(in srgb, ${optionThemeColors[category]} 10%, transparent)` }} className="inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium">{optionCategories.find((c) => c.id === category)?.label}</span></td>
+                      <td className="whitespace-nowrap px-4 py-3">{o.priceFrom ? "À partir de " : ""}{euro(o.price)}{o.unit ? ` / ${o.unit}` : ""}</td>
+                      <td className="px-4 py-3 text-muted">{o.priceFrom ? "Sur devis" : "En ligne"}</td>
+                    </DrawerRow>
+                  );
+                })}
+              </SortableRows>
+            </table>
+          </div>
+          {options.map((o) => {
+            const content = optionContentFor(o, translationContent, "fr");
+            const english = optionContentFor(o, translationContent, "en");
+            return (
+              <Drawer key={o.id} id={`option-${o.id}`} kicker="Option à la carte" title={o.name} openOnLoad={openOption === o.id} footer={<><ConfirmDelete action={deleteOptionAction} id={o.id} label="Supprimer l'option" /><button type="submit" form={`save-${o.id}`} className={save}>Enregistrer l&apos;option</button></>}>
+                {openOption === o.id && enregistre && <p role="status" className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">Enregistré.</p>}
+                {openOption === o.id && typeof erreur === "string" && <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{erreur}</p>}
+                <TranslationTabs compact stored={translationValues(translationContent)}>
+                  <form id={`save-${o.id}`} action={saveOptionAction} className="space-y-5">
+                    <input type="hidden" name="id" value={o.id} />
+                    <Field label="Nom"><TranslationInput translationKey={`translation:option:${o.id}:name`} name="name" defaultValue={o.name} required className={input} /></Field>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Catégorie"><select name="category" defaultValue={optionCategory(o)} className={input}>{optionCategories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
+                      <Field label="Prix (€)"><input name="price" defaultValue={euros(o.price)} inputMode="decimal" required className={input} /></Field>
+                    </div>
+                    <Field label="Unité (facultative)" hint="Ex. « visuel »."><TranslationInput translationKey={`translation:option:${o.id}:unit`} name="unit" defaultValue={o.unit} className={input} /></Field>
+                    <label className="flex items-start gap-2 text-sm"><input type="checkbox" name="priceFrom" defaultChecked={o.priceFrom} className="mt-1 accent-[var(--accent)]" /> Prix « à partir de » : sur devis (bouton « Demander un devis » au lieu d&apos;« Ajouter »)</label>
+                    <Field label="Description sur la carte"><TranslationInput multiline translationKey={`translation:option-description:${o.id}`} englishDefault={english.description} name="description" defaultValue={content.description} rows={3} maxLength={1200} className={input} /></Field>
+                    <Field label="Ce que le client reçoit" hint="Une ligne par élément livré. Vide : la liste « Tu reçois » n'apparaît pas sur la carte."><TranslationInput multiline translationKey={`translation:option-files:${o.id}`} englishDefault={english.files.join("\n")} name="files" defaultValue={content.files.join("\n")} rows={4} maxLength={1200} className={input} /></Field>
+                    <fieldset className="space-y-3 rounded-xl border border-border p-4">
+                      <legend className="px-1 text-sm font-medium">Carte sur la page Offres</legend>
+                      <Field label="Regrouper avec" hint="Les options regroupées partagent une carte, avec un bouton Statique / Animé et, si leurs nombres diffèrent, un menu du nombre.">
+                        <select name="groupWith" defaultValue={cardMates(o)[0]?.id ?? ""} className={input}>
+                          <option value="">Carte seule</option>
+                          {options.filter((x) => x.id !== o.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Nom de la carte" hint="Titre de la carte partagée sur la page Offres (commun aux options regroupées). Vide : nom d'origine."><TranslationInput translationKey={`translation:option-group:${content.group ?? o.id}`} englishDefault={english.groupName} name="groupName" defaultValue={content.group ? content.groupName : ""} placeholder="Ex. Overlay" maxLength={80} className={input} /></Field>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <fieldset><legend className="mb-1 text-sm font-medium">Variante</legend><div className="flex gap-4 pt-1">{([["statique", "Statique"], ["anime", "Animée"]] as const).map(([v, l]) => <label key={v} className="flex items-center gap-2 text-sm"><input type="radio" name="variant" value={v} defaultChecked={(v === "anime") === content.animated} className="accent-[var(--accent)]" /> {l}</label>)}</div></fieldset>
+                        <Field label="Nombre" hint="Ex. 5 pour un pack de 5 emotes."><input name="count" type="number" min={1} max={999} defaultValue={content.count} className={input} /></Field>
+                      </div>
+                    </fieldset>
+                    <fieldset>
+                      <legend className="mb-2 text-sm font-medium">Compatible avec <span className="font-normal text-muted">(logos affichés sur la carte)</span></legend>
+                      <div className="flex flex-wrap gap-4">{platforms.map((p) => <label key={p.id} className="flex items-center gap-2 text-sm"><input type="checkbox" name={`compat_${p.id}`} defaultChecked={content.compat.includes(p.id)} className="accent-[var(--accent)]" /> {p.name}</label>)}</div>
+                    </fieldset>
+                  </form>
+                </TranslationTabs>
+              </Drawer>
+            );
+          })}
+          <Drawer id="option-nouvelle" kicker="Option à la carte" title="Nouvelle option" footer={<><span /><button type="submit" form="option-creer" className={save}>Créer l&apos;option</button></>}>
+            <form id="option-creer" action={createOptionAction} className="space-y-4">
+              <Field label="Nom"><input name="name" required className={input} /></Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Catégorie"><select name="category" className={input}>{optionCategories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
+                <Field label="Prix (€)"><input name="price" required inputMode="decimal" className={input} /></Field>
+              </div>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="priceFrom" className="accent-[var(--accent)]" /> Sur devis (« à partir de »)</label>
+              <p className="text-xs text-muted">Sa fiche s&apos;ouvre ensuite pour compléter sa description, ce que le client reçoit et la traduction.</p>
             </form>
-          </details>
+          </Drawer>
         </section>
       )}
 

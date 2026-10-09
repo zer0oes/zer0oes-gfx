@@ -7,7 +7,8 @@ import { createCheckout } from "@/app/actions";
 import { href, t, type Locale } from "@/lib/i18n";
 import { formatPrice, optionCategories, type Option, type Pack, type PricingSettings } from "@/lib/pricing";
 import { glossaryIdFor, type GlossaryHint } from "@/lib/glossary";
-import { animatedOption, emoteCount, optionIncludes, optionProducts, optionProductTitle, optionThemeColors } from "@/lib/option-products";
+import type { OptionContent } from "@/lib/option-content";
+import { optionProducts, optionProductTitle, optionThemeColors } from "@/lib/option-products";
 import { recommendPack } from "@/lib/pack-recommendation";
 import { Hint } from "./Hint";
 import { ProductPreview } from "./ProductPreview";
@@ -30,7 +31,11 @@ function Quantity({ value, onChange, label, className = "flex flex-col gap-1" }:
 }
 
 // Textes modifiables dans l'admin, lus côté serveur : bulles « ? », fichiers livrés et titre de leur liste
-export type CatalogTexts = { hints: Record<string, GlossaryHint>; files: Record<string, string[]>; receive: string };
+export type CatalogTexts = {
+  hints: Record<string, GlossaryHint>;
+  content: Record<string, OptionContent>;
+  labels: { receive: string; revision: string; add: string; quote: string; quoteHeading: string; custom: string; customLink: string };
+};
 
 function ProductCard({ product, locale, add, texts }: { product: ReturnType<typeof optionProducts>[number]; locale: Locale; add: (option: Option, quantity: number) => void; texts: CatalogTexts }) {
   const variantGroup = useId();
@@ -38,32 +43,38 @@ function ProductCard({ product, locale, add, texts }: { product: ReturnType<type
   const [quantity, setQuantity] = useState(1);
   const option = product.variants.find((o) => o.id === variantId) ?? product.variants[0];
   const title = optionProductTitle(option.name);
+  const content = texts.content[option.id];
   const emotes = product.category === "emotes";
-  const counts = [...new Set(product.variants.map(emoteCount))].sort((a, b) => a - b);
-  const variants = emotes ? product.variants.filter((v) => emoteCount(v) === emoteCount(option)) : product.variants;
+  // Place de chaque option dans la carte (réglée dans l'admin) : nombre et variante statique / animée
+  const count = (o: Option) => texts.content[o.id]?.count ?? 1;
+  const animatedOf = (o: Option) => texts.content[o.id]?.animated ?? false;
+  const counts = [...new Set(product.variants.map(count))].sort((a, b) => a - b);
+  const bySize = counts.length > 1;
+  const variants = bySize ? product.variants.filter((v) => count(v) === count(option)) : product.variants;
+  const toggle = new Set(product.variants.map(animatedOf)).size > 1;
   return <article style={{ "--product-color": optionThemeColors[product.category] } as CSSProperties} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--product-color)_35%,var(--border))] bg-surface">
     <div className="relative">
-      <ProductPreview option={option} locale={locale} />
+      <ProductPreview option={option} animated={animatedOf(option)} locale={locale} />
       <SaleBadge item={option} locale={locale} className="absolute right-3 top-3" />
     </div>
     <div className="flex flex-col gap-2.5 p-4">
-      <div><h3 className="font-display text-lg font-bold">{emotes ? "Emotes" : title.main}<Hint hint={texts.hints[glossaryIdFor(option.name) ?? ""]} /></h3>{!emotes && title.detail && <p className="mt-1 text-xs text-muted">{title.detail}</p>}</div>
-      {product.variants.length > 1 && <fieldset aria-label={t(locale, { fr: "Variante", en: "Variant" })} className="grid grid-cols-2 gap-1 rounded-full border border-border bg-background p-1">{[false, true].map((animated) => {
-        const variant = variants.find((v) => animatedOption(v) === animated);
-        const active = animatedOption(option) === animated;
+      <div><h3 className="font-display text-lg font-bold">{content?.groupName || (emotes && bySize ? "Emotes" : title.main)}<Hint hint={texts.hints[glossaryIdFor(option.name) ?? ""]} /></h3>{!content?.groupName && !(emotes && bySize) && title.detail && <p className="mt-1 text-xs text-muted">{title.detail}</p>}</div>
+      {toggle && <fieldset aria-label={t(locale, { fr: "Variante", en: "Variant" })} className="grid grid-cols-2 gap-1 rounded-full border border-border bg-background p-1">{[false, true].map((animated) => {
+        const variant = variants.find((v) => animatedOf(v) === animated);
+        const active = animatedOf(option) === animated;
         return <label key={String(animated)} className={`relative rounded-full px-3 py-2 text-center text-xs font-semibold transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${!variant ? "opacity-35" : "cursor-pointer"} ${active ? "bg-[var(--product-color)] text-background shadow-sm" : "text-muted hover:text-foreground"}`}><input type="radio" name={variantGroup} value={variant?.id ?? String(animated)} checked={active} disabled={!variant} onChange={() => variant && setVariantId(variant.id)} className="sr-only" />{t(locale, { fr: animated ? "Animé" : "Statique", en: animated ? "Animated" : "Static" })}</label>;
       })}</fieldset>}
-      <p className="text-sm leading-relaxed text-muted">{optionIncludes(option, locale)}</p>
-      {(texts.files[option.id]?.length ?? 0) > 0 && <div className="text-xs"><p className="font-semibold text-foreground">{texts.receive}</p><ul className="mt-1.5 space-y-1 text-muted">{texts.files[option.id].map((line) => <li key={line} className="flex gap-2"><span aria-hidden className="text-[var(--product-color)]">✓</span><span>{line}</span></li>)}</ul></div>}
-      <ProductCompatibility option={option} locale={locale} />
-      <p className="text-xs font-medium text-[var(--product-color)]">{t(locale, { fr: "1 modification incluse par création", en: "1 revision included per creation" })}</p>
-      {emotes && variants.length === 1 && <p className="text-xs text-muted">{t(locale, { fr: "Seule cette variante est disponible pour ce nombre d’emotes.", en: "Only this variant is available for this number of emotes." })}</p>}
+      {content?.description && <p className="whitespace-pre-line text-sm leading-relaxed text-muted">{content.description}</p>}
+      {(content?.files.length ?? 0) > 0 && <div className="text-xs"><p className="font-semibold text-foreground">{texts.labels.receive}</p><ul className="mt-1.5 space-y-1 text-muted">{content!.files.map((line) => <li key={line} className="flex gap-2"><span aria-hidden className="text-[var(--product-color)]">✓</span><span>{line}</span></li>)}</ul></div>}
+      <ProductCompatibility platforms={content?.compat ?? []} locale={locale} />
+      {texts.labels.revision && <p className="text-xs font-medium text-[var(--product-color)]">{texts.labels.revision}</p>}
+      {bySize && toggle && variants.length === 1 && <p className="text-xs text-muted">{t(locale, emotes ? { fr: "Seule cette variante est disponible pour ce nombre d’emotes.", en: "Only this variant is available for this number of emotes." } : { fr: "Seule cette variante est disponible pour ce nombre.", en: "Only this variant is available for this number." })}</p>}
       <div className="grid grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_2.75rem] items-center gap-x-3 gap-y-1">
-      {emotes && <label className="row-span-2 grid grid-rows-subgrid text-center text-xs">{t(locale, { fr: "Nombre d’emotes", en: "Number of emotes" })}<select value={emoteCount(option)} onChange={(e) => { const available = product.variants.filter((v) => emoteCount(v) === Number(e.target.value)); setVariantId((available.find((v) => animatedOption(v) === animatedOption(option)) ?? available[0]).id); }} className="h-11 rounded-lg border border-border bg-background px-3 py-2 text-center text-sm font-semibold">{counts.map((count) => <option key={count} value={count}>{count}</option>)}</select></label>}
-        {!option.priceFrom && !emotes && <Quantity className="row-span-2 grid grid-rows-subgrid" label={t(locale, { fr: /alerte|alert|panneau|panel/i.test(option.id) ? "Nombre de packs" : "Quantité", en: /alerte|alert|panneau|panel/i.test(option.id) ? "Number of packs" : "Quantity" })} value={quantity} onChange={setQuantity} />}
+      {bySize && <label className="row-span-2 grid grid-rows-subgrid text-center text-xs">{t(locale, emotes ? { fr: "Nombre d’emotes", en: "Number of emotes" } : { fr: "Nombre", en: "Number" })}<select value={count(option)} onChange={(e) => { const available = product.variants.filter((v) => count(v) === Number(e.target.value)); setVariantId((available.find((v) => animatedOf(v) === animatedOf(option)) ?? available[0]).id); }} className="h-11 rounded-lg border border-border bg-background px-3 py-2 text-center text-sm font-semibold">{counts.map((n) => <option key={n} value={n}>{n}</option>)}</select></label>}
+        {!option.priceFrom && !bySize && <Quantity className="row-span-2 grid grid-rows-subgrid" label={t(locale, { fr: /alerte|alert|panneau|panel/i.test(option.id) ? "Nombre de packs" : "Quantité", en: /alerte|alert|panneau|panel/i.test(option.id) ? "Number of packs" : "Quantity" })} value={quantity} onChange={setQuantity} />}
         <p className="col-start-2 row-start-2 text-right font-display text-2xl font-bold"><OfferPrice item={{ ...option, unit: undefined, price: option.price * quantity, normalPrice: option.normalPrice ? option.normalPrice * quantity : undefined }} locale={locale} /></p>
       </div>
-      {option.priceFrom ? <Link href={href(locale, `/contact?option=${encodeURIComponent(option.id)}`)} className="rounded-full border border-[var(--product-color)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--product-color)]">{t(locale, { fr: "Demander un devis", en: "Request a quote" })}</Link> : <button type="button" onClick={() => add(option, quantity)} className="rounded-full border border-transparent bg-accent px-4 py-2.5 text-sm font-semibold text-background transition-colors hover:border-[var(--product-color)] hover:bg-transparent hover:text-[var(--product-color)]">{t(locale, { fr: "Ajouter", en: "Add" })}</button>}
+      {option.priceFrom ? <Link href={href(locale, `/contact?option=${encodeURIComponent(option.id)}`)} className="rounded-full border border-[var(--product-color)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--product-color)]">{texts.labels.quote}</Link> : <button type="button" onClick={() => add(option, quantity)} className="rounded-full border border-transparent bg-accent px-4 py-2.5 text-sm font-semibold text-background transition-colors hover:border-[var(--product-color)] hover:bg-transparent hover:text-[var(--product-color)]">{texts.labels.add}</button>}
     </div>
   </article>;
 }
@@ -81,7 +92,7 @@ export function OptionCatalog({ options, packs, settings, locale, texts }: { opt
   const tooMany = items.length > 20 || JSON.stringify(items).length > 500;
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
   const labels: Record<string, string> = locale === "en" ? { all: "All", overlays: "Overlays", emotes: "Emotes", branding: "Visual identity", motion: "Animation" } : { all: "Tout", overlays: "Overlays", emotes: "Emotes", branding: "Identité visuelle", motion: "Animation" };
-  const products = optionProducts(options).filter((product) => filter === "all" || product.category === filter).sort((a, b) => filter === "all" ? Number(a.variants.every((v) => v.priceFrom)) - Number(b.variants.every((v) => v.priceFrom)) : 0);
+  const products = optionProducts(options, (o) => texts.content[o.id]?.group ?? null).filter((product) => filter === "all" || product.category === filter).sort((a, b) => filter === "all" ? Number(a.variants.every((v) => v.priceFrom)) - Number(b.variants.every((v) => v.priceFrom)) : 0);
   const change = (id: string, quantity: number) => setQuantities((current) => ({ ...current, [id]: quantity }));
   return <section className="pb-24 lg:pb-0">
 
@@ -91,7 +102,7 @@ export function OptionCatalog({ options, packs, settings, locale, texts }: { opt
     <div className="mb-3 flex flex-wrap gap-2" aria-label={t(locale, { fr: "Filtrer les créations", en: "Filter creations" })}>
       {["all", ...optionCategories.map((c) => c.id)].map((id) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} style={id !== "all" ? { "--filter-color": optionThemeColors[id as keyof typeof optionThemeColors] } as CSSProperties : undefined} className={`rounded-full border px-4 py-2 text-sm font-medium ${filter === id ? id === "all" ? "border-accent bg-accent text-background" : "border-[var(--filter-color)] bg-[var(--filter-color)] text-background" : id === "all" ? "border-border bg-surface text-muted hover:text-foreground" : "border-[color-mix(in_srgb,var(--filter-color)_40%,var(--border))] bg-surface text-[var(--filter-color)]"}`}>{labels[id]}</button>)}
     </div>
-      <div className="grid items-start gap-4 sm:grid-cols-2">{products.map((product, index) => <Fragment key={product.id}>{product.variants.every((v) => v.priceFrom) && (index === 0 || !products[index - 1].variants.every((v) => v.priceFrom)) && <h3 className="col-span-full mt-3 border-t border-border pt-4 font-display text-base font-semibold">{t(locale, { fr: "Créations sur devis", en: "Creations by quote" })}</h3>}<ProductCard product={product} locale={locale} texts={texts} add={(option, quantity) => {
+      <div className="grid items-start gap-4 sm:grid-cols-2">{products.map((product, index) => <Fragment key={product.id}>{product.variants.every((v) => v.priceFrom) && (index === 0 || !products[index - 1].variants.every((v) => v.priceFrom)) && <h3 className="col-span-full mt-3 border-t border-border pt-4 font-display text-base font-semibold">{texts.labels.quoteHeading}</h3>}<ProductCard product={product} locale={locale} texts={texts} add={(option, quantity) => {
         const next = (quantities[option.id] ?? 0) + quantity;
         if (next > 20) { setMessage(t(locale, { fr: "Maximum 20 exemplaires par produit. Contacte-moi pour une commande plus importante.", en: "Maximum 20 of each product. Contact me for larger orders." })); return; }
         change(option.id, next);
@@ -127,7 +138,7 @@ export function OptionCatalog({ options, packs, settings, locale, texts }: { opt
         </form>
       </aside>
     </div>
-    <p className="mt-8 text-center text-sm text-muted">{t(locale, { fr: "Un projet particulier ?", en: "A specific project?" })} <Link href={href(locale, "/contact")} className="text-accent underline underline-offset-4">{t(locale, { fr: "Parlons-en", en: "Let's talk" })}</Link></p>
+    <p className="mt-8 text-center text-sm text-muted">{texts.labels.custom} <Link href={href(locale, "/contact")} className="text-accent underline underline-offset-4">{texts.labels.customLink}</Link></p>
     <a href={`#${cartId}`} className="fixed inset-x-4 bottom-4 z-40 flex items-center justify-between rounded-full border border-accent/40 bg-surface px-5 py-4 text-sm font-semibold shadow-xl lg:hidden"><span>{t(locale, { fr: `Voir ma commande (${count})`, en: `View my order (${count})` })}</span><span>{formatPrice(total, locale)}</span></a>
   </section>;
 }

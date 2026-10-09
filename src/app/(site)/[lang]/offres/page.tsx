@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { OfferGuide } from "@/components/OfferGuide";
 import { OfferTabs } from "@/components/OfferTabs";
-import { OptionCatalog } from "@/components/OptionCatalog";
+import { OptionCatalog, type CatalogTexts } from "@/components/OptionCatalog";
 import { glossaryHints } from "@/lib/glossary";
-import { resolveOptionFiles } from "@/lib/option-files";
+import { resolveOptionContent } from "@/lib/option-content";
 import { PackCard } from "@/components/PackCard";
 import { resolveHome } from "@/lib/home-content";
 import { asLocale, t, type Locale } from "@/lib/i18n";
@@ -160,7 +160,11 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
         <OfferGuide locale={lang} />
 
         </>} options={
-          <OptionCatalog settings={site} packs={packs.map((p) => trDeep(lang, p))} options={catalog.options.map((o) => trDeep(lang, o))} locale={lang} texts={{ hints: glossaryHints(texts), files: resolveOptionFiles(catalog.options, stored, lang), receive: texts.text("options.receive") }} />
+          <OptionCatalog settings={site} packs={packs.map((p) => trDeep(lang, p))} options={catalog.options.map((o) => trDeep(lang, o))} locale={lang} texts={{
+            hints: glossaryHints(texts),
+            content: resolveOptionContent(catalog.options, stored, lang),
+            labels: Object.fromEntries((["receive", "revision", "add", "quote", "quoteHeading", "custom", "customLink"] as const).map((k) => [k, texts.text(`options.${k}`)])) as CatalogTexts["labels"],
+          }} />
         } />
 
         <section className="mt-20">
