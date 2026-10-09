@@ -181,7 +181,7 @@ function BlockEditor({
         </button>
         <div className="flex shrink-0 gap-1">
           <button type="button" className={iconButton} onClick={onDuplicate} aria-label="Dupliquer le bloc" title="Dupliquer">⧉</button>
-          <button type="button" className={`${iconButton} hover:!border-red-400 hover:!text-red-300`} onClick={onRemove} aria-label="Supprimer le bloc" title="Supprimer">✕</button>
+          <button type="button" className={`${iconButton} hover:!border-red-400 hover:!text-red-300`} onClick={onRemove} aria-label="Supprimer le bloc" title="Supprimer"><svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" /></svg></button>
         </div>
       </div>
 
@@ -229,7 +229,7 @@ function BlockEditor({
                 <div className="flex gap-1 sm:pb-1">
                   <button type="button" className={iconButton} disabled={i === 0} aria-label="Visuel précédent" onClick={() => onChange({ ...block, slots: swap(block.slots, i, i - 1) })}>↑</button>
                   <button type="button" className={iconButton} disabled={i === block.slots.length - 1} aria-label="Visuel suivant" onClick={() => onChange({ ...block, slots: swap(block.slots, i, i + 1) })}>↓</button>
-                  <button type="button" className={iconButton} disabled={block.slots.length <= 1} aria-label="Retirer ce visuel" onClick={() => onChange({ ...block, slots: block.slots.filter((_, k) => k !== i) })}>✕</button>
+                  <button type="button" className={iconButton} disabled={block.slots.length <= 1} aria-label="Retirer ce visuel" title="Retirer ce visuel" onClick={() => onChange({ ...block, slots: block.slots.filter((_, k) => k !== i) })}><svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" /></svg></button>
                 </div>
               </div>
             ))}
