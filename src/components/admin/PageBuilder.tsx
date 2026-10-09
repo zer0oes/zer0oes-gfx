@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { resetProjectPageAction, saveProjectPageAction } from "@/app/admin/portfolio-actions";
 import { layoutIds, layouts, type Block, type BuilderPage, type L, type LayoutId, type Slot } from "@/lib/page-builder";
 import { PREVIEW_MESSAGE } from "./PagePreview";
+import { moveItem, usePointerSort } from "./usePointerSort";
 
 export type PickerWork = { id: string; title: string; image?: string; category: string; emotes: boolean };
 
@@ -143,7 +144,8 @@ function BlockEditor({
   onMove,
   onDuplicate,
   onRemove,
-  drag,
+  sortClass,
+  handle,
 }: {
   block: Block;
   index: number;
@@ -156,7 +158,8 @@ function BlockEditor({
   onMove: (to: number) => void;
   onDuplicate: () => void;
   onRemove: () => void;
-  drag: { dragging: boolean; over: boolean; source: React.HTMLAttributes<HTMLElement>; target: React.HTMLAttributes<HTMLElement> };
+  sortClass: string;
+  handle: ReturnType<ReturnType<typeof usePointerSort>["handle"]>;
 }) {
   const def = layouts[block.layout];
   const [picking, setPicking] = useState(false);
@@ -165,14 +168,11 @@ function BlockEditor({
   const title = (lang === "en" ? block.title?.en : undefined) || block.title?.fr || block.kicker?.fr || def.label;
 
   return (
-    <li
-      {...drag.target}
-      className={`rounded-2xl border bg-surface transition ${drag.over ? "border-accent" : "border-border"} ${drag.dragging ? "opacity-40" : ""}`}
-    >
-      {/* Seule la barre du bloc se glisse : les champs restent sélectionnables */}
-      <div {...drag.source} className="flex items-center gap-3 p-3">
-        <span className="cursor-grab select-none px-1 text-lg leading-none text-muted active:cursor-grabbing" title="Glisser pour déplacer" aria-hidden>
-          ⋮⋮
+    <li className={`rounded-2xl border border-border bg-surface transition ${sortClass}`}>
+      <div className="flex items-center gap-3 p-3">
+        {/* Poignée : tirer pour déplacer le bloc (ou flèches haut et bas au clavier) */}
+        <span {...handle} role="button" tabIndex={0} aria-label="Déplacer le bloc (flèches haut et bas)" title="Glisser pour déplacer" className="inline-flex size-8 shrink-0 cursor-grab items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent active:cursor-grabbing">
+          <svg viewBox="0 0 24 24" className="size-5" fill="currentColor"><path d="M9 5h2v2H9V5zm4 0h2v2h-2V5zM9 11h2v2H9v-2zm4 0h2v2h-2v-2zM9 17h2v2H9v-2zm4 0h2v2h-2v-2z" /></svg>
         </span>
         <button type="button" onClick={onToggle} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <LayoutThumb id={block.layout} className="w-14 shrink-0" />
@@ -276,8 +276,6 @@ export function PageBuilder({ streamerId, streamerName, initial, custom, works }
   const [status, setStatus] = useState<{ tone: "ok" | "error" | "idle"; text: string }>({ tone: "idle", text: custom ? "Mise en page personnalisée en ligne." : "Mise en page d'origine en ligne." });
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [dragFrom, setDragFrom] = useState<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
   const frame = useRef<HTMLIFrameElement>(null);
   const frameBox = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.5);
@@ -287,6 +285,7 @@ export function PageBuilder({ streamerId, streamerName, initial, custom, works }
     setDirty(true);
   };
   const setBlocks = (blocks: Block[]) => update({ ...page, blocks });
+  const sort = usePointerSort((from, to) => setBlocks(moveItem(page.blocks, from, to)));
 
   // Aperçu : la page en cours est envoyée au cadre à chaque changement
   const send = useCallback(() => {
@@ -370,7 +369,7 @@ export function PageBuilder({ streamerId, streamerName, initial, custom, works }
           </div>
         </section>
 
-        <ol className="space-y-3">
+        <ol data-sort-list className="space-y-3">
           {page.blocks.map((b, i) => (
             <BlockEditor
               key={b.id}
@@ -389,38 +388,8 @@ export function PageBuilder({ streamerId, streamerName, initial, custom, works }
                 setOpenBlock(copy.id);
               }}
               onRemove={() => window.confirm("Supprimer ce bloc ?") && setBlocks(page.blocks.filter((x) => x.id !== b.id))}
-              drag={{
-                dragging: dragFrom === i,
-                over: dragOver === i && dragFrom !== i,
-                source: {
-                  draggable: true,
-                  onDragStart: (e) => {
-                    setDragFrom(i);
-                    e.dataTransfer.effectAllowed = "move";
-                  },
-                  onDragEnd: () => {
-                    setDragFrom(null);
-                    setDragOver(null);
-                  },
-                },
-                target: {
-                  onDragOver: (e) => {
-                    e.preventDefault();
-                    setDragOver(i);
-                  },
-                  onDrop: (e) => {
-                    e.preventDefault();
-                    if (dragFrom !== null && dragFrom !== i) {
-                      const next = [...page.blocks];
-                      const [moved] = next.splice(dragFrom, 1);
-                      next.splice(i, 0, moved);
-                      setBlocks(next);
-                    }
-                    setDragFrom(null);
-                    setDragOver(null);
-                  },
-                },
-              }}
+              sortClass={sort.rowClass(i)}
+              handle={sort.handle(i)}
             />
           ))}
         </ol>
