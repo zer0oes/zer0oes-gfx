@@ -3,7 +3,6 @@ import { translationValues } from "@/lib/admin-translations";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { caseStudies } from "@/data/case-studies";
 import { categories } from "@/data/portfolio";
 import { getStore } from "@/lib/store";
 import { deleteStreamerAction, moveWorkAction, saveStreamerAction, saveTestimonialAction } from "../../../../portfolio-actions";
@@ -22,7 +21,6 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
   const s = streamers.find((x) => x.id === decodeURIComponent(id));
   if (!s) notFound();
   const own = works.filter((w) => w.streamer === s.id);
-  const study = caseStudies[s.id];
   const review = testimonials.find((x) => x.streamerId === s.id);
 
   const translationContent = await getStore().getHomeContent();
@@ -72,17 +70,15 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
           </form>
         </section>
 
-        {study && "layout" in study && (
-          <section className={`${card} flex flex-wrap items-center justify-between gap-3`}>
-            <div>
-              <h2 className="font-semibold">Textes de la page projet</h2>
-              <p className="mt-1 text-sm text-muted">Titres, présentation, légendes et appel au contact.</p>
-            </div>
-            <Link href={`/admin/portfolio/textes/${s.id}`} className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">
-              Modifier les textes
-            </Link>
-          </section>
-        )}
+        <section className={`${card} flex flex-wrap items-center justify-between gap-3`}>
+          <div>
+            <h2 className="font-semibold">Mise en page de la page projet</h2>
+            <p className="mt-1 text-sm text-muted">Blocs, disposition, visuels et textes (FR et EN), avec aperçu en direct.</p>
+          </div>
+          <Link href={`/admin/portfolio/mise-en-page/${encodeURIComponent(s.id)}`} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background hover:brightness-110">
+            Mettre en page
+          </Link>
+        </section>
 
         <section className={card} aria-labelledby="avis">
           <h2 id="avis" className="font-semibold">

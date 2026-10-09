@@ -3,10 +3,11 @@ import {
   createPortalLinkAction,
   deleteDeliverableAction,
   removeDeliverablePreviewAction,
+  removeFinalAssetAction,
   sendDeliveryAction,
   setDeliverableTypeAction,
 } from "@/app/admin/livraison-actions";
-import { correctionPending, itemRevisionLimit, deliverableTypes, formatBytes, itemType, mediaKind, pendingPreview } from "@/lib/delivery";
+import { correctionPending, itemRevisionLimit, deliverableTypes, formatBytes, itemType, mediaKind, pendingPreview, deliveryLocked, deliveryLockedMessage } from "@/lib/delivery";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/env";
 import { siteUrl } from "@/lib/site-url";
 import type { Deliverable, Order } from "@/lib/store";
@@ -35,6 +36,8 @@ const statusStyles = {
 export async function DeliverySection({ order, items, message }: { order: Order; items: Deliverable[]; message?: { ok?: string; error?: string } }) {
   const pageUrl = order.deliveryToken ? `${await siteUrl()}/commande/${order.deliveryToken}` : null;
   const newCount = items.filter((item) => pendingPreview(item)).length;
+  // Commande entièrement validée : plus de retrait possible (sauf en repassant la commande « En cours »)
+  const locked = deliveryLocked(order, items);
   return (
     <section id="livraison" className="scroll-mt-24 rounded-2xl border border-border bg-surface p-5 sm:p-6">
       <h2 className="font-semibold">Livraison</h2>
@@ -83,7 +86,7 @@ export async function DeliverySection({ order, items, message }: { order: Order;
       </div>
       {items.map((d) => {
         const ready = Boolean(d.previewPath || (!d.plannedKey && mediaKind(d.storagePath) === "image"));
-        return <Drawer key={d.id} id={`livrable-${d.id}`} kicker="Livrable" title={d.label} footer={<><ConfirmDelete action={deleteDeliverableAction} id={d.id} fields={{ orderId: order.id }} label="Retirer ce livrable" question="Es-tu sûre de vouloir retirer ce livrable ?" /><SaveWithUploads scope={`livrable-${d.id}`} form={`livrable-form-${d.id}`} /></>}>
+        return <Drawer key={d.id} id={`livrable-${d.id}`} kicker="Livrable" title={d.label} footer={<>{locked ? <span className="max-w-xs text-xs text-muted">{deliveryLockedMessage}</span> : <ConfirmDelete action={deleteDeliverableAction} id={d.id} fields={{ orderId: order.id }} label="Retirer ce livrable" question="Es-tu sûre de vouloir retirer ce livrable ?" />}<SaveWithUploads scope={`livrable-${d.id}`} form={`livrable-form-${d.id}`} /></>}>
 
             <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
               <h4 className="font-semibold">Aperçu client</h4>
@@ -93,12 +96,15 @@ export async function DeliverySection({ order, items, message }: { order: Order;
               </div>}
               {!ready && <p className="text-sm text-muted">Ajoute une image de présentation. Elle sera réduite et filigranée côté serveur.</p>}
               {d.finalAccessedAt || d.accessedFinalAssets?.length ? <p className="text-xs text-muted">Déjà téléchargé par le client : l’aperçu ne peut plus être remplacé.</p> : <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} saveScope={`livrable-${d.id}`} />}
-              {d.previewPath && <form action={removeDeliverablePreviewAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-xs text-muted hover:text-red-300">Retirer l’aperçu</button></form>}
+              {d.previewPath && !locked && !(d.finalAccessedAt || d.accessedFinalAssets?.length) && <form action={removeDeliverablePreviewAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-xs text-muted hover:text-red-300">Retirer l’aperçu</button></form>}
             </section>
             <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
               <h4 className="font-semibold">Fichiers définitifs</h4>
               <p className="text-xs text-muted">Privés jusqu’à validation du livrable et paiement intégral.</p>
-              <ul className="space-y-2 text-sm">{d.storagePath && <li>✓ {d.label} — {formatBytes(d.sizeBytes)}</li>}{d.url && <li>✓ Lien d’import existant</li>}{(d.finalAssets ?? []).map((asset, i) => <li key={i}>✓ {asset.label} ({asset.url ? "lien d’import" : "fichier"})</li>)}</ul>
+              <ul className="space-y-2 text-sm">{d.storagePath && <li>✓ {d.label} — {formatBytes(d.sizeBytes)}</li>}{d.url && <li>✓ Lien d’import existant</li>}{(d.finalAssets ?? []).map((asset, i) => {
+                const downloaded = Boolean(asset.path && d.accessedFinalAssets?.includes(asset.path));
+                return <li key={i} className="flex items-center justify-between gap-3"><span>✓ {asset.label} ({asset.url ? "lien d’import" : "fichier"}){downloaded && <span className="ml-1 text-xs text-muted">· téléchargé</span>}</span>{!locked && !downloaded && <ConfirmDelete action={removeFinalAssetAction} id={d.id} fields={{ orderId: order.id, index: String(i) }} label="" question={`Retirer « ${asset.label} » des fichiers définitifs ?`} icon />}</li>;
+              })}</ul>
               <DeliveryUpload orderId={order.id} targetId={d.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} saveScope={`livrable-${d.id}`} />
               <form action={addDeliveryLinkAction} className="space-y-3"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="targetId" value={d.id} /><input name="label" required placeholder="Nom du lien d’import" aria-label="Nom du lien d’import" className={input} /><input name="url" type="url" required placeholder="https://…" aria-label="Adresse du lien d’import" className={input} /><button className="rounded-full border border-border px-4 py-2 text-sm">Ajouter le lien d’import</button></form>
             </section>

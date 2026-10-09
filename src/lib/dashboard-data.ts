@@ -9,15 +9,16 @@ import { getStore } from "@/lib/store";
 // d'exemple sont affichées ; en production, jamais de chiffres fictifs.
 export async function loadDashboard(params: PeriodParams) {
   const store = getStore();
-  const [orders, invoices, finance] = await Promise.all([store.listOrders(), store.listInvoices(), store.getFinance()]);
+  const [orders, invoices, finance, quotes] = await Promise.all([store.listOrders(), store.listInvoices(), store.getFinance(), store.listQuotes()]);
   const today = parisDay(new Date());
   const real = orders.filter((o) => !o.demo);
   const sample = real.length === 0 && !isProductionLike();
   const source = sample ? demoOrders(today) : real;
   const movs = movements(source, sample ? [] : invoices, finance);
-  // Sans période demandée : le mois en cours si la déclaration URSSAF est mensuelle, sinon le trimestre
-  const period = resolvePeriod(params.periode ? params : { ...params, periode: finance.urssafPeriodicity === "mensuelle" ? "mois" : "trimestre" }, today);
-  return { today, sample, finance, period, orders: source, movs, inPeriod: movs.filter((m) => within(m, period.start, period.end)) };
+  // Sans période demandée : le mois en cours
+  const period = resolvePeriod(params.periode ? params : { ...params, periode: "mois" }, today);
+  // realOrders / quotes : travail en cours (jamais d'exemples)
+  return { today, sample, finance, period, orders: source, allOrders: orders, quotes, movs, inPeriod: movs.filter((m) => within(m, period.start, period.end)) };
 }
 
 // searchParams (string | string[]) → paramètres de période

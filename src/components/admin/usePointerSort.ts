@@ -2,12 +2,22 @@
 
 import { useRef, useState } from "react";
 
+export type SortDrag = {
+  from: number; // ligne tirée
+  to: number; // place où elle sera déposée
+  y: number; // position verticale du pointeur (écran)
+  offset: number; // distance entre le haut de la ligne et le pointeur au moment de la saisir
+  left: number;
+  width: number;
+};
+
 // Réordonner une liste en tirant une poignée (souris, doigt ou stylet), sans le glisser-déposer HTML :
 // fiable partout, y compris sur tactile. L'élément dont les enfants sont les lignes porte l'attribut data-sort-list.
-// Pendant le geste, `drag` donne la ligne tirée et la place où elle sera déposée (pour l'affichage).
+// Les positions des lignes sont relevées au début du geste : l'affichage peut se réorganiser pendant le geste
+// (emplacement en pointillé) sans fausser le calcul.
 export function usePointerSort(onMove: (from: number, to: number) => void) {
-  const [drag, setDrag] = useState<{ from: number; to: number } | null>(null);
-  const current = useRef<{ from: number; to: number } | null>(null);
+  const [drag, setDrag] = useState<SortDrag | null>(null);
+  const current = useRef<SortDrag | null>(null);
 
   const handle = (index: number) => ({
     onPointerDown: (e: React.PointerEvent) => {
@@ -16,11 +26,18 @@ export function usePointerSort(onMove: (from: number, to: number) => void) {
       if (!list) return;
       e.preventDefault();
       const items = [...list.children] as HTMLElement[];
+      const row = items[index]?.getBoundingClientRect();
+      if (!row) return;
+      // Milieux des autres lignes, en coordonnées de page
+      const mids = items.filter((_, i) => i !== index).map((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top + window.scrollY + r.height / 2;
+      });
+      const base = { from: index, offset: e.clientY - row.top, left: row.left, width: row.width };
       const update = (y: number) => {
-        // Nombre de lignes (hors celle tirée) dont le milieu est au-dessus du pointeur = nouvelle place
-        const to = items.filter((el, i) => i !== index && el.getBoundingClientRect().top + el.offsetHeight / 2 < y).length;
-        current.current = { from: index, to };
-        setDrag({ from: index, to });
+        const to = mids.filter((mid) => mid < y + window.scrollY).length;
+        current.current = { ...base, to, y };
+        setDrag(current.current);
       };
       update(e.clientY);
       const move = (ev: PointerEvent) => update(ev.clientY);
@@ -52,8 +69,7 @@ export function usePointerSort(onMove: (from: number, to: number) => void) {
   const rowClass = (index: number) => {
     if (!drag) return "";
     if (index === drag.from) return "opacity-40";
-    const above = drag.to > drag.from ? index === drag.to : index === drag.to;
-    if (!above) return "";
+    if (index !== drag.to) return "";
     return drag.to > drag.from ? "shadow-[inset_0_-3px_0_var(--accent)]" : "shadow-[inset_0_3px_0_var(--accent)]";
   };
 
