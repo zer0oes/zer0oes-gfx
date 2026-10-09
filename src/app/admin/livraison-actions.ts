@@ -256,7 +256,8 @@ export async function removeFinalAssetAction(formData: FormData) {
   const asset = item?.finalAssets?.[index];
   if (!order || !item || !asset) back(orderId, { error: "Fichier introuvable." });
   if (deliveryLocked(order, items)) back(orderId, { error: deliveryLockedMessage });
-  if (asset.path && item.accessedFinalAssets?.includes(asset.path)) back(orderId, { error: "Ce fichier a déjà été téléchargé par le client : il ne peut plus être retiré." });
+  if (order.status === "terminee") back(orderId, { error: "La commande est terminée : ses fichiers ne peuvent plus être retirés." });
+  if (item.approvedAt && asset.path && item.accessedFinalAssets?.includes(asset.path)) back(orderId, { error: "Ce fichier a déjà été téléchargé par le client : il ne peut plus être retiré." });
   await store.updateDeliverable(id, { finalAssets: item.finalAssets!.filter((_, i) => i !== index) });
   // Le même fichier peut servir d'aperçu : on ne le supprime du stockage que s'il n'est plus utilisé
   if (asset.path && asset.path !== item.previewPath && asset.path !== item.storagePath && !item.finalAssets!.some((a, i) => i !== index && a.path === asset.path)) await removeFromBucket(asset.path);
