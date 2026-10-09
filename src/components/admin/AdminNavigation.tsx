@@ -10,6 +10,7 @@ const nav: { href: string; label: string; icon: MaterialIconName }[] = [
   { href: "/admin/devis", label: "Devis", icon: "shopping_bag" },
   { href: "/admin/commandes", label: "Commandes", icon: "shopping_bag" },
   { href: "/admin/statistiques", label: "Statistiques", icon: "assessment" },
+  { href: "/admin/laboratoire", label: "Laboratoire", icon: "science" },
   { href: "/admin/accueil", label: "Page d'accueil", icon: "home" },
   { href: "/admin/portfolio", label: "Portfolio", icon: "collections" },
   { href: "/admin/offres", label: "Offres et réglages", icon: "tune" },
@@ -59,7 +60,7 @@ export function AdminNavigation({ collapsed = false, initialPendingOrders = 0, i
         const count = item.href === "/admin/devis" ? pendingQuotes : item.href === "/admin/commandes" ? pendingOrders : 0;
         return (
           <Fragment key={item.href}>
-          {item.href === "/admin/accueil" && <div role="separator" className="my-2 shrink-0 border-l border-border md:border-l-0 md:border-t" />}
+          {(item.href === "/admin/laboratoire" || item.href === "/admin/accueil") && <div role="separator" className="my-2 shrink-0 border-l border-border md:border-l-0 md:border-t" />}
           <Link href={item.href} aria-current={active ? "page" : undefined} title={collapsed ? item.label : undefined}
             style={{ position: "relative" }}
             className={`flex shrink-0 items-center whitespace-nowrap rounded-lg text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent ${collapsed ? "mx-2 size-11 justify-center p-0 md:mx-auto" : "mx-2 gap-3 px-3 py-2.5 md:mx-3"} ${active ? "is-active bg-accent/25 font-medium text-accent ring-1 ring-inset ring-accent/40" : "text-muted hover:bg-surface-2 hover:text-foreground"}`}>

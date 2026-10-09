@@ -1,8 +1,63 @@
-export type MaterialIconName = "dashboard" | "assessment" | "shopping_bag" | "tune" | "home" | "collections" | "open_in_new" | "logout" | "chevron_left" | "chevron_right" | "person" | "gavel";
+export type MaterialIconName =
+  | "add"
+  | "alarm"
+  | "align_horizontal_center"
+  | "align_vertical_center"
+  | "arrow_back"
+  | "arrow_downward"
+  | "arrow_forward"
+  | "arrow_upward"
+  | "assessment"
+  | "category"
+  | "chat_bubble_outline"
+  | "chevron_left"
+  | "chevron_right"
+  | "close"
+  | "collections"
+  | "content_copy"
+  | "create_new_folder"
+  | "dashboard"
+  | "delete"
+  | "diamond"
+  | "drag_indicator"
+  | "euro"
+  | "expand_more"
+  | "favorite_border"
+  | "folder"
+  | "fullscreen"
+  | "gavel"
+  | "grid_on"
+  | "group_add"
+  | "home"
+  | "image"
+  | "layers"
+  | "lock"
+  | "lock_open"
+  | "logout"
+  | "movie"
+  | "notifications_active"
+  | "open_in_new"
+  | "person"
+  | "redo"
+  | "refresh"
+  | "restart_alt"
+  | "science"
+  | "shopping_bag"
+  | "shopping_cart"
+  | "star_border"
+  | "title"
+  | "tune"
+  | "undo"
+  | "view_sidebar"
+  | "visibility"
+  | "visibility_off"
+  | "volunteer_activism"
+  | "widgets";
 
 // SVG Material Icons officiels, servis localement et teintés avec la couleur du lien.
-export function MaterialIcon({ name }: { name: MaterialIconName }) {
+// className : taille (size-5 par défaut) ou autres classes
+export function MaterialIcon({ name, className = "size-5" }: { name: MaterialIconName; className?: string }) {
   const mask = `url(/icons/material/${name}.svg)`;
-  return <span aria-hidden="true" className="inline-block size-5 shrink-0 bg-current"
+  return <span aria-hidden="true" className={`inline-block shrink-0 bg-current ${className}`}
     style={{ maskImage: mask, WebkitMaskImage: mask, maskSize: "contain", maskRepeat: "no-repeat", maskPosition: "center" }} />;
 }
