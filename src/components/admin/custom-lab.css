@@ -14,7 +14,8 @@
 .cl-platform-switch img { width: 94px; height: 24px; object-fit: contain; }
 .cl-metadata { border-bottom: 1px solid var(--cl-line); padding-bottom: 14px; margin-bottom: 18px; font-size: 12px; color: var(--cl-muted); }
 .cl-metadata summary { cursor: pointer; }
-.cl-metadata > div { display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; }
+.cl-metadata > div { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; padding-top: 12px; }
+.cl-metadata > div > label { width: 240px; }
 .cl-root label { display: grid; gap: 7px; font-size: 11px; color: #adb3c1; }
 .cl-root input:not([type=checkbox]):not([type=range]):not([type=color]), .cl-root select, .cl-root .cl-advanced textarea { width: 100%; border: 1px solid var(--cl-line); border-radius: 5px; padding: 9px 10px; background: #0b0d13; color: #e3e5ec; font-size: 12px; }
 .cl-root input:focus, .cl-root select:focus, .cl-root textarea:focus { outline: 1px solid var(--cl-accent); outline-offset: -1px; }
