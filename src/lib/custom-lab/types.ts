@@ -1,4 +1,5 @@
 import type { Platform } from "./platformEvents";
+import type { OverlayData } from "./overlay";
 
 export interface FieldDefinition {
   type: string;
@@ -22,7 +23,9 @@ export type LabVariant = {
 export type LabContent = {
   name: string;
   project: string;
-  kind: "widget" | "alertbox";
+  kind: "widget" | "alertbox" | "overlay";
+  // overlay : scène composée de calques (les variantes restent présentes mais ne servent pas)
+  overlay?: OverlayData;
   variants: Record<Platform, LabVariant>;
 };
 export type LabDocument = LabContent & {

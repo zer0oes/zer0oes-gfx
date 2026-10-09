@@ -13,7 +13,7 @@ export async function createLabAction(form: FormData) {
   await requireAdmin();
   let id: string;
   try {
-    const document = await saveLabDocument(newLabContent(form.get("kind") === "alertbox" ? "alertbox" : "widget"));
+    const document = await saveLabDocument(newLabContent(form.get("kind") === "alertbox" ? "alertbox" : form.get("kind") === "overlay" ? "overlay" : "widget"));
     id = document.id;
   } catch (error) {
     redirect(`/admin/laboratoire?error=${error instanceof LabStorageError && error.reason === "setup" ? "setup" : "create"}`);

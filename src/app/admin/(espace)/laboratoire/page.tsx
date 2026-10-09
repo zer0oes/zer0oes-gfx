@@ -9,7 +9,7 @@ import { ConfirmDelete, Drawer, DrawerButton } from "@/components/admin/Drawer";
 export const metadata = { title: "Laboratoire" };
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
-const kinds = { widget: { label: "Widget", tone: "border-violet-400/40 bg-violet-400/10 text-violet-300" }, alertbox: { label: "Pack d’alertes", tone: "border-pink-400/40 bg-pink-400/10 text-pink-300" } } as const;
+const kinds = { widget: { label: "Widget", tone: "border-violet-400/40 bg-violet-400/10 text-violet-300" }, alertbox: { label: "Pack d’alertes", tone: "border-pink-400/40 bg-pink-400/10 text-pink-300" }, overlay: { label: "Overlay", tone: "border-cyan-400/40 bg-cyan-400/10 text-cyan-300" } } as const;
 const errorMessages: Record<string, string> = {
   setup: "Le Laboratoire n’est pas encore initialisé dans la base : sa migration doit être appliquée.",
   create: "Création impossible pour le moment. Réessaie dans un instant.",
@@ -67,13 +67,13 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">Laboratoire</h1>
-          <p className="mt-2 text-sm text-muted">Crée et teste tes widgets et packs d’alertes pour StreamElements et Streamlabs.</p>
+          <p className="mt-2 text-sm text-muted">Compose tes overlays, crée et teste tes widgets et packs d’alertes pour StreamElements et Streamlabs.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {(["widget", "alertbox"] as const).map((kind) => (
+          {(["overlay", "widget", "alertbox"] as const).map((kind) => (
             <form key={kind} action={createLabAction}>
               <input type="hidden" name="kind" value={kind} />
-              <button disabled={Boolean(message)} className={small}>+ {kind === "widget" ? "Nouveau widget" : "Nouveau pack d’alertes"}</button>
+              <button disabled={Boolean(message)} className={small}>+ {kind === "widget" ? "Nouveau widget" : kind === "overlay" ? "Nouvel overlay" : "Nouveau pack d’alertes"}</button>
             </form>
           ))}
           <DrawerButton drawer="laboratoire-projet-nouveau" className={small}>+ Nouveau projet</DrawerButton>

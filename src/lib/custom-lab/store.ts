@@ -76,3 +76,14 @@ export async function saveLabDocument(raw: LabContent, existing?: { id: string; 
   queue = run.catch(() => {});
   return run;
 }
+
+// Créations complètes utilisables dans un overlay (widgets et packs d'alertes)
+export async function listLabSources(): Promise<LabDocument[]> {
+  if (supabaseConfigured()) {
+    const { data, error } = await database().from("custom_lab_documents").select("*").neq("content->>kind", "overlay").order("updated_at", { ascending: false });
+    if (error) throw new LabStorageError(error.code);
+    return data.map(fromRow);
+  }
+  if (!localStoreAllowed()) return [];
+  return (await localRead()).filter((doc) => doc.kind !== "overlay");
+}

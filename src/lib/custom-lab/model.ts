@@ -1,4 +1,5 @@
 import { alertboxAlerts } from "./alertbox";
+import { DEFAULT_OVERLAY, parseOverlay } from "./overlay";
 import type { LabCode, LabContent, LabVariant, FieldDefinitions } from "./types";
 
 export const LAB_MAX_BYTES = 2 * 1024 * 1024;
@@ -47,7 +48,7 @@ export function parseLabContent(raw: unknown): LabContent {
   const input = object(raw);
   if (typeof input.name !== "string" || !input.name.trim() || input.name.length > 120) throw new Error("Nom requis (120 caractères maximum).");
   if (typeof input.project !== "string" || !input.project.trim() || input.project.length > 120) throw new Error("Projet requis (120 caractères maximum).");
-  if (input.kind !== "widget" && input.kind !== "alertbox") throw new Error("Type de création invalide.");
+  if (input.kind !== "widget" && input.kind !== "alertbox" && input.kind !== "overlay") throw new Error("Type de création invalide.");
   const variants = object(input.variants);
   const parsed = Object.fromEntries(LAB_PLATFORMS.map((platform) => {
     const variant = object(variants[platform]);
@@ -59,7 +60,7 @@ export function parseLabContent(raw: unknown): LabContent {
     if (input.kind === "alertbox" && alertboxAlerts(platform).some(({ type }) => !alerts[type])) throw new Error("Chaque alerte doit posséder son code.");
     return [platform, { code: parseCode(variant.code), settings: variant.settings, alerts: Object.fromEntries(Object.entries(alerts).map(([key, code]) => [key, parseCode(code)])) }];
   })) as LabContent["variants"];
-  return { name: input.name.trim(), project: input.project.trim(), kind: input.kind, variants: parsed };
+  return { name: input.name.trim(), project: input.project.trim(), kind: input.kind, variants: parsed, ...(input.kind === "overlay" ? { overlay: parseOverlay(input.overlay) } : {}) };
 }
 
 export function newLabContent(kind: LabContent["kind"] = "widget"): LabContent {
@@ -75,5 +76,6 @@ export function newLabContent(kind: LabContent["kind"] = "widget"): LabContent {
     settings: '{}',
     alerts: Object.fromEntries(alertboxAlerts(platform).map(({ type }) => [type, { ...code, html: '<div id="alert">{name}</div>', js: '' }])),
   });
-  return { name: kind === "widget" ? "Nouveau widget" : "Nouveau pack d’alertes", project: "Bibliothèque", kind, variants: { streamelements: variant("streamelements"), streamlabs: variant("streamlabs") } };
+  const name = kind === "widget" ? "Nouveau widget" : kind === "overlay" ? "Nouvel overlay" : "Nouveau pack d’alertes";
+  return { name, project: "Bibliothèque", kind, variants: { streamelements: variant("streamelements"), streamlabs: variant("streamlabs") }, ...(kind === "overlay" ? { overlay: { ...DEFAULT_OVERLAY, items: [] } } : {}) };
 }
