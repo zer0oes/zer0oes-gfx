@@ -14,6 +14,7 @@ import { CustomLabPlatformSwitch } from "./CustomLabCodePanel";
 import { CustomLabMedia, openLabMedia } from "./CustomLabMedia";
 import { CustomLabSimulator } from "./CustomLabSimulator";
 import { usePointerSort } from "./usePointerSort";
+import { shift, SortPreview } from "./SortableRows";
 import "./custom-lab.css";
 import { MaterialIcon, type MaterialIconName } from "./MaterialIcon";
 import { CustomLabWidgetSettings } from "./CustomLabWidgetSettings";
@@ -389,6 +390,9 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
     const n = order.length;
     setData((d) => ({ ...d, items: d.items.map((it) => ({ ...it, z: n - order.findIndex((o) => o.id === it.id) })) }));
   });
+  // Même glissement que les autres listes de l'admin : les lignes s'écartent, un emplacement en pointillé marque le dépôt
+  const layerList = useRef<HTMLUListElement>(null);
+  useEffect(() => shift(layerList.current, sort.drag), [sort.drag]);
 
   const widgetName = (wid: string) => byId.get(wid)?.name;
   const p = current?.props ?? {};
@@ -487,12 +491,14 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
           </div>
 
           {panel === "layers" ? (
-            <ul data-sort-list className="mt-4 space-y-1.5">
+            <>
+            <ul ref={layerList} data-sort-list className="mt-3">
               {layers.map((item, i) => {
                 const handle = sort.handle(i);
                 return (
-                  <li key={item.id} onPointerEnter={() => setHovered(item.id)} onPointerLeave={() => setHovered((h) => (h === item.id ? null : h))} className={`flex items-center gap-2 rounded-lg border px-2 py-2 text-sm ${selected === item.id ? "border-[var(--cl-accent)] bg-[#ac8bfa1f]" : hovered === item.id ? "border-[var(--cl-accent)]/60 bg-white/5" : "border-[var(--cl-line)] bg-[#151720]"} ${item.hidden ? "opacity-60" : ""} ${sort.drag?.from === i ? "opacity-40" : ""}`}>
-                    <span {...handle} role="button" tabIndex={0} aria-label={`Déplacer le calque ${itemLabel(item, widgetName)}`} className="inline-flex cursor-grab text-[var(--cl-muted)]"><MaterialIcon name="drag_indicator" className="size-4" /></span>
+                  <li key={item.id} aria-label={itemLabel(item, widgetName)} onPointerEnter={() => setHovered(item.id)} onPointerLeave={() => setHovered((h) => (h === item.id ? null : h))} className="py-[3px]">
+                    <div className={`flex items-center gap-2 rounded-lg border px-2 py-2 text-sm ${selected === item.id ? "border-[var(--cl-accent)] bg-[#ac8bfa1f]" : hovered === item.id ? "border-[var(--cl-accent)]/60 bg-white/5" : "border-[var(--cl-line)] bg-[#151720]"} ${item.hidden ? "opacity-60" : ""}`}>
+                    <span {...handle} role="button" tabIndex={0} aria-label={`Déplacer le calque ${itemLabel(item, widgetName)}`} title="Glisser pour changer l’ordre d’affichage · ↑/↓ au clavier" className="inline-flex size-7 shrink-0 cursor-grab items-center justify-center rounded text-[var(--cl-muted)] hover:bg-[#ac8bfa1f] hover:text-[var(--cl-accent)] active:cursor-grabbing"><MaterialIcon name="drag_indicator" className="size-5" /></span>
                     <span className="grid size-7 shrink-0 place-items-center rounded-md bg-white/5 text-[var(--cl-accent)]" title={ITEM_LABELS[item.type]}><MaterialIcon name={TYPE_ICONS[item.type]} className="size-4" /></span>
                     <button type="button" onClick={() => { setSelected(item.id); setPanel("props"); }} className="grid min-w-0 flex-1 text-left leading-tight">
                       <span className="truncate font-medium text-[#e3e5ec]">{itemLabel(item, widgetName)}</span>
@@ -500,11 +506,14 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
                     </button>
                     <button type="button" onClick={() => updateItem(item.id, { hidden: !item.hidden })} title={item.hidden ? "Afficher" : "Masquer"} aria-label={item.hidden ? "Afficher le calque" : "Masquer le calque"} className={`inline-flex ${item.hidden ? "text-[var(--cl-muted)]" : ""}`}><MaterialIcon name={item.hidden ? "visibility_off" : "visibility"} className="size-4" /></button>
                     <button type="button" onClick={() => updateItem(item.id, { locked: !item.locked })} title={item.locked ? "Déverrouiller" : "Verrouiller"} aria-label={item.locked ? "Déverrouiller le calque" : "Verrouiller le calque"} className={`inline-flex ${item.locked ? "text-[var(--cl-accent)]" : "text-[var(--cl-muted)]"}`}><MaterialIcon name={item.locked ? "lock" : "lock_open"} className="size-4" /></button>
+                    </div>
                   </li>
                 );
               })}
-              {!data.items.length && <p className="cl-field-hint">Aucun calque : ajoute un texte, une image ou un widget.</p>}
             </ul>
+            {sort.drag && <SortPreview drag={sort.drag} />}
+            {!data.items.length && <p className="cl-field-hint mt-4">Aucun calque : ajoute un texte, une image ou un widget.</p>}
+            </>
           ) : !current ? (
             <p className="cl-field-hint mt-4">Sélectionne un calque dans la scène ou dans la liste des calques.</p>
           ) : (
