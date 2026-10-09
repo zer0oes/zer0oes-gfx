@@ -19,6 +19,7 @@ import { normalizeCode, validPromotion } from "@/lib/promotions";
 import { includedOverlays, validOverlaySelection } from "@/lib/brief-overlays";
 import { productBriefFields } from "@/lib/product-brief";
 import { recordQuoteRequest } from "@/lib/project-quotes";
+import { briefDeliveryAnswers, briefDeliveryNeeds } from "@/lib/brief-delivery";
 
 export type FormState = { ok: boolean; message: string } | null;
 
@@ -226,6 +227,7 @@ async function briefForm(
   const locale = formLocale(formData);
   const editingBrief = formData.get("editBrief") === "1";
   let productFields: Record<string, string> = {};
+  let deliveryAnswers: Record<string, string> = {};
   try {
     const store = getStore();
     const order = sessionId ? await store.getOrderBySession(sessionId) : null;
@@ -251,7 +253,12 @@ async function briefForm(
       const count = includedOverlays(pack);
       if (!pack || count === null) return { ok: false, message: locale === "en" ? "Unable to verify your package. Please refresh or contact me." : "Impossible de vérifier ton pack. Actualise la page ou contacte-moi." };
       if (!validOverlaySelection(formData.getAll("overlays"), count)) return { ok: false, message: locale === "en" ? `Choose exactly ${count} different overlays included in your package.` : `Choisis exactement ${count} overlays différents, inclus dans ton pack.` };
+      deliveryTemplate ??= pack.deliverables;
     }
+    // Plateforme des widgets / alertes et livraison des overlays, selon le contenu de la commande
+    const answers = briefDeliveryAnswers((name) => field(formData, name, 100) || undefined, briefDeliveryNeeds(deliveryTemplate ?? [], formData.getAll("overlays").length || null));
+    if (!answers) return { ok: false, message: locale === "en" ? "Choose the platform for your widgets and alerts, and how you’d like to receive your overlays." : "Choisis la plateforme de tes widgets et alertes, et la façon de recevoir tes overlays." };
+    deliveryAnswers = answers;
   } catch (e) {
     console.error(e);
     return { ok: false, message: locale === "en" ? "Unable to verify your package. Please try again." : "Impossible de vérifier ton pack. Réessaie." };
@@ -277,6 +284,7 @@ async function briefForm(
     Références: field(formData, "references"),
     "Logo existant": field(formData, "logoLink", 1000),
     "Overlays choisis": checked(formData, "overlays"),
+    ...deliveryAnswers,
     "Éléments à inclure": field(formData, "elements"),
     "Date souhaitée": field(formData, "deadline", 100),
     Remarques: field(formData, "notes"),

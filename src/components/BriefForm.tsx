@@ -7,6 +7,8 @@ import { sendBrief } from "@/app/actions";
 import { href, type Locale } from "@/lib/i18n";
 import { overlayTypes } from "@/lib/pricing";
 import { productBriefHint } from "@/lib/option-products";
+import { BRIEF_OVERLAY_DELIVERY_KEY, BRIEF_PLATFORM_KEY, briefDeliveryNeeds } from "@/lib/brief-delivery";
+import { BriefDeliveryQuestions } from "./BriefDeliveryQuestions";
 import { useLocale } from "./I18nProvider";
 import { DatePicker } from "./DatePicker";
 import { Field, FormStatus, inputClass } from "./ui";
@@ -84,7 +86,9 @@ export function BriefForm({
   optionalProducts = [],
   fullWidthSections = false,
   requiredFields,
+  productLines,
 }: {
+  productLines?: string[];
   optionalProducts?: string[];
   fullWidthSections?: boolean;
   requiredFields?: string[];
@@ -114,8 +118,12 @@ export function BriefForm({
     ...quoteBriefFields.filter((f) => isRequired(f.id) && !(values?.[f.key] || (f.id === "email" ? email : f.id === "platform" ? "Twitch" : ""))).map((f) => f.label),
     ...purchasedProducts.filter((line, index) => !optionalProducts.includes(line) && !values?.[`Création ${index + 1} : ${line}`]),
   ]);
+  // Questions techniques selon le contenu de la commande (widgets / alertes, overlays)
+  const needs = briefDeliveryNeeds(productLines ?? purchasedProducts, overlayCount);
+  const [streamTool, setStreamTool] = useState(values?.[BRIEF_PLATFORM_KEY] ?? "");
+  const [overlayDelivery, setOverlayDelivery] = useState(values?.[BRIEF_OVERLAY_DELIVERY_KEY] ?? "");
   const remaining = overlayCount === null ? 0 : overlayCount - overlays.length;
-  const missing = [...missingFields, ...(remaining > 0 ? [locale === "en" ? `${remaining} overlay${remaining > 1 ? "s" : ""} to choose` : `${remaining} overlay${remaining > 1 ? "s" : ""} à choisir`] : [])];
+  const missing = [...missingFields, ...(needs.platform && !streamTool ? [locale === "en" ? "platform for widgets and alerts" : "plateforme des widgets et alertes"] : []), ...(needs.overlays && !overlayDelivery ? [locale === "en" ? "overlay delivery" : "livraison des overlays"] : []), ...(remaining > 0 ? [locale === "en" ? `${remaining} overlay${remaining > 1 ? "s" : ""} to choose` : `${remaining} overlay${remaining > 1 ? "s" : ""} à choisir`] : [])];
 
   useEffect(() => {
     if (!state?.ok || !portalUrl) return;
@@ -182,6 +190,7 @@ export function BriefForm({
           <input name="logoLink" defaultValue={values?.["Logo existant"]} placeholder="https://…" className={inputClass} required={isRequired("logoLink")} />
         </Field>
       )}
+      <BriefDeliveryQuestions needs={needs} en={locale === "en"} streamTool={streamTool} overlayDelivery={overlayDelivery} onStreamTool={setStreamTool} onOverlayDelivery={setOverlayDelivery} />
       <Field label={tx.universe.replace(" *", "") + (isRequired("universe") ? " *" : "")} hint={tx.universeHint}>
         <textarea name="universe" defaultValue={values?.["Univers / ambiance"]} rows={4} className={inputClass} required={isRequired("universe")} />
       </Field>

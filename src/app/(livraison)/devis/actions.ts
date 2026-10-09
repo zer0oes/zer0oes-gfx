@@ -38,7 +38,7 @@ export async function savePaidQuoteBrief(_state: { error: string } | null, data:
   if (!order || !q || q.orderId !== order.id || order.amountPaid <= 0) return { error: "Le paiement doit être confirmé avant l’envoi du brief." };
   if (q.briefCompletedAt) redirect(`/commande/${token}`);
   const brief = parseQuoteBrief(data, q.deliverables, q.optionalBriefDeliverables, q.requiredBriefFields ?? ["email", "channel", "universe"]);
-  if (!brief) return { error: "Complète ton univers et chaque création." };
+  if (!brief) return { error: "Complète ton univers, chaque création et, selon ta commande, la plateforme de tes widgets et alertes et la livraison de tes overlays." };
   const now = new Date().toISOString();
   await store.updateOrder(order.id, { brief: { ...order.brief, ...brief, "E-mail": order.customerEmail, Plateforme: String(data.get("platform") ?? "").slice(0, 100), "Éléments à inclure": String(data.get("elements") ?? "").slice(0, 5000) }, briefReceivedAt: now, status: "brief_recu" });
   await ensureDeliveryPlan({ ...order, brief });

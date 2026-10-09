@@ -189,6 +189,7 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
             initialBrief={editBrief ? order?.brief ?? {} : undefined}
             revisionsUsed={revisionsUsed}
             purchasedProducts={view?.packId === "options" || view?.packId.startsWith("option:") ? view.deliveryTemplate : undefined}
+            productLines={view?.deliveryTemplate}
           />
           </>}
         </div>
