@@ -15,6 +15,7 @@ import {
 } from "@/lib/dashboard";
 import { loadDashboard, periodParams } from "@/lib/dashboard-data";
 import { formatPrice } from "@/lib/pricing";
+import { WorkInProgress } from "@/components/admin/WorkInProgress";
 
 export const metadata: Metadata = { title: "Tableau de bord" };
 
@@ -38,7 +39,7 @@ function Kpi({ label, value, hint, tone }: { label: string; value: string; hint?
 }
 
 export default async function DashboardPage({ searchParams }: PageProps<"/admin">) {
-  const { today, sample, finance, period, orders, movs, inPeriod } = await loadDashboard(periodParams(await searchParams));
+  const { today, sample, finance, period, orders, allOrders, quotes, movs, inPeriod } = await loadDashboard(periodParams(await searchParams));
   const t = totals(inPeriod, finance);
   const points = series(movs, period, finance, today);
   const decls = declarations(movs, finance, period, today);
@@ -78,7 +79,10 @@ export default async function DashboardPage({ searchParams }: PageProps<"/admin"
         </p>
       )}
 
-      <nav aria-label="Période" className="mt-6 flex flex-wrap items-center gap-2">
+      <WorkInProgress orders={allOrders} quotes={quotes} />
+
+      <h2 className="mt-10 font-display text-xl font-bold">Statistiques</h2>
+      <nav aria-label="Période" className="mt-4 flex flex-wrap items-center gap-2">
         {periodKinds.map((k) => chip(k.id, k.label))}
       </nav>
 
