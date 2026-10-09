@@ -278,7 +278,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
             <button type="submit" className={save}>Enregistrer les textes</button>
           </form>
           </details>
-          <Intro>Clique sur une offre pour la modifier. Glisse les lignes par leur poignée pour changer l&apos;ordre du site.</Intro>
+          <Intro>Clique sur une offre pour la modifier. L&apos;ordre ici est celui du site.</Intro>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="px-4 py-3">#</th><th className="px-4 py-3">Offre</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th><th className="px-4 py-3">Ordre</th></tr></thead>
@@ -341,7 +341,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
       {tab === "options" && (
         <section className="mt-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="max-w-2xl text-sm text-muted">Créations à la carte de la page Offres. Clique sur une ligne pour modifier tout ce qui s&apos;affiche sur sa carte. L&apos;ordre ici est celui du site.</p>
+            <p className="max-w-2xl text-sm text-muted">Créations à la carte de la page Offres. Clique sur une ligne pour modifier tout ce qui s&apos;affiche sur sa carte. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
             <DrawerButton drawer="option-nouvelle" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouvelle option</DrawerButton>
           </div>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
@@ -352,7 +352,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                   const category = optionCategory(o);
                   return (
                     <DrawerRow key={o.id} sortId={o.id} drawer={`option-${o.id}`} label={`Modifier ${o.name}`} className={openOption === o.id ? "bg-accent/10" : ""}>
-                      <td className="px-2 py-3"><SortHandle label={o.name} /></td>
+                      <td className="px-2 py-3"><SortHandle id={o.id} label={o.name} /></td>
                       <td className="px-4 py-3"><span className="font-semibold">{o.name}</span><p className="mt-1 line-clamp-1 max-w-md text-xs text-muted">{optionContentFor(o, translationContent, "fr").description}</p></td>
                       <td className="px-4 py-3">{cardMates(o).length > 0 ? <span title={`Avec : ${cardMates(o).map((m) => m.name).join(", ")}`} className="whitespace-nowrap font-medium">{optionContentFor(o, translationContent, "fr").groupName || optionProductTitle(cardMates(o)[0].name).main}</span> : <span className="whitespace-nowrap text-muted">{optionProductTitle(o.name).main}</span>}</td>
                       <td className="px-4 py-3"><span style={{ color: optionThemeColors[category], borderColor: `color-mix(in srgb, ${optionThemeColors[category]} 45%, transparent)`, background: `color-mix(in srgb, ${optionThemeColors[category]} 10%, transparent)` }} className="inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium">{optionCategories.find((c) => c.id === category)?.label}</span></td>
