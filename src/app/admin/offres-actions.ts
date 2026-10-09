@@ -244,11 +244,11 @@ export async function saveOptionAction(formData: FormData) {
     name,
     price,
     priceFrom: formData.get("priceFrom") === "on" || undefined,
-    unit: text(formData, "unit", 30) || undefined,
+    unit: undefined, // champ retiré de l'admin : plus d'unité après le prix
     category: optionCategories.find((c) => c.id === formData.get("category"))?.id as OptionCategory | undefined,
   };
   await store.saveOptions(options.map((o) => (o.id === id ? next : o)));
-  await saveAdminTranslations(formData, `option:${id}`, ["name", "unit"]);
+  await saveAdminTranslations(formData, `option:${id}`, ["name"]);
   const content = optionContentFromForm(await store.getHomeContent(), id, formData);
   await store.saveHomeContent(withGroupName(withGrouping(content, options, id, text(formData, "groupWith", 60)), next, formData));
   done(optionTab(id));

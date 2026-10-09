@@ -326,7 +326,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                       <td className="px-4 py-3"><span className="font-semibold">{o.name}</span><p className="mt-1 line-clamp-1 max-w-md text-xs text-muted">{optionContentFor(o, translationContent, "fr").description}</p></td>
                       <td className="px-4 py-3">{cardMates(o).length > 0 ? <span title={`Avec : ${cardMates(o).map((m) => m.name).join(", ")}`} className="whitespace-nowrap font-medium">{optionContentFor(o, translationContent, "fr").groupName || optionProductTitle(cardMates(o)[0].name).main}</span> : <span className="whitespace-nowrap text-muted">{optionProductTitle(o.name).main}</span>}</td>
                       <td className="px-4 py-3"><span style={{ color: optionThemeColors[category], borderColor: `color-mix(in srgb, ${optionThemeColors[category]} 45%, transparent)`, background: `color-mix(in srgb, ${optionThemeColors[category]} 10%, transparent)` }} className="inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium">{optionCategories.find((c) => c.id === category)?.label}</span></td>
-                      <td className="whitespace-nowrap px-4 py-3">{o.priceFrom ? "À partir de " : ""}{euro(o.price)}{o.unit ? ` / ${o.unit}` : ""}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{o.priceFrom ? "À partir de " : ""}{euro(o.price)}</td>
                       <td className="px-4 py-3 text-muted">{o.priceFrom ? "Sur devis" : "En ligne"}</td>
                     </DrawerRow>
                   );
@@ -349,7 +349,6 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                       <Field label="Catégorie"><select name="category" defaultValue={optionCategory(o)} className={input}>{optionCategories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
                       <Field label="Prix (€)"><input name="price" defaultValue={euros(o.price)} inputMode="decimal" required className={input} /></Field>
                     </div>
-                    <Field label="Unité (facultative)" hint="Ex. « visuel »."><TranslationInput translationKey={`translation:option:${o.id}:unit`} name="unit" defaultValue={o.unit} className={input} /></Field>
                     <label className="flex items-start gap-2 text-sm"><input type="checkbox" name="priceFrom" defaultChecked={o.priceFrom} className="mt-1 accent-[var(--accent)]" /> Prix « à partir de » : sur devis (bouton « Demander un devis » au lieu d&apos;« Ajouter »)</label>
                     <Field label="Description sur la carte"><TranslationInput multiline translationKey={`translation:option-description:${o.id}`} englishDefault={english.description} name="description" defaultValue={content.description} rows={3} maxLength={1200} className={input} /></Field>
                     <Field label="Ce que le client reçoit" hint="Une ligne par élément livré. Vide : la liste « Tu reçois » n'apparaît pas sur la carte."><TranslationInput multiline translationKey={`translation:option-files:${o.id}`} englishDefault={english.files.join("\n")} name="files" defaultValue={content.files.join("\n")} rows={4} maxLength={1200} className={input} /></Field>
