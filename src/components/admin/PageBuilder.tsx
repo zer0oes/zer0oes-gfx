@@ -135,13 +135,11 @@ function WorkPicker({ works, value, onChange, label, emotesOnly }: { works: Pick
 function BlockEditor({
   block,
   index,
-  count,
   works,
   lang,
   open,
   onToggle,
   onChange,
-  onMove,
   onDuplicate,
   onRemove,
   sortClass,
@@ -149,13 +147,11 @@ function BlockEditor({
 }: {
   block: Block;
   index: number;
-  count: number;
   works: PickerWork[];
   lang: Lang;
   open: boolean;
   onToggle: () => void;
   onChange: (b: Block) => void;
-  onMove: (to: number) => void;
   onDuplicate: () => void;
   onRemove: () => void;
   sortClass: string;
@@ -184,8 +180,6 @@ function BlockEditor({
           </span>
         </button>
         <div className="flex shrink-0 gap-1">
-          <button type="button" className={iconButton} disabled={index === 0} onClick={() => onMove(index - 1)} aria-label="Monter le bloc">↑</button>
-          <button type="button" className={iconButton} disabled={index === count - 1} onClick={() => onMove(index + 1)} aria-label="Descendre le bloc">↓</button>
           <button type="button" className={iconButton} onClick={onDuplicate} aria-label="Dupliquer le bloc" title="Dupliquer">⧉</button>
           <button type="button" className={`${iconButton} hover:!border-red-400 hover:!text-red-300`} onClick={onRemove} aria-label="Supprimer le bloc" title="Supprimer">✕</button>
         </div>
@@ -286,6 +280,8 @@ export function PageBuilder({ streamerId, streamerName, initial, custom, works }
   };
   const setBlocks = (blocks: Block[]) => update({ ...page, blocks });
   const sort = usePointerSort((from, to) => setBlocks(moveItem(page.blocks, from, to)));
+  // Ordre affiché : pendant le geste, le bloc tiré prend déjà sa future place
+  const order = sort.drag ? moveItem(page.blocks.map((_, i) => i), sort.drag.from, sort.drag.to) : page.blocks.map((_, i) => i);
 
   // Aperçu : la page en cours est envoyée au cadre à chaque changement
   const send = useCallback(() => {
@@ -370,18 +366,20 @@ export function PageBuilder({ streamerId, streamerName, initial, custom, works }
         </section>
 
         <ol data-sort-list className="space-y-3">
-          {page.blocks.map((b, i) => (
+          {order.map((i) => {
+            const b = page.blocks[i];
+            // Pendant le geste : emplacement en pointillé là où le bloc sera déposé
+            if (sort.drag?.from === i) return <li key={b.id} aria-hidden className="h-[4.5rem] rounded-2xl border-2 border-dashed border-accent bg-accent/5" />;
+            return (
             <BlockEditor
               key={b.id}
               block={b}
               index={i}
-              count={page.blocks.length}
               works={works}
               lang={lang}
               open={openBlock === b.id}
               onToggle={() => setOpenBlock((o) => (o === b.id ? null : b.id))}
               onChange={(nb) => setBlocks(page.blocks.map((x) => (x.id === b.id ? nb : x)))}
-              onMove={(to) => setBlocks(swap(page.blocks, i, to))}
               onDuplicate={() => {
                 const copy = { ...structuredClone(b), id: newId() };
                 setBlocks([...page.blocks.slice(0, i + 1), copy, ...page.blocks.slice(i + 1)]);
@@ -391,8 +389,25 @@ export function PageBuilder({ streamerId, streamerName, initial, custom, works }
               sortClass={sort.rowClass(i)}
               handle={sort.handle(i)}
             />
-          ))}
+            );
+          })}
         </ol>
+        {/* Bloc tiré, qui suit le pointeur */}
+        {sort.drag && page.blocks[sort.drag.from] && (
+          <div
+            aria-hidden
+            style={{ top: sort.drag.y - sort.drag.offset, left: sort.drag.left, width: sort.drag.width }}
+            className="pointer-events-none fixed z-50 flex items-center gap-3 rounded-2xl border border-accent bg-surface p-3 shadow-2xl"
+          >
+            <span className="inline-flex size-8 shrink-0 items-center justify-center text-accent">
+              <svg viewBox="0 0 24 24" className="size-5" fill="currentColor"><path d="M9 5h2v2H9V5zm4 0h2v2h-2V5zM9 11h2v2H9v-2zm4 0h2v2h-2v-2zM9 17h2v2H9v-2zm4 0h2v2h-2v-2z" /></svg>
+            </span>
+            <LayoutThumb id={page.blocks[sort.drag.from].layout} className="w-14 shrink-0" />
+            <span className="min-w-0 truncate font-semibold">
+              {(page.blocks[sort.drag.from].title?.fr || layouts[page.blocks[sort.drag.from].layout].label).split("\n").join(" ")}
+            </span>
+          </div>
+        )}
 
         <div className="rounded-2xl border border-dashed border-border p-4">
           {adding ? (
