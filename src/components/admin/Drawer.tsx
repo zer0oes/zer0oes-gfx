@@ -71,7 +71,8 @@ export function DrawerButton({ drawer, className, children }: { drawer: string; 
 }
 
 // Suppression confirmée dans une petite modale (le formulaire n'est envoyé qu'après « Supprimer »)
-export function ConfirmDelete({ action, id, label = "Supprimer", question = "Es-tu sûre de vouloir supprimer ?" }: { action: (form: FormData) => void | Promise<void>; id: string; label?: string; question?: string }) {
+// fields : champs cachés supplémentaires envoyés avec la suppression (ex. identifiant de la commande)
+export function ConfirmDelete({ action, id, label = "Supprimer", question = "Es-tu sûre de vouloir supprimer ?", fields = {} }: { action: (form: FormData) => void | Promise<void>; id: string; label?: string; question?: string; fields?: Record<string, string> }) {
   const dialog = useRef<HTMLDialogElement>(null);
   return (
     <>
@@ -83,6 +84,7 @@ export function ConfirmDelete({ action, id, label = "Supprimer", question = "Es-
         <form action={action} className="mt-6 flex justify-end gap-3">
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="confirm" value="on" />
+          {Object.entries(fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
           <button type="button" onClick={() => dialog.current?.close()} className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">Annuler</button>
           <button type="submit" className="rounded-full bg-red-500/90 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Supprimer</button>
         </form>

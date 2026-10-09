@@ -12,7 +12,7 @@ import { siteUrl } from "@/lib/site-url";
 import type { Deliverable, Order } from "@/lib/store";
 import { DeliveryUpload } from "./DeliveryUpload";
 import { AddDeliveryElement, ClientSpaceLinks } from "./DeliveryControls";
-import { DeliveryDrawer } from "./DeliveryDrawer";
+import { ConfirmDelete, Drawer, DrawerRow } from "./Drawer";
 import { deliveryState } from "@/lib/delivery-plan";
 import { DeliveryNotice } from "./DeliveryNotice";
 
@@ -63,47 +63,51 @@ export async function DeliverySection({ order, items, message }: { order: Order;
 
       <div className="mt-5 overflow-x-auto rounded-xl border border-border">
         <table className="w-full min-w-[620px] text-left text-sm">
-          <thead className="bg-background/50 text-xs text-muted"><tr>{["Livrable", "Aperçu", "Fichiers finaux", "Statut", "Action"].map((label) => <th key={label} scope="col" className="px-3 py-3 font-medium">{label}</th>)}</tr></thead>
+          <thead className="bg-background/50 text-xs text-muted"><tr>{["Livrable", "Aperçu", "Fichiers finaux", "Statut"].map((label) => <th key={label} scope="col" className="px-3 py-3 font-medium">{label}</th>)}</tr></thead>
           <tbody className="divide-y divide-border">
             {items.map((d) => {
               const ready = Boolean(d.previewPath || (!d.plannedKey && mediaKind(d.storagePath) === "image"));
               const finals = (d.finalAssets?.length ?? 0) + (d.storagePath || d.url ? 1 : 0);
               const status = deliveryState(order, d);
-              return <tr key={d.id}>
+              return <DrawerRow key={d.id} drawer={`livrable-${d.id}`} label={`Modifier ${d.label}`}>
                 <td className="px-3 py-3 font-medium">{status === "Téléchargé" ? <details><summary className="cursor-pointer">{d.label}</summary><ul className="mt-2 space-y-1 text-xs font-normal text-muted">{(d.finalAssets ?? []).map((asset, index) => <li key={index}>{asset.label} · Téléchargé</li>)}{(d.storagePath || d.url) && <li>{d.label} · Téléchargé</li>}</ul></details> : d.label}{correctionPending(d) && <span className="mt-1 block text-xs text-amber-300">Retour client à traiter</span>}<span className="mt-1 block text-xs font-normal text-muted">{d.clientNotes?.length ?? 0}/{itemRevisionLimit(order)} corrections utilisées</span></td>
                 <td className={`px-3 py-3 ${ready ? "text-emerald-300" : "text-muted"}`}>{ready ? "Prêt" : "À ajouter"}</td>
                 <td className="px-3 py-3">{finals ? `${finals} fichier(s) / lien(s)` : "Aucun"}</td>
                 <td className="px-3 py-3"><span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold ${statusStyles[status]}`}><span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />{status}</span></td>
-                <td className="px-3 py-3"><DeliveryDrawer label={d.label}>
-                  <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
-                    <h4 className="font-semibold">Aperçu client</h4>
-                    {ready && order.deliveryToken && <div className="rounded-lg border border-border bg-background p-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`/commande/${order.deliveryToken}/${d.id}/apercu`} alt={`Aperçu protégé de ${d.label}`} className="max-h-56 w-full object-contain" />
-                    </div>}
-                    {!ready && <p className="text-sm text-muted">Ajoute une image de présentation. Elle sera réduite et filigranée côté serveur.</p>}
-                    <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} />
-                    {d.previewPath && <form action={removeDeliverablePreviewAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-xs text-muted hover:text-red-300">Retirer l’aperçu</button></form>}
-                  </section>
-                  <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
-                    <h4 className="font-semibold">Fichiers définitifs</h4>
-                    <p className="text-xs text-muted">Privés jusqu’à validation du livrable et paiement intégral.</p>
-                    <ul className="space-y-2 text-sm">{d.storagePath && <li>✓ {d.label} — {formatBytes(d.sizeBytes)}</li>}{d.url && <li>✓ Lien d’import existant</li>}{(d.finalAssets ?? []).map((asset, i) => <li key={i}>✓ {asset.label} ({asset.url ? "lien d’import" : "fichier"})</li>)}</ul>
-                    <DeliveryUpload orderId={order.id} targetId={d.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} />
-                    <form action={addDeliveryLinkAction} className="space-y-3"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="targetId" value={d.id} /><input name="label" required placeholder="Nom du lien d’import" aria-label="Nom du lien d’import" className={input} /><input name="url" type="url" required placeholder="https://…" aria-label="Adresse du lien d’import" className={input} /><button className="rounded-full border border-border px-4 py-2 text-sm">Ajouter le lien d’import</button></form>
-                  </section>
-                  {!!d.clientNotes?.length && <section className="space-y-3"><h4 className="font-semibold">Retours du client</h4>{d.clientNotes.map((note, i) => <div key={i} className="rounded-lg border border-amber-400/30 p-3"><p className="text-xs text-muted">{dateFmt.format(new Date(note.at))}</p><p className="mt-1 whitespace-pre-wrap text-sm">{note.body}</p></div>)}</section>}
-                  <details className="border-t border-border pt-4"><summary className="cursor-pointer text-sm text-muted">Nom, type et retrait du livrable</summary><div className="mt-3 space-y-4">
-                    <form action={setDeliverableTypeAction} className="space-y-3"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><input name="label" defaultValue={d.label} required aria-label="Nom du livrable" className={input} /><select name="type" defaultValue={itemType(d)} aria-label="Type du livrable" className={input}>{deliverableTypes.map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}</select><button className="rounded-full border border-border px-4 py-2 text-sm">Enregistrer</button></form>
-                    <form action={deleteDeliverableAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-sm text-red-300">Retirer ce livrable</button></form>
-                  </div></details>
-                </DeliveryDrawer></td>
-              </tr>;
+              </DrawerRow>;
             })}
-            {!items.length && <tr><td colSpan={5} className="px-3 py-4 text-muted">Aucun livrable prévu.</td></tr>}
+            {!items.length && <tr><td colSpan={4} className="px-3 py-4 text-muted">Aucun livrable prévu.</td></tr>}
           </tbody>
         </table>
       </div>
+      {items.map((d) => {
+        const ready = Boolean(d.previewPath || (!d.plannedKey && mediaKind(d.storagePath) === "image"));
+        return <Drawer key={d.id} id={`livrable-${d.id}`} kicker="Livrable" title={d.label} footer={<><ConfirmDelete action={deleteDeliverableAction} id={d.id} fields={{ orderId: order.id }} label="Retirer ce livrable" question="Es-tu sûre de vouloir retirer ce livrable ?" /><button type="submit" form={`livrable-form-${d.id}`} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110">Enregistrer</button></>}>
+
+            <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
+              <h4 className="font-semibold">Aperçu client</h4>
+              {ready && order.deliveryToken && <div className="rounded-lg border border-border bg-background p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/commande/${order.deliveryToken}/${d.id}/apercu`} alt={`Aperçu protégé de ${d.label}`} className="max-h-56 w-full object-contain" />
+              </div>}
+              {!ready && <p className="text-sm text-muted">Ajoute une image de présentation. Elle sera réduite et filigranée côté serveur.</p>}
+              <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} />
+              {d.previewPath && <form action={removeDeliverablePreviewAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-xs text-muted hover:text-red-300">Retirer l’aperçu</button></form>}
+            </section>
+            <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
+              <h4 className="font-semibold">Fichiers définitifs</h4>
+              <p className="text-xs text-muted">Privés jusqu’à validation du livrable et paiement intégral.</p>
+              <ul className="space-y-2 text-sm">{d.storagePath && <li>✓ {d.label} — {formatBytes(d.sizeBytes)}</li>}{d.url && <li>✓ Lien d’import existant</li>}{(d.finalAssets ?? []).map((asset, i) => <li key={i}>✓ {asset.label} ({asset.url ? "lien d’import" : "fichier"})</li>)}</ul>
+              <DeliveryUpload orderId={order.id} targetId={d.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} />
+              <form action={addDeliveryLinkAction} className="space-y-3"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="targetId" value={d.id} /><input name="label" required placeholder="Nom du lien d’import" aria-label="Nom du lien d’import" className={input} /><input name="url" type="url" required placeholder="https://…" aria-label="Adresse du lien d’import" className={input} /><button className="rounded-full border border-border px-4 py-2 text-sm">Ajouter le lien d’import</button></form>
+            </section>
+            {!!d.clientNotes?.length && <section className="space-y-3"><h4 className="font-semibold">Retours du client</h4>{d.clientNotes.map((note, i) => <div key={i} className="rounded-lg border border-amber-400/30 p-3"><p className="text-xs text-muted">{dateFmt.format(new Date(note.at))}</p><p className="mt-1 whitespace-pre-wrap text-sm">{note.body}</p></div>)}</section>}
+            <section className="space-y-3 rounded-xl border border-border bg-background/40 p-4">
+              <h4 className="font-semibold">Nom et type</h4>
+              <form id={`livrable-form-${d.id}`} action={setDeliverableTypeAction} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><label className="text-xs text-muted">Nom affiché au client<input name="label" defaultValue={d.label} required className={`${input} mt-1`} /></label><label className="text-xs text-muted">Type<select name="type" defaultValue={itemType(d)} className={`${input} mt-1`}>{deliverableTypes.map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}</select></label></form>
+            </section>
+        </Drawer>;
+      })}
       <p className="mt-3 text-sm text-muted">{readyCount} aperçu{readyCount > 1 ? "s" : ""} prêt{readyCount > 1 ? "s" : ""} sur {items.length}</p>
       <AddDeliveryElement linkForm={<form action={addDeliveryLinkAction} className="space-y-3">
           <input type="hidden" name="orderId" value={order.id} />
