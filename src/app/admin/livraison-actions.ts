@@ -216,6 +216,8 @@ export async function removeDeliverablePreviewAction(formData: FormData) {
   const id = text(formData, "id", 60);
   const item = (await getStore().listDeliverables(orderId)).find((d) => d.id === id);
   if (!item) back(orderId, { error: "Élément introuvable." });
+  // Déjà téléchargé par le client : sa validation est définitive, l'aperçu ne peut plus être retiré
+  if (item.finalAccessedAt || item.accessedFinalAssets?.length) back(orderId, { error: "Ce livrable a déjà été téléchargé par le client : son aperçu ne peut plus être retiré." });
   await getStore().updateDeliverable(id, { previewPath: null, previewType: null, publishedAt: null });
   if (item.approvedAt) await getStore().setDeliverableApproval(item.id, false);
   back(orderId, { ok: "Aperçu retiré." });
