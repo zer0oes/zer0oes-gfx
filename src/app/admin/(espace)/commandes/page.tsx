@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ClickableRow } from "@/components/admin/ClickableRow";
-import { MaterialIcon } from "@/components/admin/MaterialIcon";
 import { OrdersBulkBar, SelectAllOrders } from "@/components/admin/OrdersBulk";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { parseSort, sortOrders, type SortKey } from "@/lib/order-sort";
@@ -112,7 +111,6 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
                       </th>
                     );
                   })}
-                  <th scope="col" className="px-4 py-3 font-medium">Voir</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -147,10 +145,6 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
                       <td className="px-4 py-3">
                         <StatusBadge status={o.status} />
                         {pendingInvoice.has(o.id) && <span className="ml-2 text-xs text-amber-300">facture en attente</span>}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <Link href={`/admin/commandes/${o.id}`} title="Ouvrir la commande" aria-label={`Voir la commande ${o.offerName} de ${o.customerEmail || "client inconnu"}`} className="inline-flex size-9 items-center justify-center rounded-full border border-border text-accent transition hover:border-accent hover:bg-accent/10"><MaterialIcon name="open_in_new" /></Link>
                       </td>
                     </ClickableRow>
                   );

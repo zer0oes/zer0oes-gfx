@@ -1,6 +1,5 @@
 ﻿import Link from "next/link";
 import { ClickableRow } from "@/components/admin/ClickableRow";
-import { MaterialIcon } from "@/components/admin/MaterialIcon";
 import { requireAdmin } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { quoteExpired, quoteLabels, type ProjectQuote } from "@/lib/quotes";
@@ -75,7 +74,6 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
                 </Link>
               </th>;
             })}
-            <th scope="col" className="px-4 py-3 font-medium">Voir</th>
           </tr></thead>
           <tbody className="divide-y divide-border">{quotes.map((q) => <ClickableRow key={q.id} href={`/admin/devis/${q.id}`}>
             <td className="whitespace-nowrap px-4 py-3 text-muted">{dateFmt.format(new Date(q.createdAt))}</td>
@@ -84,7 +82,6 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
             <td className="whitespace-nowrap px-4 py-3">{q.totalPrice > 0 ? formatPrice(q.totalPrice) : <span className="text-muted">À chiffrer</span>}</td>
             <td className="whitespace-nowrap px-4 py-3">{q.validUntil ? <><span>{new Date(`${q.validUntil}T12:00:00Z`).toLocaleDateString("fr-FR", { timeZone: "UTC" })}</span>{q.status === "propose" && quoteExpired(q) && <span className="ml-2 text-xs text-amber-300">Expiré</span>}</> : <span className="text-muted">—</span>}</td>
             <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${tones[q.status]}`}>{quoteLabels[q.status]}</span></td>
-            <td className="px-4 py-3"><Link href={`/admin/devis/${q.id}`} title="Ouvrir le devis" aria-label={`Voir le devis ${projectName(q)} de ${q.email}`} className="inline-flex size-9 items-center justify-center rounded-full border border-border text-accent transition hover:border-accent hover:bg-accent/10"><MaterialIcon name="open_in_new" /></Link></td>
           </ClickableRow>)}</tbody>
         </table>
       </div>}
