@@ -112,6 +112,8 @@ function WidgetFrame({ item, source, platform, register }: { item: OverlayItem; 
   if (!preview?.source) return <Placeholder label={preview?.error || "Aperçu indisponible"} />;
   return (
     <iframe
+      // Rechargé à chaque changement de réglage : beaucoup de widgets ne lisent leurs valeurs qu'au chargement (onWidgetLoad)
+      key={`${platform}:${overrides}`}
       ref={(el) => {
         frame.current = el;
         register(item.id, el);
