@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { CustomLabFields } from "./CustomLabFields";
+import { MaterialIcon } from "./MaterialIcon";
 import { widgetInstance } from "@/lib/custom-lab/widget-instance";
 import { fieldValues, jsonObject, parseFields } from "@/lib/custom-lab/model";
 import { normalizeAlertboxConfig } from "@/lib/custom-lab/alertbox";
@@ -17,11 +18,10 @@ export function CustomLabWidgetSettings({ content, props, platform, onChange }: 
   const code = content.kind === "alertbox" ? variant.alerts[alert] : variant.code;
   return <section className="cl-widget-settings -mx-[18px] space-y-3 border-t border-border px-[18px] pt-4">
     <h3 className="text-sm font-semibold">Réglages de ce widget</h3>
-    <p className="text-xs text-muted">Propres à ce calque sur {platform === "streamlabs" ? "Streamlabs" : "StreamElements"}. Le modèle de la bibliothèque reste inchangé.</p>
     <CustomLabFields platform={platform} alertbox={content.kind === "alertbox"} alertType={alert} fields={parseFields(code.fields)} values={fieldValues(code)} config={normalizeAlertboxConfig(jsonObject(variant.settings), platform)} onAlert={setAlert} onField={(key, value) => {
       if (content.kind === "alertbox") { const alerts = (current.alerts ?? {}) as Record<string, Record<string, unknown>>; update({ alerts: { ...alerts, [alert]: { ...alerts[alert], [key]: value } } }); }
       else update({ fields: { ...(current.fields as Record<string, unknown> ?? {}), [key]: value } });
     }} onSettings={(settings) => update({ settings })} />
-    <button type="button" className="cl-secondary" onClick={() => onChange({ widgetOverrides: { ...all, [platform]: {} } })}>Reprendre les réglages du modèle</button>
+    <button type="button" className="cl-secondary inline-flex items-center gap-1.5" title="Reprendre les réglages du modèle de la bibliothèque" onClick={() => onChange({ widgetOverrides: { ...all, [platform]: {} } })}><MaterialIcon name="restart_alt" className="size-4" />Réinitialiser</button>
   </section>;
 }

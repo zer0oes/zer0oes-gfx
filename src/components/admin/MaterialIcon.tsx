@@ -40,6 +40,7 @@ export type MaterialIconName =
   | "person"
   | "redo"
   | "refresh"
+  | "restart_alt"
   | "science"
   | "shopping_bag"
   | "shopping_cart"

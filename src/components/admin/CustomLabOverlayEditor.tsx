@@ -519,15 +519,15 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
           ) : (
             <div className="mt-4 grid gap-3 text-xs">
               <label className="grid gap-1">Nom du calque<input className={input} value={current.name ?? ""} placeholder={itemLabel({ ...current, name: undefined }, widgetName)} onChange={(e) => updateItem(current.id, { name: e.target.value })} /></label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {(["y", "x", "w", "h"] as const).map((k) => (
                   <label key={k} className="grid gap-1">{k === "w" ? "Width" : k === "h" ? "Height" : k === "y" ? "Top" : "Left"}<input className={input} type="number" value={current[k]} onChange={(e) => updateItem(current.id, { [k]: k === "w" || k === "h" ? Math.max(MIN_ITEM_SIZE, num(e.target.value)) : num(e.target.value) })} /></label>
                 ))}
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className={toolButton} onClick={() => updateItem(current.id, { x: Math.round((data.width - current.w) / 2) })}><MaterialIcon name="align_horizontal_center" className="size-4" />Centrer</button>
-                <button type="button" className={toolButton} onClick={() => updateItem(current.id, { y: Math.round((data.height - current.h) / 2) })}><MaterialIcon name="align_vertical_center" className="size-4" />Centrer</button>
-                <button type="button" className={toolButton} onClick={() => updateItem(current.id, { x: 0, y: 0, w: data.width, h: data.height })}><MaterialIcon name="fullscreen" className="size-4" />Plein écran</button>
+                <button type="button" className="inline-grid size-9 place-items-center rounded-full border border-border bg-surface text-foreground hover:border-accent" title="Centrer horizontalement" aria-label="Centrer horizontalement" onClick={() => updateItem(current.id, { x: Math.round((data.width - current.w) / 2) })}><MaterialIcon name="align_horizontal_center" className="size-5" /></button>
+                <button type="button" className="inline-grid size-9 place-items-center rounded-full border border-border bg-surface text-foreground hover:border-accent" title="Centrer verticalement" aria-label="Centrer verticalement" onClick={() => updateItem(current.id, { y: Math.round((data.height - current.h) / 2) })}><MaterialIcon name="align_vertical_center" className="size-5" /></button>
+                <button type="button" className="inline-grid size-9 place-items-center rounded-full border border-border bg-surface text-foreground hover:border-accent" title="Plein écran" aria-label="Plein écran" onClick={() => updateItem(current.id, { x: 0, y: 0, w: data.width, h: data.height })}><MaterialIcon name="fullscreen" className="size-5" /></button>
               </div>
 
               {current.type === "text" && (
@@ -588,8 +588,8 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
               )}
 
               <div className="-mx-[18px] flex flex-wrap gap-2 border-t border-[var(--cl-line)] px-[18px] pt-3">
-                <button type="button" className={toolButton} onClick={() => duplicate(current.id)}>Dupliquer</button>
-                <button type="button" className={`${toolButton} hover:!border-red-400 hover:text-red-300`} onClick={() => remove(current.id)}>Supprimer le calque</button>
+                <button type="button" className={toolButton} onClick={() => duplicate(current.id)}><MaterialIcon name="content_copy" className="size-4" />Dupliquer</button>
+                <button type="button" className={`${toolButton} hover:!border-red-400 hover:text-red-300`} onClick={() => remove(current.id)}><MaterialIcon name="delete" className="size-4" />Supprimer le calque</button>
               </div>
             </div>
           )}
