@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { portalEmail } from "./delivery";
+import { deliveryLocked, portalEmail } from "./delivery";
 
 test("la confirmation donne accès au brief et à l’espace commande", () => {
   const briefUrl = "https://example.com/merci?session_id=cs_test_order";
@@ -71,4 +71,13 @@ test("type d'élément et progression", () => {
   assert.equal(itemType({ kind: "fichier", itemType: "guide", storagePath: "o/x.png" }), "guide");
   assert.deepEqual(deliveryProgress([{ approvedAt: "x" }, {}, {}]), { done: 1, total: 3, percent: 33, complete: false });
   assert.equal(deliveryProgress([]).complete, false);
+});
+
+test("commande entièrement validée : retrait verrouillé tant qu'elle n'est pas repassée « En cours »", () => {
+  const done = [{ approvedAt: "2026-10-01" }, { approvedAt: "2026-10-02" }];
+  assert.equal(deliveryLocked({ status: "livree" }, done), true);
+  assert.equal(deliveryLocked({ status: "terminee" }, done), true);
+  assert.equal(deliveryLocked({ status: "en_cours" }, done), false);
+  assert.equal(deliveryLocked({ status: "livree" }, [...done, {}]), false);
+  assert.equal(deliveryLocked({ status: "livree" }, []), false);
 });

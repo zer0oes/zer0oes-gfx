@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { checkDeliveryLink, DELIVERABLE_MAX_BYTES, deliverablePath, pendingPreview, previewsEmail, isDeliverableType, mediaKind, newDeliveryToken } from "@/lib/delivery";
+import { checkDeliveryLink, DELIVERABLE_MAX_BYTES, deliverablePath, pendingPreview, previewsEmail, isDeliverableType, mediaKind, newDeliveryToken, deliveryLocked, deliveryLockedMessage } from "@/lib/delivery";
 import { notify, sendToCustomer } from "@/lib/notify";
 import { siteUrl } from "@/lib/site-url";
 import { s3Configured, s3DeliverableDelete, s3DeliverableUpload } from "@/lib/s3";
@@ -137,6 +137,8 @@ export async function deleteDeliverableAction(formData: FormData) {
   const items = await getStore().listDeliverables(orderId);
   const item = items.find((d) => d.id === id);
   if (!item) back(orderId, { error: "Élément introuvable." });
+  const order = await getStore().getOrder(orderId);
+  if (order && deliveryLocked(order, items)) back(orderId, { error: deliveryLockedMessage });
   await getStore().deleteDeliverable(id);
   await removeFromBucket(item.storagePath, item.previewPath);
   await removeFromBucket(...(item.previewVersions ?? []).map((v) => v.path));
@@ -194,8 +196,13 @@ export async function attachDeliverablePreview(input: { orderId: string; id: str
   const store = getStore();
   const order = await store.getOrder(input.orderId);
   if (!order) return { error: "Commande introuvable." };
-  const item = (await store.listDeliverables(input.orderId)).find((d) => d.id === input.id);
+  const items = await store.listDeliverables(input.orderId);
+  const item = items.find((d) => d.id === input.id);
   if (!item) return { error: "Élément introuvable." };
+  // Une nouvelle version d'aperçu annule la validation : impossible si le client a déjà téléchargé
+  // le livrable, ou si la commande entière est validée (sauf à la repasser « En cours »)
+  if (item.finalAccessedAt || item.accessedFinalAssets?.length) return { error: "Ce livrable a déjà été téléchargé par le client : son aperçu ne peut plus être remplacé." };
+  if (deliveryLocked(order, items)) return { error: deliveryLockedMessage };
   const publishedAt = new Date().toISOString();
   const versions = item.previewVersions ?? [];
   await store.updateDeliverable(input.id, { previewPath: input.path, previewType: kind, publishedAt,
@@ -214,8 +221,13 @@ export async function removeDeliverablePreviewAction(formData: FormData) {
   await requireAdmin();
   const orderId = text(formData, "orderId", 60);
   const id = text(formData, "id", 60);
-  const item = (await getStore().listDeliverables(orderId)).find((d) => d.id === id);
+  const items = await getStore().listDeliverables(orderId);
+  const item = items.find((d) => d.id === id);
   if (!item) back(orderId, { error: "Élément introuvable." });
+  const order = await getStore().getOrder(orderId);
+  if (order && deliveryLocked(order, items)) back(orderId, { error: deliveryLockedMessage });
+  // Déjà téléchargé par le client : sa validation est définitive, l'aperçu ne peut plus être retiré
+  if (item.finalAccessedAt || item.accessedFinalAssets?.length) back(orderId, { error: "Ce livrable a déjà été téléchargé par le client : son aperçu ne peut plus être retiré." });
   await getStore().updateDeliverable(id, { previewPath: null, previewType: null, publishedAt: null });
   if (item.approvedAt) await getStore().setDeliverableApproval(item.id, false);
   back(orderId, { ok: "Aperçu retiré." });
