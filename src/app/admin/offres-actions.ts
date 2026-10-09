@@ -303,3 +303,14 @@ export async function reorderOptionsAction(ids: string[]) {
   await store.saveOptions(next);
   revalidatePath("/", "layout");
 }
+
+// Nouvel ordre des offres (poignée dans le tableau de l'admin)
+export async function reorderPacksAction(ids: string[]) {
+  await requireAdmin();
+  const store = getStore();
+  const current = (await store.getCatalog()).packs.map((p) => p.id);
+  // Seulement des offres existantes, toutes présentes
+  if (ids.length !== current.length || !ids.every((id) => current.includes(id))) return;
+  await store.reorderPacks(ids);
+  revalidatePath("/", "layout");
+}

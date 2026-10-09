@@ -19,7 +19,7 @@ import {
   archivePackAction,
   createPackAction,
   deletePackAction,
-  movePackAction,
+  reorderPacksAction,
   saveFinanceAction,
   saveProtectionAction,
   createOptionAction,
@@ -79,44 +79,11 @@ function Intro({ children }: { children: React.ReactNode }) {
   return <p className="mb-4 max-w-2xl text-sm text-muted">{children}</p>;
 }
 
-function PackControls({ pack, first, last }: { pack: Pack; first: boolean; last: boolean }) {
-  const small = "rounded-full border border-border px-3 py-1 text-xs hover:border-accent disabled:opacity-30";
-  return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4 text-xs">
-      <form action={movePackAction} className="flex gap-1">
-        <input type="hidden" name="id" value={pack.id} />
-        <button name="dir" value="up" disabled={first} aria-label={`Monter ${pack.name}`} className={small}>
-          ↑
-        </button>
-        <button name="dir" value="down" disabled={last} aria-label={`Descendre ${pack.name}`} className={small}>
-          ↓
-        </button>
-      </form>
-      <form action={archivePackAction}>
-        <input type="hidden" name="id" value={pack.id} />
-        {pack.archived && <input type="hidden" name="restore" value="1" />}
-        <button type="submit" className={small}>
-          {pack.archived ? "Remettre en ligne" : "Archiver (masquer du site)"}
-        </button>
-      </form>
-      <form action={deletePackAction} className="ml-auto flex items-center gap-2 text-muted">
-        <input type="hidden" name="id" value={pack.id} />
-        <label className="flex items-center gap-1">
-          <input type="checkbox" name="confirm" /> confirmer
-        </label>
-        <button type="submit" className="rounded-full border border-red-500/40 px-3 py-1 text-red-300 hover:bg-red-500/10">
-          Supprimer
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function PackForm({ pack }: { pack: Pack }) {
+function PackForm({ pack, formId }: { pack: Pack; formId: string }) {
   // Formules existantes + 2 lignes vides pour en ajouter
   const rows = [...(pack.formulas ?? []), undefined, undefined];
   return (
-    <form action={savePackAction} className="space-y-4">
+    <form id={formId} action={savePackAction} className="space-y-4">
       <input type="hidden" name="id" value={pack.id} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nom">
@@ -163,9 +130,6 @@ function PackForm({ pack }: { pack: Pack }) {
           ))}
         </div>
       </fieldset>
-      <button type="submit" className={save}>
-        Enregistrer « {pack.name} »
-      </button>
     </form>
   );
 }
@@ -278,63 +242,68 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
             <button type="submit" className={save}>Enregistrer les textes</button>
           </form>
           </details>
-          <Intro>Clique sur une offre pour la modifier. L&apos;ordre ici est celui du site.</Intro>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="max-w-2xl text-sm text-muted">Clique sur une ligne pour modifier l&apos;offre. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
+            <DrawerButton drawer="offre-nouvelle" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouvelle offre</DrawerButton>
+          </div>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="px-4 py-3">#</th><th className="px-4 py-3">Offre</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th><th className="px-4 py-3">Ordre</th></tr></thead>
-              <tbody className="divide-y divide-border">
-                {packs.map((p, i) => (
-                  <tr key={p.id} className={`${openPack === p.id ? "bg-accent/10" : "hover:bg-surface/50"} ${p.archived ? "opacity-60" : ""}`}>
-                    <td className="px-4 py-3 text-muted">{i + 1}</td>
-                    <td className="px-4 py-3"><Link href={`/admin/offres?offre=${encodeURIComponent(p.id)}#offre-${p.id}`} className="font-semibold hover:text-accent">{p.name}</Link><p className="mt-1 text-xs text-muted">{p.tagline}</p></td>
+              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Offre</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th></tr></thead>
+              <SortableRows onReorder={reorderPacksAction}>
+                {packs.map((p) => (
+                  <DrawerRow key={p.id} sortId={p.id} drawer={`offre-${p.id}`} label={`Modifier ${p.name}`} className={`${openPack === p.id ? "bg-accent/10" : ""} ${p.archived ? "opacity-60" : ""}`}>
+                    <td className="px-2 py-3"><SortHandle id={p.id} label={p.name} /></td>
+                    <td className="px-4 py-3"><span className="font-semibold">{p.name}</span><p className="mt-1 line-clamp-1 max-w-xl text-xs text-muted">{p.tagline}</p></td>
                     <td className="whitespace-nowrap px-4 py-3">{p.priceFrom ? "À partir de " : ""}{euro(p.price)}</td>
-                    <td className="px-4 py-3 text-muted">{p.archived ? "Archivée" : p.checkout ? "En ligne" : "Sur devis"}</td>
-                    <td className="px-4 py-3"><div className="flex gap-2">{(["up", "down"] as const).map((direction) => <form key={direction} action={movePackAction}><input type="hidden" name="id" value={p.id} /><button name="dir" value={direction} disabled={direction === "up" ? i === 0 : i === packs.length - 1} aria-label={`${direction === "up" ? "Monter" : "Descendre"} ${p.name}`} className="rounded border border-border px-2 py-1 text-accent disabled:opacity-30">{direction === "up" ? "↑" : "↓"}</button></form>)}</div></td>
-                  </tr>
+                    <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${p.archived ? "border-border text-muted" : p.checkout ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300" : "border-violet-400/40 bg-violet-400/10 text-violet-300"}`}>{p.archived ? "Archivée" : p.checkout ? "En ligne" : "Sur devis"}</span></td>
+                  </DrawerRow>
                 ))}
-              </tbody>
+              </SortableRows>
             </table>
           </div>
-          <div className="space-y-3">
-            {packs.map((p, i) => (
-              <details key={p.id} id={`offre-${p.id}`} hidden={openPack !== p.id} open={openPack === p.id} className={`group ${card} p-0 sm:p-0 ${p.archived ? "opacity-70" : ""}`}>
-                <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5 sm:px-6 [&::-webkit-details-marker]:hidden">
-                  <span>
-                    <span className="font-display text-lg font-bold">
-                      {p.name} — {p.priceFrom ? "à partir de " : ""}
-                      {euro(p.price)}
-                    </span>
-                    <span className="mt-1 block text-xs text-muted">{packSummary(p, settings).join(" • ")}</span>
+          {packs.map((p) => (
+            <Drawer
+              key={p.id}
+              id={`offre-${p.id}`}
+              kicker="Offre"
+              title={p.name}
+              openOnLoad={openPack === p.id}
+              footer={
+                <>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <ConfirmDelete action={deletePackAction} id={p.id} label="Supprimer l'offre" question={`Es-tu sûre de vouloir supprimer « ${p.name} » ? (si elle a des commandes, elle sera archivée)`} />
+                    <form action={archivePackAction}>
+                      <input type="hidden" name="id" value={p.id} />
+                      {p.archived && <input type="hidden" name="restore" value="1" />}
+                      <button type="submit" className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">{p.archived ? "Remettre en ligne" : "Archiver"}</button>
+                    </form>
                   </span>
-                  <span className="text-sm text-accent">
-                    <span className="group-open:hidden">Modifier ↓</span>
-                    <span className="hidden group-open:inline">Fermer ↑</span>
-                  </span>
-                </summary>
-                <div className="space-y-4 px-5 pb-5 sm:px-6 sm:pb-6">
-                  <PackForm pack={p} />
-                  <PackControls pack={p} first={i === 0} last={i === packs.length - 1} />
-                </div>
-              </details>
-            ))}
-            <details className={`${card} p-0 sm:p-0`}>
-              <summary className="cursor-pointer list-none p-5 font-semibold text-accent sm:px-6 [&::-webkit-details-marker]:hidden">+ Nouvelle offre</summary>
-              <form action={createPackAction} className="grid gap-3 px-5 pb-5 sm:grid-cols-[2fr_1fr_auto_auto] sm:items-end sm:px-6 sm:pb-6">
-                <Field label="Nom">
-                  <TranslationInput translationKey="translation:pack:new:name" name="name" required className={input} />
-                </Field>
-                <Field label="Prix (€ HT)">
-                  <input name="price" required inputMode="decimal" className={input} />
-                </Field>
-                <label className="flex items-center gap-2 pb-2 text-sm">
-                  <input type="checkbox" name="checkout" defaultChecked className="accent-[var(--accent)]" /> Commandable en ligne
-                </label>
-                <button type="submit" className={save}>
-                  Créer
-                </button>
-              </form>
-            </details>
-          </div>
+                  <button type="submit" form={`offre-form-${p.id}`} className={save}>Enregistrer l&apos;offre</button>
+                </>
+              }
+            >
+              {openPack === p.id && enregistre && <p role="status" className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">Enregistré.</p>}
+              {openPack === p.id && typeof erreur === "string" && <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{erreur}</p>}
+              <p className="text-xs text-muted">{packSummary(p, settings).join(" • ")}</p>
+              <TranslationTabs compact stored={translationValues(translationContent)}>
+                <PackForm pack={p} formId={`offre-form-${p.id}`} />
+              </TranslationTabs>
+            </Drawer>
+          ))}
+          <Drawer id="offre-nouvelle" kicker="Offre" title="Nouvelle offre" footer={<><span /><button type="submit" form="offre-creer" className={save}>Créer l&apos;offre</button></>}>
+            <form id="offre-creer" action={createPackAction} className="space-y-4">
+              <Field label="Nom">
+                <input name="name" required className={input} />
+              </Field>
+              <Field label="Prix (€)">
+                <input name="price" required inputMode="decimal" className={input} />
+              </Field>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="checkout" defaultChecked className="accent-[var(--accent)]" /> Commandable en ligne (sinon : sur devis)
+              </label>
+              <p className="text-xs text-muted">Sa fiche s&apos;ouvre ensuite pour compléter l&apos;accroche, les livrables, les formules et la traduction.</p>
+            </form>
+          </Drawer>
         </section>
       )}
 

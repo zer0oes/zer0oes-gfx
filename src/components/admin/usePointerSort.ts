@@ -9,6 +9,7 @@ export type SortDrag = {
   offset: number; // distance entre le haut de la ligne et le pointeur au moment de la saisir
   left: number;
   width: number;
+  height: number; // hauteur de la ligne tirée (pour son emplacement)
 };
 
 // Réordonner une liste en tirant une poignée (souris, doigt ou stylet), sans le glisser-déposer HTML :
@@ -33,7 +34,7 @@ export function usePointerSort(onMove: (from: number, to: number) => void) {
         const r = el.getBoundingClientRect();
         return r.top + window.scrollY + r.height / 2;
       });
-      const base = { from: index, offset: e.clientY - row.top, left: row.left, width: row.width };
+      const base = { from: index, offset: e.clientY - row.top, left: row.left, width: row.width, height: row.height };
       const update = (y: number) => {
         const to = mids.filter((mid) => mid < y + window.scrollY).length;
         current.current = { ...base, to, y };
