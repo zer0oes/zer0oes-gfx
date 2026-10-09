@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FieldDefinition } from "@/lib/custom-lab/types";
 import { MaterialIcon } from "./MaterialIcon";
+import { shift, SortPreview } from "./SortableRows";
+import { moveItem, usePointerSort } from "./usePointerSort";
 
 // Types de champs reconnus par StreamElements et Streamlabs (les autres restent modifiables en JSON)
 export const fieldTypes = [
@@ -49,6 +51,9 @@ const numberOrUndefined = (v: string) => (v.trim() === "" || !Number.isFinite(Nu
 export function CustomLabFieldBuilder({ value, onChange }: { value: string; onChange: (json: string) => void }) {
   const rows = toRows(value);
   const [open, setOpen] = useState<string | null>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const sort = usePointerSort((from, to) => { if (rows) onChange(toJson(moveItem(rows, from, to))); });
+  useEffect(() => shift(list.current, sort.drag), [sort.drag]);
   if (!rows) return <p className="cl-field-hint p-4">Le JSON de Fields est invalide : corrige-le dans la vue JSON pour retrouver l’éditeur visuel.</p>;
 
   const commit = (next: Row[]) => onChange(toJson(next));
@@ -57,13 +62,6 @@ export function CustomLabFieldBuilder({ value, onChange }: { value: string; onCh
     if (!keyPattern.test(key) || rows.some((r, k) => k !== i && r.key === key)) return;
     if (open === rows[i].key) setOpen(key);
     commit(rows.map((r, k) => (k === i ? { ...r, key } : r)));
-  };
-  const move = (i: number, d: -1 | 1) => {
-    const j = i + d;
-    if (j < 0 || j >= rows.length) return;
-    const next = [...rows];
-    [next[i], next[j]] = [next[j], next[i]];
-    commit(next);
   };
   const add = () => {
     let n = rows.length + 1;
@@ -74,23 +72,24 @@ export function CustomLabFieldBuilder({ value, onChange }: { value: string; onCh
   };
 
   return (
-    <div className="space-y-2 p-3 text-xs">
+    <div className="p-3 text-xs">
       {!rows.length && <p className="cl-field-hint">Aucun champ pour l’instant.</p>}
+      <div ref={list} data-sort-list>
       {rows.map(({ key, field }, i) => {
         const isOpen = open === key;
         const typeLabel = fieldTypes.find(([t]) => t === field.type)?.[1] ?? field.type;
         const numeric = field.type === "number" || field.type === "slider";
         return (
-          <div key={key} className="rounded-md border border-[var(--cl-line)] bg-[#11131a]">
+          <div key={key} aria-label={field.label || key} className="py-1">
+          <div className="rounded-md border border-[var(--cl-line)] bg-[#11131a]">
             <div className="flex items-center gap-2 px-2 py-1.5">
+              <span {...sort.handle(i)} role="button" tabIndex={0} aria-label={`Déplacer ${field.label || key} (flèches haut et bas)`} title="Glisser pour changer l’ordre · ↑/↓ au clavier" className="inline-flex size-7 shrink-0 cursor-grab items-center justify-center rounded text-[var(--cl-muted)] hover:bg-[#ac8bfa1f] hover:text-[var(--cl-accent)] active:cursor-grabbing"><MaterialIcon name="drag_indicator" className="size-5" /></span>
               <button type="button" onClick={() => setOpen(isOpen ? null : key)} aria-expanded={isOpen} className="flex min-w-0 flex-1 items-center gap-2 text-left">
                 <span className={`inline-flex text-[var(--cl-muted)] transition-transform ${isOpen ? "" : "-rotate-90"}`}><MaterialIcon name="expand_more" className="size-4" /></span>
                 <span className="truncate font-semibold">{field.label || key}</span>
                 <code className="text-[10px] text-[var(--cl-muted)]">{key}</code>
                 <span className="ml-auto shrink-0 rounded-full border border-[var(--cl-line)] px-2 py-0.5 text-[10px] text-[var(--cl-muted)]">{typeLabel}</span>
               </button>
-              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Monter ${key}`} className="cl-icon-button disabled:opacity-30"><MaterialIcon name="arrow_upward" className="size-4" /></button>
-              <button type="button" onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label={`Descendre ${key}`} className="cl-icon-button disabled:opacity-30"><MaterialIcon name="arrow_downward" className="size-4" /></button>
               <button type="button" onClick={() => window.confirm(`Supprimer le champ « ${field.label || key} » ?`) && commit(rows.filter((_, k) => k !== i))} aria-label={`Supprimer ${key}`} title="Supprimer" className="cl-icon-button hover:text-red-300">
                 <MaterialIcon name="delete" className="size-4" />
               </button>
@@ -128,9 +127,12 @@ export function CustomLabFieldBuilder({ value, onChange }: { value: string; onCh
               </div>
             )}
           </div>
+          </div>
         );
       })}
-      <button type="button" onClick={add} className="rounded-full border border-dashed border-[var(--cl-line)] px-3 py-1.5 text-[var(--cl-accent)] hover:border-[var(--cl-accent)]">+ Ajouter un champ</button>
+      </div>
+      {sort.drag && <SortPreview drag={sort.drag} />}
+      <button type="button" onClick={add} className="mt-2 rounded-full border border-dashed border-[var(--cl-line)] px-3 py-1.5 text-[var(--cl-accent)] hover:border-[var(--cl-accent)]">+ Ajouter un champ</button>
     </div>
   );
 }
