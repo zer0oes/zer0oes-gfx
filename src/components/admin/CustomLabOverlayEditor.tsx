@@ -518,6 +518,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
             <p className="cl-field-hint mt-4">Sélectionne un calque dans la scène ou dans la liste des calques.</p>
           ) : (
             <div className="mt-4 grid gap-3 text-xs">
+              <span className="cl-eyebrow uppercase !mb-0">Taille et position</span>
               <label className="grid gap-1">Nom du calque<input className={input} value={current.name ?? ""} placeholder={itemLabel({ ...current, name: undefined }, widgetName)} onChange={(e) => updateItem(current.id, { name: e.target.value })} /></label>
               <div className="grid grid-cols-2 gap-2">
                 {(["y", "x", "w", "h"] as const).map((k) => (

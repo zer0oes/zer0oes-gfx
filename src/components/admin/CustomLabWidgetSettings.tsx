@@ -17,7 +17,6 @@ export function CustomLabWidgetSettings({ content, props, platform, onChange }: 
   const variant = instance.variants[platform];
   const code = content.kind === "alertbox" ? variant.alerts[alert] : variant.code;
   return <section className="cl-widget-settings -mx-[18px] space-y-3 border-t border-border px-[18px] pt-4">
-    <h3 className="text-sm font-semibold">Réglages de ce widget</h3>
     <CustomLabFields platform={platform} alertbox={content.kind === "alertbox"} alertType={alert} fields={parseFields(code.fields)} values={fieldValues(code)} config={normalizeAlertboxConfig(jsonObject(variant.settings), platform)} onAlert={setAlert} onField={(key, value) => {
       if (content.kind === "alertbox") { const alerts = (current.alerts ?? {}) as Record<string, Record<string, unknown>>; update({ alerts: { ...alerts, [alert]: { ...alerts[alert], [key]: value } } }); }
       else update({ fields: { ...(current.fields as Record<string, unknown> ?? {}), [key]: value } });
