@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { attachDeliverablePreview, finalizeDeliverable, prepareDeliverableUpload, uploadDeliverableDirect } from "@/app/admin/livraison-actions";
 import { formatBytes } from "@/lib/delivery";
+import { FileDrop } from "./FileDrop";
 
 // Envoi d'un fichier livré (zip Streamlabs, visuels, guide…) : directement du navigateur
 // vers le stockage privé « livrables » via une URL signée (jusqu'à 500 Mo).
@@ -76,19 +77,13 @@ export function DeliveryUpload({
   }
 
   const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
-  const fileInput =
-    "block w-full text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-surface-2 file:px-4 file:py-2 file:text-sm file:text-foreground";
 
   if (previewFor) {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg"
-          aria-label="Aperçu (image ou vidéo basse résolution)"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className={`${fileInput} max-w-xs text-xs`}
-        />
+        <div className="w-full">
+          <FileDrop compact file={file} onFile={setFile} disabled={busy} accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" label="Image d’aperçu" hint="PNG, JPG, WebP ou SVG" />
+        </div>
         <button type="button" onClick={send} disabled={!file || busy} className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40">
           {busy ? "Envoi…" : "Envoyer l'aperçu"}
         </button>
@@ -105,15 +100,15 @@ export function DeliveryUpload({
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">Ajouter un fichier</p>
-      <input
-        type="file"
-        aria-label="Fichier à livrer"
-        onChange={(e) => {
-          const f = e.target.files?.[0] ?? null;
+      <FileDrop
+        file={file}
+        disabled={busy}
+        label="Fichier à livrer"
+        hint="jusqu’à 500 Mo"
+        onFile={(f) => {
           setFile(f);
           if (f && !label) setLabel(f.name.replace(/\.[^.]+$/, ""));
         }}
-        className={fileInput}
       />
       <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nom affiché au client (ex. Pack Streamlabs)" aria-label="Nom du fichier affiché au client" className={input} />
       <button type="button" onClick={send} disabled={!file || busy} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background disabled:opacity-40">
