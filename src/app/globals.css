@@ -284,3 +284,34 @@ select:not([multiple]):not([size]) {
     animation: none;
   }
 }
+
+/* Barres de défilement aux couleurs du site (page, panneaux latéraux, tableaux, listes) :
+   fines, violet discret (plus franc au survol sur Safari). scrollbar-color pour Firefox et Chrome récent,
+   ::-webkit-scrollbar pour Safari. */
+:root {
+  --scrollbar-thumb: color-mix(in srgb, var(--accent) 40%, var(--border));
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--accent) 75%, var(--border));
+}
+html,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--scrollbar-thumb) padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover) padding-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
