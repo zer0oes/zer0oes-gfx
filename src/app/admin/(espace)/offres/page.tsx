@@ -7,6 +7,7 @@ import { optionContentFor, platforms } from "@/lib/option-content";
 import { optionProductTitle, optionThemeColors } from "@/lib/option-products";
 import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "@/components/admin/Drawer";
 import { SortHandle, SortableRows } from "@/components/admin/SortableRows";
+import { Segmented } from "@/components/admin/Segmented";
 import { saveOffersPageAction } from "../../portfolio-actions";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -362,7 +363,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                       </Field>
                       <Field label="Nom de la carte" hint="Titre de la carte partagée sur la page Offres (commun aux options regroupées). Vide : nom d'origine."><TranslationInput translationKey={`translation:option-group:${content.group ?? o.id}`} englishDefault={english.groupName} name="groupName" defaultValue={content.group ? content.groupName : ""} placeholder="Ex. Overlay" maxLength={80} className={input} /></Field>
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <fieldset><legend className="mb-1 text-sm font-medium">Variante</legend><div className="flex gap-4 pt-1">{([["statique", "Statique"], ["anime", "Animée"]] as const).map(([v, l]) => <label key={v} className="flex items-center gap-2 text-sm"><input type="radio" name="variant" value={v} defaultChecked={(v === "anime") === content.animated} className="accent-[var(--accent)]" /> {l}</label>)}</div></fieldset>
+                        <Segmented name="variant" legend="Variante" options={[["statique", "Statique"], ["anime", "Animée"]]} defaultValue={content.animated ? "anime" : "statique"} />
                         <Field label="Nombre" hint="Ex. 5 pour un pack de 5 emotes."><input name="count" type="number" min={1} max={999} defaultValue={content.count} className={input} /></Field>
                       </div>
                     </fieldset>
