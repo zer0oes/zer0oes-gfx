@@ -6,7 +6,7 @@ import {
   sendDeliveryAction,
   setDeliverableTypeAction,
 } from "@/app/admin/livraison-actions";
-import { correctionPending, itemRevisionLimit, deliverableTypes, formatBytes, itemType, mediaKind, pendingPreview } from "@/lib/delivery";
+import { correctionPending, itemRevisionLimit, deliverableTypes, formatBytes, itemType, mediaKind, pendingPreview, deliveryLocked, deliveryLockedMessage } from "@/lib/delivery";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/env";
 import { siteUrl } from "@/lib/site-url";
 import type { Deliverable, Order } from "@/lib/store";
@@ -34,6 +34,8 @@ export async function DeliverySection({ order, items, message }: { order: Order;
   const pageUrl = order.deliveryToken ? `${await siteUrl()}/commande/${order.deliveryToken}` : null;
   const readyCount = items.filter((item) => item.previewPath || (!item.plannedKey && mediaKind(item.storagePath) === "image")).length;
   const newCount = items.filter((item) => pendingPreview(item)).length;
+  // Commande entièrement validée : plus de retrait possible (sauf en repassant la commande « En cours »)
+  const locked = deliveryLocked(order, items);
   return (
     <section id="livraison" className="scroll-mt-24 rounded-2xl border border-border bg-surface p-5 sm:p-6">
       <h2 className="font-semibold">Livraison</h2>
@@ -83,7 +85,7 @@ export async function DeliverySection({ order, items, message }: { order: Order;
                     </div>}
                     {!ready && <p className="text-sm text-muted">Ajoute une image de présentation. Elle sera réduite et filigranée côté serveur.</p>}
                     <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} />
-                    {d.previewPath && <form action={removeDeliverablePreviewAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-xs text-muted hover:text-red-300">Retirer l’aperçu</button></form>}
+                    {d.previewPath && !locked && <form action={removeDeliverablePreviewAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-xs text-muted hover:text-red-300">Retirer l’aperçu</button></form>}
                   </section>
                   <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
                     <h4 className="font-semibold">Fichiers définitifs</h4>
@@ -95,7 +97,7 @@ export async function DeliverySection({ order, items, message }: { order: Order;
                   {!!d.clientNotes?.length && <section className="space-y-3"><h4 className="font-semibold">Retours du client</h4>{d.clientNotes.map((note, i) => <div key={i} className="rounded-lg border border-amber-400/30 p-3"><p className="text-xs text-muted">{dateFmt.format(new Date(note.at))}</p><p className="mt-1 whitespace-pre-wrap text-sm">{note.body}</p></div>)}</section>}
                   <details className="border-t border-border pt-4"><summary className="cursor-pointer text-sm text-muted">Nom, type et retrait du livrable</summary><div className="mt-3 space-y-4">
                     <form action={setDeliverableTypeAction} className="space-y-3"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><input name="label" defaultValue={d.label} required aria-label="Nom du livrable" className={input} /><select name="type" defaultValue={itemType(d)} aria-label="Type du livrable" className={input}>{deliverableTypes.map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}</select><button className="rounded-full border border-border px-4 py-2 text-sm">Enregistrer</button></form>
-                    <form action={deleteDeliverableAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-sm text-red-300">Retirer ce livrable</button></form>
+                    {locked ? <p className="text-xs text-muted">{deliveryLockedMessage}</p> : <form action={deleteDeliverableAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-sm text-red-300">Retirer ce livrable</button></form>}
                   </div></details>
                 </DeliveryDrawer></td>
               </tr>;

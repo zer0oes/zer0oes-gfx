@@ -196,3 +196,11 @@ export function portalEmail({ offerName, url, briefUrl }: { offerName: string; u
     ].join("\n"),
   };
 }
+
+// Commande entièrement validée par le client (tous les livrables validés) et marquée livrée ou au-delà :
+// aperçus et livrables ne peuvent plus être retirés. Repasser la commande « En cours » à la main lève le verrou.
+export function deliveryLocked(order: { status: string }, items: { approvedAt?: string }[]) {
+  return items.length > 0 && items.every((d) => d.approvedAt) && ["livree", "solde_paye", "terminee"].includes(order.status);
+}
+
+export const deliveryLockedMessage = "La commande est entièrement validée : pour retirer un aperçu ou un livrable, repasse d'abord son statut à « En cours ».";
