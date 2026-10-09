@@ -182,10 +182,9 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
   return <div className={`cl-root ${fieldsCollapsed ? "cl-fields-collapsed" : ""}`}>
     <Link href="/admin/laboratoire" onClick={(event) => { if (dirty && !window.confirm("Quitter sans enregistrer les modifications ?")) event.preventDefault(); }} className="inline-flex items-center gap-1 text-sm text-muted hover:text-accent"><MaterialIcon name="arrow_back" className="size-4" />Laboratoire</Link>
     <header className="cl-topbar">
-      <div><h1>{content.name}</h1><p>{content.kind === "alertbox" ? "Pack d’alertes" : "Widget"} · {dirty ? "Modifications à enregistrer" : "Enregistré"}</p></div>
+      <div><h1>{content.name}</h1><p>{content.kind === "alertbox" ? "Pack d’alertes" : "Widget"} · {pending ? "Enregistrement…" : dirty ? "Modifications à enregistrer" : "Enregistré"}</p></div>
       <div className="cl-actions">
         <CustomLabPlatformSwitch platform={platform} onChange={switchPlatform} />
-        <button type="button" onClick={() => save()} disabled={pending || !dirty} className="cl-primary">{pending ? "Enregistrement…" : "Enregistrer"}</button>
         <button type="button" onClick={() => openLabMedia()} className="cl-secondary">Médias</button>
           <CustomLabDeliver id={id} kind={content.kind} name={content.name} platform={platform} dirty={dirty} className="cl-secondary disabled:cursor-not-allowed disabled:opacity-50" />
         <button type="button" onClick={exportZip} className="cl-secondary">Exporter pour {platform === "streamlabs" ? "Streamlabs" : "StreamElements"}</button>
