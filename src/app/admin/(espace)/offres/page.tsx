@@ -4,7 +4,7 @@ import { TranslationTabs, TranslationInput } from "@/components/admin/Translatio
 import { translationValues } from "@/lib/admin-translations";
 import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@/lib/home-content";
 import { optionContentFor, platforms } from "@/lib/option-content";
-import { optionThemeColors } from "@/lib/option-products";
+import { optionProductTitle, optionThemeColors } from "@/lib/option-products";
 import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "@/components/admin/Drawer";
 import { SortHandle, SortableRows } from "@/components/admin/SortableRows";
 import { saveOffersPageAction } from "../../portfolio-actions";
@@ -354,7 +354,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                     <DrawerRow key={o.id} sortId={o.id} drawer={`option-${o.id}`} label={`Modifier ${o.name}`} className={openOption === o.id ? "bg-accent/10" : ""}>
                       <td className="px-2 py-3"><SortHandle label={o.name} /></td>
                       <td className="px-4 py-3"><span className="font-semibold">{o.name}</span><p className="mt-1 line-clamp-1 max-w-md text-xs text-muted">{optionContentFor(o, translationContent, "fr").description}</p></td>
-                      <td className="px-4 py-3">{cardMates(o).length > 0 ? <span title={`Avec : ${cardMates(o).map((m) => m.name).join(", ")}`} className="whitespace-nowrap font-medium">{optionContentFor(o, translationContent, "fr").groupName || "Carte sans nom"}</span> : <span className="text-muted">Seule</span>}</td>
+                      <td className="px-4 py-3">{cardMates(o).length > 0 ? <span title={`Avec : ${cardMates(o).map((m) => m.name).join(", ")}`} className="whitespace-nowrap font-medium">{optionContentFor(o, translationContent, "fr").groupName || optionProductTitle(cardMates(o)[0].name).main}</span> : <span className="whitespace-nowrap text-muted">{optionProductTitle(o.name).main}</span>}</td>
                       <td className="px-4 py-3"><span style={{ color: optionThemeColors[category], borderColor: `color-mix(in srgb, ${optionThemeColors[category]} 45%, transparent)`, background: `color-mix(in srgb, ${optionThemeColors[category]} 10%, transparent)` }} className="inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium">{optionCategories.find((c) => c.id === category)?.label}</span></td>
                       <td className="whitespace-nowrap px-4 py-3">{o.priceFrom ? "À partir de " : ""}{euro(o.price)}{o.unit ? ` / ${o.unit}` : ""}</td>
                       <td className="px-4 py-3 text-muted">{o.priceFrom ? "Sur devis" : "En ligne"}</td>
