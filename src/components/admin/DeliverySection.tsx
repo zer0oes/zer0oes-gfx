@@ -91,7 +91,7 @@ export async function DeliverySection({ order, items, message }: { order: Order;
                 <img src={`/commande/${order.deliveryToken}/${d.id}/apercu`} alt={`Aperçu protégé de ${d.label}`} className="max-h-56 w-full object-contain" />
               </div>}
               {!ready && <p className="text-sm text-muted">Ajoute une image de présentation. Elle sera réduite et filigranée côté serveur.</p>}
-              <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} saveScope={`livrable-${d.id}`} />
+              {d.finalAccessedAt || d.accessedFinalAssets?.length ? <p className="text-xs text-muted">Déjà téléchargé par le client : l’aperçu ne peut plus être remplacé.</p> : <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} saveScope={`livrable-${d.id}`} />}
               {d.previewPath && <form action={removeDeliverablePreviewAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-xs text-muted hover:text-red-300">Retirer l’aperçu</button></form>}
             </section>
             <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">

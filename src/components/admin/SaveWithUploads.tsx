@@ -6,19 +6,19 @@ import { flushUploads } from "./pending-uploads";
 // « Enregistrer » d'un panneau : envoie d'abord les fichiers choisis dans le panneau, puis le formulaire
 export function SaveWithUploads({ scope, form, label = "Enregistrer" }: { scope: string; form: string; label?: string }) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
+  const [failed, setFailed] = useState<string[]>([]);
   return (
     <span className="flex items-center gap-3">
-      {error && <span role="alert" className="text-xs text-red-300">Un envoi a échoué, voir le panneau.</span>}
+      {failed.length > 0 && <span role="alert" className="text-xs text-red-300">Envoi impossible : voir « {failed.join(" » et « ")} » ci-dessus.</span>}
       <button
         type="button"
         disabled={busy}
         onClick={async () => {
           setBusy(true);
-          setError(false);
-          const ok = await flushUploads(scope);
+          setFailed([]);
+          const errors = await flushUploads(scope);
           setBusy(false);
-          if (!ok) return setError(true);
+          if (errors.length) return setFailed(errors);
           (document.getElementById(form) as HTMLFormElement | null)?.requestSubmit();
         }}
         className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110 disabled:opacity-60"

@@ -39,7 +39,7 @@ export function DeliveryUpload({
   // Fichier en attente : inscrit auprès du panneau, envoyé à l'enregistrement
   useEffect(() => {
     if (!saveScope) return;
-    registerUpload(saveScope, key, file ? () => send(file) : null);
+    registerUpload(saveScope, key, file ? () => send(file) : null, previewFor ? "Aperçu client" : "Fichiers définitifs");
     return () => registerUpload(saveScope, key, null);
     // send lit alsoHd et label : réinscrit quand ils changent
     // eslint-disable-next-line react-hooks/exhaustive-deps
