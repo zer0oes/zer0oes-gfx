@@ -54,7 +54,7 @@ export function CustomLabProjectField({ value, projects, onChange }: { value: st
         <div className="max-h-56 overflow-y-auto">{options.map((project) => <button key={project} type="button" role="menuitemradio" aria-checked={value === project} onClick={() => { onChange(project); setOpen(false); trigger.current?.focus(); }} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-normal hover:bg-surface-2 ${value === project ? "bg-accent/15 text-accent" : "text-foreground"}`}>
           <MaterialIcon name="folder" className="size-4 shrink-0" /><span className="min-w-0 flex-1 truncate">{project}</span>{value === project && <svg aria-hidden="true" className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m5 12 4 4L19 6" /></svg>}
         </button>)}</div>
-        <div className="mt-1 border-t border-border pt-1"><button type="button" role="menuitem" onClick={() => { setOpen(false); setCreating(true); setError(""); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-accent hover:bg-accent/10"><MaterialIcon name="add" className="size-4" />Créer un projet</button></div>
+        <div className="-mx-1.5 mt-1.5 border-t border-border px-1.5 pt-1.5"><button type="button" role="menuitem" onClick={() => { setOpen(false); setCreating(true); setError(""); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-accent hover:bg-accent/10"><MaterialIcon name="add" className="size-4" />Créer un projet</button></div>
       </div>}
     </div>
     {creating && <div className="mt-3 space-y-3 rounded-lg border border-border bg-background p-3">

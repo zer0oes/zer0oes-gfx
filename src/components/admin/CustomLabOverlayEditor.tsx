@@ -587,7 +587,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
                 </>
               )}
 
-              <div className="flex flex-wrap gap-2 border-t border-[var(--cl-line)] pt-3">
+              <div className="-mx-[18px] flex flex-wrap gap-2 border-t border-[var(--cl-line)] px-[18px] pt-3">
                 <button type="button" className={toolButton} onClick={() => duplicate(current.id)}>Dupliquer</button>
                 <button type="button" className={`${toolButton} hover:!border-red-400 hover:text-red-300`} onClick={() => remove(current.id)}>Supprimer le calque</button>
               </div>

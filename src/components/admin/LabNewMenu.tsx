@@ -40,7 +40,7 @@ export function LabNewMenu({ disabled, className, projectDrawer }: { disabled?: 
               <button role="menuitem" className={item}><MaterialIcon name={c.icon} className="size-4 text-muted" />{c.label}</button>
             </form>
           ))}
-          <div className="my-1 border-t border-border" />
+          <div className="-mx-1.5 my-1.5 border-t border-border" />
           <button type="button" role="menuitem" className={item} onClick={() => { setOpen(false); (document.getElementById(projectDrawer) as HTMLDialogElement | null)?.showModal(); }}>
             <MaterialIcon name="create_new_folder" className="size-4 text-muted" />Nouveau projet
           </button>

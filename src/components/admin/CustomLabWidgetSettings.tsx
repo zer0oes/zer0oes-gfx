@@ -15,7 +15,7 @@ export function CustomLabWidgetSettings({ content, props, platform, onChange }: 
   const instance = widgetInstance(content, props, platform);
   const variant = instance.variants[platform];
   const code = content.kind === "alertbox" ? variant.alerts[alert] : variant.code;
-  return <section className="cl-widget-settings space-y-3 border-t border-border pt-4">
+  return <section className="cl-widget-settings -mx-[18px] space-y-3 border-t border-border px-[18px] pt-4">
     <h3 className="text-sm font-semibold">Réglages de ce widget</h3>
     <p className="text-xs text-muted">Propres à ce calque sur {platform === "streamlabs" ? "Streamlabs" : "StreamElements"}. Le modèle de la bibliothèque reste inchangé.</p>
     <CustomLabFields platform={platform} alertbox={content.kind === "alertbox"} alertType={alert} fields={parseFields(code.fields)} values={fieldValues(code)} config={normalizeAlertboxConfig(jsonObject(variant.settings), platform)} onAlert={setAlert} onField={(key, value) => {
