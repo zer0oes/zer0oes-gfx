@@ -32,5 +32,7 @@ test("livraison : page HTML autonome d'un overlay", () => {
   assert.equal((html.match(/class="layer"/g) ?? []).length, 3);
   // calques dans l'ordre (texte en dessous, widget au-dessus) et message de chargement envoyé au widget
   assert.ok(html.indexOf("Salut") < html.indexOf('data-frame="w1"'));
-  assert.match(html, /const loads=\{"w1":/);
+  assert.match(html, /const frames=\{"w1":\{"load":/);
+  // le document du widget est posé par le script, après le branchement de l'écoute du chargement
+  assert.ok(!/<iframe[^>]*srcdoc=/.test(html));
 });

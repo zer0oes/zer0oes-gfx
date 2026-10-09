@@ -39,7 +39,9 @@ const num = (v: unknown, fallback = 0) => (typeof v === "number" && Number.isFin
 const src = (v: unknown) => (/^https:\/\//.test(String(v ?? "")) ? esc(v) : "");
 
 // Contenu HTML d'un calque (même rendu que la scène de l'éditeur)
-function itemHtml(item: OverlayItem, sources: Record<string, LabContent>, platform: Platform, frames: { id: string; message: unknown }[]) {
+type Frame = { id: string; message: unknown; source: string };
+
+function itemHtml(item: OverlayItem, sources: Record<string, LabContent>, platform: Platform, frames: Frame[]) {
   const p = item.props;
   if (item.type === "text") {
     const style = [
@@ -70,8 +72,8 @@ function itemHtml(item: OverlayItem, sources: Record<string, LabContent>, platfo
   if (!source) return "";
   const preview = buildLabPreview(widgetInstance(source, item.props, platform), platform, { transparent: true });
   if (!preview.source) return "";
-  frames.push({ id: item.id, message: labLoadMessage(preview, platform) });
-  return `<iframe data-frame="${esc(item.id)}" sandbox="allow-scripts" allow="autoplay" srcdoc="${esc(preview.source)}"></iframe>`;
+  frames.push({ id: item.id, message: labLoadMessage(preview, platform), source: preview.source });
+  return `<iframe data-frame="${esc(item.id)}" sandbox="allow-scripts" allow="autoplay"></iframe>`;
 }
 
 // Page HTML autonome d'un overlay : scène à la taille du format, fond transparent, calques visibles dans l'ordre.
@@ -79,14 +81,14 @@ function itemHtml(item: OverlayItem, sources: Record<string, LabContent>, platfo
 export function labOverlayHtml(raw: LabContent, sources: Record<string, LabContent>, platform: Platform = PLATFORM_STREAM_ELEMENTS): LabExportFile {
   const content = parseLabContent(raw);
   const data = content.overlay ?? DEFAULT_OVERLAY;
-  const frames: { id: string; message: unknown }[] = [];
+  const frames: Frame[] = [];
   const layers = [...data.items]
     .filter((item) => !item.hidden)
     .sort((a, b) => a.z - b.z)
     .map((item) => `<div class="layer" style="left:${item.x}px;top:${item.y}px;width:${item.w}px;height:${item.h}px;z-index:${item.z}">${itemHtml(item, sources, platform, frames)}</div>`)
     .join("\n");
   const script = frames.length
-    ? `<script>const loads=${JSON.stringify(Object.fromEntries(frames.map((f) => [f.id, f.message]))).replaceAll("<", "\\u003c")};document.querySelectorAll("iframe[data-frame]").forEach((f)=>f.addEventListener("load",()=>f.contentWindow.postMessage(loads[f.dataset.frame],"*")));</script>`
+    ? `<script>const frames=${JSON.stringify(Object.fromEntries(frames.map((f) => [f.id, { load: f.message, source: f.source }]))).replaceAll("<", "\\u003c")};document.querySelectorAll("iframe[data-frame]").forEach((f)=>{const w=frames[f.dataset.frame];f.addEventListener("load",()=>f.contentWindow.postMessage(w.load,"*"));f.srcdoc=w.source;});</script>`
     : "";
   const html = `<!doctype html>
 <html lang="fr">

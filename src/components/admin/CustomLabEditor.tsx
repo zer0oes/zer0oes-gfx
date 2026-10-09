@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { saveLabAction } from "@/app/admin/custom-lab-actions";
 import { normalizeAlertboxConfig, type AlertboxAlertType } from "@/lib/custom-lab/alertbox";
 import { buildWidgetSrcdoc } from "@/lib/custom-lab/widgetSrcdoc";
@@ -28,6 +28,8 @@ function download(data: BlobPart, name: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+const noSubscribe = () => () => {};
+
 // projects : noms des projets existants, proposés dans le champ « Projet »
 export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocument; projects?: string[] }) {
   const { id, revision: initialRevision } = initial;
@@ -46,6 +48,9 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
   const [fieldsCollapsed, setFieldsCollapsed] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const frame = useRef<HTMLIFrameElement>(null);
+  // Aperçu créé seulement dans le navigateur : rendu côté serveur, il chargerait avant que onLoad soit branché
+  // et le widget ne recevrait pas ses valeurs (onWidgetLoad)
+  const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   const mockStore = useRef<Record<string, unknown>>({});
   const saving = useRef(false);
   const dirty = JSON.stringify(content) !== saved;
@@ -200,7 +205,7 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
             <button type="button" className="cl-icon-button" aria-label="Recharger l’aperçu" title="Recharger l’aperçu" onClick={() => { setPreview(content); setPreviewKey((key) => key + 1); }}><MaterialIcon name="refresh" className="size-4" /></button>
             <button type="button" className="cl-icon-button" aria-label={fieldsCollapsed ? "Afficher les champs" : "Replier les champs"} aria-expanded={!fieldsCollapsed} title={fieldsCollapsed ? "Afficher les champs" : "Replier les champs"} onClick={() => setFieldsCollapsed(!fieldsCollapsed)}><MaterialIcon name="view_sidebar" className="size-4" /></button>
           </div></header>
-          {rendered.error ? <p role="alert" className="cl-error">{rendered.error}</p> : <CustomLabSizedStage size={size}><iframe key={previewKey} ref={frame} title="Aperçu isolé du Laboratoire" sandbox="allow-scripts" allow="autoplay" referrerPolicy="no-referrer" srcDoc={rendered.source} onLoad={loadPreview} className="block h-full w-full border-0 bg-[#11141a]" style={{ colorScheme: "normal" }} /></CustomLabSizedStage>}
+          {rendered.error ? <p role="alert" className="cl-error">{rendered.error}</p> : <CustomLabSizedStage size={size}>{hydrated && <iframe key={previewKey} ref={frame} title="Aperçu isolé du Laboratoire" sandbox="allow-scripts" allow="autoplay" referrerPolicy="no-referrer" srcDoc={rendered.source} onLoad={loadPreview} className="block h-full w-full border-0 bg-[#11141a]" style={{ colorScheme: "normal" }} />}</CustomLabSizedStage>}
         </section>
         <CustomLabCodePanel tab={tab} value={tab === "settings" ? variant.settings : code[tab]} platform={platform} dirty={dirty} pending={pending} alertbox={content.kind === "alertbox"} onTab={setTab} onChange={edit} onStatus={setStatus} />
         <section className="cl-console" aria-label="Console"><header><h2>Console · {lines.length}</h2><button type="button" onClick={() => setLines([])}>Effacer</button></header><pre>{lines.join("\n") || "Aucun message."}</pre></section>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { saveLabAction } from "@/app/admin/custom-lab-actions";
 import { parseLabContent } from "@/lib/custom-lab/model";
 import { DEFAULT_OVERLAY, ITEM_LABELS, MIN_ITEM_SIZE, createItem, itemLabel, newItemId, snapPosition, snapTargets, type OverlayData, type OverlayItem, type OverlayItemType } from "@/lib/custom-lab/overlay";
@@ -102,13 +102,19 @@ function Placeholder({ label }: { label: string }) {
   return <div className="flex h-full w-full items-center justify-center border-2 border-dashed border-white/30 bg-white/5 text-2xl text-white/60">{label}</div>;
 }
 
+const noSubscribe = () => () => {};
+
 // Widget ou pack d'alertes de la bibliothèque, rendu dans une iframe isolée (comme dans l'éditeur de widgets)
 function WidgetFrame({ item, source, platform, register }: { item: OverlayItem; source?: OverlaySource; platform: Platform; register: (id: string, el: HTMLIFrameElement | null) => void }) {
   // Réglages propres au calque (surcharges par plateforme) appliqués au modèle, comme dans la page livrée
   const overrides = JSON.stringify(item.props.widgetOverrides ?? null);
   const preview = useMemo(() => (source ? buildLabPreview(widgetInstance(source.content, { widgetOverrides: JSON.parse(overrides) }, platform), platform, { transparent: true }) : null), [source, platform, overrides]);
   const frame = useRef<HTMLIFrameElement | null>(null);
+  // Rendue côté serveur, l'iframe finirait de charger avant que onLoad soit branché : le widget ne recevrait
+  // jamais ses valeurs (onWidgetLoad). Elle n'est donc créée que dans le navigateur.
+  const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   if (!source) return <Placeholder label="Widget : choisis une création" />;
+  if (!hydrated) return null;
   if (!preview?.source) return <Placeholder label={preview?.error || "Aperçu indisponible"} />;
   return (
     <iframe
