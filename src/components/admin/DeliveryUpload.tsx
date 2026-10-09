@@ -30,8 +30,8 @@ export function DeliveryUpload({
   const [busy, setBusy] = useState(false);
   const [alsoHd, setAlsoHd] = useState(false);
 
-  async function send() {
-    if (!file) return;
+  // Envoi automatique dès qu'un fichier est choisi ou déposé
+  async function send(file: File) {
     setBusy(true);
     setStatus(`Envoi de ${file.name} (${formatBytes(file.size)})…`);
     try {
@@ -42,7 +42,7 @@ export function DeliveryUpload({
         if (!put.ok) throw new Error(`Envoi vers S3 refusé (${put.status}).`);
         const done = previewFor
           ? await attachDeliverablePreview({ orderId, id: previewFor, path: ticket.path, alsoHd, hdLabel: file.name })
-          : await finalizeDeliverable({ orderId, label: label || file.name, path: ticket.path, size: file.size, targetId });
+          : await finalizeDeliverable({ orderId, label: label || file.name.replace(/\.[^.]+$/, ""), path: ticket.path, size: file.size, targetId });
         if ("error" in done && done.error) throw new Error(done.error);
       } else if (ticket.mode === "signed") {
         if (!supabaseUrl || !supabaseKey) throw new Error("Configuration Supabase manquante.");
@@ -52,12 +52,12 @@ export function DeliveryUpload({
         if (error) throw new Error(error.message);
         const done = previewFor
           ? await attachDeliverablePreview({ orderId, id: previewFor, path: ticket.path, alsoHd, hdLabel: file.name })
-          : await finalizeDeliverable({ orderId, label: label || file.name, path: ticket.path, size: file.size, targetId });
+          : await finalizeDeliverable({ orderId, label: label || file.name.replace(/\.[^.]+$/, ""), path: ticket.path, size: file.size, targetId });
         if ("error" in done && done.error) throw new Error(done.error);
       } else {
         const fd = new FormData();
         fd.set("orderId", orderId);
-        fd.set("label", label || file.name);
+        fd.set("label", label || file.name.replace(/\.[^.]+$/, ""));
         if (previewFor) fd.set("previewFor", previewFor);
         if (previewFor && alsoHd) fd.set("alsoHd", "1");
         if (targetId) fd.set("targetId", targetId);
@@ -81,13 +81,11 @@ export function DeliveryUpload({
   if (previewFor) {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <div className="w-full">
-          <FileDrop compact file={file} onFile={setFile} disabled={busy} accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" label="Image d’aperçu" hint="PNG, JPG, WebP ou SVG" />
-        </div>
-        <button type="button" onClick={send} disabled={!file || busy} className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold hover:border-accent disabled:opacity-40">
-          {busy ? "Envoi…" : "Envoyer l'aperçu"}
-        </button>
+        {/* À cocher avant de déposer l'image : l'envoi part dès le dépôt */}
         <label className="flex w-full items-start gap-2 text-xs"><input type="checkbox" checked={alsoHd} disabled={busy} onChange={(event) => setAlsoHd(event.target.checked)} className="mt-0.5 accent-[var(--accent)]" /><span>Utiliser aussi l’original comme fichier HD<span className="mt-1 block text-muted">L’aperçu reste protégé. L’original sera téléchargeable après validation et paiement intégral.</span></span></label>
+        <div className="w-full">
+          <FileDrop compact file={busy ? file : null} onFile={(f) => { setFile(f); if (f) send(f); }} disabled={busy} accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" label="Image d’aperçu" hint="envoyée dès le dépôt · PNG, JPG, WebP ou SVG" />
+        </div>
         {status && (
           <span role="status" className="text-xs text-muted">
             {status}
@@ -100,20 +98,17 @@ export function DeliveryUpload({
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">Ajouter un fichier</p>
+      <input value={label} onChange={(e) => setLabel(e.target.value)} disabled={busy} placeholder="Nom affiché au client (facultatif, sinon le nom du fichier)" aria-label="Nom du fichier affiché au client" className={input} />
       <FileDrop
-        file={file}
+        file={busy ? file : null}
         disabled={busy}
         label="Fichier à livrer"
         hint="jusqu’à 500 Mo"
         onFile={(f) => {
           setFile(f);
-          if (f && !label) setLabel(f.name.replace(/\.[^.]+$/, ""));
+          if (f) send(f);
         }}
       />
-      <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nom affiché au client (ex. Pack Streamlabs)" aria-label="Nom du fichier affiché au client" className={input} />
-      <button type="button" onClick={send} disabled={!file || busy} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background disabled:opacity-40">
-        {busy ? "Envoi…" : "Envoyer le fichier"}
-      </button>
       {status && (
         <p role="status" className="text-xs text-muted">
           {status}

@@ -32,7 +32,6 @@ const statusStyles = {
 // guide), puis envoi au client d'un lien privé vers sa page de livraison.
 export async function DeliverySection({ order, items, message }: { order: Order; items: Deliverable[]; message?: { ok?: string; error?: string } }) {
   const pageUrl = order.deliveryToken ? `${await siteUrl()}/commande/${order.deliveryToken}` : null;
-  const readyCount = items.filter((item) => item.previewPath || (!item.plannedKey && mediaKind(item.storagePath) === "image")).length;
   const newCount = items.filter((item) => pendingPreview(item)).length;
   return (
     <section id="livraison" className="scroll-mt-24 rounded-2xl border border-border bg-surface p-5 sm:p-6">
@@ -108,7 +107,6 @@ export async function DeliverySection({ order, items, message }: { order: Order;
             </section>
         </Drawer>;
       })}
-      <p className="mt-3 text-sm text-muted">{readyCount} aperçu{readyCount > 1 ? "s" : ""} prêt{readyCount > 1 ? "s" : ""} sur {items.length}</p>
       <AddDeliveryElement linkForm={<form action={addDeliveryLinkAction} className="space-y-3">
           <input type="hidden" name="orderId" value={order.id} />
           <p className="text-sm font-medium">Ajouter un lien d&apos;import</p>
