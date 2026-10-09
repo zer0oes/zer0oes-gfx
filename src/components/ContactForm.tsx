@@ -19,6 +19,8 @@ import {
 } from "@/lib/contact-form";
 import { useLocale } from "./I18nProvider";
 import { Field, FormStatus, OptionsField, inputClass } from "./ui";
+import { briefDeliveryNeeds } from "@/lib/brief-delivery";
+import { BriefDeliveryQuestions } from "./BriefDeliveryQuestions";
 
 // Textes des deux formulaires. Les valeurs envoyées (types, budgets, plateformes…) restent
 // en français pour le serveur et les e-mails reçus par Aurore ; seul l'affichage est traduit.
@@ -208,6 +210,8 @@ export function ContactForm({
 }) {
   const [state, action, pending] = useActionState(sendContact, null);
   const [subject, setSubject] = useState(defaultType);
+  // Options cochées (libellés) : questions de plateforme et de livraison selon leur contenu
+  const [selectedOptions, setSelectedOptions] = useState<string[]>(() => optionChoices.filter((o) => o.id === selectedOptionId).map((o) => o.label));
   const [offer, setOffer] = useState(selectedOffer ?? "");
   const isOfferQuestion = subject === "Question sur une offre";
   const isProject = subject === "Projet sur mesure" || subject === "Devis Univers complet";
@@ -339,11 +343,13 @@ export function ContactForm({
                   <span className="text-accent group-open:hidden">{tx.show}</span>
                   <span className="hidden text-accent group-open:inline">{tx.hide}</span>
                 </summary>
-                <div className="mt-4">
+                <div className="mt-4" onChange={(event) => setSelectedOptions([...event.currentTarget.querySelectorAll<HTMLInputElement>('input[name="options"]:checked')].map((input) => input.value))}>
                   <OptionsField legend={tx.optionsLegend} options={optionChoices} selectedIds={selectedOptionId ? [selectedOptionId] : []} />
                 </div>
               </details>
             )}
+            {/* Widgets, alertes ou overlays demandés : plateforme et mode de livraison */}
+            <BriefDeliveryQuestions quote needs={briefDeliveryNeeds(selectedOptions)} en={locale === "en"} />
 
           </Section>
 

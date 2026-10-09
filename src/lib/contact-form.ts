@@ -1,3 +1,5 @@
+import { BRIEF_OVERLAY_DELIVERY_KEY, BRIEF_PLATFORM_KEY, overlayDeliveryChoices, pickChoice, streamToolChoices } from "./brief-delivery";
+
 // Formulaire de contact : choix proposés (partagés entre le formulaire et le serveur,
 // qui ne retient que les valeurs de ces listes) et mise en forme de la demande.
 
@@ -142,6 +144,8 @@ export function parseContact(get: Get, getAll: GetAll): { ok: true; request: Con
         "Éléments disponibles": join(pick(getAll("assets"), providedAssets)),
         "Fichiers envoyés après la prise de contact": get("filesLater") === "1" ? "Oui" : "",
         Options: getAll("options").map((o) => o.slice(0, 200)).slice(0, 20).join(", "),
+        [BRIEF_PLATFORM_KEY]: pickChoice(get("streamTool"), streamToolChoices),
+        [BRIEF_OVERLAY_DELIVERY_KEY]: pickChoice(get("overlayDelivery"), overlayDeliveryChoices),
         Projet: message,
         "M'a trouvée via": one(get("referral"), referralSources),
       },
