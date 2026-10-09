@@ -13,6 +13,7 @@ import type { CodeFile, LabContent, LabDocument } from "@/lib/custom-lab/types";
 import { CustomLabCodePanel, CustomLabPlatformSwitch } from "./CustomLabCodePanel";
 import { CustomLabSimulator } from "./CustomLabSimulator";
 import { CustomLabFields } from "./CustomLabFields";
+import { CustomLabMedia, openLabMedia } from "./CustomLabMedia";
 import "./custom-lab.css";
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
@@ -180,6 +181,7 @@ export function CustomLabEditor({ initial }: { initial: LabDocument }) {
       <div className="cl-actions">
         <CustomLabPlatformSwitch platform={platform} onChange={switchPlatform} />
         <button type="button" onClick={() => save()} disabled={pending || !dirty} className="cl-primary">{pending ? "Enregistrement…" : "Enregistrer"}</button>
+        <button type="button" onClick={() => openLabMedia()} className="cl-secondary">Médias</button>
         <button type="button" onClick={exportZip} className="cl-secondary">Exporter pour {platform === "streamlabs" ? "Streamlabs" : "StreamElements"}</button>
         <button type="button" onClick={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} className="cl-secondary">Sauvegarde du projet</button>
       </div>
@@ -201,6 +203,7 @@ export function CustomLabEditor({ initial }: { initial: LabDocument }) {
       </div>
       {!fieldsCollapsed && <CustomLabFields platform={platform} alertbox={content.kind === "alertbox"} alertType={alertType} fields={editableFields.fields} values={editableFields.values} config={editableFields.config} onAlert={setAlertType} onField={updateField} onSettings={(value) => setContent((current) => ({ ...current, variants: { ...current.variants, [platform]: { ...current.variants[platform], settings: JSON.stringify(value, null, 2) } } }))} />}
     </div>
+    <CustomLabMedia />
     <CustomLabSimulator platform={platform} dispatch={dispatch} onStatus={(message) => { setStatus(message); setLines((current) => [...current.slice(-99), message]); }} />
   </div>;
 }
