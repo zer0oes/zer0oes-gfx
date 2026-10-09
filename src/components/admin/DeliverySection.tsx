@@ -11,7 +11,8 @@ import { supabasePublishableKey, supabaseUrl } from "@/lib/env";
 import { siteUrl } from "@/lib/site-url";
 import type { Deliverable, Order } from "@/lib/store";
 import { DeliveryUpload } from "./DeliveryUpload";
-import { AddDeliveryElement, ClientSpaceLinks } from "./DeliveryControls";
+import { ClientSpaceLinks } from "./DeliveryControls";
+import { NewDeliverable } from "./NewDeliverable";
 import { ConfirmDelete, Drawer, DrawerRow } from "./Drawer";
 import { SaveWithUploads } from "./SaveWithUploads";
 import { deliveryState } from "@/lib/delivery-plan";
@@ -108,13 +109,7 @@ export async function DeliverySection({ order, items, message }: { order: Order;
             </section>
         </Drawer>;
       })}
-      <AddDeliveryElement linkForm={<form action={addDeliveryLinkAction} className="space-y-3">
-          <input type="hidden" name="orderId" value={order.id} />
-          <p className="text-sm font-medium">Ajouter un lien d&apos;import</p>
-          <input name="label" required placeholder="Ex. Overlays — import StreamElements" aria-label="Nom du lien" className={input} />
-          <input name="url" type="url" required placeholder="https://streamelements.com/…" aria-label="Adresse du lien (https)" className={input} />
-          <button className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-accent">Ajouter le lien</button>
-        </form>} fileForm={<DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} />} />
+      <NewDeliverable orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} linkAction={addDeliveryLinkAction} />
 
       <div className="mt-6 flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-2">

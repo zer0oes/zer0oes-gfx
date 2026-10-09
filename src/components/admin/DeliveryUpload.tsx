@@ -19,6 +19,7 @@ export function DeliveryUpload({
   previewFor,
   targetId,
   saveScope,
+  fixedLabel,
 }: {
   orderId: string;
   supabaseUrl?: string;
@@ -26,10 +27,13 @@ export function DeliveryUpload({
   previewFor?: string;
   targetId?: string;
   saveScope?: string;
+  // Nom imposé par le formulaire parent (le champ de nom n'est alors pas affiché)
+  fixedLabel?: string;
 }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
-  const [label, setLabel] = useState("");
+  const [ownLabel, setLabel] = useState("");
+  const label = fixedLabel ?? ownLabel;
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [alsoHd, setAlsoHd] = useState(false);
@@ -114,8 +118,8 @@ export function DeliveryUpload({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">Ajouter un fichier</p>
-      <input value={label} onChange={(e) => setLabel(e.target.value)} disabled={busy} placeholder="Nom affiché au client (facultatif, sinon le nom du fichier)" aria-label="Nom du fichier affiché au client" className={input} />
+      {fixedLabel === undefined && <p className="text-sm font-medium">Ajouter un fichier</p>}
+      {fixedLabel === undefined && <input value={label} onChange={(e) => setLabel(e.target.value)} disabled={busy} placeholder="Nom affiché au client (facultatif, sinon le nom du fichier)" aria-label="Nom du fichier affiché au client" className={input} />}
       <FileDrop
         file={deferred || busy ? file : null}
         disabled={busy}

@@ -20,3 +20,7 @@ export async function flushUploads(scope: string): Promise<string[]> {
   const results = await Promise.all(list.map(async (u) => ((await u.upload()) ? null : u.label)));
   return results.filter((label): label is string => label !== null);
 }
+
+export function hasPendingUploads(scope: string) {
+  return (scopes.get(scope)?.size ?? 0) > 0;
+}
