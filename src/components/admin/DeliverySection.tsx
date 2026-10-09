@@ -13,6 +13,7 @@ import type { Deliverable, Order } from "@/lib/store";
 import { DeliveryUpload } from "./DeliveryUpload";
 import { AddDeliveryElement, ClientSpaceLinks } from "./DeliveryControls";
 import { ConfirmDelete, Drawer, DrawerRow } from "./Drawer";
+import { SaveWithUploads } from "./SaveWithUploads";
 import { deliveryState } from "@/lib/delivery-plan";
 import { DeliveryNotice } from "./DeliveryNotice";
 
@@ -81,7 +82,7 @@ export async function DeliverySection({ order, items, message }: { order: Order;
       </div>
       {items.map((d) => {
         const ready = Boolean(d.previewPath || (!d.plannedKey && mediaKind(d.storagePath) === "image"));
-        return <Drawer key={d.id} id={`livrable-${d.id}`} kicker="Livrable" title={d.label} footer={<><ConfirmDelete action={deleteDeliverableAction} id={d.id} fields={{ orderId: order.id }} label="Retirer ce livrable" question="Es-tu sûre de vouloir retirer ce livrable ?" /><button type="submit" form={`livrable-form-${d.id}`} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110">Enregistrer</button></>}>
+        return <Drawer key={d.id} id={`livrable-${d.id}`} kicker="Livrable" title={d.label} footer={<><ConfirmDelete action={deleteDeliverableAction} id={d.id} fields={{ orderId: order.id }} label="Retirer ce livrable" question="Es-tu sûre de vouloir retirer ce livrable ?" /><SaveWithUploads scope={`livrable-${d.id}`} form={`livrable-form-${d.id}`} /></>}>
 
             <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
               <h4 className="font-semibold">Aperçu client</h4>
@@ -90,14 +91,14 @@ export async function DeliverySection({ order, items, message }: { order: Order;
                 <img src={`/commande/${order.deliveryToken}/${d.id}/apercu`} alt={`Aperçu protégé de ${d.label}`} className="max-h-56 w-full object-contain" />
               </div>}
               {!ready && <p className="text-sm text-muted">Ajoute une image de présentation. Elle sera réduite et filigranée côté serveur.</p>}
-              <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} />
+              <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} saveScope={`livrable-${d.id}`} />
               {d.previewPath && <form action={removeDeliverablePreviewAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-xs text-muted hover:text-red-300">Retirer l’aperçu</button></form>}
             </section>
             <section className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
               <h4 className="font-semibold">Fichiers définitifs</h4>
               <p className="text-xs text-muted">Privés jusqu’à validation du livrable et paiement intégral.</p>
               <ul className="space-y-2 text-sm">{d.storagePath && <li>✓ {d.label} — {formatBytes(d.sizeBytes)}</li>}{d.url && <li>✓ Lien d’import existant</li>}{(d.finalAssets ?? []).map((asset, i) => <li key={i}>✓ {asset.label} ({asset.url ? "lien d’import" : "fichier"})</li>)}</ul>
-              <DeliveryUpload orderId={order.id} targetId={d.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} />
+              <DeliveryUpload orderId={order.id} targetId={d.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} saveScope={`livrable-${d.id}`} />
               <form action={addDeliveryLinkAction} className="space-y-3"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="targetId" value={d.id} /><input name="label" required placeholder="Nom du lien d’import" aria-label="Nom du lien d’import" className={input} /><input name="url" type="url" required placeholder="https://…" aria-label="Adresse du lien d’import" className={input} /><button className="rounded-full border border-border px-4 py-2 text-sm">Ajouter le lien d’import</button></form>
             </section>
             {!!d.clientNotes?.length && <section className="space-y-3"><h4 className="font-semibold">Retours du client</h4>{d.clientNotes.map((note, i) => <div key={i} className="rounded-lg border border-amber-400/30 p-3"><p className="text-xs text-muted">{dateFmt.format(new Date(note.at))}</p><p className="mt-1 whitespace-pre-wrap text-sm">{note.body}</p></div>)}</section>}
