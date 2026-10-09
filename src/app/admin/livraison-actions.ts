@@ -196,8 +196,13 @@ export async function attachDeliverablePreview(input: { orderId: string; id: str
   const store = getStore();
   const order = await store.getOrder(input.orderId);
   if (!order) return { error: "Commande introuvable." };
-  const item = (await store.listDeliverables(input.orderId)).find((d) => d.id === input.id);
+  const items = await store.listDeliverables(input.orderId);
+  const item = items.find((d) => d.id === input.id);
   if (!item) return { error: "Élément introuvable." };
+  // Une nouvelle version d'aperçu annule la validation : impossible si le client a déjà téléchargé
+  // le livrable, ou si la commande entière est validée (sauf à la repasser « En cours »)
+  if (item.finalAccessedAt || item.accessedFinalAssets?.length) return { error: "Ce livrable a déjà été téléchargé par le client : son aperçu ne peut plus être remplacé." };
+  if (deliveryLocked(order, items)) return { error: deliveryLockedMessage };
   const publishedAt = new Date().toISOString();
   const versions = item.previewVersions ?? [];
   await store.updateDeliverable(input.id, { previewPath: input.path, previewType: kind, publishedAt,
