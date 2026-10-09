@@ -520,8 +520,8 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
             <div className="mt-4 grid gap-3 text-xs">
               <label className="grid gap-1">Nom du calque<input className={input} value={current.name ?? ""} placeholder={itemLabel({ ...current, name: undefined }, widgetName)} onChange={(e) => updateItem(current.id, { name: e.target.value })} /></label>
               <div className="grid grid-cols-4 gap-2">
-                {(["x", "y", "w", "h"] as const).map((k) => (
-                  <label key={k} className="grid gap-1">{k === "w" ? "Larg." : k === "h" ? "Haut." : k.toUpperCase()}<input className={input} type="number" value={current[k]} onChange={(e) => updateItem(current.id, { [k]: k === "w" || k === "h" ? Math.max(MIN_ITEM_SIZE, num(e.target.value)) : num(e.target.value) })} /></label>
+                {(["y", "x", "w", "h"] as const).map((k) => (
+                  <label key={k} className="grid gap-1">{k === "w" ? "Larg." : k === "h" ? "Haut." : k === "y" ? "Top" : "Left"}<input className={input} type="number" value={current[k]} onChange={(e) => updateItem(current.id, { [k]: k === "w" || k === "h" ? Math.max(MIN_ITEM_SIZE, num(e.target.value)) : num(e.target.value) })} /></label>
                 ))}
               </div>
               <div className="flex flex-wrap gap-2">
