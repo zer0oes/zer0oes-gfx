@@ -9,7 +9,7 @@ const SortContext = createContext<Sort | null>(null);
 // Glissement affiché sans réordonner les lignes côté React (les lignes venues du serveur ne sont pas
 // toutes identifiables avant leur affichage) : la ligne tirée est masquée, celles qu'elle survole glissent
 // d'une hauteur pour lui faire de la place, et un emplacement en pointillé marque l'endroit du dépôt.
-function shift(list: HTMLElement | null, drag: SortDrag | null) {
+export function shift(list: HTMLElement | null, drag: SortDrag | null) {
   if (!list) return;
   const items = [...list.children] as HTMLElement[];
   items.forEach((el, k) => {
@@ -56,24 +56,33 @@ export function SortableRows({ onReorder, children }: { onReorder: (ids: string[
         <tbody aria-hidden>
           <tr>
             <td className="p-0">
-              {/* Emplacement du dépôt */}
-              <div
-                style={{ top: slotTop(drag) - window.scrollY + 4, left: drag.left + 4, width: drag.width - 8, height: Math.max(drag.height - 8, 24) }}
-                className="pointer-events-none fixed z-40 rounded-xl border-2 border-dashed border-accent bg-accent/5"
-              />
-              {/* Ligne tirée, qui suit le pointeur */}
-              <div
-                style={{ top: drag.y - drag.offset, left: drag.left, width: drag.width, height: drag.height }}
-                className="pointer-events-none fixed z-50 flex items-center gap-3 rounded-xl border border-accent bg-surface px-3 text-sm font-semibold shadow-2xl"
-              >
-                <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 text-accent" fill="currentColor"><path d="M9 5h2v2H9V5zm4 0h2v2h-2V5zM9 11h2v2H9v-2zm4 0h2v2h-2v-2zM9 17h2v2H9v-2zm4 0h2v2h-2v-2z" /></svg>
-                {drag.label.replace(/^Modifier\s+/, "")}
-              </div>
+              <SortPreview drag={drag} />
             </td>
           </tr>
         </tbody>
       )}
     </SortContext.Provider>
+  );
+}
+
+// Pendant un glissement : emplacement du dépôt (pointillés) et ligne tirée qui suit le pointeur
+export function SortPreview({ drag }: { drag: SortDrag }) {
+  return (
+    <>
+      {/* Emplacement du dépôt */}
+      <div
+        style={{ top: slotTop(drag) - window.scrollY + 4, left: drag.left + 4, width: drag.width - 8, height: Math.max(drag.height - 8, 24) }}
+        className="pointer-events-none fixed z-40 rounded-xl border-2 border-dashed border-accent bg-accent/5"
+      />
+      {/* Ligne tirée, qui suit le pointeur */}
+      <div
+        style={{ top: drag.y - drag.offset, left: drag.left, width: drag.width, height: drag.height }}
+        className="pointer-events-none fixed z-50 flex items-center gap-3 rounded-xl border border-accent bg-surface px-3 text-sm font-semibold shadow-2xl"
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 text-accent" fill="currentColor"><path d="M9 5h2v2H9V5zm4 0h2v2h-2V5zM9 11h2v2H9v-2zm4 0h2v2h-2v-2zM9 17h2v2H9v-2zm4 0h2v2h-2v-2z" /></svg>
+        {drag.label.replace(/^Modifier\s+/, "")}
+      </div>
+    </>
   );
 }
 
