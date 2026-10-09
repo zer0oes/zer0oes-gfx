@@ -11,9 +11,9 @@ export function CustomLabPlatformSwitch({ platform, onChange }: { platform: Plat
   return <div className="cl-platform-switch" role="group" aria-label="Plateforme du code et de la simulation">{(["streamelements", "streamlabs"] as const).map((value) => <button key={value} type="button" aria-pressed={platform === value} aria-label={value === "streamlabs" ? "Streamlabs" : "StreamElements"} title={value === "streamlabs" ? "Streamlabs" : "StreamElements"} onClick={() => onChange(value)}><Image unoptimized src={`/streamerlab/platforms/${value}.svg`} alt="" width={94} height={24} /></button>)}</div>;
 }
 
-export function CustomLabCodePanel({ tab, value, platform, dirty, pending, alertbox, onTab, onChange, onSave, onStatus }: {
+export function CustomLabCodePanel({ tab, value, platform, dirty, pending, alertbox, onTab, onChange, onStatus }: {
   tab: CodeFile | "settings"; value: string; platform: Platform; dirty: boolean; pending: boolean; alertbox: boolean;
-  onTab: (tab: CodeFile | "settings") => void; onChange: (value: string) => void; onSave: () => void; onStatus: (message: string) => void;
+  onTab: (tab: CodeFile | "settings") => void; onChange: (value: string) => void; onStatus: (message: string) => void;
 }) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const highlight = useRef<HTMLPreElement>(null);
@@ -25,10 +25,9 @@ export function CustomLabCodePanel({ tab, value, platform, dirty, pending, alert
     <div className="cl-code-body" id="cl-code-body" role="tabpanel" aria-labelledby={`cl-tab-${tab}`}>
       <pre ref={highlight} aria-hidden="true" className="cl-code-highlight"><code dangerouslySetInnerHTML={{ __html: highlighted + "\n" }} /></pre>
       <textarea ref={textarea} aria-label={`Code ${tab} du widget`} wrap="off" autoComplete="off" autoCapitalize="off" spellCheck={false} value={value} onChange={(event) => onChange(event.target.value)} onScroll={(event) => { if (highlight.current) { highlight.current.scrollTop = event.currentTarget.scrollTop; highlight.current.scrollLeft = event.currentTarget.scrollLeft; } }} onKeyDown={(event) => {
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); if (!pending) onSave(); }
         if (event.key === "Tab") { event.preventDefault(); const element = event.currentTarget; const start = element.selectionStart; const end = element.selectionEnd; onChange(`${value.slice(0, start)}  ${value.slice(end)}`); requestAnimationFrame(() => { textarea.current?.setSelectionRange(start + 2, start + 2); }); }
       }} />
       <button type="button" className="cl-copy" aria-label="Copier le code" title="Copier le code" onClick={async () => { try { await navigator.clipboard.writeText(value); onStatus("Code copié."); } catch { onStatus("Copie indisponible. Sélectionne le code pour le copier."); } }}>⧉</button>
-    </div><footer className="cl-code-footer"><code>{filename}</code><span>Ctrl + S pour enregistrer immédiatement</span></footer>
+    </div><footer className="cl-code-footer"><code>{filename}</code><span>Enregistrement automatique · Ctrl + S pour enregistrer tout de suite</span></footer>
   </section>;
 }

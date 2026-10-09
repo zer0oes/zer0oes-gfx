@@ -41,6 +41,7 @@ export function CustomLabEditor({ initial }: { initial: LabDocument }) {
   const [previewKey, setPreviewKey] = useState(0);
   const frame = useRef<HTMLIFrameElement>(null);
   const mockStore = useRef<Record<string, unknown>>({});
+  const saving = useRef(false);
   const dirty = JSON.stringify(content) !== saved;
   const variant = content.variants[platform];
   const code = content.kind === "alertbox" ? variant.alerts[alertType] : variant.code;
@@ -108,19 +109,38 @@ export function CustomLabEditor({ initial }: { initial: LabDocument }) {
       return { ...current, variants: { ...current.variants, [platform]: current.kind === "alertbox" ? { ...v, alerts: { ...v.alerts, [alertType]: next } } : { ...v, code: next } } };
     });
   }
-  function save() {
+  // auto : enregistrement automatique (silencieux si le JSON est momentanément invalide pendant la saisie)
+  function save(auto = false) {
     const snapshot = content;
-    try { parseLabContent(snapshot); } catch (error) { setStatus(error instanceof Error ? error.message : "Document invalide."); return; }
+    if (saving.current) return;
+    try { parseLabContent(snapshot); } catch (error) { if (!auto) setStatus(error instanceof Error ? error.message : "Document invalide."); return; }
+    saving.current = true;
     startTransition(async () => {
       try {
         const result = await saveLabAction(id, revision.current, snapshot);
         if (!result.ok) { setStatus(result.message); return; }
         revision.current = result.revision;
         setSaved(JSON.stringify(snapshot));
-        setStatus("Création enregistrée.");
+        setStatus(`${auto ? "Enregistré automatiquement" : "Création enregistrée"} à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}.`);
       } catch { setStatus("Connexion interrompue. Tes modifications restent dans l’éditeur."); }
+      finally { saving.current = false; }
     });
   }
+  // Enregistrement automatique 1,5 s après la dernière modification ; Ctrl + S partout dans l'éditeur
+  const saveRef = useRef(save);
+  useEffect(() => { saveRef.current = save; });
+  useEffect(() => {
+    if (!dirty) return;
+    const timer = setTimeout(() => saveRef.current(true), 1500);
+    return () => clearTimeout(timer);
+  }, [content, dirty]);
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); saveRef.current(); }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, []);
   function exportZip() {
     try {
       parseLabContent(content);
@@ -159,7 +179,7 @@ export function CustomLabEditor({ initial }: { initial: LabDocument }) {
       <div><h1>{content.name}</h1><p>{content.kind === "alertbox" ? "Pack d’alertes" : "Widget"} · {dirty ? "Modifications à enregistrer" : "Enregistré"}</p></div>
       <div className="cl-actions">
         <CustomLabPlatformSwitch platform={platform} onChange={switchPlatform} />
-        <button type="button" onClick={save} disabled={pending || !dirty} className="cl-primary">{pending ? "Enregistrement…" : "Enregistrer"}</button>
+        <button type="button" onClick={() => save()} disabled={pending || !dirty} className="cl-primary">{pending ? "Enregistrement…" : "Enregistrer"}</button>
         <button type="button" onClick={exportZip} className="cl-secondary">Exporter pour {platform === "streamlabs" ? "Streamlabs" : "StreamElements"}</button>
         <button type="button" onClick={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} className="cl-secondary">Sauvegarde du projet</button>
       </div>
@@ -176,7 +196,7 @@ export function CustomLabEditor({ initial }: { initial: LabDocument }) {
           </div></header>
           {rendered.error ? <p role="alert" className="cl-error">{rendered.error}</p> : <iframe key={previewKey} ref={frame} title="Aperçu isolé du Laboratoire" sandbox="allow-scripts" allow="autoplay" referrerPolicy="no-referrer" srcDoc={rendered.source} onLoad={loadPreview} className="cl-preview-frame" />}
         </section>
-        <CustomLabCodePanel tab={tab} value={tab === "settings" ? variant.settings : code[tab]} platform={platform} dirty={dirty} pending={pending} alertbox={content.kind === "alertbox"} onTab={setTab} onChange={edit} onSave={save} onStatus={setStatus} />
+        <CustomLabCodePanel tab={tab} value={tab === "settings" ? variant.settings : code[tab]} platform={platform} dirty={dirty} pending={pending} alertbox={content.kind === "alertbox"} onTab={setTab} onChange={edit} onStatus={setStatus} />
         <section className="cl-console" aria-label="Console"><header><h2>Console · {lines.length}</h2><button type="button" onClick={() => setLines([])}>Effacer</button></header><pre>{lines.join("\n") || "Aucun message."}</pre></section>
       </div>
       {!fieldsCollapsed && <CustomLabFields platform={platform} alertbox={content.kind === "alertbox"} alertType={alertType} fields={editableFields.fields} values={editableFields.values} config={editableFields.config} onAlert={setAlertType} onField={updateField} onSettings={(value) => setContent((current) => ({ ...current, variants: { ...current.variants, [platform]: { ...current.variants[platform], settings: JSON.stringify(value, null, 2) } } }))} />}
