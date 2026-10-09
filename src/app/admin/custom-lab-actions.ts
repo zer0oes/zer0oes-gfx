@@ -29,28 +29,6 @@ export async function createLabAction(form: FormData) {
   redirect(`/admin/laboratoire/${id}`);
 }
 
-export async function updateLabDetailsAction(form: FormData) {
-  await requireAdmin();
-  const id = form.get("id")?.toString() ?? "";
-  const revision = Number(form.get("revision"));
-  const name = form.get("name")?.toString().trim() ?? "";
-  const width = Number(form.get("width"));
-  const height = Number(form.get("height"));
-  try {
-    if (!name || name.length > 120 || !Number.isInteger(width) || !Number.isInteger(height) || width < 20 || width > 7680 || height < 20 || height > 4320) throw new Error("Dimensions invalides.");
-    const document = await getLabDocument(id);
-    if (!document || document.revision !== revision) throw new LabConflictError();
-    if (document.kind === "overlay" && (width < 320 || height < 180)) throw new Error("Dimensions d’overlay invalides.");
-    const content = { ...document, name, ...(document.kind === "overlay" && document.overlay ? { overlay: { ...document.overlay, width, height } } : { size: { width, height } }) };
-    await saveLabDocument(content, { id, revision });
-  } catch (error) {
-    redirect(`/admin/laboratoire?error=${error instanceof LabConflictError ? "conflict" : "details"}`);
-  }
-  revalidatePath("/admin/laboratoire");
-  revalidatePath(`/admin/laboratoire/${id}`);
-  redirect("/admin/laboratoire");
-}
-
 export async function importLabAction(form: FormData) {
   await requireAdmin();
   const file = form.get("file");

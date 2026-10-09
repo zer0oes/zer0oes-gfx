@@ -13,8 +13,6 @@ export const metadata = { title: "Laboratoire" };
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" });
 const kinds = { widget: { label: "Widget", tone: "border-violet-400/40 bg-violet-400/10 text-violet-300" }, alertbox: { label: "Pack d’alertes", tone: "border-pink-400/40 bg-pink-400/10 text-pink-300" }, overlay: { label: "Overlay", tone: "border-cyan-400/40 bg-cyan-400/10 text-cyan-300" } } as const;
 const errorMessages: Record<string, string> = {
-  details: "Enregistrement impossible : vérifie le nom et les dimensions de la création.",
-  conflict: "Cette création a été modifiée ailleurs. Recharge la page avant de réessayer.",
   setup: "Le Laboratoire n’est pas encore initialisé dans la base : sa migration doit être appliquée.",
   create: "Création impossible pour le moment. Réessaie dans un instant.",
   storage: "Le stockage est indisponible. Réessaie dans un instant.",
