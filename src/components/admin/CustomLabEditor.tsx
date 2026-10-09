@@ -24,7 +24,8 @@ function download(data: BlobPart, name: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function CustomLabEditor({ initial }: { initial: LabDocument }) {
+// projects : noms des projets existants, proposés dans le champ « Projet »
+export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocument; projects?: string[] }) {
   const { id, revision: initialRevision } = initial;
   const initialContent: LabContent = { name: initial.name, project: initial.project, kind: initial.kind, variants: initial.variants };
   const [content, setContent] = useState<LabContent>(initialContent);
@@ -187,7 +188,7 @@ export function CustomLabEditor({ initial }: { initial: LabDocument }) {
       </div>
     </header>
     {status && <p role="status" className="cl-status">{status}</p>}
-    <details className="cl-metadata"><summary>Nom et projet</summary><div><label>Nom<input className={input} value={content.name} maxLength={120} onChange={(event) => setContent({ ...content, name: event.target.value })} /></label><label>Projet<input className={input} value={content.project} maxLength={120} onChange={(event) => setContent({ ...content, project: event.target.value })} /></label></div></details>
+    <details className="cl-metadata"><summary>Nom et projet</summary><div><label>Nom<input className={input} value={content.name} maxLength={120} onChange={(event) => setContent({ ...content, name: event.target.value })} /></label><label>Projet<input className={input} list="cl-projects" value={content.project} maxLength={120} onChange={(event) => setContent({ ...content, project: event.target.value })} /><datalist id="cl-projects">{projects.map((name) => <option key={name} value={name} />)}</datalist></label></div></details>
     <div className={`cl-workspace ${fieldsCollapsed ? "is-collapsed" : ""}`}>
       <div className="cl-main">
         <section aria-label="Aperçu du widget">

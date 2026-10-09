@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { LAB_MAX_BYTES, newLabContent, parseLabContent } from "@/lib/custom-lab/model";
 import { LabConflictError, saveLabDocument } from "@/lib/custom-lab/store";
 import { LabStorageError } from "@/lib/custom-lab/errors";
+import { createLabProject, deleteLabProject, updateLabProject } from "@/lib/custom-lab/projects";
 import { addLabMedia, deleteLabMedia, labMediaAvailable, labMediaCheck, labMediaUrl, listLabMedia, signLabMediaUpload, type LabMedia } from "@/lib/custom-lab/media";
 
 export async function createLabAction(form: FormData) {
@@ -87,4 +88,34 @@ export async function deleteLabMediaAction(id: string) {
   } catch (error) {
     return { ok: false as const, message: error instanceof LabStorageError ? error.message : "Suppression impossible." };
   }
+}
+
+// --- Projets du Laboratoire --------------------------------------------------------
+
+const labText = (form: FormData, key: string, max: number) => (form.get(key)?.toString() ?? "").trim().slice(0, max);
+
+export async function saveLabProjectAction(form: FormData) {
+  await requireAdmin();
+  const id = labText(form, "id", 60);
+  const name = labText(form, "name", 120);
+  if (!name) redirect("/admin/laboratoire?error=projet");
+  try {
+    if (id) await updateLabProject(id, { name, description: labText(form, "description", 500), archived: form.get("archived") === "on" });
+    else await createLabProject(name, labText(form, "description", 500));
+  } catch {
+    redirect("/admin/laboratoire?error=projet");
+  }
+  revalidatePath("/admin/laboratoire");
+  redirect("/admin/laboratoire");
+}
+
+export async function deleteLabProjectAction(form: FormData) {
+  await requireAdmin();
+  try {
+    await deleteLabProject(labText(form, "id", 60));
+  } catch {
+    redirect("/admin/laboratoire?error=projet");
+  }
+  revalidatePath("/admin/laboratoire");
+  redirect("/admin/laboratoire");
 }
