@@ -1,5 +1,6 @@
 import type { Streamer, Work } from "@/data/portfolio";
 import type { StoredTexts } from "@/lib/case-study-texts";
+import type { StoredPage } from "@/lib/page-builder";
 import type { FinanceSettings } from "@/lib/finance";
 import type { Catalog, Option, Pack, PaymentType, PricingSettings } from "@/lib/pricing";
 import type { ProtectionSettings } from "@/lib/protection";
@@ -244,7 +245,8 @@ export interface Store {
   reorderStreamers(orderedIds: string[]): Promise<void>;
   // Textes des pages projet saisis dans l'admin (null : textes d'origine)
   getCaseStudyTexts(streamerId: string): Promise<unknown>;
-  saveCaseStudyTexts(streamerId: string, texts: StoredTexts | null): Promise<void>;
+  // Anciens textes seuls, ou page du constructeur ({ builder: 1, page })
+  saveCaseStudyTexts(streamerId: string, texts: StoredTexts | StoredPage | null): Promise<void>;
   // Page d'accueil saisie dans l'admin (null : contenu d'origine)
   getHomeContent(): Promise<unknown>;
   saveHomeContent(content: Record<string, string> | null): Promise<void>;

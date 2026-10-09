@@ -3,12 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProjectOverview } from "@/components/ProjectOverview";
 import { CaseStudyView } from "@/components/CaseStudyView";
-import { EditorialView } from "@/components/EditorialView";
+import { BuilderView } from "@/components/BuilderView";
 import { TestimonialQuote, testimonialImage } from "@/components/TestimonialQuote";
 import { WorkGrid } from "@/components/WorkGrid";
 import { caseStudies } from "@/data/case-studies";
 import { categories, projectHref, type Category } from "@/data/portfolio";
-import { withStoredTexts, applyTexts } from "@/lib/case-study-texts";
+import { projectPage } from "@/lib/project-page";
 import { asLocale, href, t, type Locale } from "@/lib/i18n";
 import { languageAlternates } from "@/lib/seo";
 import { getStore } from "@/lib/store";
@@ -45,32 +45,27 @@ export default async function ProjectPage({ params, searchParams }: PageProps<"/
   const review = (await getStore().listTestimonials()).find((x) => x.streamerId === streamer.id);
   const quote = review?.consent ? <TestimonialQuote testimonial={review} locale={lang} image={testimonialImage(own, streamer.id)} /> : null;
   const base = caseStudies[streamer.id];
-  // Textes modifiés dans l'admin, appliqués sur la mise en page du code (puis traduits sur /en)
-  const storedStudy = await getStore().getCaseStudyTexts(streamer.id);
-  const translatedStudy = trDeep(lang, base && "layout" in base ? withStoredTexts(base, storedStudy) : base);
-  const translations = await getStore().getHomeContent() as Record<string, string> | null;
-  const study = lang === "en" && translatedStudy && "layout" in translatedStudy
-    ? applyTexts(translatedStudy, (path) => {
-        const match = /^blocks\.(\d+)\./.exec(path);
-        const blocks = storedStudy && typeof storedStudy === "object" && "blocks" in storedStudy ? storedStudy.blocks : undefined;
-        if (match && (!Array.isArray(blocks) || blocks[Number(match[1])] !== translatedStudy.blocks[Number(match[1])]?.type)) return undefined;
-        return translations?.[`translation:study:${streamer.id}:t:${path}`];
-      })
-    : translatedStudy;
+  // Page construite dans l'admin (ou mise en page d'origine), sinon vue « étude de cas » ou onglets par type
+  const built = await projectPage(streamer.id);
   const back = (
     <Link href={to("/portfolio")} className="text-sm text-muted hover:text-foreground">
       {t(lang, { fr: "← Tous les projets", en: "← All projects" })}
     </Link>
   );
-  if (study) {
+  if (built) {
     return (
       <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
         {back}
-        {"layout" in study ? (
-          <EditorialView study={study} works={own} streamerName={streamer.name} quote={quote} />
-        ) : (
-          <CaseStudyView study={study} works={own} streamerName={streamer.name} quote={quote} />
-        )}
+        <BuilderView page={built.page} works={own} streamerName={streamer.name} quote={quote} />
+      </div>
+    );
+  }
+  const study = trDeep(lang, base);
+  if (study && !("layout" in study)) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
+        {back}
+        <CaseStudyView study={study} works={own} streamerName={streamer.name} quote={quote} />
       </div>
     );
   }
