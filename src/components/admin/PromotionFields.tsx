@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { formatPrice, type Catalog } from "@/lib/pricing";
 import { discountedPrice, promotionProducts, type Promotion } from "@/lib/promotions";
+import { Segmented } from "./Segmented";
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 export function PromotionFields({ promotion, catalog }: { promotion?: Promotion; catalog: Catalog }) {
@@ -13,8 +14,7 @@ export function PromotionFields({ promotion, catalog }: { promotion?: Promotion;
   const products = promotionProducts(catalog);
   return <>
     <fieldset><legend className="mb-2 text-sm font-medium">Utilisation de la remise</legend><div className="flex flex-wrap gap-4">
-      <label className="flex gap-2 text-sm"><input type="radio" name="mode" value="code" checked={mode === "code"} onChange={() => setMode("code")} />Code promo ou fidélité</label>
-      <label className="flex gap-2 text-sm"><input type="radio" name="mode" value="sale" checked={mode === "sale"} onChange={() => setMode("sale")} />Prix promotionnels publics</label>
+      <Segmented name="mode" options={[["code", "Code promo ou fidélité"], ["sale", "Prix promotionnels publics"]]} value={mode} onChange={(v) => setMode(v as typeof mode)} />
     </div></fieldset>
     {mode === "code" ? <>
       <div className="grid gap-4 sm:grid-cols-2">

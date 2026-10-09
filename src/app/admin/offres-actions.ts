@@ -244,11 +244,11 @@ export async function saveOptionAction(formData: FormData) {
     name,
     price,
     priceFrom: formData.get("priceFrom") === "on" || undefined,
-    unit: text(formData, "unit", 30) || undefined,
+    unit: undefined, // champ retiré de l'admin : plus d'unité après le prix
     category: optionCategories.find((c) => c.id === formData.get("category"))?.id as OptionCategory | undefined,
   };
   await store.saveOptions(options.map((o) => (o.id === id ? next : o)));
-  await saveAdminTranslations(formData, `option:${id}`, ["name", "unit"]);
+  await saveAdminTranslations(formData, `option:${id}`, ["name"]);
   const content = optionContentFromForm(await store.getHomeContent(), id, formData);
   await store.saveHomeContent(withGroupName(withGrouping(content, options, id, text(formData, "groupWith", 60)), next, formData));
   done(optionTab(id));
@@ -301,5 +301,16 @@ export async function reorderOptionsAction(ids: string[]) {
   const rank = new Map(ids.map((id, i) => [id, i]));
   const next = [...options].sort((a, b) => (rank.get(a.id) ?? options.length) - (rank.get(b.id) ?? options.length));
   await store.saveOptions(next);
+  revalidatePath("/", "layout");
+}
+
+// Nouvel ordre des offres (poignée dans le tableau de l'admin)
+export async function reorderPacksAction(ids: string[]) {
+  await requireAdmin();
+  const store = getStore();
+  const current = (await store.getCatalog()).packs.map((p) => p.id);
+  // Seulement des offres existantes, toutes présentes
+  if (ids.length !== current.length || !ids.every((id) => current.includes(id))) return;
+  await store.reorderPacks(ids);
   revalidatePath("/", "layout");
 }
