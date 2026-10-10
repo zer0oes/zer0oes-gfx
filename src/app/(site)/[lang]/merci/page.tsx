@@ -115,7 +115,7 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
         {view?.paid ? (
           <>
             <span className="block font-semibold text-emerald-300">{t(lang, { fr: `Paiement de ${amount(view.amountPaid ?? 0)} confirmé`, en: `Payment of ${amount(view.amountPaid ?? 0)} confirmed` })}</span>
-            <span className="mt-1 block text-base">{t(lang, { fr: `Reste à payer : ${amount(Math.max(0, view.totalPrice - (view.amountPaid ?? 0)))}`, en: `Remaining balance: ${amount(Math.max(0, view.totalPrice - (view.amountPaid ?? 0)))}` })}</span>
+            {view.totalPrice > (view.amountPaid ?? 0) && <span className="mt-1 block text-base">{t(lang, { fr: `Reste à payer : ${amount(view.totalPrice - (view.amountPaid ?? 0))}`, en: `Remaining balance: ${amount(view.totalPrice - (view.amountPaid ?? 0))}` })}</span>}
           </>
         ) : view ? (
           lang === "en" ? (
