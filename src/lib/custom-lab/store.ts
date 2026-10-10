@@ -15,13 +15,15 @@ const file = path.join(directory, "library.json");
 let queue: Promise<unknown> = Promise.resolve();
 const database = () => createClient(supabaseUrl()!, supabaseSecretKey()!, { auth: { persistSession: false, autoRefreshToken: false } });
 const summary = (document: LabDocument): LabSummary => {
-  const { id, name, description, project, kind, revision, updatedAt } = document;
+  const { id, name, description, project, kind, revision, updatedAt, position } = document;
   const size = kind === "overlay" && document.overlay ? { width: document.overlay.width, height: document.overlay.height } : parseLabSize(document.size, kind === "alertbox" ? "alertbox" : "widget");
   // Plateformes au code rempli ; overlay : widgets utilisés (compatibilité calculée avec la bibliothèque)
   const widgetIds = kind === "overlay" ? [...new Set((document.overlay?.items ?? []).flatMap((item) => (item.type === "widget" && item.widgetId ? [item.widgetId] : [])))] : [];
-  return { id, name, description, project, kind, revision, updatedAt, size, platforms: codePlatforms(document), widgetIds, ...(document.streamlabsWidget ? { streamlabsWidget: document.streamlabsWidget } : {}) };
+  return { id, name, description, project, kind, revision, updatedAt, position: position ?? 0, size, platforms: codePlatforms(document), widgetIds, ...(document.streamlabsWidget ? { streamlabsWidget: document.streamlabsWidget } : {}) };
 };
-const fromRow = (row: Record<string, unknown>): LabDocument => ({ ...parseLabContent(row.content), id: row.id as string, revision: row.revision as number, createdAt: row.created_at as string, updatedAt: row.updated_at as string });
+const fromRow = (row: Record<string, unknown>): LabDocument => ({ ...parseLabContent(row.content), id: row.id as string, revision: row.revision as number, position: Number(row.position ?? 0), createdAt: row.created_at as string, updatedAt: row.updated_at as string });
+// Ordre de la bibliothèque : position dans le projet, puis dernière modification
+const byPosition = (a: LabSummary, b: LabSummary) => (a.position ?? 0) - (b.position ?? 0) || b.updatedAt.localeCompare(a.updatedAt);
 
 async function localRead(): Promise<LabDocument[]> {
   assertNotProduction("La bibliothèque locale du Laboratoire");
@@ -31,12 +33,12 @@ async function localRead(): Promise<LabDocument[]> {
 
 export async function listLabDocuments(): Promise<LabSummary[]> {
   if (supabaseConfigured()) {
-    const { data, error } = await database().from("custom_lab_documents").select("*").order("updated_at", { ascending: false });
+    const { data, error } = await database().from("custom_lab_documents").select("*").order("position").order("updated_at", { ascending: false });
     if (error) throw new LabStorageError(error.code);
     return data.map(fromRow).map(summary);
   }
   if (!localStoreAllowed()) return [];
-  return (await localRead()).map(summary).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return (await localRead()).map(summary).sort(byPosition);
 }
 
 export async function getLabDocument(id: string): Promise<LabDocument | null> {
@@ -72,7 +74,7 @@ export async function saveLabDocument(raw: LabContent, existing?: { id: string; 
     const docs = await localRead();
     const current = existing ? docs.find((doc) => doc.id === existing.id) : undefined;
     if (existing && (!current || current.revision !== existing.revision)) throw new LabConflictError();
-    const doc: LabDocument = { ...content, id: current?.id ?? randomUUID(), revision: (current?.revision ?? 0) + 1, createdAt: current?.createdAt ?? now, updatedAt: now };
+    const doc: LabDocument = { ...content, id: current?.id ?? randomUUID(), revision: (current?.revision ?? 0) + 1, position: current?.position ?? 0, createdAt: current?.createdAt ?? now, updatedAt: now };
     const next = [...docs.filter((entry) => entry.id !== doc.id), doc];
     await fs.mkdir(directory, { recursive: true });
     const temporary = `${file}.${randomUUID()}.tmp`;
@@ -93,4 +95,42 @@ export async function listLabSources(): Promise<LabDocument[]> {
   }
   if (!localStoreAllowed()) return [];
   return (await localRead()).filter((doc) => doc.kind !== "overlay");
+}
+
+async function localWrite(docs: LabDocument[]) {
+  await fs.mkdir(directory, { recursive: true });
+  const temporary = `${file}.${randomUUID()}.tmp`;
+  await fs.writeFile(temporary, JSON.stringify(docs));
+  await fs.rename(temporary, file);
+}
+
+// Suppression définitive d'une création
+export async function deleteLabDocument(id: string): Promise<void> {
+  if (!validLabId(id)) throw new Error("Création introuvable.");
+  if (supabaseConfigured()) {
+    const { error } = await database().from("custom_lab_documents").delete().eq("id", id);
+    if (error) throw new LabStorageError(error.code);
+    return;
+  }
+  if (!localStoreAllowed()) throw new Error("Configure Supabase pour modifier la bibliothèque.");
+  const run = queue.then(async () => localWrite((await localRead()).filter((doc) => doc.id !== id)));
+  queue = run.catch(() => {});
+  return run;
+}
+
+// Ordre des créations d'un projet : position = rang dans la liste reçue
+export async function setLabPositions(orderedIds: string[]): Promise<void> {
+  const ids = orderedIds.filter(validLabId).slice(0, 500);
+  if (supabaseConfigured()) {
+    const db = database();
+    for (const [position, id] of ids.entries()) {
+      const { error } = await db.from("custom_lab_documents").update({ position }).eq("id", id);
+      if (error) throw new LabStorageError(error.code);
+    }
+    return;
+  }
+  if (!localStoreAllowed()) throw new Error("Configure Supabase pour modifier la bibliothèque.");
+  const run = queue.then(async () => localWrite((await localRead()).map((doc) => (ids.includes(doc.id) ? { ...doc, position: ids.indexOf(doc.id) } : doc))));
+  queue = run.catch(() => {});
+  return run;
 }
