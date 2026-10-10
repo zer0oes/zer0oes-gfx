@@ -15,6 +15,7 @@ import { orderStatuses } from "@/lib/store/types";
 import { LabStorageError } from "@/lib/custom-lab/errors";
 import { createLabProject, deleteLabProject, updateLabProject } from "@/lib/custom-lab/projects";
 import { addLabMedia, deleteLabMedia, labMediaAvailable, labMediaCheck, labMediaUrl, listLabMedia, signLabMediaUpload, type LabMedia } from "@/lib/custom-lab/media";
+import { LAB_TEXT_DEFAULTS, type LabTextKey } from "@/lib/custom-lab/lab-texts";
 
 export async function createLabAction(form: FormData) {
   await requireAdmin();
@@ -216,4 +217,19 @@ export async function deliverLabAction(input: { id: string; orderId: string; tar
   if (order.deliveryToken) revalidatePath(`/commande/${order.deliveryToken}`);
   const count = uploaded.length > 1 ? `${uploaded.length} fichiers ajoutés` : "Fichier ajouté";
   return { ok: true, message: `${count} au livrable « ${target?.label ?? name} » de la commande de ${order.customerName}.` };
+}
+
+// Textes du Laboratoire (lien Streamlabs et sa note) : enregistrés avec les autres textes du site ; vide = texte d'origine
+export async function saveLabTextsAction(form: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const stored = await store.getHomeContent();
+  const content = Object.fromEntries(Object.entries(stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {}).filter(([, value]) => typeof value === "string")) as Record<string, string>;
+  for (const key of Object.keys(LAB_TEXT_DEFAULTS) as LabTextKey[]) {
+    const value = (form.get(key)?.toString() ?? "").trim().slice(0, 300);
+    if (value && value !== LAB_TEXT_DEFAULTS[key]) content[key] = value;
+    else delete content[key];
+  }
+  await store.saveHomeContent(content);
+  revalidatePath("/admin/laboratoire");
 }
