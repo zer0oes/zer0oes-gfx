@@ -5,6 +5,10 @@
 
 export type InstallPlatform = "streamlabs" | "streamelements";
 
+// Où obtenir les liens (admin) : partage d'un Widget Theme Streamlabs, code de partage c4ldas pour StreamElements
+export const STREAMLABS_THEMES_URL = "https://streamlabs.com/dashboard#/widgetthemes";
+export const C4LDAS_URL = "https://seapi.c4ldas.com.br/";
+
 // Page d'installation c4ldas : connexion avec StreamElements, puis saisie du code reçu
 export const C4LDAS_INSTALL_URL = "https://seapi.c4ldas.com.br/overlays/install";
 

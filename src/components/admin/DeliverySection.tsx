@@ -20,7 +20,7 @@ import { SaveWithUploads } from "./SaveWithUploads";
 import { deliveryState } from "@/lib/delivery-plan";
 import { DeliveryNotice } from "./DeliveryNotice";
 import { Segmented } from "./Segmented";
-import { installAccessKey } from "@/lib/install-links";
+import { C4LDAS_URL, installAccessKey, STREAMLABS_THEMES_URL } from "@/lib/install-links";
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" });
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
@@ -115,6 +115,10 @@ export async function DeliverySection({ order, items, message }: { order: Order;
                 <input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="targetId" value={d.id} />
                 <p className="text-sm font-semibold">Lien d’installation</p>
                 <p className="text-xs text-muted">Le client voit un bouton « Installer sur … » avec les instructions, après validation et paiement. Les fichiers ZIP restent téléchargeables.</p>
+                <ul className="list-disc space-y-1 pl-5 text-xs text-muted">
+                  <li>Streamlabs : partage le Widget Theme depuis <a href={STREAMLABS_THEMES_URL} target="_blank" rel="noopener noreferrer" className="text-accent underline">streamlabs.com › Widget Themes ↗</a> et colle le lien d’importation.</li>
+                  <li>StreamElements : génère le code de partage sur <a href={C4LDAS_URL} target="_blank" rel="noopener noreferrer" className="text-accent underline">c4ldas SE API ↗</a> (« Share overlay / widget ») et colle-le.</li>
+                </ul>
                 <Segmented name="platform" options={[["streamlabs", "Streamlabs"], ["streamelements", "StreamElements"]]} defaultValue="streamlabs" />
                 <input name="url" type="url" placeholder="Lien d’importation Streamlabs, ou lien de partage StreamElements (facultatif)" aria-label="Lien d’importation ou de partage" className={input} />
                 <input name="code" placeholder="Code de partage c4ldas (StreamElements)" aria-label="Code de partage c4ldas" autoComplete="off" className={input} />
