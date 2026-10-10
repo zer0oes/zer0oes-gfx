@@ -1,6 +1,7 @@
 import { alertboxAlerts } from "./alertbox";
 import { DEFAULT_OVERLAY, parseOverlay } from "./overlay";
 import type { LabCode, LabContent, LabConversion, LabSize, LabVariant, FieldDefinitions } from "./types";
+import { isStreamlabsWidget } from "./streamlabs-widgets";
 
 export const LAB_MAX_BYTES = 2 * 1024 * 1024;
 export const LAB_PLATFORMS = ["streamelements", "streamlabs"] as const;
@@ -61,7 +62,7 @@ export function parseLabContent(raw: unknown): LabContent {
     if (input.kind === "alertbox" && alertboxAlerts(platform).some(({ type }) => !alerts[type])) throw new Error("Chaque alerte doit posséder son code.");
     return [platform, { code: parseCode(variant.code), settings: variant.settings, alerts: Object.fromEntries(Object.entries(alerts).map(([key, code]) => [key, parseCode(code)])) }];
   })) as LabContent["variants"];
-  return { name: input.name.trim(), ...(typeof input.description === "string" ? { description: input.description.trim() } : {}), project: input.project.trim(), kind: input.kind, variants: parsed, ...(input.kind === "overlay" ? { overlay: parseOverlay(input.overlay) } : { size: parseLabSize(input.size, input.kind) }), ...(input.kind !== "overlay" && input.conversions && object(input.conversions).streamlabs ? { conversions: { streamlabs: parseConversion(object(input.conversions).streamlabs) } } : {}) };
+  return { name: input.name.trim(), ...(typeof input.description === "string" ? { description: input.description.trim() } : {}), project: input.project.trim(), kind: input.kind, variants: parsed, ...(input.kind === "overlay" ? { overlay: parseOverlay(input.overlay) } : { size: parseLabSize(input.size, input.kind) }), ...(input.kind === "widget" && isStreamlabsWidget(input.streamlabsWidget) && input.streamlabsWidget !== "custom" ? { streamlabsWidget: input.streamlabsWidget } : {}), ...(input.kind !== "overlay" && input.conversions && object(input.conversions).streamlabs ? { conversions: { streamlabs: parseConversion(object(input.conversions).streamlabs) } } : {}) };
 }
 
 // Rapport de conversion vers Streamlabs : textes courts, nombre d'alertes borné

@@ -9,6 +9,7 @@ import { widgetInstance } from "./widget-instance";
 import type { LabContent } from "./types";
 import { buildAlertboxExport, buildPlatformExport, slugifyWidgetName, type AlertboxExportCode } from "./widgetExport";
 import { createZip } from "./zip";
+import { streamlabsWidgetReadme } from "./streamlabs-widgets";
 
 export type LabExportFile = { filename: string; label: string; data: Uint8Array; contentType: string };
 
@@ -24,6 +25,9 @@ export function labPlatformZip(raw: LabContent, platform: Platform): LabExportFi
     files = buildAlertboxExport(codes, normalizeAlertboxConfig(jsonObject(variant.settings), platform), platform, platform === PLATFORM_STREAMLABS ? content.conversions?.streamlabs : undefined).files;
   } else {
     files = buildPlatformExport({ ...variant.code, fields: parseFields(variant.code.fields) }, fieldValues(variant.code), platform, platform === PLATFORM_STREAMLABS ? content.conversions?.streamlabs : undefined).files;
+    // Widget natif Streamlabs ciblé (Fenêtre de chat…) : guide d'installation propre à ce widget
+    const readme = platform === PLATFORM_STREAMLABS ? streamlabsWidgetReadme(content.streamlabsWidget ?? "custom") : null;
+    if (readme) files = { ...files, "README.txt": readme };
   }
   return {
     filename: `${slugifyWidgetName(content.name)}-${platform}.zip`,
