@@ -7,6 +7,7 @@ import { parse } from "acorn";
 import type { FieldDefinitions, LabCode } from "../types";
 import { configEntry, quote, streamlabsFields, walk, type Node } from "./alert";
 import type { ConversionStatus } from "./rules";
+import { streamlabsWidgetLabel, type StreamlabsWidget } from "../streamlabs-widgets";
 
 export type WidgetConversionResult = { code: LabCode; status: ConversionStatus; converted: string[]; limitations: string[]; manual: string[] };
 
@@ -36,7 +37,33 @@ const UNSUPPORTED_LISTENERS: Record<string, string> = {
   "event:test": "boutons de test de l'éditeur StreamElements",
 };
 
-export function convertWidgetToStreamlabs(source: LabCode, fields: FieldDefinitions, values: Record<string, unknown>): WidgetConversionResult {
+// target : widget natif Streamlabs ciblé. Fenêtre de chat : les messages du chat Streamlabs sont traduits en évènements
+// « message » StreamElements (le code d'origine les affiche lui-même, l'affichage natif de Streamlabs est masqué).
+const CHATBOX_SHELL = [
+  "<!-- Fenêtre de chat Streamlabs : affichage natif masqué, les messages sont affichés par le widget ci-dessous -->",
+  '<div id="log" class="sl__chat__layout" style="display:none"></div>',
+  '<script type="text/template" id="chatlist_item"><div data-id="{messageId}"></div></script>',
+].join("\n");
+
+const CHATBOX_BRIDGE = [
+  "",
+  "// Fenêtre de chat : message Streamlabs (PRIVMSG) → évènement « message » StreamElements",
+  "const escapeChat = (text) => String(text ?? \"\").replace(/[&<>\"']/g, (c) => ({ \"&\": \"&amp;\", \"<\": \"&lt;\", \">\": \"&gt;\", '\"': \"&quot;\", \"'\": \"&#39;\" })[c]);",
+  "document.addEventListener(\"onEventReceived\", (obj) => {",
+  "  const source = (obj && obj.detail) || {};",
+  "  if (source.command !== \"PRIVMSG\") return;",
+  "  const tags = source.tags || {};",
+  "  const displayName = tags[\"display-name\"] || source.from || \"\";",
+  "  const text = String(source.body ?? \"\");",
+  "  const badges = String(tags.badges || \"\").split(\",\").filter(Boolean).map((badge) => { const [type, version] = badge.split(\"/\"); return { type, version, url: \"\" }; });",
+  "  const data = { time: Date.now(), tags, nick: String(source.from || displayName).toLowerCase(), userId: tags[\"user-id\"] || \"\", displayName, displayColor: tags.color || \"\", badges, channel: \"\", text, isAction: false, emotes: [], msgId: source.messageId || tags.id || \"\" };",
+  "  const event = { service: \"twitch\", data, renderedText: escapeChat(text) };",
+  "  streamlabsHandlers.onEventReceived.forEach((handler) => handler({ detail: { listener: \"message\", event } }));",
+  "});",
+];
+
+export function convertWidgetToStreamlabs(source: LabCode, fields: FieldDefinitions, values: Record<string, unknown>, target: StreamlabsWidget = "custom"): WidgetConversionResult {
+  const chatbox = target === "chatbox";
   const converted: string[] = [];
   const limitations: string[] = [];
   const manual: string[] = [];
@@ -94,10 +121,10 @@ export function convertWidgetToStreamlabs(source: LabCode, fields: FieldDefiniti
     if (found.onWidgetLoad) converted.push("Écouteur onWidgetLoad raccordé au chargement Streamlabs (onLoad), avec les valeurs des Custom Fields.");
     else limitations.push("Aucun écouteur onWidgetLoad dans le code : les réglages restent disponibles dans le bloc CONFIG.");
     const listeners = [...new Set([...source.js.matchAll(/["'`]([a-z]+(?:-[a-z]+)*(?::[a-z]+)?)["'`]/g)].map((m) => m[1]))];
-    const supported = listeners.filter((l) => SUPPORTED_LISTENERS[l]);
-    const unsupported = listeners.filter((l) => UNSUPPORTED_LISTENERS[l]);
+    const supported = listeners.filter((l) => SUPPORTED_LISTENERS[l] || (chatbox && l === "message"));
+    const unsupported = listeners.filter((l) => UNSUPPORTED_LISTENERS[l] && !(chatbox && l === "message"));
     const goals = listeners.filter((l) => /-(goal|session|count|week|month|total|recent)$/.test(l));
-    if (found.onEventReceived) converted.push(`Écouteur onEventReceived raccordé aux évènements Streamlabs${supported.length ? ` : ${supported.map((l) => `${l} (${SUPPORTED_LISTENERS[l]})`).join(", ")}` : " (follow, sub, don, bits, raid)"}.`);
+    if (found.onEventReceived) converted.push(`Écouteur onEventReceived raccordé aux évènements Streamlabs${supported.length ? ` : ${supported.map((l) => `${l} (${SUPPORTED_LISTENERS[l] ?? "messages du chat"})`).join(", ")}` : " (follow, sub, don, bits, raid)"}.`);
     if (unsupported.length) manual.push(`Évènements StreamElements sans équivalent vérifié sur Streamlabs : ${unsupported.map((l) => `${l} (${UNSUPPORTED_LISTENERS[l]})`).join(", ")}.`);
     if (found.onSessionUpdate || goals.length || /\.detail\s*\.\s*session\b/.test(source.js)) limitations.push(`Données de session StreamElements (compteurs, objectifs, derniers évènements${goals.length ? ` : ${goals.join(", ")}` : ""}) absentes sur Streamlabs : le widget les reçoit vides.`);
     if (/\bSE_API\b/.test(source.js)) manual.push("SE_API (store, compteurs, setField…) n'existe pas sur Streamlabs : à remplacer à la main.");
@@ -158,12 +185,23 @@ export function convertWidgetToStreamlabs(source: LabCode, fields: FieldDefiniti
     "  const event = { type: listener.replace(/-latest$/, \"\"), name, displayName: name, amount, count: amount, message: source.message || \"\", currency: source.currency || \"\", sender: source.gifter || source.from_display_name || \"\", gifted: Boolean(source.gifter), isTest: Boolean(source.isTest), data: { displayName: name, amount, message: source.message || \"\" } };",
     "  streamlabsHandlers.onEventReceived.forEach((handler) => handler({ detail: { listener, event } }));",
     "});",
+    ...(chatbox ? CHATBOX_BRIDGE : []),
     "})();",
     "",
   ].join("\n");
   converted.push("Chargement Streamlabs ajouté : les réglages arrivent par onLoad, ou au bout de 1,5 s depuis le bloc CONFIG si onLoad n'arrive pas.");
 
-  const html = markup(source.html);
+  // Fenêtre de chat : #log et le modèle #chatlist_item restent présents mais masqués (affichage assuré par le code d'origine)
+  const html = chatbox ? `${CHATBOX_SHELL}\n${markup(source.html)}` : markup(source.html);
+  if (chatbox) {
+    converted.push("Fenêtre de chat : chaque message Streamlabs (PRIVMSG) est transmis au code d'origine comme un évènement « message » StreamElements (pseudo, couleur, texte, badges, identifiants).");
+    converted.push("Affichage natif de la Fenêtre de chat (#log, modèle #chatlist_item) gardé mais masqué : c'est le code d'origine qui affiche les messages.");
+    limitations.push("Badges et émoticônes : Streamlabs ne fournit que leurs codes (pas d'images), le texte du message est transmis sans émoticônes rendues.");
+    limitations.push("Suppression de messages (modération) : non transmise, à vérifier sur Streamlabs.");
+    limitations.push("Réglages : vérifier que la Fenêtre de chat propose l'onglet Custom Fields ; sinon les valeurs du bloc de réglages s'appliquent.");
+  } else if (target !== "custom") {
+    manual.push(`Le widget Streamlabs « ${streamlabsWidgetLabel(target)} » a ses propres variables et évènements : le code est converti comme un Widget personnalisé, à adapter à la main.`);
+  }
   const css = markup(source.css);
   if (unknown.size) manual.push(`Variables inconnues laissées telles quelles : ${[...unknown].map((name) => `{{${name}}}`).join(", ")}.`);
 
