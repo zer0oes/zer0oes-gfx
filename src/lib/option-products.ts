@@ -73,9 +73,9 @@ export function productBriefHint(line: string, locale: Locale) {
     return en ? "Character, expressions and poses for each emote. For animated emotes, describe the movement." : "Personnage, expressions et poses de chaque emote. Pour les emotes animées, précise le mouvement.";
   }
   if (/alerte|alert/i.test(line)) {
-    if (animated) return en ? "Your 5 included events: follow, sub, raid, cheer and tips. Specify the text, the colours and the desired movement for each." : "Tes 5 événements inclus : follow, sub, raid, cheer et tips. Précise les textes, les couleurs et le mouvement souhaité pour chacun.";
-    if (still) return en ? "Your 5 included events: follow, sub, raid, cheer and tips. Specify the text and the colours for each." : "Tes 5 événements inclus : follow, sub, raid, cheer et tips. Précise les textes et les couleurs de chacun.";
-    return en ? "Your 5 included events: follow, sub, raid, cheer and tips. Specify the text and the colours for each, and the desired movement for the animated variant." : "Tes 5 événements inclus : follow, sub, raid, cheer et tips. Précise les textes et les couleurs de chacun, et le mouvement souhaité pour la variante animée.";
+    if (animated) return en ? "Specify the text, the colours and the desired movement for each." : "Précise les textes, les couleurs et le mouvement souhaité pour chacun.";
+    if (still) return en ? "Specify the text and the colours for each." : "Précise les textes et les couleurs de chacun.";
+    return en ? "Specify the text and the colours for each, and the desired movement for the animated variant." : "Précise les textes et les couleurs de chacun, et le mouvement souhaité pour la variante animée.";
   }
   if (/panneau/i.test(line)) return en ? "The six headings, texts and links." : "Les six rubriques, leurs textes et liens.";
   if (/banni/i.test(line)) return en ? "Platform, text, social handles and elements to include." : "Plateforme, textes, réseaux sociaux et éléments à afficher.";

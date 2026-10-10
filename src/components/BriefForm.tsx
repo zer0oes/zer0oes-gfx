@@ -214,17 +214,22 @@ export function BriefForm({
         <textarea name="elements" defaultValue={values?.["Éléments à inclure"]} rows={3} className={inputClass} required={isRequired("elements")} />
       </Field>
       {purchasedProducts.length > 0 && <section className={fullWidthSections ? "-mx-4 space-y-5 border-y border-border px-4 py-5 sm:-mx-5 sm:px-5" : "-mx-6 space-y-5 border-y border-border px-6 py-5 sm:-mx-8 sm:px-8"}>
-        <h3 className="font-semibold">{locale === "en" ? "Your purchased creations" : "Tes créations achetées"}</h3>
+        <h2 className="font-display text-xl font-bold">{purchasedProducts.length === 1 ? (locale === "en" ? "Your purchased creation" : "Ta création achetée") : locale === "en" ? "Your purchased creations" : "Tes créations achetées"}</h2>
         {purchasedProducts.map((line, index) => {
           const optional = optionalProducts.includes(line);
-          const title = `${line}${optional ? (locale === "en" ? " (optional)" : " (facultatif)") : " *"}`;
+          // Surtitre : la création achetée, sans étoile (les champs portent l'obligation)
+          const title = `${line}${optional ? (locale === "en" ? " (optional)" : " (facultatif)") : ""}`;
           const saved = values?.[`Création ${index + 1} : ${line}`];
           const parts = productBriefParts(line);
-          if (!parts) return <Field key={index} label={title} hint={productBriefHint(line, locale)}><textarea name={productBriefFieldName(index)} required={!optional} rows={3} defaultValue={saved} className={inputClass} /></Field>;
+          if (!parts) return <fieldset key={index} className="space-y-2">
+            <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">{title}</legend>
+            <p className="text-sm text-foreground/75">{productBriefHint(line, locale)}</p>
+            <textarea name={productBriefFieldName(index)} aria-label={line} required={!optional} rows={3} defaultValue={saved} className={inputClass} />
+          </fieldset>;
           // Un champ par alerte ou par emote
           const savedParts = splitProductBrief(line, saved);
           return <fieldset key={index} className="space-y-3">
-            <legend className="text-sm font-medium">{title}</legend>
+            <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">{title}</legend>
             <p className="text-sm text-foreground/75">{productBriefHint(line, locale)}</p>
             <div className="grid gap-4 sm:grid-cols-2">
               {parts.map((part, j) => <Field key={j} label={`${locale === "en" ? part.labelEn : part.label}${optional ? "" : " *"}`}><textarea name={productBriefFieldName(index, j)} required={!optional} rows={2} defaultValue={savedParts[j]} className={inputClass} /></Field>)}
