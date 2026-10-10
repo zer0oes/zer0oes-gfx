@@ -231,5 +231,5 @@ export async function saveLabTextsAction(form: FormData) {
     else delete content[key];
   }
   await store.saveHomeContent(content);
-  revalidatePath("/admin/laboratoire");
+  revalidatePath("/admin/laboratoire", "layout");
 }
