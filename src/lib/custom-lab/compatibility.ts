@@ -13,11 +13,13 @@ const filled = (code: LabCode | undefined, example: LabCode | undefined) =>
 export function codePlatforms(content: Pick<LabContent, "kind" | "variants">): Platform[] {
   if (content.kind === "overlay") return [];
   const example = newLabContent(content.kind);
+  const legacyAlert = content.kind === "alertbox" ? Object.values(example.variants.streamelements.alerts)[0] : undefined;
   return LAB_PLATFORMS.filter((platform) => {
     const variant = content.variants[platform];
     const sample = example.variants[platform];
     return content.kind === "alertbox"
-      ? Object.entries(variant.alerts).some(([type, code]) => filled(code, sample.alerts[type]))
+      // ancien code d'exemple des alertes (identique sur les deux plateformes) : ne compte pas non plus
+      ? Object.entries(variant.alerts).some(([type, code]) => filled(code, sample.alerts[type]) && filled(code, legacyAlert))
       : filled(variant.code, sample.code);
   });
 }

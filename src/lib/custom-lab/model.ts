@@ -2,6 +2,7 @@ import { alertboxAlerts } from "./alertbox";
 import { DEFAULT_OVERLAY, parseOverlay } from "./overlay";
 import type { LabCode, LabContent, LabConversion, LabSize, LabVariant, FieldDefinitions } from "./types";
 import { isStreamlabsWidget } from "./streamlabs-widgets";
+import { STREAMLABS_ALERT_TEMPLATE } from "./streamlabs-templates";
 
 export const LAB_MAX_BYTES = 2 * 1024 * 1024;
 export const LAB_PLATFORMS = ["streamelements", "streamlabs"] as const;
@@ -102,7 +103,8 @@ export function newLabContent(kind: LabContent["kind"] = "widget"): LabContent {
   const variant = (platform: typeof LAB_PLATFORMS[number]): LabVariant => ({
     code: { ...code, ...(platform === "streamlabs" ? { js: code.js.replace('window.addEventListener', 'document.addEventListener') } : {}) },
     settings: '{}',
-    alerts: Object.fromEntries(alertboxAlerts(platform).map(({ type }) => [type, { ...code, html: '<div id="alert">{name}</div>', js: '' }])),
+    // Streamlabs : code de base de la Fenêtre d'alertes fourni par zer0oes
+    alerts: Object.fromEntries(alertboxAlerts(platform).map(({ type }) => [type, platform === "streamlabs" ? { ...STREAMLABS_ALERT_TEMPLATE } : { ...code, html: '<div id="alert">{name}</div>', js: '' }])),
   });
   const name = kind === "widget" ? "Nouveau widget" : kind === "overlay" ? "Nouvel overlay" : "Nouveau pack d’alertes";
   return { name, project: "Bibliothèque", kind, variants: { streamelements: variant("streamelements"), streamlabs: variant("streamlabs") }, ...(kind === "overlay" ? { overlay: { ...DEFAULT_OVERLAY, items: [] } } : { size: { ...DEFAULT_LAB_SIZE[kind] } }) };

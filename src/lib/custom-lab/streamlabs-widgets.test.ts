@@ -78,3 +78,18 @@ test("codes de base Streamlabs : modèles par type, code non modifié reconnu", 
   assert.match(doc, /goalLoad/);
   assert.match(doc, /window\.__SL_AFTER__ =/);
 });
+
+test("pack d'alertes : code de base Streamlabs et message par défaut dans l'aperçu", async () => {
+  const { STREAMLABS_ALERT_TEMPLATE } = await import("./streamlabs-templates");
+  const runtimeSource = (await import("./alertboxRuntimeSource")).default;
+  const pack = newLabContent("alertbox");
+  for (const code of Object.values(pack.variants.streamlabs.alerts)) assert.equal(code.html, STREAMLABS_ALERT_TEMPLATE.html);
+  assert.match(STREAMLABS_ALERT_TEMPLATE.html, /\{messageTemplate\}/);
+  // StreamElements garde son code d'exemple
+  assert.doesNotMatch(Object.values(pack.variants.streamelements.alerts)[0].html, /messageTemplate/);
+  const runtime = new Function(`${runtimeSource}\nreturn AlertboxRuntime;`)();
+  const vars = runtime.buildAlertVariables("follow", { name: "Astro" }, { sound: "", volume: 0.5, duration: 8 }, null, "streamlabs");
+  assert.match(vars.messageTemplate, /Astro<\/span> suit maintenant la chaîne/);
+  const html = runtime.substituteAlertVariables(STREAMLABS_ALERT_TEMPLATE.html, vars);
+  assert.match(html, /<div id="alert-message"><span class="name">Astro<\/span>/);
+});
