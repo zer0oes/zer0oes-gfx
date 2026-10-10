@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
-import { saveLabAction } from "@/app/admin/custom-lab-actions";
+import { saveLabAction, saveLabTextsAction } from "@/app/admin/custom-lab-actions";
 import { normalizeAlertboxConfig } from "@/lib/custom-lab/alertbox";
 import { buildWidgetSrcdoc } from "@/lib/custom-lab/widgetSrcdoc";
 import { slugifyWidgetName } from "@/lib/custom-lab/widgetExport";
@@ -22,6 +22,7 @@ import { CustomLabConversionReport, CustomLabConvert, openLabDrawer, REPORT_DRAW
 import { staleSources } from "@/lib/custom-lab/convert";
 import { CHATBOX_TEMPLATE, STREAMLABS_WIDGETS, streamlabsWidgetLabel, type StreamlabsWidget } from "@/lib/custom-lab/streamlabs-widgets";
 import { labPlatformZip } from "@/lib/custom-lab/export";
+import { LAB_TEXT_DEFAULTS, STREAMLABS_CUSTOM_WIDGET_URL, type LabTexts } from "@/lib/custom-lab/lab-texts";
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 function download(data: BlobPart, name: string, type: string) {
@@ -34,7 +35,7 @@ function download(data: BlobPart, name: string, type: string) {
 const noSubscribe = () => () => {};
 
 // projects : noms des projets existants, proposés dans le champ « Projet »
-export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocument; projects?: string[] }) {
+export function CustomLabEditor({ initial, projects = [], labTexts = LAB_TEXT_DEFAULTS }: { initial: LabDocument; projects?: string[]; labTexts?: LabTexts }) {
   const { id, revision: initialRevision } = initial;
   const initialContent: LabContent = { name: initial.name, description: initial.description ?? "", project: initial.project, kind: initial.kind, variants: initial.variants, ...(initial.size ? { size: initial.size } : {}), ...(initial.conversions ? { conversions: initial.conversions } : {}), ...(initial.streamlabsWidget ? { streamlabsWidget: initial.streamlabsWidget } : {}) };
   const [content, setContent] = useState<LabContent>(initialContent);
@@ -225,8 +226,26 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
     </header>
     {status && <p role="status" className="cl-status">{status}</p>}
     {platform === "streamlabs" && stale.length > 0 && <p role="status" className="cl-status">La version StreamElements a changé depuis la conversion vers Streamlabs. <button type="button" className="underline" onClick={() => openLabDrawer(REPORT_DRAWER)}>Voir le rapport</button></p>}
-    <details className="cl-metadata"><summary>Nom, projet et taille</summary><div><label>Nom<input className={input} value={content.name} maxLength={120} onChange={(event) => setContent({ ...content, name: event.target.value })} /></label><label>Description<textarea className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={content.description ?? ""} maxLength={500} rows={2} onChange={(e) => setContent({ ...content, description: e.target.value })} /></label>
-          <CustomLabProjectField value={content.project} projects={projects} onChange={(project) => setContent((current) => ({ ...current, project }))} /><CustomLabSizeField size={size} onChange={(next) => setContent({ ...content, size: next })} />{content.kind === "widget" && <label>Widget Streamlabs<select className={input} value={content.streamlabsWidget ?? "custom"} onChange={(event) => chooseStreamlabsWidget(event.target.value as StreamlabsWidget)}>{STREAMLABS_WIDGETS.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>}</div></details>
+    <details className="cl-metadata"><summary>Nom, projet et taille</summary><div className="cl-metadata-grid">
+      <label>Nom<input className={input} value={content.name} maxLength={120} onChange={(event) => setContent({ ...content, name: event.target.value })} /></label>
+      <CustomLabProjectField value={content.project} projects={projects} onChange={(project) => setContent((current) => ({ ...current, project }))} />
+      <CustomLabSizeField size={size} onChange={(next) => setContent({ ...content, size: next })} />
+      <label className="cl-span-all">Description<textarea className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={content.description ?? ""} maxLength={500} rows={2} placeholder="Usage, particularités, client…" onChange={(e) => setContent({ ...content, description: e.target.value })} /></label>
+      {content.kind === "widget" && <>
+        <label>Widget Streamlabs<select className={input} value={content.streamlabsWidget ?? "custom"} onChange={(event) => chooseStreamlabsWidget(event.target.value as StreamlabsWidget)}>{STREAMLABS_WIDGETS.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>
+        {!content.streamlabsWidget && <div className="sm:col-span-2 grid gap-1 pb-1 text-sm">
+          <a href={STREAMLABS_CUSTOM_WIDGET_URL} target="_blank" rel="noopener noreferrer" className="inline-flex w-fit items-center gap-1.5 font-semibold text-[var(--cl-accent)] hover:underline">{labTexts["laboratoire.streamlabs.lien"]}<MaterialIcon name="open_in_new" className="size-4" /></a>
+          <span className="text-xs text-[var(--cl-muted)]">{labTexts["laboratoire.streamlabs.note"]}</span>
+          <details className="text-xs"><summary className="w-fit cursor-pointer text-[var(--cl-muted)] hover:text-[var(--cl-accent)]">Modifier ces textes</summary>
+            <form action={saveLabTextsAction} className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <label className="!text-xs">Texte du lien<input name="laboratoire.streamlabs.lien" defaultValue={labTexts["laboratoire.streamlabs.lien"]} maxLength={300} /></label>
+              <label className="!text-xs">Note<input name="laboratoire.streamlabs.note" defaultValue={labTexts["laboratoire.streamlabs.note"]} maxLength={300} /></label>
+              <button className="cl-secondary">Enregistrer</button>
+            </form>
+          </details>
+        </div>}
+      </>}
+    </div></details>
     <div className={`cl-workspace ${fieldsCollapsed ? "is-collapsed" : ""}`}>
       <div className="cl-main">
         <section aria-label="Aperçu du widget">

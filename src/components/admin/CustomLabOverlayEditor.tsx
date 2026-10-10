@@ -422,11 +422,11 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
       {status && <p role="status" className="cl-status">{status}</p>}
       <details className="cl-metadata">
         <summary>Nom, projet et format</summary>
-        <div>
+        <div className="cl-metadata-grid">
           <label>Nom<input className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={content.name} maxLength={120} onChange={(e) => setContent({ ...content, name: e.target.value })} /></label>
-          <label>Description<textarea className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={content.description ?? ""} maxLength={500} rows={2} onChange={(e) => setContent({ ...content, description: e.target.value })} /></label>
           <CustomLabProjectField value={content.project} projects={projects} onChange={(project) => setContent((current) => ({ ...current, project }))} />
           <label>Format<select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={`${data.width}x${data.height}`} onChange={(e) => { const [w, h] = e.target.value.split("x").map(Number); setData((d) => ({ ...d, width: w, height: h })); }}>{[[1920, 1080], [1280, 720], [2560, 1440], [1080, 1920]].map(([w, h]) => <option key={`${w}x${h}`} value={`${w}x${h}`}>{w} × {h}{h > w ? " (vertical)" : ""}</option>)}</select></label>
+          <label className="cl-span-all">Description<textarea className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={content.description ?? ""} maxLength={500} rows={2} placeholder="Usage, particularités, client…" onChange={(e) => setContent({ ...content, description: e.target.value })} /></label>
         </div>
       </details>
 

@@ -4,6 +4,8 @@ import { getLabDocument, listLabDocuments, listLabSources } from "@/lib/custom-l
 import { CustomLabEditor } from "@/components/admin/CustomLabEditor";
 import { CustomLabOverlayEditor } from "@/components/admin/CustomLabOverlayEditor";
 import { listLabProjects } from "@/lib/custom-lab/projects";
+import { resolveLabTexts } from "@/lib/custom-lab/lab-texts";
+import { getStore } from "@/lib/store";
 
 export const metadata = { title: "Laboratoire — éditeur" };
 
@@ -20,5 +22,6 @@ export default async function LabEditorPage({ params }: { params: Promise<{ id: 
     const sources = (await listLabSources()).map((d) => ({ id: d.id, name: d.name, project: d.project, content: { name: d.name, project: d.project, kind: d.kind, variants: d.variants, ...(d.size ? { size: d.size } : {}) } }));
     return <CustomLabOverlayEditor initial={document} sources={sources} projects={projects} />;
   }
-  return <CustomLabEditor initial={document} projects={projects} />;
+  const labTexts = resolveLabTexts(await getStore().getHomeContent().catch(() => null));
+  return <CustomLabEditor initial={document} projects={projects} labTexts={labTexts} />;
 }
