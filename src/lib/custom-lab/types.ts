@@ -56,4 +56,4 @@ export type LabDocument = LabContent & {
   createdAt: string;
   updatedAt: string;
 };
-export type LabSummary = Pick<LabDocument, "id" | "name" | "description" | "project" | "kind" | "revision" | "updatedAt"> & { size: LabSize; platforms: Platform[]; widgetIds: string[] };
+export type LabSummary = Pick<LabDocument, "id" | "name" | "description" | "project" | "kind" | "revision" | "updatedAt"> & { size: LabSize; platforms: Platform[]; widgetIds: string[]; streamlabsWidget?: StreamlabsWidget };
