@@ -7,6 +7,8 @@ import { ClickableRow } from "@/components/admin/ClickableRow";
 import { LabNewMenu } from "@/components/admin/LabNewMenu";
 import { MaterialIcon } from "@/components/admin/MaterialIcon";
 import { ConfirmDelete, Drawer, DrawerButton } from "@/components/admin/Drawer";
+import { overlayPlatforms } from "@/lib/custom-lab/compatibility";
+import type { Platform } from "@/lib/custom-lab/platformEvents";
 
 export const metadata = { title: "Laboratoire" };
 
@@ -48,6 +50,24 @@ function ProjectDrawer({ project, drawer }: { project?: LabProject; drawer: stri
   );
 }
 
+const platformIcons: Record<Platform, { src: string; label: string }> = {
+  streamelements: { src: "/streamerlab/platforms/streamelements-icon.svg", label: "StreamElements" },
+  streamlabs: { src: "/streamerlab/platforms/streamlabs-icon-active.svg", label: "Streamlabs" },
+};
+
+// Compatibilité : logo de chaque plateforme dont le code est rempli
+function Compatibility({ platforms }: { platforms: readonly Platform[] }) {
+  if (!platforms.length) return <span className="text-muted">—</span>;
+  return (
+    <span className="flex items-center gap-2" aria-label={`Compatible ${platforms.map((p) => platformIcons[p].label).join(" et ")}`}>
+      {platforms.map((p) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={p} src={platformIcons[p].src} alt="" title={platformIcons[p].label} width={22} height={22} className="size-[22px] object-contain" />
+      ))}
+    </span>
+  );
+}
+
 // Bibliothèque du Laboratoire : même présentation que les autres listes de l'admin (clic sur la ligne pour ouvrir)
 export default async function LaboratoirePage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   await requireAdmin();
@@ -62,6 +82,7 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
     ...[...projects].sort((a, b) => Number(a.archived) - Number(b.archived)).map((p) => ({ name: p.name, project: p })),
     ...loose.map((name) => ({ name, project: undefined as LabProject | undefined })),
   ];
+  const platformsById = new Map(documents.map((d) => [d.id, d.platforms]));
   const small = "rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
@@ -99,27 +120,38 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
               </div>
               {project?.description && <p className="mt-1 text-sm text-muted">{project.description}</p>}
               <div className="mt-3 overflow-x-auto rounded-2xl border border-border">
-                <table className="w-full text-left text-sm">
+                <table className="w-full min-w-[960px] table-fixed text-left text-sm">
+                  {/* Mêmes largeurs de colonnes pour tous les projets */}
+                  <colgroup>
+                    <col className="w-[22%]" />
+                    <col />
+                    <col className="w-40" />
+                    <col className="w-36" />
+                    <col className="w-36" />
+                    <col className="w-48" />
+                  </colgroup>
                   <thead className="bg-surface text-xs uppercase tracking-wider text-muted">
                     <tr>
                       <th scope="col" className="px-4 py-3 font-medium">Création</th>
                       <th scope="col" className="px-4 py-3 font-medium">Description</th>
-                      <th scope="col" className="w-48 px-4 py-3 font-medium">Type</th>
-                      <th scope="col" className="w-40 px-4 py-3 font-medium">Dimensions</th>
-                      <th scope="col" className="w-56 px-4 py-3 font-medium">Modifiée le</th>
+                      <th scope="col" className="px-4 py-3 font-medium">Type</th>
+                      <th scope="col" className="px-4 py-3 font-medium">Compatibilité</th>
+                      <th scope="col" className="px-4 py-3 font-medium">Dimensions</th>
+                      <th scope="col" className="px-4 py-3 font-medium">Modifiée le</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {docs.map((doc) => (
                       <ClickableRow key={doc.id} href={`/admin/laboratoire/${doc.id}`}>
-                        <td className="px-4 py-3 font-medium">{doc.name}</td>
-                        <td className="max-w-md whitespace-pre-line px-4 py-3 text-muted">{doc.description || "—"}</td>
+                        <td className="truncate px-4 py-3 font-medium" title={doc.name}>{doc.name}</td>
+                        <td className="whitespace-pre-line break-words px-4 py-3 text-muted">{doc.description || "—"}</td>
                         <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${kinds[doc.kind].tone}`}>{kinds[doc.kind].label}</span></td>
+                        <td className="px-4 py-3"><Compatibility platforms={doc.kind === "overlay" ? overlayPlatforms(doc.widgetIds, (wid) => platformsById.get(wid)) : doc.platforms} /></td>
                         <td className="whitespace-nowrap px-4 py-3 tabular-nums text-muted">{doc.size.width} × {doc.size.height} px</td>
                         <td className="whitespace-nowrap px-4 py-3 text-muted">{dateFmt.format(new Date(doc.updatedAt))}</td>
                       </ClickableRow>
                     ))}
-                    {!docs.length && <tr><td colSpan={5} className="px-4 py-4 text-center text-sm text-muted">Aucune création dans ce projet.</td></tr>}
+                    {!docs.length && <tr><td colSpan={6} className="px-4 py-4 text-center text-sm text-muted">Aucune création dans ce projet.</td></tr>}
                   </tbody>
                 </table>
               </div>
