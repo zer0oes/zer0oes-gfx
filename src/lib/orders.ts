@@ -25,7 +25,7 @@ import { getStripe } from "@/lib/stripe";
 import { trOfferName } from "@/lib/translations-en";
 import { discountedPrice, type Promotion } from "@/lib/promotions";
 import { plannedDelivery } from "@/lib/delivery-plan";
-import { INSTALL_LINE, INSTALL_OPTION_ID, briefDeliveryNeeds, hasInstallLine } from "@/lib/brief-delivery";
+import { INSTALL_LINE, INSTALL_OPTION_ID, INSTALL_SUPPLEMENT_ENABLED, briefDeliveryNeeds, hasInstallLine } from "@/lib/brief-delivery";
 
 // Commande calculée côté serveur à partir des identifiants envoyés par le formulaire.
 export type CheckoutQuote = {
@@ -75,6 +75,7 @@ export function quote(
       listPrice += q.listPrice * item.quantity;
       // Supplément d'installation : une seule fois, avec une ligne fixe (repérée par le brief et la livraison)
       if (item.id === INSTALL_OPTION_ID) {
+        if (!INSTALL_SUPPLEMENT_ENABLED) return null;
         if (item.quantity !== 1) return null;
         lines.push(INSTALL_LINE);
       } else {
