@@ -1,9 +1,19 @@
 // Brief des créations achetées : une réponse par création, ou une par partie (chaque alerte d'un pack d'alertes,
 // chaque emote selon le nombre acheté). Les parties sont réunies en une seule réponse « Partie : texte » par ligne.
 
-export type BriefPart = { label: string; labelEn: string };
+export type BriefPart = { label: string; labelEn: string; example?: string; exampleEn?: string };
 
 const ALERT_LABELS: Record<string, string> = { follow: "Follow", sub: "Sub", raid: "Raid", cheer: "Cheer", tips: "Tips", tip: "Tips" };
+
+// Exemples affichés dans les champs : texte de l'alerte et couleurs
+const ALERT_EXAMPLES: Record<string, [string, string]> = {
+  Follow: ["Ex. : « Bienvenue [pseudo] ! », texte blanc sur fond violet", "E.g. “Welcome [name]!”, white text on purple"],
+  Sub: ["Ex. : « Merci [pseudo] pour l’abonnement ! », rose néon et noir", "E.g. “Thanks [name] for subscribing!”, neon pink and black"],
+  Raid: ["Ex. : « [pseudo] débarque avec [nombre] raiders ! », orange et jaune", "E.g. “[name] is raiding with [count] viewers!”, orange and yellow"],
+  Cheer: ["Ex. : « [pseudo] envoie [nombre] bits ! », cyan et violet", "E.g. “[name] cheered [count] bits!”, cyan and purple"],
+  Tips: ["Ex. : « Merci [pseudo] pour ton don de [montant] ! », vert menthe et blanc", "E.g. “Thanks [name] for the [amount] tip!”, mint green and white"],
+};
+const EMOTE_EXAMPLE: [string, string] = ["Ex. : mon personnage qui fait un clin d’œil, un cœur dans les mains", "E.g. my character winking, holding a heart"];
 const MAX_PARTS = 30;
 
 // Parties à décrire séparément pour une ligne de commande (null : une seule réponse)
@@ -11,11 +21,11 @@ export function productBriefParts(line: string): BriefPart[] | null {
   const quantity = Number(/×\s*(\d+)\s*$/.exec(line)?.[1] ?? 1) || 1;
   if (/alerte|alert/i.test(line) && line.includes(":")) {
     const types = line.slice(line.lastIndexOf(":") + 1).replace(/×\s*\d+\s*$/, "").split(",").map((t) => t.trim()).filter(Boolean);
-    if (types.length > 1) return types.slice(0, MAX_PARTS).map((type) => { const label = ALERT_LABELS[type.toLowerCase()] ?? type; return { label, labelEn: label }; });
+    if (types.length > 1) return types.slice(0, MAX_PARTS).map((type) => { const label = ALERT_LABELS[type.toLowerCase()] ?? type; const [example, exampleEn] = ALERT_EXAMPLES[label] ?? []; return { label, labelEn: label, example, exampleEn }; });
   }
   if (/emote/i.test(line)) {
     const count = Math.min(MAX_PARTS, (Number(/(\d+)\s+emotes?/i.exec(line)?.[1] ?? 1) || 1) * quantity);
-    if (count > 1) return Array.from({ length: count }, (_, i) => ({ label: `Emote ${i + 1}`, labelEn: `Emote ${i + 1}` }));
+    if (count > 1) return Array.from({ length: count }, (_, i) => ({ label: `Emote ${i + 1}`, labelEn: `Emote ${i + 1}`, example: EMOTE_EXAMPLE[0], exampleEn: EMOTE_EXAMPLE[1] }));
   }
   return null;
 }
