@@ -1,4 +1,5 @@
 import { ArchiveDownload } from "@/components/ArchiveDownload";
+import { InstallLinks } from "@/components/InstallLinks";
 import { ApproveAllButton } from "@/components/ApproveAllButton";
 import { QuoteBrief } from "@/components/QuoteBrief";
 import { syncQuotePayment } from "@/lib/orders";
@@ -369,7 +370,7 @@ function Item({
             {expired ? (
               <span className="text-sm text-muted">{tx.archived}</span>
             ) : state === "debloque" && d.finalAssets?.length ? (
-              <div className="ml-auto flex flex-wrap justify-end gap-2">{d.finalAssets.map((asset, index) => <a key={index} href={`/commande/${token}/${d.id}?asset=${index}`} target={asset.url ? "_blank" : undefined} rel={asset.url ? "noopener noreferrer" : undefined} className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background"><DownloadIcon />{asset.label}</a>)}</div>
+              <div className="ml-auto flex flex-wrap justify-end gap-2">{d.finalAssets.map((asset, index) => asset.install ? null : <a key={index} href={`/commande/${token}/${d.id}?asset=${index}`} target={asset.url ? "_blank" : undefined} rel={asset.url ? "noopener noreferrer" : undefined} className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background"><DownloadIcon />{asset.label}</a>)}</div>
             ) : state === "debloque" && !d.storagePath && !d.url ? (
               <span className="text-sm text-muted">{locale === "en" ? "Final files are being prepared." : "Les fichiers finaux sont en préparation."}</span>
             ) : state === "debloque" ? (
@@ -387,6 +388,11 @@ function Item({
             )}
           </div>
         )}
+
+        {/* Liens d'installation (Streamlabs, StreamElements) : débloqués comme les fichiers définitifs */}
+        {state === "debloque" && !expired && d.finalAssets?.some((asset) => asset.install) ? (
+          <InstallLinks token={token} deliverableId={d.id} locale={locale} assets={d.finalAssets.flatMap((asset, index) => (asset.install ? [{ index, label: asset.label, install: asset.install, hasUrl: Boolean(asset.url), hasCode: Boolean(asset.code) }] : []))} />
+        ) : null}
 
         <div className="flex flex-wrap items-start gap-x-5 gap-y-2">
           {d.approvedAt && cancellable && (

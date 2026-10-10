@@ -1,5 +1,6 @@
 import {
   addDeliveryLinkAction,
+  addInstallLinkAction,
   createPortalLinkAction,
   deleteDeliverableAction,
   removeDeliverablePreviewAction,
@@ -18,6 +19,8 @@ import { ConfirmDelete, Drawer, DrawerRow } from "./Drawer";
 import { SaveWithUploads } from "./SaveWithUploads";
 import { deliveryState } from "@/lib/delivery-plan";
 import { DeliveryNotice } from "./DeliveryNotice";
+import { Segmented } from "./Segmented";
+import { installAccessKey } from "@/lib/install-links";
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" });
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
@@ -102,11 +105,22 @@ export async function DeliverySection({ order, items, message }: { order: Order;
               <h4 className="font-semibold">Fichiers définitifs</h4>
               <p className="text-xs text-muted">Privés jusqu’à validation du livrable et paiement intégral.</p>
               <ul className="space-y-2 text-sm">{d.storagePath && <li>✓ {d.label} — {formatBytes(d.sizeBytes)}</li>}{d.url && <li>✓ Lien d’import existant</li>}{(d.finalAssets ?? []).map((asset, i) => {
-                const downloaded = Boolean(asset.path && d.accessedFinalAssets?.includes(asset.path));
-                return <li key={i} className="flex items-center justify-between gap-3"><span>✓ {asset.label} ({asset.url ? "lien d’import" : "fichier"}){downloaded && <span className="ml-1 text-xs text-muted">· téléchargé</span>}</span>{!locked && order.status !== "terminee" && !(downloaded && d.approvedAt) && <ConfirmDelete action={removeFinalAssetAction} id={d.id} fields={{ orderId: order.id, index: String(i) }} label="" question={`Retirer « ${asset.label} » des fichiers définitifs ?`} icon />}</li>;
+                const downloaded = Boolean(d.accessedFinalAssets?.includes(asset.path ?? (asset.install ? installAccessKey(asset) : asset.url ?? "")));
+                return <li key={i} className="flex items-center justify-between gap-3"><span>✓ {asset.label} ({asset.install === "streamlabs" ? "installation Streamlabs" : asset.install === "streamelements" ? `installation StreamElements · code ${asset.code ?? "—"}` : asset.url ? "lien d’import" : "fichier"}){downloaded && <span className="ml-1 text-xs text-muted">· {asset.install ? "installé" : "téléchargé"}</span>}</span>{!locked && order.status !== "terminee" && !(downloaded && d.approvedAt) && <ConfirmDelete action={removeFinalAssetAction} id={d.id} fields={{ orderId: order.id, index: String(i) }} label="" question={`Retirer « ${asset.label} » des fichiers définitifs ?`} icon />}</li>;
               })}</ul>
               <DeliveryUpload orderId={order.id} targetId={d.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} saveScope={`livrable-${d.id}`} />
               <form action={addDeliveryLinkAction} className="space-y-3"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="targetId" value={d.id} /><input name="label" required placeholder="Nom du lien d’import" aria-label="Nom du lien d’import" className={input} /><input name="url" type="url" required placeholder="https://…" aria-label="Adresse du lien d’import" className={input} /><button className="rounded-full border border-border px-4 py-2 text-sm">Ajouter le lien d’import</button></form>
+              {/* Lien d'installation : Streamlabs (lien d'importation du Widget Theme) ou StreamElements (code de partage c4ldas) */}
+              <form action={addInstallLinkAction} className="-mx-4 space-y-3 border-t border-border px-4 pt-4">
+                <input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="targetId" value={d.id} />
+                <p className="text-sm font-semibold">Lien d’installation</p>
+                <p className="text-xs text-muted">Le client voit un bouton « Installer sur … » avec les instructions, après validation et paiement. Les fichiers ZIP restent téléchargeables.</p>
+                <Segmented name="platform" options={[["streamlabs", "Streamlabs"], ["streamelements", "StreamElements"]]} defaultValue="streamlabs" />
+                <input name="url" type="url" placeholder="Lien d’importation Streamlabs, ou lien de partage StreamElements (facultatif)" aria-label="Lien d’importation ou de partage" className={input} />
+                <input name="code" placeholder="Code de partage c4ldas (StreamElements)" aria-label="Code de partage c4ldas" autoComplete="off" className={input} />
+                <input name="label" placeholder="Nom affiché (facultatif, sinon « Installer sur … »)" aria-label="Nom affiché" className={input} />
+                <button className="rounded-full border border-border px-4 py-2 text-sm">Ajouter le lien d’installation</button>
+              </form>
             </section>
             {!!d.clientNotes?.length && <section className="space-y-3"><h4 className="font-semibold">Retours du client</h4>{d.clientNotes.map((note, i) => <div key={i} className="rounded-lg border border-amber-400/30 p-3"><p className="text-xs text-muted">{dateFmt.format(new Date(note.at))}</p><p className="mt-1 whitespace-pre-wrap text-sm">{note.body}</p></div>)}</section>}
             <section className="space-y-3 rounded-xl border border-border bg-background/40 p-4">
