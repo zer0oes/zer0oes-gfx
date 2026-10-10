@@ -29,12 +29,16 @@ export function modifiedTargets(content: LabContent, types: AlertboxAlertType[])
     const current = codeHash(content.variants.streamlabs.code);
     return (previous ? current === previous : false) || isStreamlabsTemplate(content.variants.streamlabs.code, newLabContent("widget").variants.streamlabs.code) ? [] : ["widget"];
   }
-  const blank = newLabContent("alertbox").variants.streamlabs.alerts;
+  const pack = newLabContent("alertbox");
+  const blank = pack.variants.streamlabs.alerts;
+  // Ancien code d'exemple des alertes Streamlabs (avant le code de base de la Fenêtre d'alertes) : identique à celui de StreamElements
+  const legacy = codeHash(Object.values(pack.variants.streamelements.alerts)[0]);
   const previous = new Map((content.conversions?.streamlabs?.alerts ?? []).map((alert) => [alert.target, alert.outputHash]));
   const targets = [...new Set(types.map(targetOf))];
   return targets.filter((target) => {
     const current = codeHash(content.variants.streamlabs.alerts[target]);
-    return current !== (previous.get(target) ?? codeHash(blank[target]));
+    if (previous.has(target)) return current !== previous.get(target);
+    return current !== codeHash(blank[target]) && current !== legacy;
   });
 }
 
