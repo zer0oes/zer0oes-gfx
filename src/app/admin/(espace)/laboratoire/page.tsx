@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
 import { listLabDocuments } from "@/lib/custom-lab/store";
-import { deleteLabProjectAction, importLabAction, saveLabProjectAction } from "@/app/admin/custom-lab-actions";
+import { deleteLabProjectAction, importLabAction, saveLabProjectAction, saveLabTextsAction } from "@/app/admin/custom-lab-actions";
 import { listLabProjects, type LabProject } from "@/lib/custom-lab/projects";
 import { LabStorageError } from "@/lib/custom-lab/errors";
 import { ClickableRow } from "@/components/admin/ClickableRow";
@@ -10,6 +10,8 @@ import { ConfirmDelete, Drawer, DrawerButton } from "@/components/admin/Drawer";
 import { overlayPlatforms } from "@/lib/custom-lab/compatibility";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
 import { streamlabsWidgetLabel } from "@/lib/custom-lab/streamlabs-widgets";
+import { resolveLabTexts, STREAMLABS_CUSTOM_WIDGET_URL, type LabTexts } from "@/lib/custom-lab/lab-texts";
+import { getStore } from "@/lib/store";
 
 export const metadata = { title: "Laboratoire" };
 
@@ -26,7 +28,7 @@ const input = "w-full rounded-lg border border-border bg-background px-3 py-2 te
 const save = "rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110";
 
 // Panneau d'un projet (création si project est absent)
-function ProjectDrawer({ project, drawer }: { project?: LabProject; drawer: string }) {
+function ProjectDrawer({ project, drawer, texts }: { project?: LabProject; drawer: string; texts: LabTexts }) {
   const form = `${drawer}-form`;
   return (
     <Drawer
@@ -47,6 +49,21 @@ function ProjectDrawer({ project, drawer }: { project?: LabProject; drawer: stri
         {project && <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="archived" defaultChecked={project.archived} className="accent-[var(--accent)]" /> Archivé (affiché en fin de liste)</label>}
         {project && <p className="text-xs text-muted">Renommer le projet met à jour toutes ses créations.</p>}
       </form>
+      {/* Streamlabs : lien de création d'un widget personnalisé (textes modifiables) */}
+      <section className="-mx-5 border-t border-border px-5 pt-5 sm:-mx-6 sm:px-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Streamlabs</p>
+        <a href={STREAMLABS_CUSTOM_WIDGET_URL} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline">{texts["laboratoire.streamlabs.lien"]}<MaterialIcon name="open_in_new" className="size-4" /></a>
+        <p className="mt-1 text-xs text-muted">{texts["laboratoire.streamlabs.note"]}</p>
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs text-muted hover:text-accent">Modifier ces textes</summary>
+          <form action={saveLabTextsAction} className="mt-3 space-y-3">
+            <label className="block text-sm font-medium">Texte du lien<input name="laboratoire.streamlabs.lien" defaultValue={texts["laboratoire.streamlabs.lien"]} maxLength={300} className={`${input} mt-1 font-normal`} /></label>
+            <label className="block text-sm font-medium">Note<textarea name="laboratoire.streamlabs.note" defaultValue={texts["laboratoire.streamlabs.note"]} maxLength={300} rows={2} className={`${input} mt-1 font-normal`} /></label>
+            <p className="text-xs text-muted">Laisser vide pour revenir au texte d’origine. Les textes sont communs à tous les projets.</p>
+            <button className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">Enregistrer les textes</button>
+          </form>
+        </details>
+      </section>
     </Drawer>
   );
 }
@@ -88,6 +105,7 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
     ...[...projects].sort((a, b) => Number(a.archived) - Number(b.archived)).map((p) => ({ name: p.name, project: p })),
     ...loose.map((name) => ({ name, project: undefined as LabProject | undefined })),
   ];
+  const labTexts = resolveLabTexts(await getStore().getHomeContent().catch(() => null));
   const platformsById = new Map(documents.map((d) => [d.id, d.platforms]));
   const small = "rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -167,8 +185,8 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
         {!groups.length && <p className="rounded-2xl border border-border px-4 py-6 text-center text-muted">Aucune création pour l’instant : commence par un nouveau widget ou importe un projet.</p>}
       </div>
 
-      <ProjectDrawer drawer="laboratoire-projet-nouveau" />
-      {projects.map((p) => <ProjectDrawer key={p.id} project={p} drawer={`laboratoire-projet-${p.id}`} />)}
+      <ProjectDrawer drawer="laboratoire-projet-nouveau" texts={labTexts} />
+      {projects.map((p) => <ProjectDrawer key={p.id} project={p} drawer={`laboratoire-projet-${p.id}`} texts={labTexts} />)}
       <Drawer id="laboratoire-import" kicker="Laboratoire" title="Importer une création" footer={<><span /><button type="submit" form="laboratoire-import-form" disabled={Boolean(message)} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110 disabled:opacity-50">Importer</button></>}>
         <form id="laboratoire-import-form" action={importLabAction} className="space-y-3">
           <p className="text-sm text-muted">Fichier projet JSON exporté depuis le Laboratoire, ou préparé depuis ton Streamer Lab local (2 Mo maximum).</p>
