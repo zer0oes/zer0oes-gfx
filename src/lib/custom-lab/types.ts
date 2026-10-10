@@ -21,6 +21,19 @@ export type LabVariant = {
   settings: string;
 };
 export type LabSize = { width: number; height: number };
+// Rapport d'une conversion StreamElements → Streamlabs (une entrée par alerte convertie)
+export type LabAlertConversion = {
+  source: string;
+  target: string;
+  status: "validated" | "untested" | "manual";
+  converted: string[];
+  limitations: string[];
+  manual: string[];
+  // Empreintes du code StreamElements converti et du code Streamlabs produit
+  sourceHash: string;
+  outputHash: string;
+};
+export type LabConversion = { at: string; alerts: LabAlertConversion[] };
 export type LabContent = {
   name: string;
   description?: string;
@@ -31,6 +44,8 @@ export type LabContent = {
   // widget / pack d'alertes : taille d'affichage (aperçu, calque d'overlay, réglage de la source)
   size?: LabSize;
   variants: Record<Platform, LabVariant>;
+  // Dernière conversion vers Streamlabs (pack d'alertes)
+  conversions?: { streamlabs?: LabConversion };
 };
 export type LabDocument = LabContent & {
   id: string;
