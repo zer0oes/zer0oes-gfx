@@ -7,6 +7,7 @@ import { sendBrief } from "@/app/actions";
 import { href, type Locale } from "@/lib/i18n";
 import { overlayTypes } from "@/lib/pricing";
 import { productBriefBlock } from "@/lib/option-products";
+import { trOfferName } from "@/lib/translations-en";
 import { productBriefFieldName, productBriefParts, splitProductBrief } from "@/lib/product-brief";
 import { BRIEF_PLATFORM_KEY, briefDeliveryNeeds, hasInstallLine } from "@/lib/brief-delivery";
 import { BriefDeliveryQuestions } from "./BriefDeliveryQuestions";
@@ -35,7 +36,7 @@ const texts = {
     colors: "Couleurs souhaitées",
     colorsHint: "Codes couleur, logo existant, couleurs à éviter…",
     references: "Références visuelles",
-    referencesHint: "Liens vers des overlays, chaînes ou images qui t'inspirent.",
+    referencesHint: "Liens vers des créations ou images qui t’inspirent.",
     elements: "Éléments à inclure",
     elementsHint: "Textes des écrans, réseaux sociaux à afficher, emplacement caméra…",
     overlays: "Overlays souhaités",
@@ -59,7 +60,7 @@ const texts = {
     colors: "Preferred colours",
     colorsHint: "Colour codes, existing logo, colours to avoid…",
     references: "Visual references",
-    referencesHint: "Links to overlays, channels or images that inspire you.",
+    referencesHint: "Links to creations or images that inspire you.",
     elements: "Elements to include",
     elementsHint: "Screen texts, social media to display, camera position…",
     overlays: "Overlays you want",
@@ -118,10 +119,15 @@ export function BriefForm({
   const isRequired = (name: string) => requiredFields ? requiredFields.includes(name) : ["email", "channel", "universe", ...(hasLogo ? ["logoLink"] : [])].includes(name);
   const locale = useLocale();
   const tx = texts[locale];
+  const sectionClass = fullWidthSections
+    ? "-mx-4 border-t border-border px-4 pt-6 sm:-mx-5 sm:px-5"
+    : "-mx-6 border-t border-border px-6 pt-6 sm:-mx-8 sm:px-8";
+  const showElements = purchasedProducts.length === 0;
+  const productLabel = (line: string) => productBriefBlock(line, locale).title;
   const [overlays, setOverlays] = useState<string[]>(() => overlayTypes.filter((o) => values?.["Overlays choisis"]?.includes(o)));
   const [missingFields, setMissingFields] = useState<string[]>([
-    ...quoteBriefFields.filter((f) => isRequired(f.id) && !(values?.[f.key] || (f.id === "email" ? email : f.id === "platform" ? "Twitch" : ""))).map((f) => f.label),
-    ...purchasedProducts.filter((line, index) => !optionalProducts.includes(line) && !values?.[`Création ${index + 1} : ${line}`]),
+    ...quoteBriefFields.filter((f) => isRequired(f.id) && (showElements || f.id !== "elements") && !(values?.[f.key] || (f.id === "email" ? email : f.id === "platform" ? "Twitch" : ""))).map((f) => f.label),
+    ...purchasedProducts.filter((line, index) => !optionalProducts.includes(line) && !values?.[`Création ${index + 1} : ${line}`]).map(productLabel),
   ]);
   // Questions techniques selon le contenu de la commande (widgets / alertes, overlays)
   const needs = briefDeliveryNeeds(productLines ?? purchasedProducts, overlayCount);
@@ -160,13 +166,16 @@ export function BriefForm({
   );
 
   return (
-    <form action={action} className="space-y-5 [&_input::placeholder]:text-foreground/65 [&_label>span.text-xs]:text-sm [&_label>span.text-xs]:text-foreground/75" onInput={(event) => {
+    <form action={action} className="space-y-5 [&_input::placeholder]:text-foreground/65 [&_textarea::placeholder]:text-foreground/65 [&_label>span.text-xs]:text-sm [&_label>span.text-xs]:text-foreground/75" onInput={(event) => {
       const form = event.currentTarget;
-      const required = [...quoteBriefFields.filter((f) => isRequired(f.id)).map((f) => [f.id, f.label]), ...purchasedProducts.flatMap((line, index) => optionalProducts.includes(line) ? [] : productBriefParts(line)?.map((part, j) => [productBriefFieldName(index, j), `${line} · ${locale === "en" ? part.labelEn : part.label}`]) ?? [[productBriefFieldName(index), line]])];
+      const required = [...quoteBriefFields.filter((f) => isRequired(f.id) && (showElements || f.id !== "elements")).map((f) => [f.id, f.label]), ...purchasedProducts.flatMap((line, index) => optionalProducts.includes(line) ? [] : productBriefParts(line)?.map((part, j) => [productBriefFieldName(index, j), `${line} · ${locale === "en" ? part.labelEn : part.label}`]) ?? [[productBriefFieldName(index), line]])];
       setMissingFields(required.filter(([name]) => {
         const field = form.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(`input[name="${name}"], textarea[name="${name}"], select[name="${name}"]`);
         return !field?.value.trim() || !field.validity.valid;
-      }).map(([, label]) => label.replace(" *", "")));
+      }).map(([, label]) => {
+        const line = purchasedProducts.find((product) => label === product || label.startsWith(`${product} · `));
+        return line ? label.replace(line, productLabel(line)) : label.replace(" *", "");
+      }));
     }}>
       <input type="hidden" name="sessionId" value={sessionId ?? ""} />
       {quoteToken && <input type="hidden" name="token" value={quoteToken} />}
@@ -177,6 +186,8 @@ export function BriefForm({
       <input type="hidden" name="payment" value={payment ?? ""} />
       <input type="hidden" name="hasLogo" value={hasLogo ? "1" : ""} />
       <input type="hidden" name="lang" value={locale} />
+      <fieldset className="space-y-5">
+        <legend className="mb-4 flex items-center gap-3 font-display text-lg font-bold"><span aria-hidden className="text-gradient text-xl font-bold tabular-nums">01</span>{locale === "en" ? "Your channel" : "Ta chaîne"}</legend>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label={tx.email.replace(" *", "") + (isRequired("email") ? " *" : "")}>
           <input name="email" type="email" defaultValue={values?.["E-mail"] ?? email} className={inputClass} required={isRequired("email")} />
@@ -205,19 +216,27 @@ export function BriefForm({
         </Field>
       )}
       <BriefDeliveryQuestions mode={quoteToken ? "quote-brief" : "brief"} note={installNote} needs={needs} en={locale === "en"} streamTool={streamTool} onStreamTool={setStreamTool} />
+      </fieldset>
+      <div className={sectionClass}>
+      <fieldset className="space-y-5">
+        <legend className="mb-4 flex items-center gap-3 font-display text-lg font-bold"><span aria-hidden className="text-gradient text-xl font-bold tabular-nums">02</span>{locale === "en" ? "Your visual universe" : "Ton univers visuel"}</legend>
       <Field label={tx.universe.replace(" *", "") + (isRequired("universe") ? " *" : "")} hint={tx.universeHint}>
-        <textarea name="universe" defaultValue={values?.["Univers / ambiance"]} rows={4} className={inputClass} required={isRequired("universe")} />
+        <textarea name="universe" defaultValue={values?.["Univers / ambiance"]} rows={3} className={inputClass} required={isRequired("universe")} />
       </Field>
       <Field label={tx.colors.replace(" *", "") + (isRequired("colors") ? " *" : "")} hint={tx.colorsHint}>
         <input name="colors" defaultValue={values?.["Couleurs"]} className={inputClass} required={isRequired("colors")} />
       </Field>
-      <Field label={tx.references.replace(" *", "") + (isRequired("references") ? " *" : "")} hint={tx.referencesHint}>
-        <textarea name="references" defaultValue={values?.["Références"]} rows={3} className={inputClass} required={isRequired("references")} />
+      <Field label={tx.references.replace(" *", "") + (isRequired("references") ? " *" : locale === "en" ? " (optional)" : " (facultatif)")} hint={tx.referencesHint}>
+        <textarea name="references" defaultValue={values?.["Références"]} rows={2} className={inputClass} required={isRequired("references")} />
       </Field>
-      <Field label={tx.elements.replace(" *", "") + (isRequired("elements") ? " *" : "")} hint={tx.elementsHint}>
+      {/* Avec des créations achetées, leurs blocs remplacent « Éléments à inclure » (une réponse déjà donnée est conservée) */}
+      {showElements ? <Field label={tx.elements.replace(" *", "") + (isRequired("elements") ? " *" : "")} hint={tx.elementsHint}>
         <textarea name="elements" defaultValue={values?.["Éléments à inclure"]} rows={3} className={inputClass} required={isRequired("elements")} />
-      </Field>
-      {purchasedProducts.length > 0 && <section className={fullWidthSections ? "-mx-4 space-y-5 border-y border-border px-4 py-5 sm:-mx-5 sm:px-5" : "-mx-6 space-y-5 border-y border-border px-6 py-5 sm:-mx-8 sm:px-8"}>
+      </Field> : values?.["Éléments à inclure"] && <input type="hidden" name="elements" value={values["Éléments à inclure"]} />}
+      </fieldset>
+      </div>
+      {purchasedProducts.length > 0 && <section className={`space-y-5 ${sectionClass}`}>
+        <h2 className="flex items-center gap-3 font-display text-lg font-bold"><span aria-hidden className="text-gradient text-xl font-bold tabular-nums">03</span>{locale === "en" ? "Your creations" : "Tes créations"}</h2>
         {purchasedProducts.map((line, index) => {
           const en = locale === "en";
           const optional = optionalProducts.includes(line);
@@ -226,28 +245,28 @@ export function BriefForm({
           // Titre du bloc selon l'offre, puis le produit commandé (et ce qu'il inclut) en sous-titre, puis la consigne
           const block = productBriefBlock(line, locale);
           const [name, ...detail] = line.split(" — ");
-          const included = parts ? (/emote/i.test(line) ? `${parts.length} emotes ${en ? "included" : "incluses"}` : `${parts.length} ${en ? "alerts included" : "alertes incluses"}`) : detail.join(" — ");
+          const included = parts ? `${parts.length} ${/emote/i.test(line) ? (en ? "emotes included" : "emotes incluses") : /panneau|panel/i.test(line) ? (en ? "panels included" : "panneaux inclus") : en ? "alerts included" : "alertes incluses"}` : detail.join(" — ");
           const header = <legend className="mb-2">
             <h2 className="font-display text-xl font-bold">{block.title}</h2>
-            <span className="mt-1 block text-sm text-muted">{[name, included].filter(Boolean).join(" · ")}{optional && (en ? " (optional)" : " (facultatif)")}</span>
+            <span className="mt-1 block text-sm text-muted">{[trOfferName(locale, name), included].filter(Boolean).join(" · ")}{optional && (en ? " (optional)" : " (facultatif)")}</span>
           </legend>;
           // Séparateur pleine largeur entre deux créations
-          const separated = index > 0 ? `border-t border-border pt-5 ${fullWidthSections ? "-mx-4 px-4 sm:-mx-5 sm:px-5" : "-mx-6 px-6 sm:-mx-8 sm:px-8"}` : "";
+          const separated = index > 0 ? sectionClass : "";
           // Le séparateur est sur un conteneur : une bordure de fieldset passerait au milieu de la légende
           if (!parts) return <div key={index} className={separated}><fieldset>
             {header}
             <p className="text-sm text-foreground/80">{block.hint}</p>
-            <textarea name={productBriefFieldName(index)} aria-label={line} required={!optional} rows={3} defaultValue={saved} className={`mt-3 ${briefInputClass}`} />
+            <textarea name={productBriefFieldName(index)} aria-label={line} required={!optional} rows={3} defaultValue={saved} placeholder={block.example} className={`mt-3 ${briefInputClass}`} />
           </fieldset></div>;
           // Une ligne par alerte ou par emote : nom à gauche, champ à droite, séparateurs pleine largeur
           const savedParts = splitProductBrief(line, saved);
           return <div key={index} className={separated}><fieldset>
             {header}
             <p className="text-sm text-foreground/80">{block.hint}</p>
-            <div className={`mt-4 divide-y divide-border border-t border-border ${fullWidthSections ? "-mx-4 sm:-mx-5" : "-mx-6 sm:-mx-8"}`}>
+            <div className="mt-4 space-y-3">
               {parts.map((part, j) => {
                 const id = `${productBriefFieldName(index, j)}-field`;
-                return <div key={j} className={`grid gap-2 py-4 sm:grid-cols-[7rem_1fr] sm:gap-4 ${fullWidthSections ? "px-4 sm:px-5" : "px-6 sm:px-8"}`}>
+                return <div key={j} className="grid gap-2 sm:grid-cols-[5rem_1fr] sm:gap-3">
                   <label htmlFor={id} className="flex items-center gap-2 text-sm font-semibold sm:pt-3 sm:items-start">
                     <span aria-hidden className="size-2 shrink-0 rounded-full bg-accent sm:mt-1.5" />
                     <span>{en ? part.labelEn : part.label}{!optional && <span aria-hidden className="ml-0.5 text-accent">*</span>}</span>

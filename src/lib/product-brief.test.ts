@@ -27,3 +27,16 @@ test("brief des créations : un champ par alerte, un par emote achetée", async 
   // une alerte sans texte : réponse incomplète
   assert.equal(readProductBrief([alerts], (key) => (key === "productBrief_0_2" ? "" : values[key] ?? ""))[0], "");
 });
+
+test("brief des créations : un champ par panneau, un exemple adapté dans chaque champ", async () => {
+  const { productBriefParts } = await import("./product-brief");
+  const panels = productBriefParts("Pack de 6 panneaux Twitch");
+  assert.deepEqual(panels?.map((p) => p.label), ["Panneau 1", "Panneau 2", "Panneau 3", "Panneau 4", "Panneau 5", "Panneau 6"]);
+  assert.equal(panels?.[0].labelEn, "Panel 1");
+  assert.ok(panels?.every((p) => p.example && p.exampleEn));
+  const animated = productBriefParts("Pack d’alertes animées — 5 alertes : follow, sub, raid, cheer, tips");
+  assert.match(animated?.[0].example ?? "", /rebondit/);
+  assert.doesNotMatch(productBriefParts("Pack d’alertes statique — 5 alertes : follow, sub, raid, cheer, tips")?.[0].example ?? "", /rebondit/);
+  const emotes = productBriefParts("Pack de 3 emotes statiques");
+  assert.equal(new Set(emotes?.map((p) => p.example)).size, 3);
+});

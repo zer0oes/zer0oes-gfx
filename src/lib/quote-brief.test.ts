@@ -19,3 +19,13 @@ test("le brief exige un univers et une description de chaque livrable accepté",
   data.set("colors", "Violet");
   assert.ok(parseQuoteBrief(data, ["Logo", "Bannière"], [], ["colors"]));
 });
+
+test("« Éléments à inclure » n'est plus exigé quand les créations du devis ont leurs blocs", () => {
+  const data = new FormData();
+  data.set("universe", "Néon");
+  data.set("creation_0", "Logo violet");
+  assert.ok(parseQuoteBrief(data, ["Logo"], [], ["universe", "elements"]));
+  assert.equal(parseQuoteBrief(data, [], [], ["universe", "elements"]), null);
+  data.set("elements", "Ancienne précision à conserver");
+  assert.equal(parseQuoteBrief(data, ["Logo"])?.["Éléments à inclure"], "Ancienne précision à conserver");
+});
