@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { defaultSettings, options, packs } from "@/data/packs";
 import { amountToPay, depositAmount, optionCategory, orderPrice, splitOptionName } from "./pricing";
 import { quote, quoteMetadata, quoteFromMetadata } from "./orders";
+import { INSTALL_SUPPLEMENT_ENABLED } from "./brief-delivery";
 
 const catalog = { settings: defaultSettings, packs, options };
 
@@ -106,6 +107,11 @@ test("nom d'option : précision entre parenthèses à part", () => {
 });
 
 test("à la carte : supplément d'installation, seulement avec une création à installer", () => {
+  if (!INSTALL_SUPPLEMENT_ENABLED) {
+    // Supplément mis de côté : refusé dans tous les cas
+    assert.equal(quote(catalog, { optionItems: [{ id: "overlay-fixe-unite", quantity: 1 }, { id: "installation-plateforme", quantity: 1 }] }), null);
+    return;
+  }
   const q = quote(catalog, { optionItems: [{ id: "overlay-fixe-unite", quantity: 2 }, { id: "installation-plateforme", quantity: 1 }] })!;
   assert.equal(q.totalPrice, 7500 * 2 + 2000);
   assert.deepEqual(q.deliveryTemplate, ["Overlay fixe (unité) × 2", "Installation par zer0oes_GFX (invitation comme éditeur)"]);

@@ -6,7 +6,7 @@
 // événements de l'autre plateforme.
 
 import { PLATFORM_STREAM_ELEMENTS, PLATFORM_STREAMLABS, type Platform } from "./platformEvents";
-import type { FieldDefinition, FieldDefinitions } from "./types";
+import type { FieldDefinition, FieldDefinitions, LabConversion } from "./types";
 import { alertboxAlerts, type AlertboxAlertType, type AlertboxConfig } from "./alertbox";
 
 export interface ExportableWidget {
@@ -39,7 +39,7 @@ export function slugifyWidgetName(name: string): string {
   );
 }
 
-export function buildPlatformExport(widget: ExportableWidget, values: Record<string, unknown>, platform: string): PlatformExportResult {
+export function buildPlatformExport(widget: ExportableWidget, values: Record<string, unknown>, platform: string, conversion?: LabConversion): PlatformExportResult {
   const target = platform === PLATFORM_STREAMLABS ? PLATFORM_STREAMLABS : PLATFORM_STREAM_ELEMENTS;
   const fields = target === PLATFORM_STREAMLABS ? toStreamlabsFields(widget.fields, values) : toStreamElementsFields(widget.fields, values);
   const bridgeFields = target === PLATFORM_STREAM_ELEMENTS ? toStreamlabsFields(widget.fields, values) : fields;
@@ -63,7 +63,8 @@ export function buildPlatformExport(widget: ExportableWidget, values: Record<str
             ? `Un pont de compatibilité ${compatibility.label} a été ajouté au début de widget.js.`
             : "Aucun pont n'a été nécessaire : le code utilise déjà les événements de cette plateforme.",
           "",
-          "Les valeurs configurées dans Streamer Lab sont incluses dans fields.json."
+          "Les valeurs configurées dans Streamer Lab sont incluses dans fields.json.",
+          ...(conversion ? widgetConversionReadme(conversion) : [])
         ].join("\n") + "\n"
     },
     platform: target,
@@ -114,7 +115,9 @@ const ALERTBOX_README_INTRO: Record<Platform, string[]> = {
 export function buildAlertboxExport(
   codes: Partial<Record<AlertboxAlertType, AlertboxExportCode>>,
   config: AlertboxConfig,
-  platform: Platform = PLATFORM_STREAM_ELEMENTS
+  platform: Platform = PLATFORM_STREAM_ELEMENTS,
+  // Rapport de conversion StreamElements → Streamlabs, repris dans le README
+  conversion?: LabConversion
 ): PlatformExportResult {
   const isStreamlabs = platform === PLATFORM_STREAMLABS;
   const platformName = isStreamlabs ? "Streamlabs" : "StreamElements";
@@ -145,6 +148,7 @@ export function buildAlertboxExport(
 
   const disabled = alerts.filter(({ type }) => !config.alerts[type]?.enabled).map(({ label }) => label);
   if (disabled.length > 0) readme.push(`Désactivées (à laisser décochées) : ${disabled.join(", ")}`);
+  if (isStreamlabs) readme.push("", ...streamlabsTestChecklist(), ...(conversion ? conversionReadme(conversion, config) : []));
   files["README.txt"] = `${readme.join("\n")}\n`;
 
   return {
@@ -153,6 +157,39 @@ export function buildAlertboxExport(
     platformName: isStreamlabs ? "Alert Box Streamlabs" : "AlertBox StreamElements",
     bridgeInjected: false
   };
+}
+
+const STATUS_TEXT = { validated: "validé sur Streamlabs", untested: "converti, NON TESTÉ sur Streamlabs", manual: "à adapter à la main avant utilisation" } as const;
+
+function streamlabsTestChecklist(): string[] {
+  return [
+    "Tester chaque alerte dans Streamlabs :",
+    "  1. dans les réglages de l'Alert Box, cliquer sur « Test » à côté du type d'alerte (ex. « Test Follow ») ;",
+    "  2. vérifier que la carte s'affiche en entier, à la bonne taille, avec le pseudo du test ;",
+    "  3. vérifier l'animation d'entrée, puis la sortie juste avant la fin de la durée réglée ;",
+    "  4. modifier un Custom Field (couleur, texte…) et relancer le test pour vérifier qu'il est pris en compte ;",
+    "  5. dans OBS, recharger la source navigateur de l'Alert Box et refaire un test.",
+  ];
+}
+
+function widgetConversionReadme(conversion: LabConversion): string[] {
+  const lines = ["", `Conversion depuis StreamElements (${new Date(conversion.at).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}) : ${conversion.alerts.map((entry) => STATUS_TEXT[entry.status]).join(", ")}`];
+  for (const entry of conversion.alerts) {
+    for (const line of entry.limitations) lines.push(`  Limite : ${line}`);
+    for (const line of entry.manual) lines.push(`  À adapter : ${line}`);
+  }
+  return [...lines, "", "Tester dans Streamlabs : ajouter le Custom Widget à OBS, vérifier les réglages (Custom Fields), puis envoyer des évènements de test (follow, sub, don…) depuis le tableau de bord Streamlabs."];
+}
+
+function conversionReadme(conversion: LabConversion, config: AlertboxConfig): string[] {
+  const lines = ["", `Conversion depuis StreamElements (${new Date(conversion.at).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}) :`];
+  for (const alert of conversion.alerts) {
+    if (!config.alerts[alert.target as AlertboxAlertType]?.enabled && alert.status !== "manual") continue;
+    lines.push("", `${alert.target}/ (depuis ${alert.source}) : ${STATUS_TEXT[alert.status]}`);
+    for (const line of alert.limitations) lines.push(`  Limite : ${line}`);
+    for (const line of alert.manual) lines.push(`  À adapter : ${line}`);
+  }
+  return lines;
 }
 
 export function toStreamElementsFields(definitions: FieldDefinitions = {}, values: Record<string, unknown> = {}): FieldDefinitions {

@@ -6,6 +6,10 @@
 export const BRIEF_PLATFORM_KEY = "Plateforme des widgets et alertes";
 export const BRIEF_INSTALL_KEY = "Installation";
 
+// Supplément « Installation par zer0oes_GFX » (panier à la carte, demande de devis) : mis de côté pour le moment.
+// À false, le choix n'est proposé nulle part et le serveur refuse l'option ; la plateforme reste demandée dans le brief.
+export const INSTALL_SUPPLEMENT_ENABLED = false;
+
 // Option à la carte du supplément d'installation (prix et description modifiables dans l'admin)
 export const INSTALL_OPTION_ID = "installation-plateforme";
 // Ligne de commande correspondante (livraison, brief) : fixe, quel que soit le nom de l'option

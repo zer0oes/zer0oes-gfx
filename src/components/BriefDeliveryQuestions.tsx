@@ -1,6 +1,6 @@
 "use client";
 
-import { installChoices, orderStreamToolChoices, streamToolChoices } from "@/lib/brief-delivery";
+import { INSTALL_SUPPLEMENT_ENABLED, installChoices, orderStreamToolChoices, streamToolChoices } from "@/lib/brief-delivery";
 
 const texts = {
   fr: {
@@ -58,7 +58,7 @@ export function BriefDeliveryQuestions({ needs, en, mode, note, streamTool, onSt
         </div>
         {note && <p className="mt-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-foreground/85">{note}</p>}
       </fieldset>}
-      {mode === "quote-request" && needs.install && <fieldset>
+      {INSTALL_SUPPLEMENT_ENABLED && mode === "quote-request" && needs.install && <fieldset>
         <legend className="text-sm font-medium">{tx.install}</legend>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
           {installChoices.map((choice, index) => (

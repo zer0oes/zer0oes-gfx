@@ -35,16 +35,16 @@ export function CustomLabSizeField({ size, onChange }: { size: LabSize; onChange
     if (Number.isFinite(v) && v > 0) onChange({ ...size, [key]: Math.min(key === "width" ? 7680 : 4320, Math.max(20, v)) });
   };
   return (
-    <div className="grid gap-[7px] text-[11px] text-[#adb3c1]">
+    <div className="grid gap-2 text-sm font-medium text-foreground">
       <span>Taille (px)</span>
       <div className="flex items-center gap-2">
-        <select aria-label="Format" style={{ width: 150 }} value={preset ? `${preset[0]}x${preset[1]}` : ""} onChange={(e) => { const [w, h] = e.target.value.split("x").map(Number); if (w && h) onChange({ width: w, height: h }); }}>
+        <select aria-label="Format" className="min-w-0 flex-1" value={preset ? `${preset[0]}x${preset[1]}` : ""} onChange={(e) => { const [w, h] = e.target.value.split("x").map(Number); if (w && h) onChange({ width: w, height: h }); }}>
           {LAB_SIZE_PRESETS.map(([w, h]) => <option key={`${w}x${h}`} value={`${w}x${h}`}>{w} × {h}</option>)}
           <option value="">Personnalisée</option>
         </select>
-        <input aria-label="Largeur" type="number" min={20} max={7680} style={{ width: 84 }} value={size.width} onChange={(e) => set("width", e.target.value)} />
-        <span className="text-[var(--cl-muted)]">×</span>
-        <input aria-label="Hauteur" type="number" min={20} max={4320} style={{ width: 84 }} value={size.height} onChange={(e) => set("height", e.target.value)} />
+        <input aria-label="Largeur" type="number" min={20} max={7680} style={{ width: 80 }} value={size.width} onChange={(e) => set("width", e.target.value)} />
+        <span className="font-normal text-[var(--cl-muted)]">×</span>
+        <input aria-label="Hauteur" type="number" min={20} max={4320} style={{ width: 80 }} value={size.height} onChange={(e) => set("height", e.target.value)} />
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ import { ProductPreview } from "./ProductPreview";
 import { ProductCompatibility } from "./ProductCompatibility";
 import { useOfferNavigation } from "./OfferTabs";
 import { OfferPrice, SaleBadge } from "./ui";
-import { briefDeliveryNeeds } from "@/lib/brief-delivery";
+import { briefDeliveryNeeds, INSTALL_SUPPLEMENT_ENABLED } from "@/lib/brief-delivery";
 
 function CheckoutButton({ disabled, locale }: { disabled: boolean; locale: Locale }) {
   const { pending } = useFormStatus();
@@ -90,7 +90,7 @@ export function OptionCatalog({ options, packs, settings, locale, texts, install
   const cartItems = selected.map((o) => ({ id: o.id, quantity: quantities[o.id] }));
   // Installation : code ajouté par le client (inclus) ou installation par zer0oes_GFX (supplément)
   const [install, setInstall] = useState<"" | "self" | "zer0oes">("");
-  const needsInstall = Boolean(installOption) && briefDeliveryNeeds(selected.map((o) => o.name)).platform;
+  const needsInstall = INSTALL_SUPPLEMENT_ENABLED && Boolean(installOption) && briefDeliveryNeeds(selected.map((o) => o.name)).platform;
   const installed = needsInstall && install === "zer0oes" ? installOption : undefined;
   const items = installed ? [...cartItems, { id: installed.id, quantity: 1 }] : cartItems;
   const total = selected.reduce((sum, o) => sum + o.price * quantities[o.id], 0) + (installed?.price ?? 0);
