@@ -7,6 +7,7 @@ import { sendBrief } from "@/app/actions";
 import { href, type Locale } from "@/lib/i18n";
 import { overlayTypes } from "@/lib/pricing";
 import { productBriefHint } from "@/lib/option-products";
+import { productBriefFieldName, productBriefParts, splitProductBrief } from "@/lib/product-brief";
 import { BRIEF_PLATFORM_KEY, briefDeliveryNeeds, hasInstallLine } from "@/lib/brief-delivery";
 import { BriefDeliveryQuestions } from "./BriefDeliveryQuestions";
 import { useLocale } from "./I18nProvider";
@@ -157,7 +158,7 @@ export function BriefForm({
   return (
     <form action={action} className="space-y-5 [&_input::placeholder]:text-foreground/65 [&_label>span.text-xs]:text-sm [&_label>span.text-xs]:text-foreground/75" onInput={(event) => {
       const form = event.currentTarget;
-      const required = [...quoteBriefFields.filter((f) => isRequired(f.id)).map((f) => [f.id, f.label]), ...purchasedProducts.flatMap((line, index) => optionalProducts.includes(line) ? [] : [[`productBrief_${index}`, line]])];
+      const required = [...quoteBriefFields.filter((f) => isRequired(f.id)).map((f) => [f.id, f.label]), ...purchasedProducts.flatMap((line, index) => optionalProducts.includes(line) ? [] : productBriefParts(line)?.map((part, j) => [productBriefFieldName(index, j), `${line} · ${locale === "en" ? part.labelEn : part.label}`]) ?? [[productBriefFieldName(index), line]])];
       setMissingFields(required.filter(([name]) => {
         const field = form.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(`input[name="${name}"], textarea[name="${name}"], select[name="${name}"]`);
         return !field?.value.trim() || !field.validity.valid;
@@ -212,9 +213,24 @@ export function BriefForm({
       <Field label={tx.elements.replace(" *", "") + (isRequired("elements") ? " *" : "")} hint={tx.elementsHint}>
         <textarea name="elements" defaultValue={values?.["Éléments à inclure"]} rows={3} className={inputClass} required={isRequired("elements")} />
       </Field>
-      {purchasedProducts.length > 0 && <section className={fullWidthSections ? "-mx-4 space-y-5 border-t border-border px-4 pt-5 sm:-mx-5 sm:px-5" : "space-y-5 rounded-xl border border-accent/30 p-4"}>
+      {purchasedProducts.length > 0 && <section className={fullWidthSections ? "-mx-4 space-y-5 border-y border-border px-4 py-5 sm:-mx-5 sm:px-5" : "-mx-6 space-y-5 border-y border-border px-6 py-5 sm:-mx-8 sm:px-8"}>
         <h3 className="font-semibold">{locale === "en" ? "Your purchased creations" : "Tes créations achetées"}</h3>
-        {purchasedProducts.map((line, index) => <Field key={index} label={`${line}${optionalProducts.includes(line) ? (locale === "en" ? " (optional)" : " (facultatif)") : " *"}`} hint={productBriefHint(line, locale)}><textarea name={`productBrief_${index}`} required={!optionalProducts.includes(line)} rows={3} defaultValue={values?.[`Création ${index + 1} : ${line}`]} className={inputClass} /></Field>)}
+        {purchasedProducts.map((line, index) => {
+          const optional = optionalProducts.includes(line);
+          const title = `${line}${optional ? (locale === "en" ? " (optional)" : " (facultatif)") : " *"}`;
+          const saved = values?.[`Création ${index + 1} : ${line}`];
+          const parts = productBriefParts(line);
+          if (!parts) return <Field key={index} label={title} hint={productBriefHint(line, locale)}><textarea name={productBriefFieldName(index)} required={!optional} rows={3} defaultValue={saved} className={inputClass} /></Field>;
+          // Un champ par alerte ou par emote
+          const savedParts = splitProductBrief(line, saved);
+          return <fieldset key={index} className="space-y-3">
+            <legend className="text-sm font-medium">{title}</legend>
+            <p className="text-sm text-foreground/75">{productBriefHint(line, locale)}</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {parts.map((part, j) => <Field key={j} label={`${locale === "en" ? part.labelEn : part.label}${optional ? "" : " *"}`}><textarea name={productBriefFieldName(index, j)} required={!optional} rows={2} defaultValue={savedParts[j]} className={inputClass} /></Field>)}
+            </div>
+          </fieldset>;
+        })}
       </section>}
       {overlayCount !== null && <fieldset>
         <legend className="text-sm font-medium">{tx.overlays}</legend>
