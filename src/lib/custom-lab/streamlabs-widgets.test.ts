@@ -15,7 +15,7 @@ test("widget Streamlabs ciblé : conservé pour un widget, ignoré sinon", () =>
 });
 
 test("Fenêtre de chat : aperçu simulé et guide d'export", () => {
-  const doc = buildWidgetSrcdoc(CHATBOX_TEMPLATE, {}, { platform: "streamlabs", chatbox: true });
+  const doc = buildWidgetSrcdoc(CHATBOX_TEMPLATE, {}, { platform: "streamlabs", streamlabsWidget: "chatbox" });
   assert.match(doc, /window\.__SL_CHATBOX__/);
   assert.match(doc, /font-size: 16px;/);
   assert.match(doc, /id="chatlist_item"/);
@@ -58,4 +58,23 @@ test("conversion vers la Fenêtre de chat : les messages Streamlabs arrivent au 
   const custom = convertWidgetToStreamlabs(source, {}, {}, "custom");
   assert.ok(custom.manual.some((line) => /messages du chat/.test(line)));
   assert.doesNotMatch(custom.code.html, /chatlist_item/);
+});
+
+test("codes de base Streamlabs : modèles par type, code non modifié reconnu", async () => {
+  const { STREAMLABS_TEMPLATES } = await import("./streamlabs-templates");
+  const { isStreamlabsTemplate } = await import("./streamlabs-widgets");
+  const example = newLabContent("widget").variants.streamlabs.code;
+  for (const type of ["chatbox", "eventlist", "viewer-count", "donation-goal", "follower-goal", "subscriber-goal", "bit-goal"] as const) {
+    assert.ok(STREAMLABS_TEMPLATES[type]?.html.trim(), type);
+    assert.equal(isStreamlabsTemplate(STREAMLABS_TEMPLATES[type]!, example), true);
+  }
+  assert.match(STREAMLABS_TEMPLATES["donation-goal"]!.js, /goalLoad/);
+  assert.match(STREAMLABS_TEMPLATES.eventlist!.html, /eventlist_item/);
+  assert.equal(isStreamlabsTemplate(example, example), true);
+  assert.equal(isStreamlabsTemplate({ ...example, js: "console.log('modifié')" }, example), false);
+  // Objectif : réglages d'aperçu et simulation goalLoad / goalEvent
+  const doc = buildWidgetSrcdoc(STREAMLABS_TEMPLATES["follower-goal"]!, {}, { platform: "streamlabs", streamlabsWidget: "follower-goal" });
+  assert.match(doc, /height: 48px;/);
+  assert.match(doc, /goalLoad/);
+  assert.match(doc, /window\.__SL_AFTER__ =/);
 });

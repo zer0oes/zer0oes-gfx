@@ -7,7 +7,7 @@ import type { LabAlertConversion, LabCode, LabContent, LabConversion } from "../
 import { convertAlertToStreamlabs } from "./alert";
 import { convertWidgetToStreamlabs } from "./widget";
 import { ALERT_RULES } from "./rules";
-import { CHATBOX_TEMPLATE } from "../streamlabs-widgets";
+import { isStreamlabsTemplate } from "../streamlabs-widgets";
 
 export { ALERT_RULES } from "./rules";
 
@@ -27,7 +27,7 @@ export function modifiedTargets(content: LabContent, types: AlertboxAlertType[])
   if (content.kind === "widget") {
     const previous = content.conversions?.streamlabs?.alerts.find((alert) => alert.target === "widget")?.outputHash;
     const current = codeHash(content.variants.streamlabs.code);
-    return current === (previous ?? codeHash(newLabContent("widget").variants.streamlabs.code)) || current === codeHash(CHATBOX_TEMPLATE) ? [] : ["widget"];
+    return (previous ? current === previous : false) || isStreamlabsTemplate(content.variants.streamlabs.code, newLabContent("widget").variants.streamlabs.code) ? [] : ["widget"];
   }
   const blank = newLabContent("alertbox").variants.streamlabs.alerts;
   const previous = new Map((content.conversions?.streamlabs?.alerts ?? []).map((alert) => [alert.target, alert.outputHash]));

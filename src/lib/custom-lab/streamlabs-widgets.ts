@@ -2,6 +2,7 @@
 // a son widget natif (Fenêtre de chat, Liste des événements, Objectifs…) dont le HTML / CSS personnalisé a ses propres
 // variables. La Fenêtre de chat est simulée dans l'aperçu ; les autres types sont repérés (export, liste) en attendant.
 import type { LabCode } from "./types";
+import { STREAMLABS_TEMPLATES } from "./streamlabs-templates";
 
 export const STREAMLABS_WIDGETS = [
   { id: "custom", label: "Widget personnalisé" },
@@ -33,132 +34,7 @@ export const isStreamlabsWidget = (value: unknown): value is StreamlabsWidget =>
 export const streamlabsWidgetLabel = (id: StreamlabsWidget | undefined) => STREAMLABS_WIDGETS.find((w) => w.id === (id ?? "custom"))!.label;
 
 // Code de base de la Fenêtre de chat Streamlabs (« Activer HTML/CSS personnalisé »)
-export const CHATBOX_TEMPLATE: LabCode = {
-  html: `<!-- item will be appended to this layout -->
-<div id="log" class="sl__chat__layout">
-
-</div>
-
-<!-- chat item -->
-<script type="text/template" id="chatlist_item">
-    <div data-from="{from}" data-id="{messageId}">
-        <span class="meta" style="color: {color}">
-            <span class="badges"></span>
-            <span class="name">{from}</span>
-        </span>
-
-        <span class="message">{message}</span>
-    </div>
-</script>
-`,
-  css: `@import url(https://fonts.googleapis.com/css?family=Roboto:700);
-
-* {
-    box-sizing: border-box;
-}
-
-html, body {
-    height: 100%;
-    overflow: hidden;
-}
-
-body {
-    text-shadow: 0 0 1px #000, 0 0 2px #000;
-    background: {background_color};
-    font-family: 'Roboto';
-    font-weight: 700;
-    font-size: {font_size};
-    line-height: 1.5em;
-    color: {text_color};
-}
-
-#log>div {
-    animation: fadeInRight .3s ease forwards, fadeOut 0.5s ease {message_hide_delay} forwards;
-    -webkit-animation: fadeInRight .3s ease forwards, fadeOut 0.5s ease {message_hide_delay} forwards;
-}
-
-.colon {
-    display: none;
-}
-
-#log {
-    display: table;
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    padding: 0 10px 10px;
-    width: 100%;
-    table-layout: fixed;
-}
-
-#log>div {
-    display: table-row;
-}
-
-#log>div.deleted {
-    visibility: hidden;
-}
-
-#log .emote {
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
-    padding: 0.4em 0.2em;
-    position: relative;
-}
-
-#log .emote img {
-    display: inline-block;
-    height: 1em;
-    opacity: 0;
-}
-
-#log .message,#log .meta {
-    vertical-align: top;
-    display: table-cell;
-    padding-bottom: 0.1em;
-}
-
-#log .meta {
-    width: 35%;
-    text-align: right;
-    padding-right: 0.5em;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-}
-
-#log .message {
-    word-wrap: break-word;
-    width: 65%;
-}
-
-.badge {
-    display: inline-block;
-    margin-right: 0.2em;
-    position: relative;
-    height: 1em;
-    vertical-align: middle;
-    top: -0.1em;
-}
-
-.name {
-    margin-left: 0.2em;
-}
-`,
-  js: `// Please use event listeners to run functions.
-document.addEventListener('onLoad', function (obj) {
-  // obj will be empty for chat widget
-  // this will fire only once when the widget loads
-});
-
-document.addEventListener('onEventReceived', function (obj) {
-  // obj will contain information about the event
-});
-`,
-  fields: "{}",
-  data: "{}",
-};
+export const CHATBOX_TEMPLATE: LabCode = STREAMLABS_TEMPLATES.chatbox!;
 
 // Réglages natifs de la Fenêtre de chat repris dans le CSS (valeurs de l'aperçu, modifiables par des champs du même nom)
 export const CHATBOX_SETTINGS: Record<string, string> = {
@@ -167,6 +43,32 @@ export const CHATBOX_SETTINGS: Record<string, string> = {
   font_size: "16px",
   message_hide_delay: "999999s",
 };
+
+// Valeurs d'aperçu des réglages natifs repris dans le code (variables entre accolades), par widget Streamlabs
+const GOAL_SETTINGS = { bar_thickness: "48", bar_bg_color: "#DDDDDD", bar_text_color: "#FFFFFF", bar_color: "#46E65A" };
+export const STREAMLABS_SETTINGS: Partial<Record<StreamlabsWidget, Record<string, string>>> = {
+  chatbox: CHATBOX_SETTINGS,
+  eventlist: { background: "rgba(23, 23, 32, 0.85)", text_color: "#FFFFFF", font_family: "Open Sans", font_size: "16px", animation_speed: "1000ms", show_animation: "fadeIn", hide_animation: "fadeOut", max_events: "6", rotate_x: "0deg", rotate_y: "0deg", hue: "0deg", brightness: "100%", saturation: "100%" },
+  "donation-goal": GOAL_SETTINGS,
+  "follower-goal": GOAL_SETTINGS,
+  "subscriber-goal": GOAL_SETTINGS,
+  "bit-goal": GOAL_SETTINGS,
+};
+export const isGoalWidget = (target: StreamlabsWidget | undefined) => target === "donation-goal" || target === "follower-goal" || target === "subscriber-goal" || target === "bit-goal";
+
+// Simulation d'un objectif : goalLoad au chargement, goalEvent à chaque évènement simulé (montant ou +1)
+export const GOAL_RUNTIME = `
+(() => {
+  const goal = { title: "Objectif du stream", amount: { current: 25, target: 100 } };
+  window.__SL_AFTER__ = (type, detail) => {
+    if (type === "onLoad") document.dispatchEvent(new CustomEvent("goalLoad", { detail: JSON.parse(JSON.stringify(goal)) }));
+    if (type === "onEventReceived") {
+      goal.amount.current = Math.min(goal.amount.target, goal.amount.current + (Number(detail && detail.amount) || 1));
+      document.dispatchEvent(new CustomEvent("goalEvent", { detail: JSON.parse(JSON.stringify(goal)) }));
+    }
+  };
+})();
+`;
 
 // Simulation de la Fenêtre de chat dans l'aperçu : un message reçu est rendu avec le modèle #chatlist_item et ajouté
 // à #log, puis le widget reçoit l'événement au format du chat Streamlabs (onEventReceived).
@@ -207,4 +109,11 @@ export function streamlabsWidgetReadme(target: StreamlabsWidget): string | null 
     ...(target === "chatbox" ? ["", "Chaque message utilise le modèle #chatlist_item (variables {from}, {message}, {color}, {messageId}) ajouté dans #log."] : []),
     "",
   ].join("\n");
+}
+
+// Code Streamlabs encore égal à un code de base (exemple d'une nouvelle création ou modèle d'un widget natif)
+export function isStreamlabsTemplate(code: LabCode, example: LabCode): boolean {
+  const same = (a: LabCode, b: LabCode) => a.html === b.html && a.css === b.css && a.js === b.js;
+  const empty = !code.html.trim() && !code.css.trim() && !code.js.trim();
+  return empty || same(code, example) || Object.values(STREAMLABS_TEMPLATES).some((template) => template && same(code, template));
 }

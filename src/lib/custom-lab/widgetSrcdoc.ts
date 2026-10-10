@@ -6,7 +6,7 @@
 
 import { PLATFORM_STREAM_ELEMENTS, type Platform } from "./platformEvents";
 import { ALERTBOX_RUNTIME_SOURCE } from "./alertbox";
-import { CHATBOX_RUNTIME, CHATBOX_SETTINGS } from "./streamlabs-widgets";
+import { CHATBOX_RUNTIME, GOAL_RUNTIME, isGoalWidget, STREAMLABS_SETTINGS, type StreamlabsWidget } from "./streamlabs-widgets";
 
 export interface WidgetBundle {
   html: string;
@@ -19,8 +19,8 @@ export interface BuildSrcdocOptions {
   themeClass?: string;
   platform?: Platform;
   transparent?: boolean;
-  // Streamlabs, Fenêtre de chat : messages simulés rendus avec le modèle #chatlist_item, réglages natifs par défaut
-  chatbox?: boolean;
+  // Widget natif Streamlabs ciblé : réglages natifs d'aperçu ; chat (messages rendus avec #chatlist_item) et objectifs simulés
+  streamlabsWidget?: StreamlabsWidget;
   // AlertBox StreamElements : réglages natifs (alertbox.json) et code de
   // chaque alerte avec ses valeurs de champs. Présent = le document n'exécute
   // pas `bundle` mais l'hôte simulé, qui affiche chaque alerte dans sa propre
@@ -46,9 +46,10 @@ export function substituteFields(source: string, values: Record<string, unknown>
 export function buildWidgetSrcdoc(
   bundle: WidgetBundle,
   values: Record<string, unknown>,
-  { checkerClass = "", themeClass = "", platform = PLATFORM_STREAM_ELEMENTS, transparent = false, alertbox, chatbox = false }: BuildSrcdocOptions = {}
+  { checkerClass = "", themeClass = "", platform = PLATFORM_STREAM_ELEMENTS, transparent = false, alertbox, streamlabsWidget }: BuildSrcdocOptions = {}
 ): string {
-  if (chatbox) values = { ...CHATBOX_SETTINGS, ...values };
+  const nativeSettings = streamlabsWidget ? STREAMLABS_SETTINGS[streamlabsWidget] : undefined;
+  if (nativeSettings) values = { ...nativeSettings, ...values };
   const html = substituteFields(bundle.html, values);
   const css = substituteFields(bundle.css, values);
   const js = substituteFields(bundle.js, values);
@@ -144,6 +145,7 @@ export function buildWidgetSrcdoc(
       const eventTarget = data.eventTarget === "document" ? document : window;
       const detail = window.__SL_CHATBOX__ ? window.__SL_CHATBOX__(data.eventType, data.detail) : data.detail;
       eventTarget.dispatchEvent(new CustomEvent(data.eventType, { detail }));
+      if (window.__SL_AFTER__) window.__SL_AFTER__(data.eventType, detail);
     }
     if (data.kind === "se-api-response") {
       const promise = pending.get(data.id);
@@ -165,7 +167,7 @@ export function buildWidgetSrcdoc(
     setField: (key, value, shouldReload = true) => send("set-field", { key, value, shouldReload }),
     resumeQueue: () => send("queue-resume")
   };
-  ${chatbox ? CHATBOX_RUNTIME : ""}
+  ${streamlabsWidget === "chatbox" ? CHATBOX_RUNTIME : isGoalWidget(streamlabsWidget) ? GOAL_RUNTIME : ""}
   ${runWidget}
 })();
 </script></body></html>`;
