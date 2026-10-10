@@ -59,10 +59,26 @@ test("regroupements : d'origine, puis réglés dans l'admin, avec un nom de cart
   assert.equal(optionProducts(options, groupOf(raw)).find((p) => p.id === "overlay-fixe-unite")?.variants.length, 1);
 });
 
-test("brief : aide adaptée à la variante achetée (statique ou animée)", async () => {
-  const { productBriefHint } = await import("./option-products");
-  assert.equal(productBriefHint("Pack d’alertes statique — 5 alertes : follow, sub, raid, cheer, tips", "fr"), "Précise les textes et les couleurs de chacun.");
-  assert.match(productBriefHint("Pack d’alertes animées — 5 alertes : follow, sub, raid, cheer, tips", "fr"), /mouvement souhaité pour chacun/);
-  assert.doesNotMatch(productBriefHint("Pack de 3 emotes statiques", "fr"), /mouvement/);
-  assert.match(productBriefHint("Emote animée", "en"), /movement/);
+test("brief : titre et consigne adaptés à l'offre et à sa variante (statique ou animée)", async () => {
+  const { productBriefBlock } = await import("./option-products");
+  const alerts = productBriefBlock("Pack d’alertes statique — 5 alertes : follow, sub, raid, cheer, tips", "fr");
+  assert.equal(alerts.title, "Personnalise tes 5 alertes");
+  assert.match(alerts.hint, /^Pour chaque alerte — follow, sub, raid, cheer et tips/);
+  assert.equal(productBriefBlock("Pack d’alertes animées — 5 alertes : follow, sub, raid, cheer, tips", "fr").title, "Imagine tes 5 alertes animées");
+  assert.equal(productBriefBlock("Pack de 3 emotes statiques × 2", "fr").title, "Personnalise tes 6 emotes");
+  assert.equal(productBriefBlock("Pack de 5 emotes animées", "fr").title, "Imagine tes 5 emotes animées");
+  assert.equal(productBriefBlock("Emote statique", "fr").title, "Décris ton emote");
+  assert.equal(productBriefBlock("Emote animée", "en").title, "Imagine your animated emote");
+  assert.equal(productBriefBlock("Animation d’une emote existante", "fr").title, "Donne vie à ton emote");
+  assert.equal(productBriefBlock("Animation légère d'un overlay existant", "fr").title, "Anime ton overlay");
+  assert.equal(productBriefBlock("Animation du logo", "fr").title, "Donne vie à ton logo");
+  assert.equal(productBriefBlock("Overlay statique", "fr").title, "Personnalise ton overlay");
+  assert.equal(productBriefBlock("Overlay animé", "fr").title, "Imagine ton overlay animé");
+  assert.equal(productBriefBlock("Widget interactif avancé", "fr").title, "Imagine les interactions de ton widget");
+  assert.equal(productBriefBlock("Widget personnalisé", "fr").title, "Décris ton widget");
+  assert.equal(productBriefBlock("Logo", "fr").title, "Définis ton logo");
+  assert.equal(productBriefBlock("Logo avec déclinaisons", "fr").title, "Définis ton logo et ses déclinaisons");
+  assert.equal(productBriefBlock("Bannière pour YouTube / Twitch", "fr").title, "Personnalise ta bannière");
+  assert.equal(productBriefBlock("Avatar", "fr").title, "Imagine ton avatar");
+  assert.equal(productBriefBlock("Pack de 6 panneaux Twitch", "fr").title, "Personnalise tes 6 panneaux");
 });

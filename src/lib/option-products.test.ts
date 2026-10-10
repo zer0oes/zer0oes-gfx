@@ -21,6 +21,6 @@ test("les créations admin et les variantes isolées restent visibles", () => {
 
 test("les contenus précisent le nombre d'emotes et les besoins du brief", () => {
   assert.match(optionIncludes(options.find((o) => o.id === "emotes-animees-5")!, "fr"), /5 emotes.*animées/);
-  assert.match(productBriefHint("Overlay fixe × 3", "fr"), /détaille chacune/);
+  assert.match(productBriefHint("Overlay statique × 3", "fr"), /Tu en as commandé 3 : détaille chacune/);
   assert.match(optionIncludes(options.find((o) => o.id === "alertes-fixes")!, "fr"), /5 alertes.*follow, sub, raid, cheer et tips/);
 });

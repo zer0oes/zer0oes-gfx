@@ -6,7 +6,7 @@ import { quoteBriefFields } from "@/lib/quote-brief";
 import { sendBrief } from "@/app/actions";
 import { href, type Locale } from "@/lib/i18n";
 import { overlayTypes } from "@/lib/pricing";
-import { productBriefHint } from "@/lib/option-products";
+import { productBriefBlock } from "@/lib/option-products";
 import { productBriefFieldName, productBriefParts, splitProductBrief } from "@/lib/product-brief";
 import { BRIEF_PLATFORM_KEY, briefDeliveryNeeds, hasInstallLine } from "@/lib/brief-delivery";
 import { BriefDeliveryQuestions } from "./BriefDeliveryQuestions";
@@ -17,13 +17,6 @@ import { Field, FormStatus, inputClass } from "./ui";
 // Champs des créations achetées : fond plus sombre et bordure plus marquée que les autres champs
 const briefInputClass = inputClass.replace("bg-surface", "bg-background").replace("border-border", "border-foreground/20");
 
-// Titre de la section des créations achetées : selon ce qui a été commandé
-function purchasedSectionTitle(lines: string[], en: boolean) {
-  if (lines.every((line) => /alerte|alert/i.test(line))) return en ? "Customize your alerts" : "Personnalise tes alertes";
-  if (lines.every((line) => /emote/i.test(line))) return en ? "Customize your emotes" : "Personnalise tes emotes";
-  if (lines.length === 1) return en ? "Your purchased creation" : "Ta création achetée";
-  return en ? "Your purchased creations" : "Tes créations achetées";
-}
 
 // Types d'overlays en anglais (la valeur envoyée reste le nom français)
 const overlayEn: Record<string, string> = { Démarrage: "Starting", Pause: "Break", Fin: "Ending", Discussion: "Just chatting", Gameplay: "Gameplay" };
@@ -225,30 +218,33 @@ export function BriefForm({
         <textarea name="elements" defaultValue={values?.["Éléments à inclure"]} rows={3} className={inputClass} required={isRequired("elements")} />
       </Field>
       {purchasedProducts.length > 0 && <section className={fullWidthSections ? "-mx-4 space-y-5 border-y border-border px-4 py-5 sm:-mx-5 sm:px-5" : "-mx-6 space-y-5 border-y border-border px-6 py-5 sm:-mx-8 sm:px-8"}>
-        <h2 className="font-display text-xl font-bold">{purchasedSectionTitle(purchasedProducts, locale === "en")}</h2>
         {purchasedProducts.map((line, index) => {
           const en = locale === "en";
           const optional = optionalProducts.includes(line);
           const saved = values?.[`Création ${index + 1} : ${line}`];
           const parts = productBriefParts(line);
-          // Nom du produit, puis en sous-titre le nombre de parties incluses (ou la précision de la ligne)
+          // Titre du bloc selon l'offre, puis le produit commandé (et ce qu'il inclut) en sous-titre, puis la consigne
+          const block = productBriefBlock(line, locale);
           const [name, ...detail] = line.split(" — ");
-          const subtitle = parts ? (/emote/i.test(line) ? `${parts.length} emotes ${en ? "included" : "incluses"}` : `${parts.length} ${en ? "alerts included" : "alertes incluses"}`) : detail.join(" — ");
-          const header = <legend className="mb-3">
-            <span className="block font-semibold">{name}{optional && <span className="font-normal text-muted">{en ? " (optional)" : " (facultatif)"}</span>}</span>
-            {subtitle && <span className="mt-0.5 block text-sm text-muted">{subtitle}</span>}
+          const included = parts ? (/emote/i.test(line) ? `${parts.length} emotes ${en ? "included" : "incluses"}` : `${parts.length} ${en ? "alerts included" : "alertes incluses"}`) : detail.join(" — ");
+          const header = <legend className="mb-2">
+            <h2 className="font-display text-xl font-bold">{block.title}</h2>
+            <span className="mt-1 block text-sm text-muted">{[name, included].filter(Boolean).join(" · ")}{optional && (en ? " (optional)" : " (facultatif)")}</span>
           </legend>;
-          if (!parts) return <fieldset key={index} className="space-y-2">
+          // Séparateur pleine largeur entre deux créations
+          const separated = index > 0 ? `border-t border-border pt-5 ${fullWidthSections ? "-mx-4 px-4 sm:-mx-5 sm:px-5" : "-mx-6 px-6 sm:-mx-8 sm:px-8"}` : "";
+          // Le séparateur est sur un conteneur : une bordure de fieldset passerait au milieu de la légende
+          if (!parts) return <div key={index} className={separated}><fieldset>
             {header}
-            <p className="text-sm text-foreground/75">{productBriefHint(line, locale)}</p>
-            <textarea name={productBriefFieldName(index)} aria-label={line} required={!optional} rows={3} defaultValue={saved} className={briefInputClass} />
-          </fieldset>;
+            <p className="text-sm text-foreground/80">{block.hint}</p>
+            <textarea name={productBriefFieldName(index)} aria-label={line} required={!optional} rows={3} defaultValue={saved} className={`mt-3 ${briefInputClass}`} />
+          </fieldset></div>;
           // Une ligne par alerte ou par emote : nom à gauche, champ à droite, séparateurs pleine largeur
           const savedParts = splitProductBrief(line, saved);
-          return <fieldset key={index}>
+          return <div key={index} className={separated}><fieldset>
             {header}
-            <p className="text-sm text-foreground/75">{productBriefHint(line, locale)}</p>
-            <div className={`mt-4 divide-y divide-border border-t border-border ${index < purchasedProducts.length - 1 ? "border-b" : ""} ${fullWidthSections ? "-mx-4 sm:-mx-5" : "-mx-6 sm:-mx-8"}`}>
+            <p className="text-sm text-foreground/80">{block.hint}</p>
+            <div className={`mt-4 divide-y divide-border border-t border-border ${fullWidthSections ? "-mx-4 sm:-mx-5" : "-mx-6 sm:-mx-8"}`}>
               {parts.map((part, j) => {
                 const id = `${productBriefFieldName(index, j)}-field`;
                 return <div key={j} className={`grid gap-2 py-4 sm:grid-cols-[7rem_1fr] sm:gap-4 ${fullWidthSections ? "px-4 sm:px-5" : "px-6 sm:px-8"}`}>
@@ -260,7 +256,7 @@ export function BriefForm({
                 </div>;
               })}
             </div>
-          </fieldset>;
+          </fieldset></div>;
         })}
       </section>}
       {overlayCount !== null && <fieldset>

@@ -61,26 +61,45 @@ export function optionIncludes(option: Option, locale: Locale) {
   return en ? `A custom creation: ${option.name}. Describe the elements in your brief.` : `Une création personnalisée : ${option.name}. Précise les éléments dans ton brief.`;
 }
 
-export function productBriefHint(line: string, locale: Locale) {
+// Bloc du brief d'une création achetée : titre et consigne, selon l'offre et sa variante (statique ou animée)
+type BriefBlock = [title: string, hint: string, titleEn: string, hintEn: string];
+export function productBriefBlock(line: string, locale: Locale): { title: string; hint: string } {
+  const quantity = Number(/×\s*(\d+)\s*$/.exec(line)?.[1] ?? 1) || 1;
+  const name = line.split(" — ")[0].replace(/×\s*\d+\s*$/, "").trim();
+  const animated = /anim/i.test(name);
+  const emotes = (Number(/(\d+)\s+emotes?/i.exec(name)?.[1] ?? 1) || 1) * quantity;
+  const block: BriefBlock =
+    /animation/i.test(name) && /emote/i.test(name) ? ["Donne vie à ton emote", "Fournis un lien vers ton emote et décris le mouvement ou l’expression souhaités. Précise les éléments qui doivent rester fixes.", "Bring your emote to life", "Provide a link to your emote and describe the movement or expression you want. Specify the elements that must stay still."]
+    : /animation/i.test(name) && /overlay/i.test(name) ? ["Anime ton overlay", "Fournis un lien vers ton overlay et indique les zones à animer ainsi que les effets souhaités.", "Animate your overlay", "Provide a link to your overlay and indicate the areas to animate and the effects you want."]
+    : /animation/i.test(name) && /logo/i.test(name) ? ["Donne vie à ton logo", "Fournis un lien vers ton logo et décris son apparition, ses mouvements et sa sortie. Précise où l’animation sera utilisée et si elle doit tourner en boucle.", "Bring your logo to life", "Provide a link to your logo and describe its entrance, movements and exit. Specify where the animation will be used and whether it should loop."]
+    : /alerte|alert/i.test(name) ? (animated
+      ? ["Imagine tes 5 alertes animées", "Pour chaque alerte, décris le texte, le visuel et l’animation souhaités. Précise si elles doivent partager le même style ou avoir chacune leur personnalité.", "Imagine your 5 animated alerts", "For each alert, describe the text, visual and animation you want. Say whether they should share the same style or each have their own personality."]
+      : ["Personnalise tes 5 alertes", "Pour chaque alerte — follow, sub, raid, cheer et tips — indique le texte à afficher, les couleurs et le visuel souhaité.", "Customize your 5 alerts", "For each alert — follow, sub, raid, cheer and tips — give the text to display, the colours and the visual you want."])
+    : /overlay/i.test(name) ? (animated
+      ? ["Imagine ton overlay animé", "Décris la disposition de ta scène et les éléments à animer. Précise l’ambiance et le mouvement souhaités : discrets, dynamiques, lumineux…", "Imagine your animated overlay", "Describe your scene layout and the elements to animate. Specify the mood and movement you want: subtle, dynamic, glowing…"]
+      : ["Personnalise ton overlay", "Décris la scène souhaitée : disposition de la caméra, zone de jeu, chat, textes et informations à afficher.", "Customize your overlay", "Describe the scene you want: camera layout, game area, chat, texts and information to display."])
+    : /widget/i.test(name) && /interactif|avancé|interactive|advanced/i.test(name) ? ["Imagine les interactions de ton widget", "Décris les événements qui déclenchent une réaction, ce qui doit se passer à l’écran et les éventuelles règles ou commandes.", "Imagine your widget’s interactions", "Describe the events that trigger a reaction, what should happen on screen and any rules or commands."]
+    : /widget/i.test(name) ? ["Décris ton widget", "Explique ce que ton widget doit afficher : objectif, compteur, progression ou autre information. Précise son apparence et son emplacement à l’écran.", "Describe your widget", "Explain what your widget should display: goal, counter, progress or other information. Specify its look and its position on screen."]
+    : /emote/i.test(name) ? (emotes > 1
+      ? (animated
+        ? [`Imagine tes ${emotes} emotes animées`, "Pour chaque emote, décris son expression et son animation. Indique les mouvements et détails importants.", `Imagine your ${emotes} animated emotes`, "For each emote, describe its expression and animation. Mention the important movements and details."]
+        : [`Personnalise tes ${emotes} emotes`, "Pour chaque emote, indique le personnage ou l’objet, l’expression et la pose souhaités. Tu peux aussi préciser les émotions que tu veux représenter.", `Customize your ${emotes} emotes`, "For each emote, give the character or object, the expression and the pose you want. You can also specify the emotions you want to show."])
+      : animated
+        ? ["Imagine ton emote animée", "Décris le personnage ou l’objet, son expression et le mouvement souhaité. Précise comment l’animation doit se répéter.", "Imagine your animated emote", "Describe the character or object, its expression and the movement you want. Specify how the animation should loop."]
+        : ["Décris ton emote", "Décris le personnage ou l’objet, son expression et sa pose. Ajoute les accessoires ou détails importants.", "Describe your emote", "Describe the character or object, its expression and pose. Add any important accessories or details."])
+    : /logo/i.test(name) && /déclinaison|variation/i.test(name) ? ["Définis ton logo et ses déclinaisons", "Décris ton logo et ses usages. Précise les versions nécessaires : symbole seul, nom complet, fond clair ou sombre, formats horizontaux ou verticaux…", "Define your logo and its variations", "Describe your logo and its uses. Specify the versions you need: symbol only, full name, light or dark background, horizontal or vertical formats…"]
+    : /logo/i.test(name) ? ["Définis ton logo", "Indique le nom à intégrer, les symboles souhaités et le style recherché. Précise où ton logo sera utilisé.", "Define your logo", "Give the name to include, the symbols you want and the style you’re after. Specify where your logo will be used."]
+    : /banni|banner/i.test(name) ? ["Personnalise ta bannière", "Précise la plateforme, les textes à afficher et les éléments visuels à intégrer : personnage, logo, réseaux sociaux…", "Customize your banner", "Specify the platform, the texts to display and the visual elements to include: character, logo, social handles…"]
+    : /avatar/i.test(name) ? ["Imagine ton avatar", "Décris le personnage, la pose, l’expression et le fond souhaités. Précise les détails qui permettront de te reconnaître.", "Imagine your avatar", "Describe the character, pose, expression and background you want. Mention the details that will make you recognisable."]
+    : /panneau|panel/i.test(name) ? ["Personnalise tes 6 panneaux", "Pour chaque panneau, indique son titre, son texte éventuel et l’icône souhaitée. Ajoute les liens associés si nécessaire.", "Customize your 6 panels", "For each panel, give its title, any text and the icon you want. Add the related links if needed."]
+    : [`Décris ta création : ${name}`, "Décris le visuel souhaité et les éléments à inclure.", `Describe your creation: ${name}`, "Describe the requested visual and the elements to include."];
+  // Plusieurs exemplaires décrits dans un même champ (les emotes et les alertes ont un champ chacune)
   const en = locale === "en";
-  if (/overlay/i.test(line)) return en ? "Scene (starting, break, ending, chatting or gameplay), texts, camera and chat positions. For several scenes, describe each one." : "Scène (démarrage, pause, fin, discussion ou gameplay), textes, emplacement caméra et tchat. Pour plusieurs scènes, détaille chacune.";
-  // Variante achetée : statique (fixe) ou animée ; sans précision, les deux cas sont mentionnés
-  const animated = /anim/i.test(line);
-  const still = !animated && /statique|fixe|static/i.test(line);
-  if (/emote/i.test(line)) {
-    if (animated) return en ? "Character, expressions, poses and movement for each emote." : "Personnage, expressions, poses et mouvement de chaque emote.";
-    if (still) return en ? "Character, expressions and poses for each emote." : "Personnage, expressions et poses de chaque emote.";
-    return en ? "Character, expressions and poses for each emote. For animated emotes, describe the movement." : "Personnage, expressions et poses de chaque emote. Pour les emotes animées, précise le mouvement.";
-  }
-  if (/alerte|alert/i.test(line)) {
-    if (animated) return en ? "Specify the text, the colours and the desired movement for each." : "Précise les textes, les couleurs et le mouvement souhaité pour chacun.";
-    if (still) return en ? "Specify the text and the colours for each." : "Précise les textes et les couleurs de chacun.";
-    return en ? "Specify the text and the colours for each, and the desired movement for the animated variant." : "Précise les textes et les couleurs de chacun, et le mouvement souhaité pour la variante animée.";
-  }
-  if (/panneau/i.test(line)) return en ? "The six headings, texts and links." : "Les six rubriques, leurs textes et liens.";
-  if (/banni/i.test(line)) return en ? "Platform, text, social handles and elements to include." : "Plateforme, textes, réseaux sociaux et éléments à afficher.";
-  return en ? "Describe the requested visual and the elements to include." : "Décris le visuel souhaité et les éléments à inclure.";
+  const several = quantity > 1 && !/emote|alerte|alert/i.test(name) ? (en ? ` You ordered ${quantity}: describe each one.` : ` Tu en as commandé ${quantity} : détaille chacune.`) : "";
+  return en ? { title: block[2], hint: block[3] + several } : { title: block[0], hint: block[1] + several };
 }
+
+export const productBriefHint = (line: string, locale: Locale) => productBriefBlock(line, locale).hint;
 
 // Fichiers concrètement livrés pour une création à prix fixe (liste « Tu reçois »).
 // Les créations sur devis n'en ont pas : leurs livrables sont fixés dans le devis.
