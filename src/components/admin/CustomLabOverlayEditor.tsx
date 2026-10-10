@@ -10,7 +10,6 @@ import { widgetInstance } from "@/lib/custom-lab/widget-instance";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
 import type { LabContent, LabDocument } from "@/lib/custom-lab/types";
 import { slugifyWidgetName } from "@/lib/custom-lab/widgetExport";
-import { CustomLabPlatformSwitch } from "./CustomLabCodePanel";
 import { CustomLabMedia, openLabMedia } from "./CustomLabMedia";
 import { CustomLabSimulator } from "./CustomLabSimulator";
 import { usePointerSort } from "./usePointerSort";
@@ -150,7 +149,8 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [panel, setPanel] = useState<"layers" | "props">("layers");
-  const [platform, setPlatform] = useState<Platform>("streamelements");
+  // Un overlay ne s'installe que sur StreamElements : ses widgets utilisent leur code StreamElements
+  const platform: Platform = "streamelements";
   const [guides, setGuides] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
   const [scale, setScale] = useState(0.5);
   const past = useRef<OverlayData[]>([]);
@@ -415,7 +415,6 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
           <p>Overlay · {data.width} × {data.height} · {pending ? "Enregistrement…" : dirty ? "Modifications à enregistrer" : "Enregistré"}</p>
         </div>
         <div className="cl-actions">
-          <CustomLabPlatformSwitch platform={platform} onChange={setPlatform} />
           <CustomLabActions id={id} kind={content.kind} name={content.name} platform={platform} dirty={dirty} onMedia={() => openLabMedia()} onBackup={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} />
         </div>
       </header>

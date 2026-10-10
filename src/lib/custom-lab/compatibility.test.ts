@@ -20,11 +20,12 @@ test("compatibilité : plateformes dont le code est rempli (code d'exemple non c
   assert.deepEqual(codePlatforms(newLabContent("overlay")), []);
 });
 
-test("compatibilité d'un overlay : plateformes communes à ses widgets", () => {
-  const of: Record<string, ("streamelements" | "streamlabs")[]> = { a: ["streamelements", "streamlabs"], b: ["streamelements"] };
+test("compatibilité d'un overlay : StreamElements uniquement", () => {
+  const of: Record<string, ("streamelements" | "streamlabs")[]> = { a: ["streamelements", "streamlabs"], b: ["streamelements"], c: ["streamlabs"] };
   assert.deepEqual(overlayPlatforms(["a", "b"], (id) => of[id]), ["streamelements"]);
-  assert.deepEqual(overlayPlatforms(["a"], (id) => of[id]), ["streamelements", "streamlabs"]);
-  assert.deepEqual(overlayPlatforms([], (id) => of[id]), ["streamelements", "streamlabs"]);
+  assert.deepEqual(overlayPlatforms(["a"], (id) => of[id]), ["streamelements"]);
+  assert.deepEqual(overlayPlatforms([], (id) => of[id]), ["streamelements"]);
+  assert.deepEqual(overlayPlatforms(["a", "c"], (id) => of[id]), []);
 });
 
 test("compatibilité : un code de base Streamlabs (Fenêtre de chat, objectif…) ne compte pas", async () => {
