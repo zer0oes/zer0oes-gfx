@@ -7,6 +7,7 @@ import { assertNotProduction, localStoreAllowed, supabaseConfigured, supabaseSec
 import { parseLabContent, parseLabSize, validLabId } from "./model";
 import type { LabContent, LabDocument, LabSummary } from "./types";
 import { LabStorageError } from "./errors";
+import { codePlatforms } from "./compatibility";
 
 // DAL privée : les pages et actions doivent vérifier requireAdmin avant tout accès.
 const directory = path.join(process.cwd(), ".data", "custom-lab");
@@ -16,7 +17,9 @@ const database = () => createClient(supabaseUrl()!, supabaseSecretKey()!, { auth
 const summary = (document: LabDocument): LabSummary => {
   const { id, name, description, project, kind, revision, updatedAt } = document;
   const size = kind === "overlay" && document.overlay ? { width: document.overlay.width, height: document.overlay.height } : parseLabSize(document.size, kind === "alertbox" ? "alertbox" : "widget");
-  return { id, name, description, project, kind, revision, updatedAt, size };
+  // Plateformes au code rempli ; overlay : widgets utilisés (compatibilité calculée avec la bibliothèque)
+  const widgetIds = kind === "overlay" ? [...new Set((document.overlay?.items ?? []).flatMap((item) => (item.type === "widget" && item.widgetId ? [item.widgetId] : [])))] : [];
+  return { id, name, description, project, kind, revision, updatedAt, size, platforms: codePlatforms(document), widgetIds };
 };
 const fromRow = (row: Record<string, unknown>): LabDocument => ({ ...parseLabContent(row.content), id: row.id as string, revision: row.revision as number, createdAt: row.created_at as string, updatedAt: row.updated_at as string });
 
