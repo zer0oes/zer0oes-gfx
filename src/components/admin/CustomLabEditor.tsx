@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransiti
 import { saveLabAction } from "@/app/admin/custom-lab-actions";
 import { normalizeAlertboxConfig } from "@/lib/custom-lab/alertbox";
 import { buildWidgetSrcdoc } from "@/lib/custom-lab/widgetSrcdoc";
-import { slugifyWidgetName } from "@/lib/custom-lab/widgetExport";
+import { PLATFORM_DASHBOARD_URLS, slugifyWidgetName } from "@/lib/custom-lab/widgetExport";
 import { buildStreamlabsLoadDetail, type Platform } from "@/lib/custom-lab/platformEvents";
 import { DEFAULT_LAB_SIZE, fieldValues, jsonObject, parseFields, parseLabContent, newLabContent } from "@/lib/custom-lab/model";
 import type { CodeFile, LabContent, LabDocument } from "@/lib/custom-lab/types";
@@ -226,7 +226,7 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
     {status && <p role="status" className="cl-status">{status}</p>}
     {platform === "streamlabs" && stale.length > 0 && <p role="status" className="cl-status">La version StreamElements a changé depuis la conversion vers Streamlabs. <button type="button" className="underline" onClick={() => openLabDrawer(REPORT_DRAWER)}>Voir le rapport</button></p>}
     <details className="cl-metadata"><summary>Nom, projet et taille</summary><div><label>Nom<input className={input} value={content.name} maxLength={120} onChange={(event) => setContent({ ...content, name: event.target.value })} /></label><label>Description<textarea className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={content.description ?? ""} maxLength={500} rows={2} onChange={(e) => setContent({ ...content, description: e.target.value })} /></label>
-          <CustomLabProjectField value={content.project} projects={projects} onChange={(project) => setContent((current) => ({ ...current, project }))} /><CustomLabSizeField size={size} onChange={(next) => setContent({ ...content, size: next })} />{content.kind === "widget" && <label>Widget Streamlabs<select className={input} value={content.streamlabsWidget ?? "custom"} onChange={(event) => chooseStreamlabsWidget(event.target.value as StreamlabsWidget)}>{STREAMLABS_WIDGETS.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>}</div></details>
+          <CustomLabProjectField value={content.project} projects={projects} onChange={(project) => setContent((current) => ({ ...current, project }))} /><CustomLabSizeField size={size} onChange={(next) => setContent({ ...content, size: next })} />{content.kind === "widget" && <label>Widget Streamlabs<select className={input} value={content.streamlabsWidget ?? "custom"} onChange={(event) => chooseStreamlabsWidget(event.target.value as StreamlabsWidget)}>{STREAMLABS_WIDGETS.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>}{content.kind === "widget" && !content.streamlabsWidget && <a href={PLATFORM_DASHBOARD_URLS.streamlabs} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 self-end pb-2 text-xs font-semibold text-[var(--cl-accent)] hover:underline">Créer un widget personnalisé sur Streamlabs<MaterialIcon name="open_in_new" className="size-3.5" /></a>}</div></details>
     <div className={`cl-workspace ${fieldsCollapsed ? "is-collapsed" : ""}`}>
       <div className="cl-main">
         <section aria-label="Aperçu du widget">
