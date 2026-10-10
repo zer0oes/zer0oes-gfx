@@ -26,3 +26,13 @@ test("compatibilité d'un overlay : plateformes communes à ses widgets", () => 
   assert.deepEqual(overlayPlatforms(["a"], (id) => of[id]), ["streamelements", "streamlabs"]);
   assert.deepEqual(overlayPlatforms([], (id) => of[id]), ["streamelements", "streamlabs"]);
 });
+
+test("compatibilité : un code de base Streamlabs (Fenêtre de chat, objectif…) ne compte pas", async () => {
+  const { STREAMLABS_TEMPLATES } = await import("./streamlabs-templates");
+  const widget = newLabContent("widget");
+  widget.variants.streamelements.code = { ...widget.variants.streamelements.code, html: "<div>Chat</div>" };
+  widget.variants.streamlabs.code = { ...STREAMLABS_TEMPLATES.chatbox! };
+  assert.deepEqual(codePlatforms(widget), ["streamelements"]);
+  widget.variants.streamlabs.code = { ...STREAMLABS_TEMPLATES.chatbox!, css: "#log { color: red; }" };
+  assert.deepEqual(codePlatforms(widget), ["streamelements", "streamlabs"]);
+});

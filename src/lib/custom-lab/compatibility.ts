@@ -1,10 +1,12 @@
 // Compatibilité d'une création du Laboratoire : plateformes dont le code est rempli.
-// Widget : HTML, CSS ou JS non vide et différent du code d'exemple d'une nouvelle création ;
+// Widget : HTML, CSS ou JS non vide et différent du code par défaut (exemple d'une nouvelle création ou, côté Streamlabs,
+// code de base d'un widget natif) ;
 // pack d'alertes : au moins une alerte dans ce cas ; overlay : plateformes communes à tous ses widgets
 // (les deux s'il n'en contient aucun).
 import { LAB_PLATFORMS, newLabContent } from "./model";
 import type { Platform } from "./platformEvents";
 import type { LabCode, LabContent } from "./types";
+import { isStreamlabsTemplate } from "./streamlabs-widgets";
 
 const parts = (code?: LabCode) => [code?.html ?? "", code?.css ?? "", code?.js ?? ""];
 const filled = (code: LabCode | undefined, example: LabCode | undefined) =>
@@ -20,7 +22,7 @@ export function codePlatforms(content: Pick<LabContent, "kind" | "variants">): P
     return content.kind === "alertbox"
       // ancien code d'exemple des alertes (identique sur les deux plateformes) : ne compte pas non plus
       ? Object.entries(variant.alerts).some(([type, code]) => filled(code, sample.alerts[type]) && filled(code, legacyAlert))
-      : filled(variant.code, sample.code);
+      : filled(variant.code, sample.code) && !(platform === "streamlabs" && isStreamlabsTemplate(variant.code, sample.code));
   });
 }
 
