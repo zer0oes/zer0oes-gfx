@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { saveLabAction } from "@/app/admin/custom-lab-actions";
-import { normalizeAlertboxConfig, type AlertboxAlertType } from "@/lib/custom-lab/alertbox";
+import { normalizeAlertboxConfig } from "@/lib/custom-lab/alertbox";
 import { buildWidgetSrcdoc } from "@/lib/custom-lab/widgetSrcdoc";
-import { buildAlertboxExport, buildPlatformExport, slugifyWidgetName, type AlertboxExportCode } from "@/lib/custom-lab/widgetExport";
+import { slugifyWidgetName } from "@/lib/custom-lab/widgetExport";
 import { buildStreamlabsLoadDetail, type Platform } from "@/lib/custom-lab/platformEvents";
-import { createZip } from "@/lib/custom-lab/zip";
-import { DEFAULT_LAB_SIZE, fieldValues, jsonObject, parseFields, parseLabContent } from "@/lib/custom-lab/model";
+import { DEFAULT_LAB_SIZE, fieldValues, jsonObject, parseFields, parseLabContent, newLabContent } from "@/lib/custom-lab/model";
 import type { CodeFile, LabContent, LabDocument } from "@/lib/custom-lab/types";
 import { CustomLabCodePanel, CustomLabPlatformSwitch } from "./CustomLabCodePanel";
 import { CustomLabSimulator } from "./CustomLabSimulator";
@@ -21,6 +20,8 @@ import { CustomLabProjectField } from "./CustomLabProjectField";
 import { CustomLabSizedStage, CustomLabSizeField } from "./CustomLabSizedStage";
 import { CustomLabConversionReport, CustomLabConvert, openLabDrawer, REPORT_DRAWER } from "./CustomLabConvert";
 import { staleSources } from "@/lib/custom-lab/convert";
+import { CHATBOX_TEMPLATE, STREAMLABS_WIDGETS, streamlabsWidgetLabel, type StreamlabsWidget } from "@/lib/custom-lab/streamlabs-widgets";
+import { labPlatformZip } from "@/lib/custom-lab/export";
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 function download(data: BlobPart, name: string, type: string) {
@@ -35,7 +36,7 @@ const noSubscribe = () => () => {};
 // projects : noms des projets existants, proposés dans le champ « Projet »
 export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocument; projects?: string[] }) {
   const { id, revision: initialRevision } = initial;
-  const initialContent: LabContent = { name: initial.name, description: initial.description ?? "", project: initial.project, kind: initial.kind, variants: initial.variants, ...(initial.size ? { size: initial.size } : {}), ...(initial.conversions ? { conversions: initial.conversions } : {}) };
+  const initialContent: LabContent = { name: initial.name, description: initial.description ?? "", project: initial.project, kind: initial.kind, variants: initial.variants, ...(initial.size ? { size: initial.size } : {}), ...(initial.conversions ? { conversions: initial.conversions } : {}), ...(initial.streamlabsWidget ? { streamlabsWidget: initial.streamlabsWidget } : {}) };
   const [content, setContent] = useState<LabContent>(initialContent);
   const [saved, setSaved] = useState(JSON.stringify(initialContent));
   const revision = useRef(initialRevision);
@@ -79,7 +80,7 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
       const values = fieldValues(active);
       const fields = parseFields(active.fields);
       const codes = Object.fromEntries(Object.entries(v.alerts).map(([type, c]) => [type, { ...c, values: fieldValues(c) }]));
-      let source = buildWidgetSrcdoc(active, values, { platform, checkerClass: checker ? " se-lab-checker" : "", ...(preview.kind === "alertbox" ? { alertbox: { codes, config: normalizeAlertboxConfig(jsonObject(v.settings), platform), platform } } : {}) });
+      let source = buildWidgetSrcdoc(active, values, { platform, checkerClass: checker ? " se-lab-checker" : "", chatbox: preview.kind === "widget" && platform === "streamlabs" && preview.streamlabsWidget === "chatbox", ...(preview.kind === "alertbox" ? { alertbox: { codes, config: normalizeAlertboxConfig(jsonObject(v.settings), platform), platform } } : {}) });
       // Le code créé n'accède ni aux cookies ni au réseau de l'admin. Cette CSP
       // précède tout HTML utilisateur ; les frames AlertBox héritent de ces règles.
       const policy = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'self'; style-src 'unsafe-inline' https:; img-src https: data:; media-src https: data:; font-src https: data:; frame-src 'self' about:; connect-src 'none'; form-action 'none'; base-uri 'none'";
@@ -157,16 +158,27 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, []);
+  // Type de widget Streamlabs ciblé ; la Fenêtre de chat reçoit son code de base si la variante Streamlabs n'a que le code d'exemple
+  function chooseStreamlabsWidget(target: StreamlabsWidget) {
+    const sl = content.variants.streamlabs.code;
+    const sample = newLabContent("widget").variants.streamlabs.code;
+    const untouched = [sl.html, sl.css, sl.js].every((part, i) => !part.trim() || part === [sample.html, sample.css, sample.js][i]);
+    const next: LabContent = { ...content, streamlabsWidget: target === "custom" ? undefined : target };
+    if (target === "chatbox" && untouched) {
+      next.variants = { ...content.variants, streamlabs: { ...content.variants.streamlabs, code: { ...CHATBOX_TEMPLATE } } };
+      setStatus("Code de base de la Fenêtre de chat Streamlabs chargé dans la variante Streamlabs.");
+    } else setStatus(`Widget Streamlabs : ${streamlabsWidgetLabel(target)}.`);
+    setContent(next);
+  }
+
   function exportZip() {
     try {
-      parseLabContent(content);
-      const codes = Object.fromEntries(Object.entries(variant.alerts).map(([type, c]) => [type, { ...c, fields: parseFields(c.fields), values: fieldValues(c) }])) as Partial<Record<AlertboxAlertType, AlertboxExportCode>>;
-      const result = content.kind === "alertbox" ? buildAlertboxExport(codes, normalizeAlertboxConfig(jsonObject(variant.settings), platform), platform, platform === "streamlabs" ? content.conversions?.streamlabs : undefined) : buildPlatformExport({ ...code, fields: parseFields(code.fields) }, fieldValues(code), platform, platform === "streamlabs" ? content.conversions?.streamlabs : undefined);
-      const bytes = createZip(result.files);
-      download(new Uint8Array(bytes).buffer, `${slugifyWidgetName(content.name)}-${platform}.zip`, "application/zip");
+      const file = labPlatformZip(content, platform);
+      download(new Uint8Array(file.data).buffer, file.filename, file.contentType);
       setStatus("Export téléchargé. Les médias doivent être accessibles sur la plateforme destinataire.");
     } catch (error) { setStatus(error instanceof Error ? error.message : "Export impossible."); }
   }
+
 
   function switchPlatform(value: Platform) {
     setPlatform(value);
@@ -214,7 +226,7 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
     {status && <p role="status" className="cl-status">{status}</p>}
     {platform === "streamlabs" && stale.length > 0 && <p role="status" className="cl-status">La version StreamElements a changé depuis la conversion vers Streamlabs. <button type="button" className="underline" onClick={() => openLabDrawer(REPORT_DRAWER)}>Voir le rapport</button></p>}
     <details className="cl-metadata"><summary>Nom, projet et taille</summary><div><label>Nom<input className={input} value={content.name} maxLength={120} onChange={(event) => setContent({ ...content, name: event.target.value })} /></label><label>Description<textarea className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={content.description ?? ""} maxLength={500} rows={2} onChange={(e) => setContent({ ...content, description: e.target.value })} /></label>
-          <CustomLabProjectField value={content.project} projects={projects} onChange={(project) => setContent((current) => ({ ...current, project }))} /><CustomLabSizeField size={size} onChange={(next) => setContent({ ...content, size: next })} /></div></details>
+          <CustomLabProjectField value={content.project} projects={projects} onChange={(project) => setContent((current) => ({ ...current, project }))} /><CustomLabSizeField size={size} onChange={(next) => setContent({ ...content, size: next })} />{content.kind === "widget" && <label>Widget Streamlabs<select className={input} value={content.streamlabsWidget ?? "custom"} onChange={(event) => chooseStreamlabsWidget(event.target.value as StreamlabsWidget)}>{STREAMLABS_WIDGETS.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>}</div></details>
     <div className={`cl-workspace ${fieldsCollapsed ? "is-collapsed" : ""}`}>
       <div className="cl-main">
         <section aria-label="Aperçu du widget">

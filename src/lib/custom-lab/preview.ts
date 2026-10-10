@@ -23,6 +23,7 @@ export function buildLabPreview(content: LabContent, platform: Platform, options
       platform,
       checkerClass: options.checker ? " se-lab-checker" : "",
       transparent: options.transparent === true,
+      chatbox: content.kind === "widget" && platform === "streamlabs" && content.streamlabsWidget === "chatbox",
       ...(content.kind === "alertbox" ? { alertbox: { codes, config: normalizeAlertboxConfig(jsonObject(v.settings), platform), platform } } : {}),
     });
     source = source.replace("<head>", `<head><meta http-equiv="Content-Security-Policy" content="${POLICY}"><meta name="referrer" content="no-referrer">`);

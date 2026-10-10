@@ -1,3 +1,4 @@
+import type { StreamlabsWidget } from "./streamlabs-widgets";
 import type { Platform } from "./platformEvents";
 import type { OverlayData } from "./overlay";
 
@@ -43,6 +44,8 @@ export type LabContent = {
   overlay?: OverlayData;
   // widget / pack d'alertes : taille d'affichage (aperçu, calque d'overlay, réglage de la source)
   size?: LabSize;
+  // widget : type de widget natif Streamlabs ciblé (absent = Widget personnalisé)
+  streamlabsWidget?: StreamlabsWidget;
   variants: Record<Platform, LabVariant>;
   // Dernière conversion vers Streamlabs (pack d'alertes)
   conversions?: { streamlabs?: LabConversion };

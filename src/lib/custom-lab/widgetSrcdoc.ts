@@ -6,6 +6,7 @@
 
 import { PLATFORM_STREAM_ELEMENTS, type Platform } from "./platformEvents";
 import { ALERTBOX_RUNTIME_SOURCE } from "./alertbox";
+import { CHATBOX_RUNTIME, CHATBOX_SETTINGS } from "./streamlabs-widgets";
 
 export interface WidgetBundle {
   html: string;
@@ -18,6 +19,8 @@ export interface BuildSrcdocOptions {
   themeClass?: string;
   platform?: Platform;
   transparent?: boolean;
+  // Streamlabs, Fenêtre de chat : messages simulés rendus avec le modèle #chatlist_item, réglages natifs par défaut
+  chatbox?: boolean;
   // AlertBox StreamElements : réglages natifs (alertbox.json) et code de
   // chaque alerte avec ses valeurs de champs. Présent = le document n'exécute
   // pas `bundle` mais l'hôte simulé, qui affiche chaque alerte dans sa propre
@@ -43,8 +46,9 @@ export function substituteFields(source: string, values: Record<string, unknown>
 export function buildWidgetSrcdoc(
   bundle: WidgetBundle,
   values: Record<string, unknown>,
-  { checkerClass = "", themeClass = "", platform = PLATFORM_STREAM_ELEMENTS, transparent = false, alertbox }: BuildSrcdocOptions = {}
+  { checkerClass = "", themeClass = "", platform = PLATFORM_STREAM_ELEMENTS, transparent = false, alertbox, chatbox = false }: BuildSrcdocOptions = {}
 ): string {
+  if (chatbox) values = { ...CHATBOX_SETTINGS, ...values };
   const html = substituteFields(bundle.html, values);
   const css = substituteFields(bundle.css, values);
   const js = substituteFields(bundle.js, values);
@@ -138,7 +142,8 @@ export function buildWidgetSrcdoc(
         window.customFields = data.detail.custom_json;
       }
       const eventTarget = data.eventTarget === "document" ? document : window;
-      eventTarget.dispatchEvent(new CustomEvent(data.eventType, { detail: data.detail }));
+      const detail = window.__SL_CHATBOX__ ? window.__SL_CHATBOX__(data.eventType, data.detail) : data.detail;
+      eventTarget.dispatchEvent(new CustomEvent(data.eventType, { detail }));
     }
     if (data.kind === "se-api-response") {
       const promise = pending.get(data.id);
@@ -160,6 +165,7 @@ export function buildWidgetSrcdoc(
     setField: (key, value, shouldReload = true) => send("set-field", { key, value, shouldReload }),
     resumeQueue: () => send("queue-resume")
   };
+  ${chatbox ? CHATBOX_RUNTIME : ""}
   ${runWidget}
 })();
 </script></body></html>`;
