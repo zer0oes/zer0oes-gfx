@@ -9,6 +9,7 @@ import { MaterialIcon } from "@/components/admin/MaterialIcon";
 import { ConfirmDelete, Drawer, DrawerButton } from "@/components/admin/Drawer";
 import { overlayPlatforms } from "@/lib/custom-lab/compatibility";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
+import { streamlabsWidgetLabel } from "@/lib/custom-lab/streamlabs-widgets";
 
 export const metadata = { title: "Laboratoire" };
 
@@ -55,15 +56,20 @@ const platformIcons: Record<Platform, { src: string; label: string }> = {
   streamlabs: { src: "/streamerlab/platforms/streamlabs-icon-active.svg", label: "Streamlabs" },
 };
 
-// Compatibilité : logo de chaque plateforme dont le code est rempli
-function Compatibility({ platforms }: { platforms: readonly Platform[] }) {
+// Compatibilité : logo de chaque plateforme dont le code est rempli ; widget Streamlabs natif ciblé indiqué dessous
+function Compatibility({ platforms, streamlabsWidget }: { platforms: readonly Platform[]; streamlabsWidget?: string }) {
   if (!platforms.length) return <span className="text-muted">—</span>;
+  const target = platforms.includes("streamlabs") ? streamlabsWidget : undefined;
+  const label = (p: Platform) => (p === "streamlabs" && target ? `Streamlabs · ${target}` : platformIcons[p].label);
   return (
-    <span className="flex items-center gap-2" aria-label={`Compatible ${platforms.map((p) => platformIcons[p].label).join(" et ")}`}>
-      {platforms.map((p) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={p} src={platformIcons[p].src} alt="" title={platformIcons[p].label} width={22} height={22} className="size-[22px] object-contain" />
-      ))}
+    <span className="grid gap-1" aria-label={`Compatible ${platforms.map(label).join(" et ")}`}>
+      <span className="flex items-center gap-2">
+        {platforms.map((p) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={p} src={platformIcons[p].src} alt="" title={label(p)} width={22} height={22} className="size-[22px] object-contain" />
+        ))}
+      </span>
+      {target && <span className="truncate text-[11px] text-muted" title={target}>{target}</span>}
     </span>
   );
 }
@@ -146,7 +152,7 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
                         <td className="truncate px-4 py-3 font-medium" title={doc.name}>{doc.name}</td>
                         <td className="whitespace-pre-line break-words px-4 py-3 text-muted">{doc.description || "—"}</td>
                         <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${kinds[doc.kind].tone}`}>{kinds[doc.kind].label}</span></td>
-                        <td className="px-4 py-3"><Compatibility platforms={doc.kind === "overlay" ? overlayPlatforms(doc.widgetIds, (wid) => platformsById.get(wid)) : doc.platforms} /></td>
+                        <td className="px-4 py-3"><Compatibility platforms={doc.kind === "overlay" ? overlayPlatforms(doc.widgetIds, (wid) => platformsById.get(wid)) : doc.platforms} streamlabsWidget={doc.kind === "widget" && doc.streamlabsWidget ? streamlabsWidgetLabel(doc.streamlabsWidget) : undefined} /></td>
                         <td className="whitespace-nowrap px-4 py-3 tabular-nums text-muted">{doc.size.width} × {doc.size.height} px</td>
                         <td className="whitespace-nowrap px-4 py-3 text-muted">{dateFmt.format(new Date(doc.updatedAt))}</td>
                       </ClickableRow>

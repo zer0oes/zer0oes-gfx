@@ -19,7 +19,7 @@ const summary = (document: LabDocument): LabSummary => {
   const size = kind === "overlay" && document.overlay ? { width: document.overlay.width, height: document.overlay.height } : parseLabSize(document.size, kind === "alertbox" ? "alertbox" : "widget");
   // Plateformes au code rempli ; overlay : widgets utilisés (compatibilité calculée avec la bibliothèque)
   const widgetIds = kind === "overlay" ? [...new Set((document.overlay?.items ?? []).flatMap((item) => (item.type === "widget" && item.widgetId ? [item.widgetId] : [])))] : [];
-  return { id, name, description, project, kind, revision, updatedAt, size, platforms: codePlatforms(document), widgetIds };
+  return { id, name, description, project, kind, revision, updatedAt, size, platforms: codePlatforms(document), widgetIds, ...(document.streamlabsWidget ? { streamlabsWidget: document.streamlabsWidget } : {}) };
 };
 const fromRow = (row: Record<string, unknown>): LabDocument => ({ ...parseLabContent(row.content), id: row.id as string, revision: row.revision as number, createdAt: row.created_at as string, updatedAt: row.updated_at as string });
 
