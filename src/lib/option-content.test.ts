@@ -58,3 +58,11 @@ test("regroupements : d'origine, puis réglés dans l'admin, avec un nom de cart
   raw = withGrouping(raw, options, "overlay-anime-unite", "");
   assert.equal(optionProducts(options, groupOf(raw)).find((p) => p.id === "overlay-fixe-unite")?.variants.length, 1);
 });
+
+test("brief : aide adaptée à la variante achetée (statique ou animée)", async () => {
+  const { productBriefHint } = await import("./option-products");
+  assert.equal(productBriefHint("Pack d’alertes statique — 5 alertes : follow, sub, raid, cheer, tips", "fr"), "Tes 5 événements inclus : follow, sub, raid, cheer et tips. Précise les textes de chacun.");
+  assert.match(productBriefHint("Pack d’alertes animées — 5 alertes : follow, sub, raid, cheer, tips", "fr"), /mouvement souhaité pour chacun/);
+  assert.doesNotMatch(productBriefHint("Pack de 3 emotes statiques", "fr"), /mouvement/);
+  assert.match(productBriefHint("Emote animée", "en"), /movement/);
+});

@@ -64,8 +64,19 @@ export function optionIncludes(option: Option, locale: Locale) {
 export function productBriefHint(line: string, locale: Locale) {
   const en = locale === "en";
   if (/overlay/i.test(line)) return en ? "Scene (starting, break, ending, chatting or gameplay), texts, camera and chat positions. For several scenes, describe each one." : "Scène (démarrage, pause, fin, discussion ou gameplay), textes, emplacement caméra et tchat. Pour plusieurs scènes, détaille chacune.";
-  if (/emote/i.test(line)) return en ? "Character, expressions and poses for each emote. For animated emotes, describe the movement." : "Personnage, expressions et poses de chaque emote. Pour les emotes animées, précise le mouvement.";
-  if (/alerte|alert/i.test(line)) return en ? "Your 5 included events: follow, sub, raid, cheer and tips. Specify the text for each and the desired movement for the animated variant." : "Tes 5 événements inclus : follow, sub, raid, cheer et tips. Précise les textes de chacun et le mouvement souhaité pour la variante animée.";
+  // Variante achetée : statique (fixe) ou animée ; sans précision, les deux cas sont mentionnés
+  const animated = /anim/i.test(line);
+  const still = !animated && /statique|fixe|static/i.test(line);
+  if (/emote/i.test(line)) {
+    if (animated) return en ? "Character, expressions, poses and movement for each emote." : "Personnage, expressions, poses et mouvement de chaque emote.";
+    if (still) return en ? "Character, expressions and poses for each emote." : "Personnage, expressions et poses de chaque emote.";
+    return en ? "Character, expressions and poses for each emote. For animated emotes, describe the movement." : "Personnage, expressions et poses de chaque emote. Pour les emotes animées, précise le mouvement.";
+  }
+  if (/alerte|alert/i.test(line)) {
+    if (animated) return en ? "Your 5 included events: follow, sub, raid, cheer and tips. Specify the text and the desired movement for each." : "Tes 5 événements inclus : follow, sub, raid, cheer et tips. Précise les textes et le mouvement souhaité pour chacun.";
+    if (still) return en ? "Your 5 included events: follow, sub, raid, cheer and tips. Specify the text for each." : "Tes 5 événements inclus : follow, sub, raid, cheer et tips. Précise les textes de chacun.";
+    return en ? "Your 5 included events: follow, sub, raid, cheer and tips. Specify the text for each and the desired movement for the animated variant." : "Tes 5 événements inclus : follow, sub, raid, cheer et tips. Précise les textes de chacun et le mouvement souhaité pour la variante animée.";
+  }
   if (/panneau/i.test(line)) return en ? "The six headings, texts and links." : "Les six rubriques, leurs textes et liens.";
   if (/banni/i.test(line)) return en ? "Platform, text, social handles and elements to include." : "Plateforme, textes, réseaux sociaux et éléments à afficher.";
   return en ? "Describe the requested visual and the elements to include." : "Décris le visuel souhaité et les éléments à inclure.";
