@@ -20,7 +20,8 @@ import { CustomLabProjectField } from "./CustomLabProjectField";
 import { CustomLabSizedStage, CustomLabSizeField } from "./CustomLabSizedStage";
 import { CustomLabConversionReport, CustomLabConvert, openLabDrawer, REPORT_DRAWER } from "./CustomLabConvert";
 import { staleSources } from "@/lib/custom-lab/convert";
-import { CHATBOX_TEMPLATE, STREAMLABS_WIDGETS, streamlabsWidgetLabel, type StreamlabsWidget } from "@/lib/custom-lab/streamlabs-widgets";
+import { isStreamlabsTemplate, STREAMLABS_WIDGETS, streamlabsWidgetLabel, type StreamlabsWidget } from "@/lib/custom-lab/streamlabs-widgets";
+import { STREAMLABS_TEMPLATES } from "@/lib/custom-lab/streamlabs-templates";
 import { labPlatformZip } from "@/lib/custom-lab/export";
 import { LAB_TEXT_DEFAULTS, STREAMLABS_CUSTOM_WIDGET_URL, type LabTexts } from "@/lib/custom-lab/lab-texts";
 
@@ -81,7 +82,7 @@ export function CustomLabEditor({ initial, projects = [], labTexts = LAB_TEXT_DE
       const values = fieldValues(active);
       const fields = parseFields(active.fields);
       const codes = Object.fromEntries(Object.entries(v.alerts).map(([type, c]) => [type, { ...c, values: fieldValues(c) }]));
-      let source = buildWidgetSrcdoc(active, values, { platform, checkerClass: checker ? " se-lab-checker" : "", chatbox: preview.kind === "widget" && platform === "streamlabs" && preview.streamlabsWidget === "chatbox", ...(preview.kind === "alertbox" ? { alertbox: { codes, config: normalizeAlertboxConfig(jsonObject(v.settings), platform), platform } } : {}) });
+      let source = buildWidgetSrcdoc(active, values, { platform, checkerClass: checker ? " se-lab-checker" : "", streamlabsWidget: preview.kind === "widget" && platform === "streamlabs" ? preview.streamlabsWidget : undefined, ...(preview.kind === "alertbox" ? { alertbox: { codes, config: normalizeAlertboxConfig(jsonObject(v.settings), platform), platform } } : {}) });
       // Le code créé n'accède ni aux cookies ni au réseau de l'admin. Cette CSP
       // précède tout HTML utilisateur ; les frames AlertBox héritent de ces règles.
       const policy = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'self'; style-src 'unsafe-inline' https:; img-src https: data:; media-src https: data:; font-src https: data:; frame-src 'self' about:; connect-src 'none'; form-action 'none'; base-uri 'none'";
@@ -159,16 +160,18 @@ export function CustomLabEditor({ initial, projects = [], labTexts = LAB_TEXT_DE
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, []);
-  // Type de widget Streamlabs ciblé ; la Fenêtre de chat reçoit son code de base si la variante Streamlabs n'a que le code d'exemple
+  // Type de widget Streamlabs ciblé : si le code Streamlabs est encore un code de base, il est remplacé par le modèle du type
+  // choisi (ou par le code d'exemple pour le Widget personnalisé). Un code modifié n'est jamais touché.
   function chooseStreamlabsWidget(target: StreamlabsWidget) {
-    const sl = content.variants.streamlabs.code;
-    const sample = newLabContent("widget").variants.streamlabs.code;
-    const untouched = [sl.html, sl.css, sl.js].every((part, i) => !part.trim() || part === [sample.html, sample.css, sample.js][i]);
     const next: LabContent = { ...content, streamlabsWidget: target === "custom" ? undefined : target };
-    if (target === "chatbox" && untouched) {
-      next.variants = { ...content.variants, streamlabs: { ...content.variants.streamlabs, code: { ...CHATBOX_TEMPLATE } } };
-      setStatus("Code de base de la Fenêtre de chat Streamlabs chargé dans la variante Streamlabs.");
-    } else setStatus(`Widget Streamlabs : ${streamlabsWidgetLabel(target)}.`);
+    const example = newLabContent("widget").variants.streamlabs.code;
+    const untouched = isStreamlabsTemplate(content.variants.streamlabs.code, example);
+    const template = target === "custom" ? example : STREAMLABS_TEMPLATES[target];
+    if (untouched && template) {
+      next.variants = { ...content.variants, streamlabs: { ...content.variants.streamlabs, code: { ...template } } };
+      setStatus(target === "custom" ? "Widget personnalisé : code d'exemple remis dans la version Streamlabs." : `Code de base « ${streamlabsWidgetLabel(target)} » chargé dans la version Streamlabs.`);
+    } else if (!untouched) setStatus(`Widget Streamlabs : ${streamlabsWidgetLabel(target)}. Le code Streamlabs déjà modifié est conservé.`);
+    else setStatus(`Widget Streamlabs : ${streamlabsWidgetLabel(target)}.`);
     setContent(next);
   }
 
