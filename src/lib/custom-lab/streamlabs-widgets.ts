@@ -1,31 +1,19 @@
 // Types de widgets Streamlabs. Sur StreamElements, tout widget est un Custom Widget ; sur Streamlabs, chaque usage
 // a son widget natif (Fenêtre de chat, Liste des événements, Objectifs…) dont le HTML / CSS personnalisé a ses propres
-// variables. La Fenêtre de chat est simulée dans l'aperçu ; les autres types sont repérés (export, liste) en attendant.
+// variables. La Fenêtre de chat et les objectifs sont simulés dans l'aperçu.
 import type { LabCode } from "./types";
 import { STREAMLABS_TEMPLATES } from "./streamlabs-templates";
 
+// Seuls les widgets natifs dont zer0oes a fourni le code de base ; tout le reste est un Widget personnalisé
 export const STREAMLABS_WIDGETS = [
   { id: "custom", label: "Widget personnalisé" },
   { id: "chatbox", label: "Fenêtre de chat" },
   { id: "eventlist", label: "Liste des événements" },
+  { id: "viewer-count", label: "Nombre de viewers" },
   { id: "donation-goal", label: "Objectif du don" },
   { id: "follower-goal", label: "Objectif de followers" },
   { id: "subscriber-goal", label: "Objectifs d’abonnés" },
   { id: "bit-goal", label: "Objectif de Bits" },
-  { id: "superchat-goal", label: "Objectif de super chat" },
-  { id: "member-goal", label: "Objectif de membres YouTube" },
-  { id: "tip-jar", label: "Le bocal" },
-  { id: "credits", label: "Générique de fin" },
-  { id: "donation-ticker", label: "Bandeau de dons" },
-  { id: "sponsor-banner", label: "Bannière sponsor" },
-  { id: "viewer-count", label: "Nombre de viewers" },
-  { id: "stream-labels", label: "Stream Labels" },
-  { id: "emote-wall", label: "Mur des émoticônes" },
-  { id: "chat-highlight", label: "Mise en évidence du chat" },
-  { id: "poll", label: "Sondage" },
-  { id: "spin-wheel", label: "Fais tourner la roue" },
-  { id: "stream-boss", label: "Boss du stream" },
-  { id: "media-share", label: "Partage multimédia" },
 ] as const;
 
 export type StreamlabsWidget = (typeof STREAMLABS_WIDGETS)[number]["id"];
