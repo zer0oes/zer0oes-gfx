@@ -24,6 +24,8 @@ export type MaterialIconName =
   | "drag_indicator"
   | "euro"
   | "expand_more"
+  | "keyboard_arrow_down"
+  | "keyboard_arrow_up"
   | "favorite_border"
   | "folder"
   | "fullscreen"

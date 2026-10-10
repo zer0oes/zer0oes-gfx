@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { productBriefFields } from "./product-brief";
+import { productBriefFields, productBriefMinutes } from "./product-brief";
+
+test("la durée du brief compte chaque création et les quantités commandées", () => {
+  assert.deepEqual(productBriefMinutes([]), [5, 10]);
+  const alerts = "Pack d’alertes animées — 5 alertes : follow, sub, raid, cheer, tips";
+  assert.deepEqual(productBriefMinutes([alerts]), [5, 10]);
+  assert.deepEqual(productBriefMinutes([alerts, "Pack de 3 emotes statiques", "Pack de 6 panneaux Twitch"]), [15, 20]);
+  assert.deepEqual(productBriefMinutes(["Overlay statique × 14"]), [15, 20]);
+});
 
 test("le brief couvre chaque produit du snapshot de commande", () => {
   const lines = ["Overlay animé × 2", "Emote statique"];

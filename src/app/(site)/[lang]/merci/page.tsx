@@ -12,6 +12,7 @@ import { getStripe } from "@/lib/stripe";
 import { includedOverlays } from "@/lib/brief-overlays";
 import { OrderedPackCard } from "@/components/OrderedPackCard";
 import { withoutInstallLine } from "@/lib/brief-delivery";
+import { productBriefMinutes } from "@/lib/product-brief";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/merci">): Promise<Metadata> {
   const lang = asLocale((await params).lang);
@@ -148,8 +149,8 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
             {lang === "en"
               ? view.payment === "acompte"
                 ? `${pricing.depositPercent}% deposit: ${amount(depositAmount(view.totalPrice, pricing))} of ${amount(view.totalPrice)} — balance of ${amount(view.totalPrice - depositAmount(view.totalPrice, pricing))} due on delivery`
-                : `Paid in full: ${amount(view.totalPrice)}`
-              : paymentLabel(view.totalPrice, view.payment, pricing)}
+                : "Paid in full"
+              : view.payment === "acompte" ? paymentLabel(view.totalPrice, view.payment, pricing) : "Réglé intégralement"}
             {view.payment === "acompte" &&
               t(lang, {
                 fr: ", avant la remise des fichiers définitifs. Je t'enverrai une facture ou un lien de paiement pour le solde.",
@@ -174,7 +175,10 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
             <p className="text-sm text-muted">{t(lang, { fr: `${revisionsUsed} / 2 modifications utilisées.`, en: `${revisionsUsed} / 2 updates used.` })}</p>
             {briefLocked ? <p className="text-sm text-muted">{t(lang, { fr: "Ton brief est verrouillé depuis les premiers aperçus. Demande tes corrections dans ton espace commande.", en: "Your brief is locked since the first previews. Request corrections in your order space." })}</p> : revisionsUsed < 2 ? <Link href={`${href(lang, "/merci")}?session_id=${encodeURIComponent(sessionId ?? "")}&modifier=1`} className="block text-sm font-semibold text-accent hover:underline">{t(lang, { fr: "Modifier mon brief", en: "Edit my brief" })}</Link> : <p className="text-sm text-muted">{t(lang, { fr: "La limite est atteinte. Contacte-moi pour tout autre changement.", en: "The limit has been reached. Contact me for further changes." })}</p>}
           </div> : <>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">{editBrief ? t(lang, { fr: "Modifier mon brief", en: "Edit my brief" }) : t(lang, { fr: "Prochaine étape · 5 à 10 minutes", en: "Next step · 5 to 10 minutes" })}</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">{editBrief ? t(lang, { fr: "Modifier mon brief", en: "Edit my brief" }) : (() => {
+            const [min, max] = productBriefMinutes(withoutInstallLine(view?.deliveryTemplate));
+            return t(lang, { fr: `Prochaine étape · environ ${min} à ${max} minutes`, en: `Next step · about ${min} to ${max} minutes` });
+          })()}</p>
           <h2 className="font-display text-2xl font-bold">{lang === "fr" ? <>Complète ton <span className="text-gradient">brief</span> pour lancer la <span className="text-gradient">création</span></> : <>Complete your <span className="text-gradient">brief</span> to start the <span className="text-gradient">creation</span></>}</h2>
           <p className="mb-6 mt-3 text-sm leading-relaxed text-foreground/80">{t(lang, { fr: "Les champs marqués d’un * sont obligatoires. Précise tes besoins pour les créations achetées avant d’envoyer.", en: "Fields marked * are required. Describe your needs for the purchased creations before sending." })}</p>
           <BriefForm

@@ -20,7 +20,7 @@ export function OrderedPackCard({ pack: original, offerName, formulaId, totalPri
         <h2 id="order-summary" className="sr-only">{t(locale, { fr: "Produits commandés", en: "Ordered products" })}</h2>
         <ul className="space-y-3">{deliveryTemplate.map((line, index) => {
           const [name, ...detail] = trOfferName(locale, line).split(" — ");
-          return <li key={index}><span className="block font-display text-xl font-bold">{name}</span>{detail.length > 0 && <span className="mt-0.5 block text-sm text-muted">{detail.join(" — ")}</span>}</li>;
+          return <li key={index}><span className="block font-display text-base font-bold">{name}</span>{detail.length > 0 && <span className="mt-0.5 block text-sm text-muted">{detail.join(" — ")}</span>}</li>;
         })}</ul>
         <CardSection title={t(locale, { fr: "Total", en: "Total" })}><p className="font-display text-3xl font-bold">{formatPrice(totalPrice, locale)}</p></CardSection>
       </> : <>

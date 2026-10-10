@@ -73,6 +73,13 @@ export function productBriefParts(line: string): BriefPart[] | null {
 
 export const productBriefFieldName = (line: number, part?: number) => (part === undefined ? `productBrief_${line}` : `productBrief_${line}_${part}`);
 
+// Trois minutes pour les informations communes, puis environ une minute par création.
+export function productBriefMinutes(lines: string[]): [number, number] {
+  const count = lines.reduce((total, line) => total + (productBriefParts(line)?.length ?? (Number(/×\s*(\d+)\s*$/.exec(line)?.[1] ?? 1) || 1)), 0);
+  const maximum = Math.max(10, Math.ceil((3 + count) / 5) * 5);
+  return [maximum - 5, maximum];
+}
+
 // Réponse de chaque ligne ("" si une partie obligatoire manque)
 export function readProductBrief(lines: string[], read: (name: string) => string): string[] {
   return lines.map((line, index) => {
