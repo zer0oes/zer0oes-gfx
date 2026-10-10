@@ -36,6 +36,7 @@ export type MaterialIconName =
   | "lock"
   | "lock_open"
   | "logout"
+  | "more_vert"
   | "movie"
   | "notifications_active"
   | "open_in_new"

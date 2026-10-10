@@ -53,7 +53,9 @@ export type LabContent = {
 export type LabDocument = LabContent & {
   id: string;
   revision: number;
+  // Ordre dans le projet (glisser-déposer de la bibliothèque)
+  position?: number;
   createdAt: string;
   updatedAt: string;
 };
-export type LabSummary = Pick<LabDocument, "id" | "name" | "description" | "project" | "kind" | "revision" | "updatedAt"> & { size: LabSize; platforms: Platform[]; widgetIds: string[]; streamlabsWidget?: StreamlabsWidget };
+export type LabSummary = Pick<LabDocument, "id" | "name" | "description" | "project" | "kind" | "revision" | "updatedAt" | "position"> & { size: LabSize; platforms: Platform[]; widgetIds: string[]; streamlabsWidget?: StreamlabsWidget };
