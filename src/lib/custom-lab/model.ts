@@ -1,6 +1,8 @@
 import { alertboxAlerts } from "./alertbox";
 import { DEFAULT_OVERLAY, parseOverlay } from "./overlay";
-import type { LabCode, LabContent, LabSize, LabVariant, FieldDefinitions } from "./types";
+import type { LabCode, LabContent, LabConversion, LabSize, LabVariant, FieldDefinitions } from "./types";
+import { isStreamlabsWidget } from "./streamlabs-widgets";
+import { STREAMLABS_ALERT_TEMPLATE } from "./streamlabs-templates";
 
 export const LAB_MAX_BYTES = 2 * 1024 * 1024;
 export const LAB_PLATFORMS = ["streamelements", "streamlabs"] as const;
@@ -61,7 +63,23 @@ export function parseLabContent(raw: unknown): LabContent {
     if (input.kind === "alertbox" && alertboxAlerts(platform).some(({ type }) => !alerts[type])) throw new Error("Chaque alerte doit posséder son code.");
     return [platform, { code: parseCode(variant.code), settings: variant.settings, alerts: Object.fromEntries(Object.entries(alerts).map(([key, code]) => [key, parseCode(code)])) }];
   })) as LabContent["variants"];
-  return { name: input.name.trim(), ...(typeof input.description === "string" ? { description: input.description.trim() } : {}), project: input.project.trim(), kind: input.kind, variants: parsed, ...(input.kind === "overlay" ? { overlay: parseOverlay(input.overlay) } : { size: parseLabSize(input.size, input.kind) }) };
+  return { name: input.name.trim(), ...(typeof input.description === "string" ? { description: input.description.trim() } : {}), project: input.project.trim(), kind: input.kind, variants: parsed, ...(input.kind === "overlay" ? { overlay: parseOverlay(input.overlay) } : { size: parseLabSize(input.size, input.kind) }), ...(input.kind === "widget" && isStreamlabsWidget(input.streamlabsWidget) && input.streamlabsWidget !== "custom" ? { streamlabsWidget: input.streamlabsWidget } : {}), ...(input.kind !== "overlay" && input.conversions && object(input.conversions).streamlabs ? { conversions: { streamlabs: parseConversion(object(input.conversions).streamlabs) } } : {}) };
+}
+
+// Rapport de conversion vers Streamlabs : textes courts, nombre d'alertes borné
+function parseConversion(raw: unknown): LabConversion {
+  const input = object(raw);
+  const text = (value: unknown, max = 600) => { if (typeof value !== "string" || value.length > max) throw new Error("Rapport de conversion invalide."); return value; };
+  const list = (value: unknown) => { if (!Array.isArray(value) || value.length > 40) throw new Error("Rapport de conversion invalide."); return value.map((entry) => text(entry)); };
+  if (!Array.isArray(input.alerts) || input.alerts.length > 20) throw new Error("Rapport de conversion invalide.");
+  return {
+    at: text(input.at, 40),
+    alerts: input.alerts.map((raw) => {
+      const alert = object(raw);
+      const status = alert.status === "validated" || alert.status === "untested" || alert.status === "manual" ? alert.status : "manual";
+      return { source: text(alert.source, 40), target: text(alert.target, 40), status, converted: list(alert.converted), limitations: list(alert.limitations), manual: list(alert.manual), sourceHash: text(alert.sourceHash, 16), outputHash: text(alert.outputHash, 16) };
+    }),
+  };
 }
 
 // Taille par défaut d'un widget et d'un pack d'alertes (pixels)
@@ -85,7 +103,8 @@ export function newLabContent(kind: LabContent["kind"] = "widget"): LabContent {
   const variant = (platform: typeof LAB_PLATFORMS[number]): LabVariant => ({
     code: { ...code, ...(platform === "streamlabs" ? { js: code.js.replace('window.addEventListener', 'document.addEventListener') } : {}) },
     settings: '{}',
-    alerts: Object.fromEntries(alertboxAlerts(platform).map(({ type }) => [type, { ...code, html: '<div id="alert">{name}</div>', js: '' }])),
+    // Streamlabs : code de base de la Fenêtre d'alertes fourni par zer0oes
+    alerts: Object.fromEntries(alertboxAlerts(platform).map(({ type }) => [type, platform === "streamlabs" ? { ...STREAMLABS_ALERT_TEMPLATE } : { ...code, html: '<div id="alert">{name}</div>', js: '' }])),
   });
   const name = kind === "widget" ? "Nouveau widget" : kind === "overlay" ? "Nouvel overlay" : "Nouveau pack d’alertes";
   return { name, project: "Bibliothèque", kind, variants: { streamelements: variant("streamelements"), streamlabs: variant("streamlabs") }, ...(kind === "overlay" ? { overlay: { ...DEFAULT_OVERLAY, items: [] } } : { size: { ...DEFAULT_LAB_SIZE[kind] } }) };

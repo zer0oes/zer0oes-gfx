@@ -87,6 +87,8 @@ export const options: Option[] = [
   { id: "avatar", name: "Avatar", price: 3000 },
   { id: "panneaux-twitch", name: "Pack de 6 panneaux Twitch", price: 9000 },
   { id: "animation-logo", name: "Animation du logo", price: 18000, priceFrom: true },
+  // Supplément d'installation (panier à la carte, masqué du catalogue) : voir lib/brief-delivery
+  { id: "installation-plateforme", name: "Installation par zer0oes_GFX (StreamElements ou Streamlabs)", price: 2000, category: "overlays" },
 ];
 
 export const defaultSettings: PricingSettings = {

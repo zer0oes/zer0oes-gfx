@@ -3,10 +3,11 @@ import { listLabDocuments } from "@/lib/custom-lab/store";
 import { deleteLabProjectAction, importLabAction, saveLabProjectAction } from "@/app/admin/custom-lab-actions";
 import { listLabProjects, type LabProject } from "@/lib/custom-lab/projects";
 import { LabStorageError } from "@/lib/custom-lab/errors";
-import { ClickableRow } from "@/components/admin/ClickableRow";
+import { LabLibraryBoard } from "@/components/admin/LabLibraryBoard";
 import { LabNewMenu } from "@/components/admin/LabNewMenu";
 import { MaterialIcon } from "@/components/admin/MaterialIcon";
 import { ConfirmDelete, Drawer, DrawerButton } from "@/components/admin/Drawer";
+import { overlayPlatforms } from "@/lib/custom-lab/compatibility";
 
 export const metadata = { title: "Laboratoire" };
 
@@ -62,6 +63,7 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
     ...[...projects].sort((a, b) => Number(a.archived) - Number(b.archived)).map((p) => ({ name: p.name, project: p })),
     ...loose.map((name) => ({ name, project: undefined as LabProject | undefined })),
   ];
+  const platformsById = new Map(documents.map((d) => [d.id, d.platforms]));
   const small = "rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
@@ -80,12 +82,13 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
       {message && <p role="alert" className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">{message}</p>}
       {!message && params.error && errorMessages[params.error] && <p role="alert" className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{errorMessages[params.error]}</p>}
 
-      {/* Un bloc par projet : titre et actions au-dessus, puis le tableau de ses créations */}
-      <div className="mt-8 space-y-10">
-        {groups.map(({ name, project }) => {
-          const docs = documents.filter((d) => d.project === name);
-          return (
-            <section key={name} aria-label={`Projet ${name}`}>
+      {/* Un bloc par projet : titre et actions au-dessus, puis le tableau de ses créations (glisser-déposer, menu ⋮) */}
+      {groups.length ? <LabLibraryBoard sections={groups.map(({ name, project }) => {
+        const docs = documents.filter((d) => d.project === name);
+        return {
+          name,
+          header: (
+            <>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <MaterialIcon name="folder" className="size-5 text-accent" />
                 <h2 className="font-display text-xl font-bold">{name}</h2>
@@ -98,36 +101,20 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
                 )}
               </div>
               {project?.description && <p className="mt-1 text-sm text-muted">{project.description}</p>}
-              <div className="mt-3 overflow-x-auto rounded-2xl border border-border">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-surface text-xs uppercase tracking-wider text-muted">
-                    <tr>
-                      <th scope="col" className="px-4 py-3 font-medium">Création</th>
-                      <th scope="col" className="px-4 py-3 font-medium">Description</th>
-                      <th scope="col" className="w-48 px-4 py-3 font-medium">Type</th>
-                      <th scope="col" className="w-40 px-4 py-3 font-medium">Dimensions</th>
-                      <th scope="col" className="w-56 px-4 py-3 font-medium">Modifiée le</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {docs.map((doc) => (
-                      <ClickableRow key={doc.id} href={`/admin/laboratoire/${doc.id}`}>
-                        <td className="px-4 py-3 font-medium">{doc.name}</td>
-                        <td className="max-w-md whitespace-pre-line px-4 py-3 text-muted">{doc.description || "—"}</td>
-                        <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${kinds[doc.kind].tone}`}>{kinds[doc.kind].label}</span></td>
-                        <td className="whitespace-nowrap px-4 py-3 tabular-nums text-muted">{doc.size.width} × {doc.size.height} px</td>
-                        <td className="whitespace-nowrap px-4 py-3 text-muted">{dateFmt.format(new Date(doc.updatedAt))}</td>
-                      </ClickableRow>
-                    ))}
-                    {!docs.length && <tr><td colSpan={5} className="px-4 py-4 text-center text-sm text-muted">Aucune création dans ce projet.</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          );
-        })}
-        {!groups.length && <p className="rounded-2xl border border-border px-4 py-6 text-center text-muted">Aucune création pour l’instant : commence par un nouveau widget ou importe un projet.</p>}
-      </div>
+            </>
+          ),
+          rows: docs.map((doc) => ({
+            id: doc.id,
+            name: doc.name,
+            description: doc.description ?? "",
+            kindLabel: kinds[doc.kind].label,
+            kindTone: kinds[doc.kind].tone,
+            platforms: doc.kind === "overlay" ? overlayPlatforms(doc.widgetIds, (wid) => platformsById.get(wid)) : doc.platforms,
+            size: `${doc.size.width} × ${doc.size.height} px`,
+            updated: dateFmt.format(new Date(doc.updatedAt)),
+          })),
+        };
+      })} /> : <p className="mt-8 rounded-2xl border border-border px-4 py-6 text-center text-muted">Aucune création pour l’instant : commence par un nouveau widget ou importe un projet.</p>}
 
       <ProjectDrawer drawer="laboratoire-projet-nouveau" />
       {projects.map((p) => <ProjectDrawer key={p.id} project={p} drawer={`laboratoire-projet-${p.id}`} />)}

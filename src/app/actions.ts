@@ -19,6 +19,7 @@ import { normalizeCode, validPromotion } from "@/lib/promotions";
 import { includedOverlays, validOverlaySelection } from "@/lib/brief-overlays";
 import { productBriefFields } from "@/lib/product-brief";
 import { recordQuoteRequest } from "@/lib/project-quotes";
+import { briefDeliveryNeeds, briefPlatformAnswer, withoutInstallLine } from "@/lib/brief-delivery";
 
 export type FormState = { ok: boolean; message: string } | null;
 
@@ -226,6 +227,7 @@ async function briefForm(
   const locale = formLocale(formData);
   const editingBrief = formData.get("editBrief") === "1";
   let productFields: Record<string, string> = {};
+  let deliveryAnswers: Record<string, string> = {};
   try {
     const store = getStore();
     const order = sessionId ? await store.getOrderBySession(sessionId) : null;
@@ -243,7 +245,7 @@ async function briefForm(
     }
     if (packId === "options" || packId?.startsWith("option:")) {
       if (!deliveryTemplate?.length) return { ok: false, message: locale === "en" ? "Unable to verify your products. Please refresh." : "Impossible de vérifier tes créations. Actualise la page." };
-      const fields = productBriefFields(deliveryTemplate, (name) => field(formData, name));
+      const fields = productBriefFields(withoutInstallLine(deliveryTemplate), (name) => field(formData, name));
       if (!fields) return { ok: false, message: locale === "en" ? "Describe each purchased creation before sending your brief." : "Précise ta demande pour chaque création achetée avant d’envoyer ton brief." };
       productFields = fields;
     } else {
@@ -251,7 +253,12 @@ async function briefForm(
       const count = includedOverlays(pack);
       if (!pack || count === null) return { ok: false, message: locale === "en" ? "Unable to verify your package. Please refresh or contact me." : "Impossible de vérifier ton pack. Actualise la page ou contacte-moi." };
       if (!validOverlaySelection(formData.getAll("overlays"), count)) return { ok: false, message: locale === "en" ? `Choose exactly ${count} different overlays included in your package.` : `Choisis exactement ${count} overlays différents, inclus dans ton pack.` };
+      deliveryTemplate ??= pack.deliverables;
     }
+    // Plateforme d'installation des widgets, alertes et overlays, selon le contenu de la commande
+    const answers = briefPlatformAnswer(field(formData, "streamTool", 100) || undefined, briefDeliveryNeeds(deliveryTemplate ?? [], formData.getAll("overlays").length || null).platform);
+    if (!answers) return { ok: false, message: locale === "en" ? "Choose the platform for your widgets, alerts and overlays: StreamElements or Streamlabs." : "Choisis la plateforme de tes widgets, alertes et overlays : StreamElements ou Streamlabs." };
+    deliveryAnswers = answers;
   } catch (e) {
     console.error(e);
     return { ok: false, message: locale === "en" ? "Unable to verify your package. Please try again." : "Impossible de vérifier ton pack. Réessaie." };
@@ -277,6 +284,7 @@ async function briefForm(
     Références: field(formData, "references"),
     "Logo existant": field(formData, "logoLink", 1000),
     "Overlays choisis": checked(formData, "overlays"),
+    ...deliveryAnswers,
     "Éléments à inclure": field(formData, "elements"),
     "Date souhaitée": field(formData, "deadline", 100),
     Remarques: field(formData, "notes"),

@@ -17,13 +17,18 @@
 .cl-platform-switch button[data-platform=streamlabs][aria-pressed=true] { background: #80f5d2; border-color: #80f5d2; color: #09161d; }
 .cl-platform-switch img { width: 22px; height: 22px; object-fit: contain; }
 .cl-metadata { border: 1px solid var(--border); border-radius: 16px; background: var(--surface); padding: 20px; margin-bottom: 18px; color: var(--foreground); }
-.cl-metadata summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; font-size: 14px; font-weight: 600; }
-.cl-metadata summary::-webkit-details-marker { display: none; }
-.cl-metadata summary::after { content: ''; flex-shrink: 0; width: 24px; height: 24px; background: var(--accent); mask: url('/icons/material/expand_more.svg') center / contain no-repeat; -webkit-mask: url('/icons/material/expand_more.svg') center / contain no-repeat; transition: transform .2s; }
-.cl-metadata[open] summary::after { transform: rotate(180deg); }
+.cl-metadata > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; font-size: 14px; font-weight: 600; }
+.cl-metadata > summary::-webkit-details-marker { display: none; }
+.cl-metadata > summary::after { content: ''; flex-shrink: 0; width: 24px; height: 24px; background: var(--accent); mask: url('/icons/material/expand_more.svg') center / contain no-repeat; -webkit-mask: url('/icons/material/expand_more.svg') center / contain no-repeat; transition: transform .2s; }
+.cl-metadata[open] > summary::after { transform: rotate(180deg); }
 .cl-metadata > div { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; margin: 20px -20px 0; padding: 16px 20px 0; border-top: 1px solid var(--border); }
 .cl-project-field { width: 240px; max-width: 100%; }
 .cl-metadata > div > label { width: 240px; max-width: 100%; }
+.cl-metadata > div.cl-metadata-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 16px 20px; }
+.cl-metadata > div.cl-metadata-grid > label, .cl-metadata-grid .cl-project-field { width: auto; }
+.cl-metadata-grid .cl-span-all { grid-column: 1 / -1; }
+.cl-metadata-grid textarea { resize: vertical; min-height: 64px; }
+@media (max-width: 900px) { .cl-metadata > div.cl-metadata-grid { grid-template-columns: minmax(0, 1fr); } }
 .cl-root .cl-metadata label { font-size: 14px; font-weight: 500; color: var(--foreground); }
 .cl-root .cl-metadata input:not([type=checkbox]), .cl-root .cl-metadata select, .cl-root .cl-metadata textarea { font-size: 14px; font-weight: 400; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--background); color: var(--foreground); }
 .cl-root label { display: grid; gap: 8px; font-size: 14px; color: var(--foreground); }

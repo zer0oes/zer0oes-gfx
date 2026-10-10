@@ -2,11 +2,13 @@ import type { Order, Deliverable } from "@/lib/store/types";
 import { overlayTypes } from "@/lib/pricing";
 import { previewPublished, correctionPending } from "@/lib/delivery";
 import { allFinalsAccessed } from "./final-downloads";
+import { withoutInstallLine } from "./brief-delivery";
 
 export function plannedDelivery(order: Pick<Order, "deliveryTemplate" | "brief" | "hasLogo" | "formulaId" | "packId">) {
   const result: { key: string; label: string; itemType: string }[] = [];
   const animated = order.deliveryTemplate?.some((line) => /animation|overlays?.*anim/i.test(line));
-  for (const line of order.deliveryTemplate ?? []) {
+  // Le supplément d'installation n'est pas une création à livrer
+  for (const line of withoutInstallLine(order.deliveryTemplate)) {
     if (order.packId === "sur-mesure") {
       const itemType = /overlay/i.test(line) ? "overlay" : /alerte/i.test(line) ? "alerte" : "visuel";
       result.push({ key: `item-${result.length}`, label: line, itemType });

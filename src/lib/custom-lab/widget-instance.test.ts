@@ -18,7 +18,9 @@ test("réglages d'un calque pack d'alertes : par alerte et réglages de l'AlertB
   const pack = newLabContent("alertbox");
   const instance = widgetInstance(pack, { widgetOverrides: { streamlabs: { alerts: { follow: { accent: "#00ff00" } }, settings: { alerts: {} } } } }, "streamlabs");
   assert.equal(fieldValues(instance.variants.streamlabs.alerts.follow).accent, "#00ff00");
-  assert.equal(fieldValues(instance.variants.streamlabs.alerts.subscriber ?? instance.variants.streamlabs.alerts[Object.keys(instance.variants.streamlabs.alerts)[1]]).accent, "#6d28d9");
+  // les autres alertes gardent les valeurs du modèle
+  const other = Object.keys(pack.variants.streamlabs.alerts).find((type) => type !== "follow")!;
+  assert.deepEqual(fieldValues(instance.variants.streamlabs.alerts[other]), fieldValues(pack.variants.streamlabs.alerts[other]));
   assert.deepEqual(jsonObject(instance.variants.streamlabs.settings), { alerts: {} });
   assert.equal(pack.variants.streamlabs.settings, "{}");
 });

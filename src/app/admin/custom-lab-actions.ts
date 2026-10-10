@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { LAB_MAX_BYTES, newLabContent, parseLabContent } from "@/lib/custom-lab/model";
 import { randomUUID } from "node:crypto";
-import { getLabDocument, LabConflictError, listLabSources, saveLabDocument } from "@/lib/custom-lab/store";
+import { deleteLabDocument, getLabDocument, LabConflictError, listLabDocuments, listLabSources, saveLabDocument, setLabPositions } from "@/lib/custom-lab/store";
 import { labOverlayHtml, labPlatformZip, type LabExportFile } from "@/lib/custom-lab/export";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
 import { deliverablePath, deliveryLocked } from "@/lib/delivery";
@@ -15,6 +15,7 @@ import { orderStatuses } from "@/lib/store/types";
 import { LabStorageError } from "@/lib/custom-lab/errors";
 import { createLabProject, deleteLabProject, updateLabProject } from "@/lib/custom-lab/projects";
 import { addLabMedia, deleteLabMedia, labMediaAvailable, labMediaCheck, labMediaUrl, listLabMedia, signLabMediaUpload, type LabMedia } from "@/lib/custom-lab/media";
+import { LAB_TEXT_DEFAULTS, type LabTextKey } from "@/lib/custom-lab/lab-texts";
 
 export async function createLabAction(form: FormData) {
   await requireAdmin();
@@ -180,7 +181,8 @@ export async function deliverLabAction(input: { id: string; orderId: string; tar
   try {
     if (document.kind === "overlay") {
       const sources = Object.fromEntries((await listLabSources()).map((d) => [d.id, { name: d.name, project: d.project, kind: d.kind, variants: d.variants }]));
-      files = [labOverlayHtml(document, sources, platforms[0])];
+      // Un overlay ne s'installe que sur StreamElements
+      files = [labOverlayHtml(document, sources, "streamelements")];
     } else files = platforms.map((p) => labPlatformZip(document, p));
   } catch (error) {
     return { ok: false, message: error instanceof Error ? `Création invalide : ${error.message}` : "Création invalide." };
@@ -216,4 +218,76 @@ export async function deliverLabAction(input: { id: string; orderId: string; tar
   if (order.deliveryToken) revalidatePath(`/commande/${order.deliveryToken}`);
   const count = uploaded.length > 1 ? `${uploaded.length} fichiers ajoutés` : "Fichier ajouté";
   return { ok: true, message: `${count} au livrable « ${target?.label ?? name} » de la commande de ${order.customerName}.` };
+}
+
+// Textes du Laboratoire (lien Streamlabs et sa note) : enregistrés avec les autres textes du site ; vide = texte d'origine
+export async function saveLabTextsAction(form: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const stored = await store.getHomeContent();
+  const content = Object.fromEntries(Object.entries(stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {}).filter(([, value]) => typeof value === "string")) as Record<string, string>;
+  for (const key of Object.keys(LAB_TEXT_DEFAULTS) as LabTextKey[]) {
+    const value = (form.get(key)?.toString() ?? "").trim().slice(0, 300);
+    if (value && value !== LAB_TEXT_DEFAULTS[key]) content[key] = value;
+    else delete content[key];
+  }
+  await store.saveHomeContent(content);
+  revalidatePath("/admin/laboratoire", "layout");
+}
+
+// --- Bibliothèque : dupliquer, supprimer, réordonner / déplacer vers un autre projet ---
+
+// Ordre courant d'un projet (identifiants), pour y insérer une création
+async function projectOrder(project: string): Promise<string[]> {
+  return (await listLabDocuments()).filter((doc) => doc.project === project).map((doc) => doc.id);
+}
+
+export async function duplicateLabAction(form: FormData) {
+  await requireAdmin();
+  const id = form.get("id")?.toString() ?? "";
+  try {
+    const document = await getLabDocument(id);
+    if (!document) throw new Error("Création introuvable.");
+    const copy = await saveLabDocument({ ...parseLabContent(document), name: `${document.name} (copie)`.slice(0, 120) });
+    // La copie se place juste après l'original
+    const order = (await projectOrder(document.project)).filter((entry) => entry !== copy.id);
+    order.splice(order.indexOf(document.id) + 1, 0, copy.id);
+    await setLabPositions(order);
+  } catch (error) {
+    console.error(error);
+    redirect("/admin/laboratoire?error=storage");
+  }
+  revalidatePath("/admin/laboratoire");
+}
+
+export async function deleteLabAction(form: FormData) {
+  await requireAdmin();
+  const id = form.get("id")?.toString() ?? "";
+  try {
+    await deleteLabDocument(id);
+  } catch (error) {
+    console.error(error);
+    redirect("/admin/laboratoire?error=storage");
+  }
+  revalidatePath("/admin/laboratoire");
+}
+
+// Glisser-déposer : project = projet d'arrivée, orderedIds = ordre complet de ce projet (création déplacée comprise)
+export async function moveLabAction(input: { id: string; project: string; orderedIds: string[] }): Promise<{ ok: boolean; message?: string }> {
+  await requireAdmin();
+  const project = String(input.project ?? "").trim().slice(0, 120);
+  if (!project || !Array.isArray(input.orderedIds) || !input.orderedIds.includes(input.id)) return { ok: false, message: "Déplacement invalide." };
+  try {
+    const document = await getLabDocument(input.id);
+    if (!document) return { ok: false, message: "Création introuvable." };
+    if (document.project !== project) {
+      await saveLabDocument({ ...parseLabContent(document), project }, { id: document.id, revision: document.revision });
+    }
+    await setLabPositions(input.orderedIds.map(String));
+  } catch (error) {
+    console.error(error);
+    return { ok: false, message: error instanceof LabConflictError ? error.message : "Déplacement impossible pour le moment." };
+  }
+  revalidatePath("/admin/laboratoire");
+  return { ok: true };
 }
