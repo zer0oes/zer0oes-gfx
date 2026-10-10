@@ -7,6 +7,7 @@ import type { LabAlertConversion, LabCode, LabContent, LabConversion } from "../
 import { convertAlertToStreamlabs } from "./alert";
 import { convertWidgetToStreamlabs } from "./widget";
 import { ALERT_RULES } from "./rules";
+import { CHATBOX_TEMPLATE } from "../streamlabs-widgets";
 
 export { ALERT_RULES } from "./rules";
 
@@ -25,7 +26,8 @@ export const targetOf = (type: AlertboxAlertType) => ALERT_RULES[type]!.target;
 export function modifiedTargets(content: LabContent, types: AlertboxAlertType[]): string[] {
   if (content.kind === "widget") {
     const previous = content.conversions?.streamlabs?.alerts.find((alert) => alert.target === "widget")?.outputHash;
-    return codeHash(content.variants.streamlabs.code) === (previous ?? codeHash(newLabContent("widget").variants.streamlabs.code)) ? [] : ["widget"];
+    const current = codeHash(content.variants.streamlabs.code);
+    return current === (previous ?? codeHash(newLabContent("widget").variants.streamlabs.code)) || current === codeHash(CHATBOX_TEMPLATE) ? [] : ["widget"];
   }
   const blank = newLabContent("alertbox").variants.streamlabs.alerts;
   const previous = new Map((content.conversions?.streamlabs?.alerts ?? []).map((alert) => [alert.target, alert.outputHash]));
@@ -82,7 +84,7 @@ export function convertPackToStreamlabs(content: LabContent, types: AlertboxAler
 export function convertWidgetContent(content: LabContent, now = new Date()): LabContent {
   if (content.kind !== "widget") throw new Error("Cette conversion concerne les widgets.");
   const code = content.variants.streamelements.code;
-  const result = convertWidgetToStreamlabs(code, parseFields(code.fields), fieldValues(code));
+  const result = convertWidgetToStreamlabs(code, parseFields(code.fields), fieldValues(code), content.streamlabsWidget ?? "custom");
   const entry: LabAlertConversion = { source: "widget", target: "widget", status: result.status, converted: result.converted, limitations: result.limitations, manual: result.manual, sourceHash: codeHash(code), outputHash: codeHash(result.code) };
   return {
     ...content,

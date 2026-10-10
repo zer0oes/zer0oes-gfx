@@ -30,3 +30,32 @@ test("Fenêtre de chat : aperçu simulé et guide d'export", () => {
   assert.match(zip, /Export Streamlabs — Fenêtre de chat/);
   assert.doesNotMatch(new TextDecoder().decode(labPlatformZip(widget, "streamelements").data), /Fenêtre de chat/);
 });
+
+test("conversion vers la Fenêtre de chat : les messages Streamlabs arrivent au code StreamElements", async () => {
+  const { convertWidgetToStreamlabs } = await import("./convert/widget");
+  const source = {
+    html: '<div id="chat"></div>',
+    css: "",
+    js: "window.addEventListener('onEventReceived', (obj) => { if (obj.detail.listener !== 'message') return; window.received.push(obj.detail.event.data.displayName + ': ' + obj.detail.event.data.text + ' ' + obj.detail.event.data.displayColor); });",
+    fields: "{}",
+    data: "{}",
+  };
+  const result = convertWidgetToStreamlabs(source, {}, {}, "chatbox");
+  assert.match(result.code.html, /id="log"[^>]*display:none/);
+  assert.match(result.code.html, /id="chatlist_item"/);
+  assert.ok(!result.manual.some((line) => /messages du chat/.test(line)));
+  assert.ok(result.converted.some((line) => /Fenêtre de chat/.test(line)));
+
+  // Exécution du code converti avec un document simulé
+  const doc = new EventTarget();
+  const received: string[] = [];
+  const run = new Function("document", "window", result.code.js);
+  run(doc, { received, setTimeout: () => 0, addEventListener: () => {} });
+  doc.dispatchEvent(Object.assign(new Event("onEventReceived"), { detail: { command: "PRIVMSG", body: "Salut <3", from: "astro", messageId: "m1", tags: { "display-name": "Astro", color: "#ff00aa", badges: "moderator/1" } } }));
+  assert.deepEqual(received, ["Astro: Salut <3 #ff00aa"]);
+
+  // Widget personnalisé : le chat reste signalé comme non pris en charge
+  const custom = convertWidgetToStreamlabs(source, {}, {}, "custom");
+  assert.ok(custom.manual.some((line) => /messages du chat/.test(line)));
+  assert.doesNotMatch(custom.code.html, /chatlist_item/);
+});
