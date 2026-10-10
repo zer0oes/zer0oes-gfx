@@ -39,7 +39,7 @@ export function slugifyWidgetName(name: string): string {
   );
 }
 
-export function buildPlatformExport(widget: ExportableWidget, values: Record<string, unknown>, platform: string): PlatformExportResult {
+export function buildPlatformExport(widget: ExportableWidget, values: Record<string, unknown>, platform: string, conversion?: LabConversion): PlatformExportResult {
   const target = platform === PLATFORM_STREAMLABS ? PLATFORM_STREAMLABS : PLATFORM_STREAM_ELEMENTS;
   const fields = target === PLATFORM_STREAMLABS ? toStreamlabsFields(widget.fields, values) : toStreamElementsFields(widget.fields, values);
   const bridgeFields = target === PLATFORM_STREAM_ELEMENTS ? toStreamlabsFields(widget.fields, values) : fields;
@@ -63,7 +63,8 @@ export function buildPlatformExport(widget: ExportableWidget, values: Record<str
             ? `Un pont de compatibilité ${compatibility.label} a été ajouté au début de widget.js.`
             : "Aucun pont n'a été nécessaire : le code utilise déjà les événements de cette plateforme.",
           "",
-          "Les valeurs configurées dans Streamer Lab sont incluses dans fields.json."
+          "Les valeurs configurées dans Streamer Lab sont incluses dans fields.json.",
+          ...(conversion ? widgetConversionReadme(conversion) : [])
         ].join("\n") + "\n"
     },
     platform: target,
@@ -169,6 +170,15 @@ function streamlabsTestChecklist(): string[] {
     "  4. modifier un Custom Field (couleur, texte…) et relancer le test pour vérifier qu'il est pris en compte ;",
     "  5. dans OBS, recharger la source navigateur de l'Alert Box et refaire un test.",
   ];
+}
+
+function widgetConversionReadme(conversion: LabConversion): string[] {
+  const lines = ["", `Conversion depuis StreamElements (${new Date(conversion.at).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}) : ${conversion.alerts.map((entry) => STATUS_TEXT[entry.status]).join(", ")}`];
+  for (const entry of conversion.alerts) {
+    for (const line of entry.limitations) lines.push(`  Limite : ${line}`);
+    for (const line of entry.manual) lines.push(`  À adapter : ${line}`);
+  }
+  return [...lines, "", "Tester dans Streamlabs : ajouter le Custom Widget à OBS, vérifier les réglages (Custom Fields), puis envoyer des évènements de test (follow, sub, don…) depuis le tableau de bord Streamlabs."];
 }
 
 function conversionReadme(conversion: LabConversion, config: AlertboxConfig): string[] {

@@ -161,7 +161,7 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
     try {
       parseLabContent(content);
       const codes = Object.fromEntries(Object.entries(variant.alerts).map(([type, c]) => [type, { ...c, fields: parseFields(c.fields), values: fieldValues(c) }])) as Partial<Record<AlertboxAlertType, AlertboxExportCode>>;
-      const result = content.kind === "alertbox" ? buildAlertboxExport(codes, normalizeAlertboxConfig(jsonObject(variant.settings), platform), platform, platform === "streamlabs" ? content.conversions?.streamlabs : undefined) : buildPlatformExport({ ...code, fields: parseFields(code.fields) }, fieldValues(code), platform);
+      const result = content.kind === "alertbox" ? buildAlertboxExport(codes, normalizeAlertboxConfig(jsonObject(variant.settings), platform), platform, platform === "streamlabs" ? content.conversions?.streamlabs : undefined) : buildPlatformExport({ ...code, fields: parseFields(code.fields) }, fieldValues(code), platform, platform === "streamlabs" ? content.conversions?.streamlabs : undefined);
       const bytes = createZip(result.files);
       download(new Uint8Array(bytes).buffer, `${slugifyWidgetName(content.name)}-${platform}.zip`, "application/zip");
       setStatus("Export téléchargé. Les médias doivent être accessibles sur la plateforme destinataire.");
@@ -179,13 +179,13 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
     setContent(next);
     setPreview(next);
     setPlatform("streamlabs");
-    setAlertType(target);
+    if (next.kind === "alertbox") setAlertType(target);
     setTab("html");
     mockStore.current = {};
-    setStatus("Version Streamlabs générée. Vérifie le rapport et teste l’alerte dans Streamlabs.");
+    setStatus("Version Streamlabs générée. Vérifie le rapport, puis teste-la dans Streamlabs.");
     openLabDrawer(REPORT_DRAWER);
   }
-  const stale = content.kind === "alertbox" ? staleSources(content) : [];
+  const stale = staleSources(content);
 
   function updateField(key: string, value: unknown) {
     try {
@@ -208,7 +208,7 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
       <div><h1>{content.name}</h1><p>{content.kind === "alertbox" ? "Pack d’alertes" : "Widget"} · {pending ? "Enregistrement…" : dirty ? "Modifications à enregistrer" : "Enregistré"}</p></div>
       <div className="cl-actions">
         <CustomLabPlatformSwitch platform={platform} onChange={switchPlatform} />
-        <CustomLabActions id={id} kind={content.kind} name={content.name} platform={platform} dirty={dirty} onMedia={() => openLabMedia()} onExport={exportZip} {...(content.kind === "alertbox" ? { onConvert: () => setConvertKey((key) => key + 1), ...(content.conversions?.streamlabs ? { onReport: () => openLabDrawer(REPORT_DRAWER) } : {}) } : {})} onBackup={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} />
+        <CustomLabActions id={id} kind={content.kind} name={content.name} platform={platform} dirty={dirty} onMedia={() => openLabMedia()} onExport={exportZip} {...(content.kind === "alertbox" || content.kind === "widget" ? { onConvert: () => setConvertKey((key) => key + 1), ...(content.conversions?.streamlabs ? { onReport: () => openLabDrawer(REPORT_DRAWER) } : {}) } : {})} onBackup={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} />
       </div>
     </header>
     {status && <p role="status" className="cl-status">{status}</p>}
@@ -231,7 +231,7 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
       {!fieldsCollapsed && <CustomLabFields platform={platform} alertbox={content.kind === "alertbox"} alertType={alertType} fields={editableFields.fields} values={editableFields.values} config={editableFields.config} onAlert={setAlertType} onField={updateField} onSettings={(value) => setContent((current) => ({ ...current, variants: { ...current.variants, [platform]: { ...current.variants[platform], settings: JSON.stringify(value, null, 2) } } }))} />}
     </div>
     <CustomLabMedia />
-    {content.kind === "alertbox" && <CustomLabConversionReport content={content} />}
+    <CustomLabConversionReport content={content} />
     {convertKey > 0 && <CustomLabConvert key={convertKey} content={content} onConverted={converted} />}
     <CustomLabSimulator platform={platform} dispatch={dispatch} onStatus={(message) => { setStatus(message); setLines((current) => [...current.slice(-99), message]); }} />
   </div>;

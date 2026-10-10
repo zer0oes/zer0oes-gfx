@@ -5,6 +5,7 @@ import { normalizeAlertboxConfig, type AlertboxAlertType } from "../alertbox";
 import { fieldValues, jsonObject, newLabContent, parseFields } from "../model";
 import type { LabAlertConversion, LabCode, LabContent, LabConversion } from "../types";
 import { convertAlertToStreamlabs } from "./alert";
+import { convertWidgetToStreamlabs } from "./widget";
 import { ALERT_RULES } from "./rules";
 
 export { ALERT_RULES } from "./rules";
@@ -21,7 +22,11 @@ export const convertibleAlerts = () => (Object.keys(ALERT_RULES) as AlertboxAler
 export const targetOf = (type: AlertboxAlertType) => ALERT_RULES[type]!.target;
 
 // Alertes Streamlabs déjà modifiées (à la main, ou depuis la dernière conversion) qui seraient remplacées
-export function modifiedTargets(content: LabContent, types: AlertboxAlertType[]): AlertboxAlertType[] {
+export function modifiedTargets(content: LabContent, types: AlertboxAlertType[]): string[] {
+  if (content.kind === "widget") {
+    const previous = content.conversions?.streamlabs?.alerts.find((alert) => alert.target === "widget")?.outputHash;
+    return codeHash(content.variants.streamlabs.code) === (previous ?? codeHash(newLabContent("widget").variants.streamlabs.code)) ? [] : ["widget"];
+  }
   const blank = newLabContent("alertbox").variants.streamlabs.alerts;
   const previous = new Map((content.conversions?.streamlabs?.alerts ?? []).map((alert) => [alert.target, alert.outputHash]));
   const targets = [...new Set(types.map(targetOf))];
@@ -33,7 +38,8 @@ export function modifiedTargets(content: LabContent, types: AlertboxAlertType[])
 
 // Alertes StreamElements modifiées depuis la conversion
 export function staleSources(content: LabContent): string[] {
-  return (content.conversions?.streamlabs?.alerts ?? []).filter((alert) => codeHash(content.variants.streamelements.alerts[alert.source]) !== alert.sourceHash).map((alert) => alert.source);
+  const source = (type: string) => (content.kind === "widget" ? content.variants.streamelements.code : content.variants.streamelements.alerts[type]);
+  return (content.conversions?.streamlabs?.alerts ?? []).filter((alert) => codeHash(source(alert.source)) !== alert.sourceHash).map((alert) => alert.source);
 }
 
 export function convertPackToStreamlabs(content: LabContent, types: AlertboxAlertType[], now = new Date()): LabContent {
@@ -69,6 +75,19 @@ export function convertPackToStreamlabs(content: LabContent, types: AlertboxAler
     ...content,
     variants: { ...content.variants, streamlabs: { ...sl, alerts, settings: JSON.stringify({ ...slSettings, alerts: settings }, null, 2) } },
     conversions: { ...content.conversions, streamlabs: conversion },
+  };
+}
+
+// Widget : la variante Streamlabs reçoit le code converti, la variante StreamElements ne change pas
+export function convertWidgetContent(content: LabContent, now = new Date()): LabContent {
+  if (content.kind !== "widget") throw new Error("Cette conversion concerne les widgets.");
+  const code = content.variants.streamelements.code;
+  const result = convertWidgetToStreamlabs(code, parseFields(code.fields), fieldValues(code));
+  const entry: LabAlertConversion = { source: "widget", target: "widget", status: result.status, converted: result.converted, limitations: result.limitations, manual: result.manual, sourceHash: codeHash(code), outputHash: codeHash(result.code) };
+  return {
+    ...content,
+    variants: { ...content.variants, streamlabs: { ...content.variants.streamlabs, code: result.code } },
+    conversions: { streamlabs: { at: now.toISOString(), alerts: [entry] } },
   };
 }
 

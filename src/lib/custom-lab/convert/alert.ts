@@ -20,7 +20,7 @@ export type AlertConversionResult = {
   manual: string[];
 };
 
-type Node = { type: string; start: number; end: number; [key: string]: unknown };
+export type Node = { type: string; start: number; end: number; [key: string]: unknown };
 
 const TOKEN = /\{\{\s*(\w+)\s*\}\}/g;
 const placeholder = (name: string) => `__SLVAR_${name}__`;
@@ -30,7 +30,7 @@ const LOAD_EVENTS = ["onWidgetLoad", "onEventReceived"];
 // Streamlabs (comme le Follow validé) : variable absente de l'évènement = laissée entre accolades
 const UNRESOLVED = String.raw`/^\{\{?\s*\w+\s*\}\}?$/`;
 
-function walk(node: unknown, visit: (node: Node, parent: Node | null) => void, parent: Node | null = null) {
+export function walk(node: unknown, visit: (node: Node, parent: Node | null) => void, parent: Node | null = null) {
   if (!node || typeof node !== "object") return;
   if (Array.isArray(node)) { node.forEach((child) => walk(child, visit, parent)); return; }
   const current = node as Node;
@@ -39,7 +39,7 @@ function walk(node: unknown, visit: (node: Node, parent: Node | null) => void, p
   for (const [key, value] of Object.entries(current)) if (key !== "type" && value && typeof value === "object") walk(value, visit, current);
 }
 
-const quote = (value: string) => JSON.stringify(value);
+export const quote = (value: string) => JSON.stringify(value);
 
 // Champs Streamlabs : mêmes libellés et valeurs, types traduits
 export function streamlabsFields(fields: FieldDefinitions, values: Record<string, unknown>, report: { converted: string[]; limitations: string[] }) {
@@ -68,7 +68,7 @@ export function streamlabsFields(fields: FieldDefinitions, values: Record<string
 }
 
 // Valeur d'un champ dans CONFIG : Streamlabs remplace {clé} par du texte, reconverti au type attendu par le code
-function configEntry(key: string, field: FieldDefinition) {
+export function configEntry(key: string, field: FieldDefinition) {
   const token = quote(`{${key}}`);
   if (field.type === "slider" || field.type === "number") return `Number(${token})`;
   if (field.type === "checkbox") return `${token} === "true"`;
