@@ -1,8 +1,8 @@
 // Compatibilité d'une création du Laboratoire : plateformes dont le code est rempli.
 // Widget : HTML, CSS ou JS non vide et différent du code par défaut (exemple d'une nouvelle création ou, côté Streamlabs,
 // code de base d'un widget natif) ;
-// pack d'alertes : au moins une alerte dans ce cas ; overlay : plateformes communes à tous ses widgets
-// (les deux s'il n'en contient aucun).
+// pack d'alertes : au moins une alerte dans ce cas ; overlay : StreamElements uniquement (un overlay ne s'installe pas
+// sur Streamlabs), si tous ses widgets sont compatibles StreamElements.
 import { LAB_PLATFORMS, newLabContent } from "./model";
 import type { Platform } from "./platformEvents";
 import type { LabCode, LabContent } from "./types";
@@ -28,6 +28,5 @@ export function codePlatforms(content: Pick<LabContent, "kind" | "variants">): P
 
 export function overlayPlatforms(widgetIds: readonly string[], platformsOf: (id: string) => readonly Platform[] | undefined): Platform[] {
   const widgets = widgetIds.map(platformsOf).filter((p): p is readonly Platform[] => Boolean(p));
-  if (!widgets.length) return [...LAB_PLATFORMS];
-  return LAB_PLATFORMS.filter((platform) => widgets.every((p) => p.includes(platform)));
+  return widgets.every((p) => p.includes("streamelements")) ? ["streamelements"] : [];
 }

@@ -50,7 +50,7 @@ export function CustomLabDeliver({ id, kind, name, platform, dirty, className, r
         id,
         orderId,
         ...(mode === "existing" ? { targetId } : { name: label.trim() }),
-        platforms: (platforms === "both" ? ["streamelements", "streamlabs"] : [platforms]) as Platform[],
+        platforms: (kind === "overlay" ? ["streamelements"] : platforms === "both" ? ["streamelements", "streamlabs"] : [platforms]) as Platform[],
       });
       setMessage({ ok: result.ok, text: result.message, orderId: result.ok ? orderId : undefined });
       if (result.ok) setTargets(await listLabDeliveryTargetsAction().catch(() => targets));
@@ -110,7 +110,7 @@ export function CustomLabDeliver({ id, kind, name, platform, dirty, className, r
               <p className="text-sm text-muted">Cette commande n’a pas encore de livrable.</p>
             )}
             {kind === "overlay" ? (
-              <Segmented name="livrer-plateforme" legend="Code des widgets de l’overlay" value={platforms === "streamlabs" ? "streamlabs" : "streamelements"} onChange={setPlatforms} options={[["streamelements", "StreamElements"], ["streamlabs", "Streamlabs"]]} />
+              <p className="text-xs text-muted">Overlay : widgets livrés avec leur code StreamElements (un overlay ne s’installe pas sur Streamlabs).</p>
             ) : (
               <Segmented name="livrer-plateforme" legend="Plateformes" value={platforms} onChange={setPlatforms} options={[["streamelements", "StreamElements"], ["streamlabs", "Streamlabs"], ["both", "Les deux"]]} />
             )}

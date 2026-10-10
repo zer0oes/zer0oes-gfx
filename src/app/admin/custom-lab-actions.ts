@@ -181,7 +181,8 @@ export async function deliverLabAction(input: { id: string; orderId: string; tar
   try {
     if (document.kind === "overlay") {
       const sources = Object.fromEntries((await listLabSources()).map((d) => [d.id, { name: d.name, project: d.project, kind: d.kind, variants: d.variants }]));
-      files = [labOverlayHtml(document, sources, platforms[0])];
+      // Un overlay ne s'installe que sur StreamElements
+      files = [labOverlayHtml(document, sources, "streamelements")];
     } else files = platforms.map((p) => labPlatformZip(document, p));
   } catch (error) {
     return { ok: false, message: error instanceof Error ? `Création invalide : ${error.message}` : "Création invalide." };
