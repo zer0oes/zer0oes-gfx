@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ALERTBOX_ALERTS, STREAMLABS_ALERTBOX_ALERTS, normalizeAlertboxConfig, type AlertboxAlertType } from "@/lib/custom-lab/alertbox";
-import { ALERT_RULES, STATUS_LABELS, codeHash, convertPackToStreamlabs, modifiedTargets, staleSources, targetOf } from "@/lib/custom-lab/convert";
+import { ALERT_RULES, STATUS_LABELS, codeHash, convertPackToStreamlabs, convertWidgetContent, modifiedTargets, staleSources, targetOf } from "@/lib/custom-lab/convert";
 import { jsonObject, newLabContent } from "@/lib/custom-lab/model";
 import type { LabAlertConversion, LabContent } from "@/lib/custom-lab/types";
 import { Drawer } from "./Drawer";
@@ -18,8 +18,8 @@ const STATUS_STYLE: Record<LabAlertConversion["status"], { icon: MaterialIconNam
   untested: { icon: "schedule", className: "border-amber-400/40 bg-amber-400/10 text-amber-200" },
   manual: { icon: "build", className: "border-red-400/40 bg-red-400/10 text-red-300" },
 };
-const streamlabsLabel = (type: string) => STREAMLABS_ALERTBOX_ALERTS.find((alert) => alert.type === type)?.label ?? type;
-const streamElementsLabel = (type: string) => ALERTBOX_ALERTS.find((alert) => alert.type === type)?.label ?? type;
+const streamlabsLabel = (type: string) => (type === "widget" ? "Custom Widget" : STREAMLABS_ALERTBOX_ALERTS.find((alert) => alert.type === type)?.label ?? type);
+const streamElementsLabel = (type: string) => (type === "widget" ? "Custom Widget" : ALERTBOX_ALERTS.find((alert) => alert.type === type)?.label ?? type);
 
 function StatusBadge({ status }: { status: LabAlertConversion["status"] }) {
   const style = STATUS_STYLE[status];
@@ -30,6 +30,7 @@ function StatusBadge({ status }: { status: LabAlertConversion["status"] }) {
 // si des alertes Streamlabs modifiées seraient remplacées. La variante StreamElements n'est pas touchée.
 // Monté (avec une nouvelle key) à chaque ouverture : le panneau s'ouvre avec les alertes activées cochées.
 export function CustomLabConvert({ content, onConverted }: { content: LabContent; onConverted: (next: LabContent, firstTarget: AlertboxAlertType) => void }) {
+  const widget = content.kind === "widget";
   const config = (() => { try { return normalizeAlertboxConfig(jsonObject(content.variants.streamelements.settings), "streamelements"); } catch { return normalizeAlertboxConfig({}, "streamelements"); } })();
   const convertible = ALERTBOX_ALERTS.filter(({ type }) => ALERT_RULES[type]);
   // Cochées par défaut : les alertes activées dont le code a été écrit (pas le modèle vide d'un nouveau pack)
@@ -39,22 +40,27 @@ export function CustomLabConvert({ content, onConverted }: { content: LabContent
   });
   const [error, setError] = useState("");
   const confirm = useRef<HTMLDialogElement>(null);
-  const modified = modifiedTargets(content, selected);
+  const modified = modifiedTargets(content, widget ? [] : selected);
 
   const run = () => {
     try {
-      const next = convertPackToStreamlabs(content, selected);
+      const next = widget ? convertWidgetContent(content) : convertPackToStreamlabs(content, selected);
       confirm.current?.close();
       closeLabDrawer(CONVERT_DRAWER);
-      onConverted(next, targetOf(selected[0]));
+      onConverted(next, widget ? "follow" : targetOf(selected[0]));
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Conversion impossible."); }
   };
 
   return <>
     <Drawer id={CONVERT_DRAWER} kicker="Laboratoire" title="Convertir vers Streamlabs" openOnLoad footer={<>
-      {error ? <span role="alert" className="text-xs text-red-300">{error}</span> : <span className="text-xs text-muted">{selected.length} alerte{selected.length > 1 ? "s" : ""}</span>}
-      <button type="button" disabled={!selected.length} onClick={() => (modified.length ? confirm.current?.showModal() : run())} className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110 disabled:opacity-60"><MaterialIcon name="sync_alt" className="size-4" />Convertir</button>
+      {error ? <span role="alert" className="text-xs text-red-300">{error}</span> : <span className="text-xs text-muted">{widget ? "Custom Widget" : `${selected.length} alerte${selected.length > 1 ? "s" : ""}`}</span>}
+      <button type="button" disabled={!widget && !selected.length} onClick={() => (modified.length ? confirm.current?.showModal() : run())} className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110 disabled:opacity-60"><MaterialIcon name="sync_alt" className="size-4" />Convertir</button>
     </>}>
+      {widget ? <>
+      <p className="text-sm text-muted">Le code StreamElements reste tel quel. Le widget converti remplit les onglets HTML, CSS, JS, Fields et Data de la version Streamlabs.</p>
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3"><span><span className="block text-sm font-semibold">Custom Widget</span><span className="block text-xs text-muted">Réglages au chargement, évènements follow, sub, don, bits et raid</span></span><StatusBadge status="untested" /></div>
+      <p className="text-xs text-muted">Aucun widget n’a encore été testé sur Streamlabs : il restera « Converti, non testé » jusqu’à ton premier test réel.</p>
+      </> : <>
       <p className="text-sm text-muted">Le code StreamElements reste tel quel. Les alertes choisies remplissent les onglets HTML, CSS, JS, Fields et Data de la version Streamlabs, avec leurs réglages (son, volume, durée).</p>
       <ul className="divide-y divide-border rounded-xl border border-border">
         {convertible.map(({ type, label }) => {
@@ -70,10 +76,11 @@ export function CustomLabConvert({ content, onConverted }: { content: LabContent
         })}
       </ul>
       <p className="text-xs text-muted">Seules les alertes testées pour de vrai sur Streamlabs sont marquées « Validé ». Le rapport liste ce qui a été converti, les limites et ce qui reste à adapter à la main.</p>
+      </>}
     </Drawer>
     <dialog ref={confirm} aria-label="Remplacer les alertes Streamlabs modifiées" onClick={(event) => { if (event.target === event.currentTarget) confirm.current?.close(); }} className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-border bg-surface p-6 text-foreground shadow-2xl backdrop:bg-black/70">
-      <p className="font-display text-lg font-bold">Es-tu sûre de vouloir remplacer ces alertes Streamlabs ?</p>
-      <p className="mt-2 text-sm text-muted">Elles ont été modifiées : {modified.map(streamlabsLabel).join(", ")}.</p>
+      <p className="font-display text-lg font-bold">{widget ? "Es-tu sûre de vouloir remplacer la version Streamlabs ?" : "Es-tu sûre de vouloir remplacer ces alertes Streamlabs ?"}</p>
+      <p className="mt-2 text-sm text-muted">{widget ? "Le code Streamlabs de ce widget a été modifié." : `Elles ont été modifiées : ${modified.map(streamlabsLabel).join(", ")}.`}</p>
       <div className="mt-6 flex justify-end gap-3">
         <button type="button" onClick={() => confirm.current?.close()} className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">Annuler</button>
         <button type="button" onClick={run} className="rounded-full bg-red-500/90 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Remplacer</button>
@@ -93,7 +100,7 @@ export function CustomLabConversionReport({ content }: { content: LabContent }) 
   const stale = staleSources(content);
   return <Drawer id={REPORT_DRAWER} kicker="Laboratoire" title="Rapport de conversion">
     {!report ? <p className="text-sm text-muted">Aucune conversion pour l’instant. Lance « Convertir vers Streamlabs » depuis l’onglet StreamElements.</p> : <>
-      <p className="text-sm text-muted">Conversion du {new Date(report.at).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}. Le résultat a été vérifié dans une simulation du Laboratoire, pas sur Streamlabs : seules les alertes « Validé sur Streamlabs » y ont été testées.</p>
+      <p className="text-sm text-muted">Conversion du {new Date(report.at).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}. Seuls les éléments « Validé sur Streamlabs » y ont été testés pour de vrai : teste les autres dans Streamlabs avant de les livrer.</p>
       {stale.length > 0 && <p role="status" className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">La version StreamElements a changé depuis la conversion : {stale.map(streamElementsLabel).join(", ")}. Relance la conversion pour reprendre ces modifications.</p>}
       {report.alerts.map((alert) => <section key={alert.source} className="space-y-3 rounded-xl border border-border p-4">
         <header className="flex flex-wrap items-center justify-between gap-2"><h4 className="font-semibold">{streamElementsLabel(alert.source)} → {streamlabsLabel(alert.target)}</h4><StatusBadge status={alert.status} /></header>

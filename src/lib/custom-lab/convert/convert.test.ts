@@ -4,7 +4,8 @@ import { parse } from "acorn";
 import { labPlatformZip } from "../export";
 import { newLabContent, parseLabContent } from "../model";
 import { convertAlertToStreamlabs } from "./alert";
-import { codeHash, convertPackToStreamlabs, modifiedTargets, staleSources } from "./index";
+import { codeHash, convertPackToStreamlabs, convertWidgetContent, modifiedTargets, staleSources } from "./index";
+import { convertWidgetToStreamlabs } from "./widget";
 
 // Alerte Follow StreamElements de référence, sur le modèle du Follow validé sur Streamlabs
 const FOLLOW = {
@@ -116,3 +117,42 @@ test("pack : seule la variante Streamlabs change, avec réglages et rapport", ()
   assert.deepEqual(staleSources(converted), ["follow"]);
   assert.notEqual(codeHash(FOLLOW), codeHash({ ...FOLLOW, css: "" }));
 });
+
+// Widget StreamElements de référence : compteur de follows
+const WIDGET = {
+  html: '<div id="box"><h1 id="title"></h1><b id="count"></b><span id="last"></span></div>',
+  css: "#box { color: {{color}}; }",
+  js: [
+    "let total = 0;",
+    "function render(){ document.getElementById('count').textContent = total; }",
+    "window.addEventListener('onWidgetLoad', (obj) => { const f = obj.detail.fieldData; document.getElementById('title').textContent = f.title + ' {{title}}'; total = f.start; render(); });",
+    "window.addEventListener('onEventReceived', (obj) => { if (obj.detail.listener !== 'follower-latest') return; total++; document.getElementById('last').textContent = obj.detail.event.name; render(); });",
+  ].join("\n"),
+  fields: JSON.stringify({ title: { type: "text", label: "Titre", value: "Follows" }, start: { type: "slider", label: "Départ", value: 10, min: 0, max: 100, step: 1 }, color: { type: "colorpicker", label: "Couleur", value: "#fff" } }),
+  data: "{}",
+};
+
+test("widget : réglages au chargement Streamlabs, évènements traduits, statut non testé", () => {
+  const content = newLabContent("widget");
+  content.variants.streamelements.code = WIDGET;
+  const before = JSON.stringify(content.variants.streamelements);
+  const converted = convertWidgetContent(content, new Date("2026-10-10T10:00:00Z"));
+  assert.equal(JSON.stringify(converted.variants.streamelements), before);
+  const { js, css } = converted.variants.streamlabs.code;
+  parse(js, { ecmaVersion: "latest" });
+  assert.match(js, /"start": Number\("\{start\}"\)/);
+  assert.match(js, /streamlabsOn\('onWidgetLoad'/);
+  assert.match(js, /streamlabsOn\('onEventReceived'/);
+  assert.match(js, /document\.addEventListener\("onLoad"/);
+  assert.match(js, /' \{title\}'/);
+  assert.match(css, /color: \{color\}/);
+  const report = converted.conversions!.streamlabs!.alerts[0];
+  assert.equal(report.status, "untested");
+  assert.ok(report.converted.some((line) => line.includes("follower-latest")));
+  assert.deepEqual(parseLabContent(converted).conversions, converted.conversions);
+  assert.deepEqual(modifiedTargets(converted, []), []);
+  const chat = convertWidgetToStreamlabs({ ...WIDGET, js: "window.addEventListener('onEventReceived', (obj) => { if (obj.detail.listener === 'message') SE_API.store.set('x', 1); });" }, {}, {});
+  assert.equal(chat.status, "manual");
+  assert.ok(chat.manual.some((line) => line.includes("messages du chat")));
+});
+
