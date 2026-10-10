@@ -21,7 +21,7 @@ export function labPlatformZip(raw: LabContent, platform: Platform): LabExportFi
   let files: Record<string, string>;
   if (content.kind === "alertbox") {
     const codes = Object.fromEntries(Object.entries(variant.alerts).map(([type, c]) => [type, { ...c, fields: parseFields(c.fields), values: fieldValues(c) }])) as Partial<Record<AlertboxAlertType, AlertboxExportCode>>;
-    files = buildAlertboxExport(codes, normalizeAlertboxConfig(jsonObject(variant.settings), platform), platform).files;
+    files = buildAlertboxExport(codes, normalizeAlertboxConfig(jsonObject(variant.settings), platform), platform, platform === PLATFORM_STREAMLABS ? content.conversions?.streamlabs : undefined).files;
   } else {
     files = buildPlatformExport({ ...variant.code, fields: parseFields(variant.code.fields) }, fieldValues(variant.code), platform).files;
   }

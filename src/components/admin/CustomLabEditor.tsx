@@ -19,6 +19,8 @@ import { MaterialIcon } from "./MaterialIcon";
 import { CustomLabActions } from "./CustomLabActions";
 import { CustomLabProjectField } from "./CustomLabProjectField";
 import { CustomLabSizedStage, CustomLabSizeField } from "./CustomLabSizedStage";
+import { CustomLabConversionReport, CustomLabConvert, openLabDrawer, REPORT_DRAWER } from "./CustomLabConvert";
+import { staleSources } from "@/lib/custom-lab/convert";
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 function download(data: BlobPart, name: string, type: string) {
@@ -33,7 +35,7 @@ const noSubscribe = () => () => {};
 // projects : noms des projets existants, proposés dans le champ « Projet »
 export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocument; projects?: string[] }) {
   const { id, revision: initialRevision } = initial;
-  const initialContent: LabContent = { name: initial.name, description: initial.description ?? "", project: initial.project, kind: initial.kind, variants: initial.variants, ...(initial.size ? { size: initial.size } : {}) };
+  const initialContent: LabContent = { name: initial.name, description: initial.description ?? "", project: initial.project, kind: initial.kind, variants: initial.variants, ...(initial.size ? { size: initial.size } : {}), ...(initial.conversions ? { conversions: initial.conversions } : {}) };
   const [content, setContent] = useState<LabContent>(initialContent);
   const [saved, setSaved] = useState(JSON.stringify(initialContent));
   const revision = useRef(initialRevision);
@@ -47,6 +49,8 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
   const [checker, setChecker] = useState(true);
   const [fieldsCollapsed, setFieldsCollapsed] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
+  // Panneau de conversion vers Streamlabs : remonté à chaque ouverture
+  const [convertKey, setConvertKey] = useState(0);
   const frame = useRef<HTMLIFrameElement>(null);
   // Aperçu créé seulement dans le navigateur : rendu côté serveur, il chargerait avant que onLoad soit branché
   // et le widget ne recevrait pas ses valeurs (onWidgetLoad)
@@ -157,7 +161,7 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
     try {
       parseLabContent(content);
       const codes = Object.fromEntries(Object.entries(variant.alerts).map(([type, c]) => [type, { ...c, fields: parseFields(c.fields), values: fieldValues(c) }])) as Partial<Record<AlertboxAlertType, AlertboxExportCode>>;
-      const result = content.kind === "alertbox" ? buildAlertboxExport(codes, normalizeAlertboxConfig(jsonObject(variant.settings), platform), platform) : buildPlatformExport({ ...code, fields: parseFields(code.fields) }, fieldValues(code), platform);
+      const result = content.kind === "alertbox" ? buildAlertboxExport(codes, normalizeAlertboxConfig(jsonObject(variant.settings), platform), platform, platform === "streamlabs" ? content.conversions?.streamlabs : undefined) : buildPlatformExport({ ...code, fields: parseFields(code.fields) }, fieldValues(code), platform);
       const bytes = createZip(result.files);
       download(new Uint8Array(bytes).buffer, `${slugifyWidgetName(content.name)}-${platform}.zip`, "application/zip");
       setStatus("Export téléchargé. Les médias doivent être accessibles sur la plateforme destinataire.");
@@ -170,6 +174,19 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
     mockStore.current = {};
     setPreview(content);
   }
+  // Conversion vers Streamlabs : la variante Streamlabs est remplacée, puis affichée avec son rapport
+  function converted(next: LabContent, target: string) {
+    setContent(next);
+    setPreview(next);
+    setPlatform("streamlabs");
+    setAlertType(target);
+    setTab("html");
+    mockStore.current = {};
+    setStatus("Version Streamlabs générée. Vérifie le rapport et teste l’alerte dans Streamlabs.");
+    openLabDrawer(REPORT_DRAWER);
+  }
+  const stale = content.kind === "alertbox" ? staleSources(content) : [];
+
   function updateField(key: string, value: unknown) {
     try {
       const data = JSON.stringify({ ...jsonObject(code.data), [key]: value }, null, 2);
@@ -191,10 +208,11 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
       <div><h1>{content.name}</h1><p>{content.kind === "alertbox" ? "Pack d’alertes" : "Widget"} · {pending ? "Enregistrement…" : dirty ? "Modifications à enregistrer" : "Enregistré"}</p></div>
       <div className="cl-actions">
         <CustomLabPlatformSwitch platform={platform} onChange={switchPlatform} />
-        <CustomLabActions id={id} kind={content.kind} name={content.name} platform={platform} dirty={dirty} onMedia={() => openLabMedia()} onExport={exportZip} onBackup={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} />
+        <CustomLabActions id={id} kind={content.kind} name={content.name} platform={platform} dirty={dirty} onMedia={() => openLabMedia()} onExport={exportZip} {...(content.kind === "alertbox" ? { onConvert: () => setConvertKey((key) => key + 1), ...(content.conversions?.streamlabs ? { onReport: () => openLabDrawer(REPORT_DRAWER) } : {}) } : {})} onBackup={() => { try { download(JSON.stringify(parseLabContent(content), null, 2), `${slugifyWidgetName(content.name)}.json`, "application/json"); } catch (error) { setStatus(String(error)); } }} />
       </div>
     </header>
     {status && <p role="status" className="cl-status">{status}</p>}
+    {platform === "streamlabs" && stale.length > 0 && <p role="status" className="cl-status">La version StreamElements a changé depuis la conversion vers Streamlabs. <button type="button" className="underline" onClick={() => openLabDrawer(REPORT_DRAWER)}>Voir le rapport</button></p>}
     <details className="cl-metadata"><summary>Nom, projet et taille</summary><div><label>Nom<input className={input} value={content.name} maxLength={120} onChange={(event) => setContent({ ...content, name: event.target.value })} /></label><label>Description<textarea className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={content.description ?? ""} maxLength={500} rows={2} onChange={(e) => setContent({ ...content, description: e.target.value })} /></label>
           <CustomLabProjectField value={content.project} projects={projects} onChange={(project) => setContent((current) => ({ ...current, project }))} /><CustomLabSizeField size={size} onChange={(next) => setContent({ ...content, size: next })} /></div></details>
     <div className={`cl-workspace ${fieldsCollapsed ? "is-collapsed" : ""}`}>
@@ -213,6 +231,8 @@ export function CustomLabEditor({ initial, projects = [] }: { initial: LabDocume
       {!fieldsCollapsed && <CustomLabFields platform={platform} alertbox={content.kind === "alertbox"} alertType={alertType} fields={editableFields.fields} values={editableFields.values} config={editableFields.config} onAlert={setAlertType} onField={updateField} onSettings={(value) => setContent((current) => ({ ...current, variants: { ...current.variants, [platform]: { ...current.variants[platform], settings: JSON.stringify(value, null, 2) } } }))} />}
     </div>
     <CustomLabMedia />
+    {content.kind === "alertbox" && <CustomLabConversionReport content={content} />}
+    {convertKey > 0 && <CustomLabConvert key={convertKey} content={content} onConverted={converted} />}
     <CustomLabSimulator platform={platform} dispatch={dispatch} onStatus={(message) => { setStatus(message); setLines((current) => [...current.slice(-99), message]); }} />
   </div>;
 }
