@@ -8,10 +8,10 @@ const dateFmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short
 const projectName = (q: ProjectQuote) => q.title || q.request["Type de demande"] || q.request.Sujet || "Demande de projet";
 const MAX = 6;
 
-// Résumé du travail en cours en haut du tableau de bord : commandes non terminées et devis à traiter
+// Résumé du travail en cours en haut du tableau de bord : commandes ni terminées ni annulées, et devis à traiter
 export function WorkInProgress({ orders, quotes }: { orders: Order[]; quotes: ProjectQuote[] }) {
   const active = orders
-    .filter((o) => o.status !== "terminee")
+    .filter((o) => o.status !== "terminee" && o.status !== "annulee")
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const open = quotes
     .filter((q) => q.status === "demande" || (q.status === "propose" && !quoteExpired(q)))
