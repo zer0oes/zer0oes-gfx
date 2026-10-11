@@ -1,10 +1,16 @@
 import { ArchiveDownload } from "@/components/ArchiveDownload";
+import { InstallLinks } from "@/components/InstallLinks";
 import { ApproveAllButton } from "@/components/ApproveAllButton";
 import { QuoteBrief } from "@/components/QuoteBrief";
+import { CancelOrder } from "@/components/CancelOrder";
+import { canCancelOrder, cancellationStarted } from "@/lib/order-cancellation";
+import { refundedTotal } from "@/lib/refunds";
 import { syncQuotePayment } from "@/lib/orders";
 import { DeliverableCard } from "@/components/DeliverableCard";
 import { allFinalsAccessed, hasFinalAccess } from "@/lib/final-downloads";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { site } from "@/data/site";
 import { notFound } from "next/navigation";
 import { OrderPreview } from "@/components/OrderPreview";
 import { ClientTestimonialForm } from "@/components/ClientTestimonialForm";
@@ -369,7 +375,7 @@ function Item({
             {expired ? (
               <span className="text-sm text-muted">{tx.archived}</span>
             ) : state === "debloque" && d.finalAssets?.length ? (
-              <div className="ml-auto flex flex-wrap justify-end gap-2">{d.finalAssets.map((asset, index) => <a key={index} href={`/commande/${token}/${d.id}?asset=${index}`} target={asset.url ? "_blank" : undefined} rel={asset.url ? "noopener noreferrer" : undefined} className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background"><DownloadIcon />{asset.label}</a>)}</div>
+              <div className="ml-auto flex flex-wrap justify-end gap-2">{d.finalAssets.map((asset, index) => asset.install ? null : <a key={index} href={`/commande/${token}/${d.id}?asset=${index}`} target={asset.url ? "_blank" : undefined} rel={asset.url ? "noopener noreferrer" : undefined} className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background"><DownloadIcon />{asset.label}</a>)}</div>
             ) : state === "debloque" && !d.storagePath && !d.url ? (
               <span className="text-sm text-muted">{locale === "en" ? "Final files are being prepared." : "Les fichiers finaux sont en préparation."}</span>
             ) : state === "debloque" ? (
@@ -387,6 +393,11 @@ function Item({
             )}
           </div>
         )}
+
+        {/* Liens d'installation (Streamlabs, StreamElements) : débloqués comme les fichiers définitifs */}
+        {state === "debloque" && !expired && d.finalAssets?.some((asset) => asset.install) ? (
+          <InstallLinks token={token} deliverableId={d.id} locale={locale} assets={d.finalAssets.flatMap((asset, index) => (asset.install ? [{ index, label: asset.label, install: asset.install, hasUrl: Boolean(asset.url), hasCode: Boolean(asset.code) }] : []))} />
+        ) : null}
 
         <div className="flex flex-wrap items-start gap-x-5 gap-y-2">
           {d.approvedAt && cancellable && (
@@ -443,6 +454,34 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
   const store = getStore();
   let order = await store.getOrderByDeliveryToken(token);
   if (!order) notFound();
+  if (cancellationStarted(order)) {
+    const en = locale === "en";
+    const cancelled = order.status === "annulee";
+    return <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+      <header className="mb-8 text-center">
+        <p className={`mb-3 text-xs font-semibold uppercase tracking-widest ${cancelled ? "text-rose-300" : "text-amber-300"}`}>{en ? "Your order" : "Ta commande"} · {cancelled ? (en ? "Cancelled" : "Annulée") : (en ? "Cancellation in progress" : "Annulation en cours")}</p>
+        <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{cancelled ? (en ? "Your cancellation is confirmed" : "Ton annulation est confirmée") : (en ? "We’re processing your cancellation" : "Ton annulation est en cours")}</h1>
+        <p className="mx-auto mt-4 max-w-xl leading-relaxed text-muted">{cancelled ? (en ? "Your order is closed. Creation has stopped and your refund has been submitted to Stripe." : "Ta commande est clôturée. La création est arrêtée et ton remboursement a été transmis à Stripe.") : (en ? "Creation is paused while your cancellation is being completed." : "La création est suspendue pendant la finalisation de ton annulation.")}</p>
+      </header>
+      <section aria-label={en ? "Cancellation details" : "Détails de l’annulation"} className="overflow-hidden rounded-2xl border border-border bg-surface">
+        <div className="p-6 sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted">{en ? "Ordered creation" : "Création commandée"}</p>
+          <h2 className="mt-2 font-display text-xl font-bold">{trOfferName(locale, order.offerName)}</h2>
+          <p className="mt-2 text-sm text-muted">{en ? "Ordered on" : "Commandée le"} {new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "long" }).format(new Date(order.createdAt))}</p>
+        </div>
+        <div className="border-t border-border p-6 sm:p-8">
+          <p className="text-sm text-muted">{cancelled ? (en ? "Refund submitted to Stripe" : "Remboursement transmis à Stripe") : (en ? "Amount to refund" : "Montant à rembourser")}</p>
+          <p className="mt-2 font-display text-3xl font-bold">{formatPrice(cancelled ? refundedTotal(order.refunds) : Math.max(0, order.amountPaid - refundedTotal(order.refunds)), locale)}</p>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">{en ? "The refund goes back to your original payment method. The time it takes to appear on your account depends on your bank." : "Le remboursement revient sur ton moyen de paiement d’origine. Le délai d’apparition sur ton compte dépend de ta banque."}</p>
+          {!cancelled && <div className="mt-5"><CancelOrder token={token} amount={Math.max(0, order.amountPaid - refundedTotal(order.refunds))} locale={locale} /></div>}
+        </div>
+      </section>
+      <div className="mt-7 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+        <a href={`mailto:${site.email}`} className="text-sm text-muted underline underline-offset-4 hover:text-foreground">{en ? "A question about your refund?" : "Une question sur ton remboursement ?"}</a>
+        <Link href={href(locale, "/")} className="ml-auto rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background transition hover:brightness-110">{en ? "Back to the website" : "Retour au site"}</Link>
+      </div>
+    </div>;
+  }
   order = await syncQuotePayment(order);
   const projectQuote = order.packId === "sur-mesure" ? await store.getQuoteByToken(token) : null;
   const items = await store.listDeliverables(order.id);
@@ -543,6 +582,10 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
               {tx.fillBrief}
             </a>
           )}
+          {/* Annulation possible tant que la création n'a pas commencé */}
+          {canCancelOrder(order, items) && <div className="-mx-4 mt-4 border-t border-border px-4 pt-4 sm:-mx-5 sm:px-5">
+            <CancelOrder token={token} amount={Math.max(0, order.amountPaid - refundedTotal(order.refunds))} locale={locale} />
+          </div>}
         </section>
 
         {downloadsLockedByBalance && !progress.complete && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-400/10 p-4">

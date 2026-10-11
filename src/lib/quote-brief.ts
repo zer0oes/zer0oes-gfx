@@ -12,11 +12,11 @@ export const defaultQuoteRequiredFields = ["email", "channel", "universe"];
 
 export function parseQuoteBrief(data: FormData, deliverables: string[], optional: string[] = [], required: string[] = ["universe"]) {
   const field = (name: string, max = 5000) => String(data.get(name) ?? "").trim().slice(0, max);
-  if (required.some((name) => !field(name))) return null;
+  if (required.some((name) => !field(name) && !(name === "elements" && deliverables.length > 0))) return null;
   if (field("email") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field("email"))) return null;
   const brief: Record<string, string> = { Pseudo: field("pseudo", 200), Chaîne: field("channel", 500),
     "Univers / ambiance": field("universe"), Couleurs: field("colors", 500),
-    Références: field("references"), "Logo existant": field("logoLink", 1000),
+    Références: field("references"), "Éléments à inclure": field("elements"), "Logo existant": field("logoLink", 1000),
     "Date souhaitée": field("deadline", 100), Remarques: field("notes") };
   for (const [i, label] of deliverables.entries()) {
     const description = field(`creation_${i}`);

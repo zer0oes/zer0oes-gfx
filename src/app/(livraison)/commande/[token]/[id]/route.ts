@@ -1,6 +1,7 @@
 import { isDeliveryToken, downloadFilename, unlockState, previewPublished } from "@/lib/delivery";
 import { filesExpired } from "@/lib/portal";
 import { getStore } from "@/lib/store";
+import { installAccessKey } from "@/lib/install-links";
 
 // Fichier final ou lien d'import d'un élément livré. Servi UNIQUEMENT si l'élément est
 // validé par le client et le solde réglé : le lien réel n'apparaît jamais dans la page avant.
@@ -32,7 +33,12 @@ export async function GET(request: Request, { params }: RouteContext<"/commande/
     if (!/^\d+$/.test(assetIndex)) return notFound();
     const asset = item.finalAssets?.[Number(assetIndex)];
     if (!asset) return notFound();
-    if (asset.url) return deliver(Response.redirect(asset.url, 302), asset.url);
+    // Code d'installation StreamElements (c4ldas) : renvoyé seulement à la demande, une fois l'élément débloqué
+    if (new URL(request.url).searchParams.get("code") === "1") {
+      if (asset.install !== "streamelements" || !asset.code) return notFound();
+      return deliver(new Response(JSON.stringify({ code: asset.code }), { headers: { ...headers, "Content-Type": "application/json" } }), installAccessKey(asset));
+    }
+    if (asset.url) return deliver(Response.redirect(asset.url, 302), asset.install ? installAccessKey(asset) : asset.url);
     if (!asset.path || !asset.path.startsWith(`${order.id}/`)) return notFound();
     if (store.deliverableDownloadUrl) return deliver(Response.redirect(await store.deliverableDownloadUrl(asset.path, downloadFilename(asset.label, asset.path)), 302), asset.path);
     if (store.readDeliverableFile) return deliver(new Response(Buffer.from(await store.readDeliverableFile(asset.path)), { headers: { ...headers, "Content-Type": "application/octet-stream", "Content-Disposition": `attachment; filename="${downloadFilename(asset.label, asset.path)}"` } }), asset.path);

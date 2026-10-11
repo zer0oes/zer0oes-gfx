@@ -14,7 +14,7 @@ export function OrderStatusSelect({ orderId, status }: { orderId: string; status
   return <div className="flex flex-col items-end gap-2">
     <div className="flex flex-wrap items-center justify-end gap-3">
       <label htmlFor={id} className="sr-only">Modifier le statut</label>
-      <select id={id} value={selected} disabled={pending} onChange={(event) => {
+      <select id={id} value={selected} disabled={pending || status === "annulee" || status === "annulation_en_cours"} onChange={(event) => {
         const next = event.target.value;
         if (!isOrderStatus(next)) return;
         const previous = selected;
@@ -34,7 +34,7 @@ export function OrderStatusSelect({ orderId, status }: { orderId: string; status
           }
         });
       }} className="rounded-lg border border-border bg-background px-3 py-2 text-sm disabled:opacity-60">
-        {orderStatuses.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+        {orderStatuses.map((item) => <option key={item.id} value={item.id} disabled={item.id === "annulee" || item.id === "annulation_en_cours"}>{item.label}</option>)}
       </select>
     </div>
     <p role="status" className="text-xs text-muted">{pending ? "Enregistrement…" : message}</p>

@@ -9,6 +9,7 @@ import { notify, sendToCustomer } from "@/lib/notify";
 import { siteUrl } from "@/lib/site-url";
 import { s3Configured, s3DeliverableDelete, s3DeliverableUpload } from "@/lib/s3";
 import { getStore } from "@/lib/store";
+import { checkInstallCode, INSTALL_LABELS, isInstallPlatform } from "@/lib/install-links";
 
 async function refreshDeliveryPages(orderId: string) {
   revalidatePath(`/admin/commandes/${orderId}`);
@@ -52,6 +53,31 @@ export async function addDeliveryLinkAction(formData: FormData) {
   } else await getStore().addDeliverable({ orderId, kind: "lien", label, url });
   await refreshDeliveryPages(orderId);
   back(orderId, { ok: "Lien ajouté." });
+}
+
+// Lien d'installation d'un widget ou pack d'alertes : lien d'importation Streamlabs, ou code de partage c4ldas
+// StreamElements (lien de partage facultatif). Ajouté aux fichiers définitifs, débloqués après validation et paiement.
+export async function addInstallLinkAction(formData: FormData) {
+  await requireAdmin();
+  const orderId = text(formData, "orderId", 60);
+  const targetId = text(formData, "targetId", 60);
+  const platform = text(formData, "platform", 20);
+  if (!isInstallPlatform(platform)) back(orderId, { error: "Choisis Streamlabs ou StreamElements." });
+  const rawUrl = text(formData, "url", 2000);
+  const url = rawUrl ? checkDeliveryLink(rawUrl) : null;
+  if (rawUrl && !url) back(orderId, { error: "Le lien doit commencer par https://." });
+  const rawCode = text(formData, "code", 200);
+  const code = rawCode ? checkInstallCode(rawCode) : null;
+  if (rawCode && !code) back(orderId, { error: "Code de partage invalide : lettres, chiffres, tirets uniquement." });
+  if (platform === "streamlabs" && !url) back(orderId, { error: "Colle le lien d'importation Streamlabs du Widget Theme." });
+  if (platform === "streamelements" && !code) back(orderId, { error: "Colle le code de partage c4ldas StreamElements." });
+  const store = getStore();
+  const item = (await store.listDeliverables(orderId)).find((d) => d.id === targetId);
+  if (!item) back(orderId, { error: "Livrable introuvable." });
+  const label = text(formData, "label", 120) || INSTALL_LABELS[platform].fr;
+  await store.updateDeliverable(item.id, { finalAssets: [...(item.finalAssets ?? []), { label, install: platform, ...(url ? { url } : {}), ...(platform === "streamelements" && code ? { code } : {}) }] });
+  await refreshDeliveryPages(orderId);
+  back(orderId, { ok: platform === "streamlabs" ? "Lien d'installation Streamlabs ajouté." : "Code d'installation StreamElements ajouté." });
 }
 
 export type DeliveryUploadTicket =

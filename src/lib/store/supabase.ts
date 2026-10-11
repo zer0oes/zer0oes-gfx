@@ -632,6 +632,11 @@ export const supabaseStore: Store = {
     }
   },
 
+  async claimOrderCancellation(order) {
+    const rows = check(await db().from("orders").update({ status: "annulation_en_cours", updated_at: new Date().toISOString() }).eq("id", order.id).eq("updated_at", order.updatedAt).in("status", ["payee", "brief_attente", "brief_recu"]).select("id")) as Row[];
+    return rows.length === 1;
+  },
+
   async reviewBriefRevision(order, at, state) {
     const now = new Date().toISOString();
     const revisions = reviewedRevisions(order.briefRevisions ?? [], at, state, now);

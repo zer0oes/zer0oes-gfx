@@ -1,6 +1,8 @@
 import { statusLabel, type OrderStatus } from "@/lib/store/types";
 
 const tone: Record<OrderStatus, string> = {
+  annulation_en_cours: "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  annulee: "border-rose-500/40 bg-rose-500/10 text-rose-300",
   payee: "border-sky-500/40 bg-sky-500/10 text-sky-200",
   brief_attente: "border-amber-500/40 bg-amber-500/10 text-amber-200",
   brief_recu: "border-violet-500/40 bg-violet-500/10 text-violet-200",
