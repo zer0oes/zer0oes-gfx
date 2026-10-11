@@ -36,3 +36,13 @@ test("livraison : page HTML autonome d'un overlay", () => {
   // le document du widget est posé par le script, après le branchement de l'écoute du chargement
   assert.ok(!/<iframe[^>]*srcdoc=/.test(html));
 });
+
+test("livraison : calque icône dessiné en SVG, couleur nettoyée", () => {
+  const base = { ...DEFAULT_OVERLAY, items: [] };
+  const icon = { ...createItem(base, "image"), props: { icon: "favorite", iconColor: '#ff0000"><script>' } };
+  const unknown = { ...createItem(base, "image"), props: { icon: "inconnue" } };
+  const html = new TextDecoder().decode(labOverlayHtml({ ...newLabContent("overlay"), name: "Icônes", overlay: { ...base, items: [icon, unknown] } }, {}).data);
+  assert.match(html, /<svg [^>]*viewBox="0 0 24 24"[^>]*><path fill="#ff0000script"/);
+  assert.ok(!html.includes("<script>alert"));
+  assert.equal((html.match(/<svg /g) ?? []).length, 1);
+});

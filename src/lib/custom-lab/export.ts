@@ -3,6 +3,7 @@
 import { normalizeAlertboxConfig, type AlertboxAlertType } from "./alertbox";
 import { fieldValues, jsonObject, parseFields, parseLabContent } from "./model";
 import { DEFAULT_OVERLAY, type OverlayItem } from "./overlay";
+import { isOverlayIcon, overlayIconSvg } from "./icons";
 import { PLATFORM_STREAM_ELEMENTS, PLATFORM_STREAMLABS, type Platform } from "./platformEvents";
 import { buildLabPreview, labLoadMessage } from "./preview";
 import { widgetInstance } from "./widget-instance";
@@ -61,6 +62,7 @@ function itemHtml(item: OverlayItem, sources: Record<string, LabContent>, platfo
     return `<div class="txt" style="${esc(style)}">${esc(p.content)}</div>`;
   }
   const fit = (fallback: string) => (["contain", "cover", "fill"].includes(String(p.fit)) ? String(p.fit) : fallback);
+  if (item.type === "image" && isOverlayIcon(p.icon)) return overlayIconSvg(p.icon, esc(css(p.iconColor || "#ffffff")));
   if (item.type === "image") return src(p.src) ? `<img src="${src(p.src)}" alt="" style="object-fit:${fit("contain")}">` : "";
   if (item.type === "video") return src(p.src) ? `<video src="${src(p.src)}" autoplay playsinline${p.loop !== false ? " loop" : ""}${p.muted !== false ? " muted" : ""} style="object-fit:${fit("cover")}"></video>` : "";
   if (item.type === "shape") {

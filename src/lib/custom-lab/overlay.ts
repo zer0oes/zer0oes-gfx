@@ -14,12 +14,16 @@ export type OverlayItem = {
   z: number;
   hidden?: boolean;
   locked?: boolean;
+  // Groupe : les calques qui partagent cet identifiant se sélectionnent et se déplacent ensemble
+  group?: string;
   // widget : identifiant de la création (widget ou pack d'alertes) affichée dans ce calque
   widgetId?: string;
   props: Record<string, unknown>;
 };
 
-export type OverlayData = { width: number; height: number; items: OverlayItem[] };
+// Repères posés depuis les règles (positions en px de la scène) : x = verticaux, y = horizontaux
+export type OverlayGuides = { x: number[]; y: number[] };
+export type OverlayData = { width: number; height: number; items: OverlayItem[]; guides?: OverlayGuides };
 
 export const OVERLAY_TYPES: OverlayItemType[] = ["text", "image", "video", "shape", "widget"];
 export const MIN_ITEM_SIZE = 8;
@@ -35,6 +39,8 @@ export const ITEM_DEFAULTS: Record<OverlayItemType, { w: number; h: number; prop
 };
 
 export const ITEM_LABELS: Record<OverlayItemType, string> = { text: "Texte", image: "Image", video: "Vidéo", shape: "Forme", widget: "Widget" };
+
+export const MAX_GUIDES = 50;
 
 export function newItemId() {
   return `it-${Math.random().toString(36).slice(2, 10)}`;
@@ -70,12 +76,14 @@ export function itemLabel(item: OverlayItem, widgetName?: (id: string) => string
 
 // --- Aimantation ---------------------------------------------------------------------
 
-// Repères d'un axe : bords et centre de la scène, bords et centres des autres calques visibles
-export function snapTargets(data: OverlayData, axis: "x" | "y", exclude: string) {
+// Repères d'un axe : bords et centre de la scène, bords et centres des autres calques visibles,
+// et repères posés depuis les règles (withGuides)
+export function snapTargets(data: OverlayData, axis: "x" | "y", exclude: string | string[], withGuides = false) {
   const size = axis === "x" ? data.width : data.height;
-  const targets = [0, size / 2, size];
+  const excluded = Array.isArray(exclude) ? exclude : [exclude];
+  const targets = [0, size / 2, size, ...(withGuides ? data.guides?.[axis] ?? [] : [])];
   for (const it of data.items) {
-    if (it.id === exclude || it.hidden) continue;
+    if (excluded.includes(it.id) || it.hidden) continue;
     const start = axis === "x" ? it.x : it.y;
     const len = axis === "x" ? it.w : it.h;
     targets.push(start, start + len / 2, start + len);
@@ -93,6 +101,21 @@ export function snapPosition(pos: number, len: number, targets: number[], thresh
     }
   }
   return best ? { pos: Math.round(pos + best.delta), guide: best.guide } : { pos: Math.round(pos), guide: null };
+}
+
+// Rectangle englobant des calques donnés
+export function itemsBounds(items: OverlayItem[]) {
+  const x = Math.min(...items.map((it) => it.x));
+  const y = Math.min(...items.map((it) => it.y));
+  return { x, y, w: Math.max(...items.map((it) => it.x + it.w)) - x, h: Math.max(...items.map((it) => it.y + it.h)) - y };
+}
+
+// Repère déplacé depuis une règle : attiré par le repère le plus proche (centre de la scène, ou bords et centre
+// de la sélection), comme dans Photoshop
+export function snapGuide(pos: number, targets: number[], threshold: number) {
+  let best: number | null = null;
+  for (const t of targets) if (Math.abs(t - pos) <= threshold && (best === null || Math.abs(t - pos) < Math.abs(best - pos))) best = t;
+  return Math.round(best ?? pos);
 }
 
 // --- Lecture et vérification ------------------------------------------------------------
@@ -120,9 +143,13 @@ export function parseOverlay(raw: unknown): OverlayData {
       z: num(it.z, 0, 100_000, 0),
       ...(it.hidden === true ? { hidden: true } : {}),
       ...(it.locked === true ? { locked: true } : {}),
+      ...(typeof it.group === "string" && /^[\w-]{1,40}$/.test(it.group) ? { group: it.group } : {}),
       ...(type === "widget" && typeof it.widgetId === "string" && /^[0-9a-f-]{36}$/i.test(it.widgetId) ? { widgetId: it.widgetId } : {}),
       props,
     }];
   });
-  return { width, height, items };
+  const g = o.guides && typeof o.guides === "object" && !Array.isArray(o.guides) ? (o.guides as Record<string, unknown>) : null;
+  const axis = (v: unknown, size: number) => (Array.isArray(v) ? v : []).filter((n): n is number => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= size).slice(0, MAX_GUIDES).map(Math.round);
+  const guides = g ? { x: axis(g.x, width), y: axis(g.y, height) } : null;
+  return { width, height, items, ...(guides && (guides.x.length || guides.y.length) ? { guides } : {}) };
 }
