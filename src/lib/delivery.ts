@@ -156,6 +156,11 @@ export function unlockState(order: { totalPrice: number; amountPaid: number }, d
   return order.totalPrice - order.amountPaid > 0 ? "solde_a_regler" : "debloque";
 }
 
+// Livrable ajouté à la main sans fichier principal (vide, ou fichiers du Laboratoire) : clé « prévue » propre,
+// pour respecter la contrainte de la base et attendre son aperçu comme un livrable du plan de l'offre
+export const MANUAL_KEY_PREFIX = "ajout-";
+export const manualPlannedKey = () => `${MANUAL_KEY_PREFIX}${globalThis.crypto.randomUUID().slice(0, 8)}`;
+
 export function previewPublished(item: { plannedKey?: string; publishedAt?: string; approvedAt?: string }) {
   return !item.plannedKey || Boolean(item.publishedAt);
 }

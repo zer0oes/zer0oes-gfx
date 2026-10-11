@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { checkDeliveryLink, DELIVERABLE_MAX_BYTES, deliverablePath, pendingPreview, previewsEmail, isDeliverableType, mediaKind, newDeliveryToken, deliveryLocked, deliveryLockedMessage } from "@/lib/delivery";
+import { checkDeliveryLink, DELIVERABLE_MAX_BYTES, deliverablePath, pendingPreview, previewsEmail, isDeliverableType, mediaKind, newDeliveryToken, deliveryLocked, deliveryLockedMessage, manualPlannedKey } from "@/lib/delivery";
 import { notify, sendToCustomer } from "@/lib/notify";
 import { siteUrl } from "@/lib/site-url";
 import { s3Configured, s3DeliverableDelete, s3DeliverableUpload } from "@/lib/s3";
@@ -64,7 +64,7 @@ export async function addEmptyDeliverableAction(input: { orderId: string; label:
   const order = await store.getOrder(input.orderId);
   if (!order) return { error: "Commande introuvable." };
   if (deliveryLocked(order, await store.listDeliverables(order.id))) return { error: deliveryLockedMessage };
-  await store.addDeliverable({ orderId: order.id, kind: "fichier", label, finalAssets: [] });
+  await store.addDeliverable({ orderId: order.id, kind: "fichier", plannedKey: manualPlannedKey(), label, finalAssets: [] });
   await refreshDeliveryPages(order.id);
   return {};
 }

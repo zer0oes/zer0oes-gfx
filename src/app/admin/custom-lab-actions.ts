@@ -9,7 +9,7 @@ import { deleteLabDocument, getLabDocument, LabConflictError, listLabDocuments, 
 import { labPlatformZip, type LabExportFile } from "@/lib/custom-lab/export";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
 import type { LabContent } from "@/lib/custom-lab/types";
-import { deliverablePath, deliveryLocked } from "@/lib/delivery";
+import { deliverablePath, deliveryLocked, manualPlannedKey } from "@/lib/delivery";
 import { s3Configured, s3DeliverableDelete } from "@/lib/s3";
 import { getStore } from "@/lib/store";
 import { orderStatuses } from "@/lib/store/types";
@@ -224,7 +224,7 @@ export async function deliverLabAction(input: { id: string; orderId: string; tar
     // Anciens fichiers remplacés : retirés du stockage s'ils ne servent plus (aperçu, autre fichier)
     if (s3Configured()) for (const p of replaced) if (p !== target.previewPath && p !== target.storagePath && !assets.some((a) => a.path === p)) await s3DeliverableDelete(p).catch((e) => console.error(e));
   } else {
-    await store.addDeliverable({ orderId: order.id, kind: "fichier", label: name, itemType: document.kind === "alertbox" ? "alerte" : document.kind, finalAssets: uploaded });
+    await store.addDeliverable({ orderId: order.id, kind: "fichier", plannedKey: manualPlannedKey(), label: name, itemType: document.kind === "alertbox" ? "alerte" : document.kind, finalAssets: uploaded });
   }
   revalidatePath(`/admin/commandes/${order.id}`);
   revalidatePath("/admin/commandes");
