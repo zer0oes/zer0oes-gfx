@@ -65,7 +65,9 @@ export function formatBytes(n?: number) {
 export function deliveryEmail({ offerName, url, links, files }: { offerName: string; url: string; links: number; files: number }) {
   const parts = [links ? `${links} lien${links > 1 ? "s" : ""} d'import` : "", files ? `${files} fichier${files > 1 ? "s" : ""}` : ""].filter(Boolean);
   return {
-    subject: `Ta livraison zer0oes gfx est prête — ${offerName}`,
+    subject: `Ta livraison est prête — ${offerName}`,
+    eyebrow: "Livraison prête !",
+    heading: offerName,
     text: [
       "Bonjour,",
       "",
@@ -174,22 +176,21 @@ export function deliveryProgress(items: { approvedAt?: string }[]) {
 }
 
 // E-mail de confirmation de commande avec le lien de l'espace commande
-export function portalEmail({ offerName, url, briefUrl }: { offerName: string; url: string; briefUrl?: string }) {
+export function portalEmail({ offerName, url }: { offerName: string; url: string }) {
   return {
-    subject: `Ta commande zer0oes gfx est confirmée — ${offerName}`,
+    subject: `Ta commande est confirmée — ${offerName}`,
+    eyebrow: "Commande confirmée",
+    heading: offerName,
     text: [
       "Bonjour,",
       "",
       `Merci pour ta commande « ${offerName} » !`,
       "",
-      ...(briefUrl ? ["Pour lancer la création, remplis ton brief ici :", briefUrl, "", "Tu y retrouveras le rappel de ton pack et des options sélectionnées.", ""] : []),
-      "Tu peux suivre ton projet à tout moment depuis ton espace commande privé :",
+      "Tout est réuni dans ton espace commande privé :",
       url,
       "",
-      "Tu y retrouveras les étapes (brief, création, validation, solde, livraison), tes paiements, puis les aperçus à valider et tes fichiers définitifs.",
-      "Garde ce lien pour toi : il donne accès à ta commande, sans mot de passe.",
-      "",
-      ...(briefUrl ? [] : ["Si ce n'est pas déjà fait, remplis ton brief pour que je puisse commencer."]),
+      "Pour lancer la création, ouvre ta commande et clique sur « Remplir mon brief ».",
+      "Tu y retrouveras ton pack et les options sélectionnées, le suivi de ton projet, tes paiements, puis les aperçus à valider et tes fichiers définitifs.",
       "",
       "À très vite,",
       "Aurore — zer0oes gfx",

@@ -1,7 +1,9 @@
 import { ZipArchive } from "archiver";
 import { Readable } from "node:stream";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { isDeliveryToken, downloadFilename } from "@/lib/delivery";
-import { canDownloadArchive, archiveEntries } from "@/lib/order-archive";
+import { canDownloadArchive, archiveEntries, archiveGuides } from "@/lib/order-archive";
 import { filesExpired } from "@/lib/portal";
 import { getStore } from "@/lib/store";
 
@@ -19,8 +21,12 @@ export async function GET(_request: Request, { params }: RouteContext<"/commande
   if (filesExpired(order)) return new Response("Fichiers archivés.", { status: 410, headers });
   if (!canDownloadArchive(order, items)) return new Response("Validation et paiement intégral requis.", { status: 403, headers });
   if (!store.readDeliverableFile) return missing();
-  const entries = archiveEntries(order.id, items);
+  const guides = archiveGuides(items);
+  // Lire avant de commencer le flux : un guide manquant ne doit pas livrer un ZIP incomplet.
+  const guideFiles = await Promise.all(guides.map(async (name) => ({ name, data: await readFile(path.join(process.cwd(), "public", name)) })));
+  const entries = archiveEntries(order.id, items, guides);
   const archive = new ZipArchive({ zlib: { level: 1 } });
+  for (const guide of guideFiles) archive.append(guide.data, { name: guide.name });
   for (const entry of entries) {
     const read = store.readDeliverableFile;
     const source = Readable.from((async function* () {

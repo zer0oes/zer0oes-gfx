@@ -44,5 +44,17 @@ test("admin URL becomes an Outlook-compatible button while other links remain co
   assert.ok(html.includes('href="https://example.com/admin/devis/123"'));
   assert.ok(!html.includes('>ADMINISTRATION</p>'));
   assert.ok(!html.includes('>CHAÎNE</p>'));
-  assert.ok(html.includes('href="https://example.com/portfolio"'));
+  assert.ok(html.includes('https://example.com/portfolio'));
+  assert.ok(!html.includes('href="https://example.com/portfolio"'));
+});
+
+test("brief notification links to the admin order and keeps the channel in the details", () => {
+  const html = adminEmailHtml('[Brief] Client', {
+    Chaîne: 'https://www.twitch.tv/client',
+    Administration: 'https://example.com/admin/commandes/order-123',
+  });
+  assert.ok(html.includes('href="https://example.com/admin/commandes/order-123"'));
+  assert.ok(html.includes('Ouvrir dans l’admin'));
+  assert.ok(html.includes('https://www.twitch.tv/client'));
+  assert.ok(!html.includes('href="https://www.twitch.tv/client"'));
 });

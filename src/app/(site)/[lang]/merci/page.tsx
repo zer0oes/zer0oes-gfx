@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BriefForm } from "@/components/BriefForm";
 import { PageHeader } from "@/components/ui";
-import { quote, quoteFromMetadata } from "@/lib/orders";
+import { quote, quoteFromMetadata, syncCheckoutOrder } from "@/lib/orders";
 import { asLocale, href, t } from "@/lib/i18n";
 import { depositAmount, formatPrice, paymentLabel, type PaymentType } from "@/lib/pricing";
 import { getStore } from "@/lib/store";
@@ -61,7 +61,7 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
 
   // 1. Commande enregistrée (webhook Stripe ou démo)
   let view: View | null = null;
-  const order = sessionId ? await store.getOrderBySession(sessionId).catch(() => null) : null;
+  const order = sessionId ? await syncCheckoutOrder(sessionId).catch(() => null) : null;
   // Espace commande privé : lien créé à l'enregistrement de la commande (webhook ou démo)
   const portal = order?.deliveryToken ?? null;
   const briefReceived = Boolean(order?.briefReceivedAt || order?.brief);
