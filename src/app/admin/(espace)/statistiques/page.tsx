@@ -58,7 +58,7 @@ export default async function StatsPage({ searchParams }: PageProps<"/admin/stat
   const delta = (current: number, prior: number, unit: string) => canCompare
     ? `${current - prior > 0 ? "+" : ""}${nf(current - prior)} ${unit} sur ${duration} jours`
     : undefined;
-  const points = s.points.filter((p) => p.start <= today);
+  const points = s.points;
   const selectedDay = selectedStatsDay(search.jour, period, today);
   const detail = selectedDay ? summarize(events, { start: selectedDay, end: selectedDay }) : s;
   const periodQuery = query(period);
@@ -145,7 +145,7 @@ export default async function StatsPage({ searchParams }: PageProps<"/admin/stat
               <p><strong className="text-lg tabular-nums">{nf(s.views)}</strong> pages vues <span className="text-muted">· {s.visitors ? (s.views / s.visitors).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) : "—"} par visiteur cumulé</span></p>
               <p><strong className="text-lg tabular-nums">{nf(s.clicks)}</strong> clics sur les liens et boutons</p>
             </div>
-            {points.length ? <VisitsChart points={points} dayHref={periodHref} selectedDay={selectedDay} /> : <p className="py-12 text-center text-sm text-muted">Cette période n’a pas encore commencé.</p>}
+            <VisitsChart points={points} dayHref={periodHref} selectedDay={selectedDay} today={today} />
             {points.some((p) => p.start === p.end) && <p className="mt-3 text-sm text-muted">Clique sur une journée pour afficher son détail ci-dessous, même sans visite.</p>}
           </ChartCard>
         </div>
@@ -158,28 +158,28 @@ export default async function StatsPage({ searchParams }: PageProps<"/admin/stat
             {hasElapsed && <form action="/admin/statistiques" className="flex flex-wrap items-end gap-2">
               {Array.from(new URLSearchParams(periodQuery)).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
               <DatePicker key={`${period.start}-${selectedDay ?? end}`} name="jour" label="Choisir un jour" locale="fr" min={period.start} max={end} defaultValue={selectedDay ?? end} required compact />
-              <button className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-background" type="submit">Filtrer</button>
+              <button className="min-h-11 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-background" type="submit">Filtrer</button>
             </form>}
             {selectedDay && <Link href={periodHref} scroll={false} className="text-sm text-accent underline underline-offset-4">Toute la période</Link>}
           </div>
         </section>
-        <ChartCard id="pages" title="Pages les plus vues" description="Part du total des pages vues pour la sélection.">
-          <RankList items={detail.pages} total={detail.views} limit={5} empty="Aucune visite pour cette sélection." />
-        </ChartCard>
-        <div className="grid content-start gap-6">
-        <ChartCard id="sources" title="Provenance" description="D'où arrivent les visiteurs (réseau, moteur de recherche, lien direct…).">
-          <RankList items={detail.sources} total={detail.visitors} empty="Aucune visite pour cette sélection." color="var(--accent-3)" />
-          <p className="mt-4 text-sm text-muted">Accès direct : lien saisi, favori ou source non identifiée. Les liens avec utm_source permettent d’identifier tes campagnes.</p>
-        </ChartCard>
+        <div className="grid min-w-0 content-start gap-6">
+          <ChartCard id="pages" title="Pages les plus vues" description="Part du total des pages vues pour la sélection.">
+            <RankList items={detail.pages} total={detail.views} limit={5} empty="Aucune visite pour cette sélection." />
+          </ChartCard>
+          <ChartCard id="clics" title="Clics" description="Boutons et liens les plus cliqués (↗ : lien vers un autre site).">
+            <RankList items={detail.clickTargets} total={detail.clicks} limit={5} empty="Aucun clic pour cette sélection." color="var(--accent)" />
+            <p className="mt-4 text-sm text-muted">Pourcentages calculés sur les {nf(detail.clicks)} clics de la sélection.</p>
+          </ChartCard>
+        </div>
+        <div className="grid min-w-0 content-start gap-6">
+          <ChartCard id="sources" title="Provenance" description="D'où arrivent les visiteurs (réseau, moteur de recherche, lien direct…).">
+            <RankList items={detail.sources} total={detail.visitors} empty="Aucune visite pour cette sélection." color="var(--accent-3)" />
+            <p className="mt-4 text-sm text-muted">Accès direct : lien saisi, favori ou source non identifiée. Les liens avec utm_source permettent d’identifier tes campagnes.</p>
+          </ChartCard>
           <ChartCard id="appareils" title="Appareils" description="Répartition des visiteurs cumulés dont l’appareil est connu.">
             <RankList items={detail.devices} empty="Aucune visite pour cette sélection." />
           </ChartCard>
-        </div>
-        <ChartCard id="clics" title="Clics" description="Boutons et liens les plus cliqués (↗ : lien vers un autre site).">
-          <RankList items={detail.clickTargets} total={detail.clicks} limit={5} empty="Aucun clic pour cette sélection." color="var(--accent)" />
-          <p className="mt-4 text-sm text-muted">Pourcentages calculés sur les {nf(detail.clicks)} clics de la sélection.</p>
-        </ChartCard>
-        <div className="grid content-start gap-6">
           <ChartCard id="formulaires" title="Formulaires envoyés">
             <RankList items={detail.formsByType} empty="Aucun formulaire envoyé pour cette sélection." color="var(--accent-3)" />
           </ChartCard>
