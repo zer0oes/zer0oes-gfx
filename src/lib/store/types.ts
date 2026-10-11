@@ -30,6 +30,8 @@ export const orderStatuses = [
   { id: "livree", label: "Livrée" },
   { id: "solde_paye", label: "Solde payé" },
   { id: "terminee", label: "Terminée" },
+  { id: "annulation_en_cours", label: "Annulation en cours" },
+  { id: "annulee", label: "Annulée" },
 ] as const;
 
 export type OrderStatus = (typeof orderStatuses)[number]["id"];
@@ -261,6 +263,7 @@ export interface Store {
   getOrderBySession(sessionId: string): Promise<Order | null>;
   listOrders(status?: OrderStatus): Promise<Order[]>;
   updateOrder(id: string, patch: OrderPatch): Promise<void>;
+  claimOrderCancellation(order: Order): Promise<boolean>;
   saveBriefRevision(order: Order, brief: Record<string, string>, revision: NonNullable<Order["briefRevisions"]>[number]): Promise<boolean>;
   reviewBriefRevision(order: Order, at: string, state: "consulted" | "acknowledged"): Promise<boolean>;
   addNote(orderId: string, body: string): Promise<void>;

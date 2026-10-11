@@ -13,7 +13,7 @@ import { formatRate, netBreakdown } from "@/lib/finance";
 import { paymentSummary, ensureDeliveryPlan } from "@/lib/orders";
 import { depositAmount, formatPrice } from "@/lib/pricing";
 import { balanceDue, getStore } from "@/lib/store";
-import { retryInvoiceAction, reviewBriefRevisionAction } from "../../../actions";
+import { retryCancellationAction, retryInvoiceAction, reviewBriefRevisionAction } from "../../../actions";
 
 export const metadata: Metadata = { title: "Commande" };
 
@@ -66,6 +66,12 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
         </div>
         <div className="flex flex-col items-end gap-3">
           <OrderStatusSelect key={order.status} orderId={order.id} status={order.status} />
+          {order.status === "annulation_en_cours" && <form action={retryCancellationAction} className="max-w-xs text-right">
+            <input type="hidden" name="id" value={order.id} />
+            <p className="text-xs text-muted">Le client a demandé l’annulation, mais le remboursement Stripe n’a pas abouti.</p>
+            <button className="mt-2 rounded-full border border-border px-4 py-2 text-sm hover:border-accent">Relancer le remboursement</button>
+          </form>}
+          {sp.annulation && <p role="status" className={`max-w-xs text-right text-xs ${sp.annulation === "erreur" ? "text-rose-300" : "text-emerald-300"}`}>{sp.annulation === "erreur" ? "Le remboursement a encore échoué. Vérifie le paiement dans Stripe." : sp.annulation === "attente" ? "Commande annulée. Le remboursement est en cours de traitement chez Stripe." : "Commande annulée et remboursée."}</p>}
           {order.deliveryToken && <a href={`/commande/${order.deliveryToken}`} target="_blank" rel="noopener noreferrer" className="block text-right text-sm font-semibold text-accent hover:underline">Voir l’espace client ↗</a>}
         </div>
       </header>

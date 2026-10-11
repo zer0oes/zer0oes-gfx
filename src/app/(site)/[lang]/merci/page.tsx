@@ -13,6 +13,9 @@ import { includedOverlays } from "@/lib/brief-overlays";
 import { OrderedPackCard } from "@/components/OrderedPackCard";
 import { withoutInstallLine } from "@/lib/brief-delivery";
 import { productBriefMinutes } from "@/lib/product-brief";
+import { CancelOrder } from "@/components/CancelOrder";
+import { canCancelOrder, cancellationStarted } from "@/lib/order-cancellation";
+import { refundedTotal } from "@/lib/refunds";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/merci">): Promise<Metadata> {
   const lang = asLocale((await params).lang);
@@ -65,6 +68,8 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
   const briefLocked = order ? Boolean(order.deliveredAt) || (await store.listDeliverables(order.id)).some(previewPublished) : false;
   const revisionsUsed = order?.briefRevisions?.length ?? 0;
   const editBrief = briefReceived && params.modifier === "1" && revisionsUsed < 2 && !briefLocked;
+  const cancelling = order ? cancellationStarted(order) : false;
+  const cancellable = order ? canCancelOrder(order, await store.listDeliverables(order.id)) || order.status === "annulation_en_cours" : false;
   if (order) {
     view = { ...order, payment: order.paymentType, email: order.customerEmail || undefined, paid: !order.demo };
   }
@@ -105,6 +110,8 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
   const overlayHint =
     overlayCount !== null ? t(lang, { fr: `Choisis les ${overlayCount} overlays inclus dans ton pack. Pour changer un choix, décoche d’abord un overlay.`, en: `Choose the ${overlayCount} overlays included in your package. Uncheck an overlay to change your selection.` }) : undefined;
   const pricing = { ...catalog.settings, depositPercent: view?.depositPercent ?? catalog.settings.depositPercent };
+
+  if (cancelling && order?.status === "annulee") return <PageHeader title={t(lang, { fr: "Commande annulée", en: "Order cancelled" })}><p>{t(lang, { fr: "Ton annulation a été enregistrée et ton remboursement a été transmis à Stripe.", en: "Your cancellation has been recorded and your refund has been submitted to Stripe." })}</p></PageHeader>;
 
   return (
     <>
@@ -158,6 +165,7 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
               })}
           </p>
         </OrderedPackCard>}
+        {cancellable && portal && order ? <CancelOrder token={portal} amount={Math.max(0, order.amountPaid - refundedTotal(order.refunds))} locale={lang} /> : !order && view?.paid && sessionId && <CancelOrder sessionId={sessionId} amount={view.amountPaid ?? 0} locale={lang} />}
         {demo && (
           <p className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
             {t(lang, {
@@ -168,7 +176,7 @@ export default async function MerciPage({ params: routeParams, searchParams }: P
         )}
         </aside>
         <div className="min-w-0 rounded-2xl border border-border bg-surface p-6 sm:p-8">
-          {briefReceived && !editBrief ? <div className="space-y-4">
+          {cancelling ? <p className="text-sm text-foreground/80">{t(lang, { fr: "L’annulation est en cours. La création est suspendue ; tu peux réessayer depuis le lien d’annulation.", en: "Cancellation is in progress. Creation is paused; you can retry using the cancellation link." })}</p> : briefReceived && !editBrief ? <div className="space-y-4">
             <h2 className="font-display text-2xl font-bold">{t(lang, { fr: "Ton brief a bien été reçu", en: "Your brief has been received" })}</h2>
             <p className="text-sm leading-relaxed text-foreground/80">{t(lang, { fr: "Tu n’as plus besoin de remplir ce formulaire. Je reviens vers toi sous 2 jours ouvrés. Pour toute précision, contacte-moi ou retrouve la suite dans ton espace commande.", en: "You don’t need to fill in this form again. I’ll get back to you within 2 business days. For any clarification, contact me or follow the next steps in your order space." })}</p>
             {portal && <Link href={`/commande/${portal}`} className="inline-flex rounded-full bg-accent px-6 py-3 font-semibold text-background hover:brightness-110">{t(lang, { fr: "Accéder à ma commande →", en: "Open my order →" })}</Link>}

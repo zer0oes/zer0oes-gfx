@@ -141,7 +141,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/com
                         {formatPrice(o.amountPaid)} / {formatPrice(o.totalPrice)}
                         {o.paymentType === "acompte" && <span className="ml-1 text-xs text-muted">acompte</span>}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3">{due > 0 ? formatPrice(due) : <span className="text-emerald-300">Réglé</span>}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{o.status === "annulee" ? <span className="text-muted">Remboursé</span> : due > 0 ? formatPrice(due) : <span className="text-emerald-300">Réglé</span>}</td>
                       <td className="px-4 py-3">
                         <StatusBadge status={o.status} />
                         {pendingInvoice.has(o.id) && <span className="ml-2 text-xs text-amber-300">facture en attente</span>}

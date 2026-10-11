@@ -58,7 +58,7 @@ export function OrdersBulkBar() {
           <option value="" disabled>
             Choisir…
           </option>
-          {orderStatuses.map((s) => (
+          {orderStatuses.filter((s) => s.id !== "annulee" && s.id !== "annulation_en_cours").map((s) => (
             <option key={s.id} value={s.id}>
               {s.label}
             </option>

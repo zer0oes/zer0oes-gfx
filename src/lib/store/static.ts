@@ -64,6 +64,7 @@ export const staticStore: Store = {
   getOrderBySession: async () => null,
   listOrders: async () => [],
   updateOrder: readOnly,
+  claimOrderCancellation: readOnly,
   saveBriefRevision: readOnly,
   reviewBriefRevision: readOnly,
   addNote: readOnly,

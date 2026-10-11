@@ -8,6 +8,7 @@ import { adminEmails, devLoginAllowed, isAdminEmail, supabaseAuthConfigured } fr
 import { sendToCustomer } from "@/lib/notify";
 import { createBalanceLink, retryInvoice } from "@/lib/orders";
 import { completionPatch } from "@/lib/portal";
+import { completeOrderCancellation } from "@/lib/order-cancel";
 import { formatPrice } from "@/lib/pricing";
 import { getStore, isOrderStatus } from "@/lib/store";
 
@@ -69,7 +70,7 @@ export async function updateStatus(formData: FormData) {
   await requireAdmin();
   const id = formData.get("id")?.toString() ?? "";
   const status = formData.get("status");
-  if (!isOrderStatus(status)) return;
+  if (!isOrderStatus(status) || status === "annulee" || status === "annulation_en_cours") return;
   const order = await getStore().getOrder(id);
   if (!order) return;
   // « Terminée » pose la date de clôture (départ des 6 mois de conservation des fichiers)
@@ -145,7 +146,7 @@ export async function bulkUpdateStatus(formData: FormData) {
   const raw = formData.get("back")?.toString() ?? "";
   const back = raw.startsWith("/admin/commandes") && !raw.startsWith("//") ? raw : "/admin/commandes";
   const sep = back.includes("?") ? "&" : "?";
-  if (!isOrderStatus(status)) redirect(`${back}${sep}erreur=${encodeURIComponent("Choisis un statut.")}`);
+  if (!isOrderStatus(status) || status === "annulee" || status === "annulation_en_cours") redirect(`${back}${sep}erreur=${encodeURIComponent("Choisis un statut.")}`);
   if (!ids.length) redirect(`${back}${sep}erreur=${encodeURIComponent("Sélectionne au moins une commande.")}`);
   const store = getStore();
   let n = 0;
@@ -158,4 +159,21 @@ export async function bulkUpdateStatus(formData: FormData) {
   }
   revalidatePath("/admin/commandes");
   redirect(`${back}${sep}maj=${n}`);
+}
+
+// Annulation bloquée (« Annulation en cours ») : relance le remboursement Stripe puis passe la commande en « Annulée »
+export async function retryCancellationAction(formData: FormData) {
+  await requireAdmin();
+  const id = formData.get("id")?.toString() ?? "";
+  const order = await getStore().getOrder(id);
+  if (!order || order.status !== "annulation_en_cours") redirect(`/admin/commandes/${encodeURIComponent(id)}`);
+  let result = "ok";
+  try {
+    const { pending } = await completeOrderCancellation(order, "admin");
+    if (pending) result = "attente";
+  } catch (error) {
+    console.error("Admin cancellation retry failed", error);
+    result = "erreur";
+  }
+  redirect(`/admin/commandes/${order.id}?annulation=${result}`);
 }
