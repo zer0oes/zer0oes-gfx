@@ -1,3 +1,4 @@
+import { DatePicker } from "@/components/DatePicker";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChartCard, CumulativeChart, DeclarationsChart, OffersChart, PaymentsChart } from "@/components/admin/charts";
@@ -63,7 +64,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/admin"
     </Link>
   );
   const arrow = "rounded-lg border border-border px-3 py-1.5 text-sm text-muted hover:text-foreground";
-  const input = "rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm";
 
   return (
     <>
@@ -112,14 +112,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/admin"
       {period.kind === "perso" && (
         <form action="/admin" className="mt-4 flex flex-wrap items-end gap-3">
           <input type="hidden" name="periode" value="perso" />
-          <label className="grid gap-1 text-sm">
-            <span className="text-muted">Du</span>
-            <input type="date" name="debut" defaultValue={period.start} required className={input} />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="text-muted">Au</span>
-            <input type="date" name="fin" defaultValue={period.end} required className={input} />
-          </label>
+          <DatePicker key={`debut-${period.start}`} name="debut" label="Du" locale="fr" defaultValue={period.start} required compact />
+          <DatePicker key={`fin-${period.end}`} name="fin" label="Au" locale="fr" defaultValue={period.end} required compact />
           <button type="submit" className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-background">
             Afficher
           </button>

@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+import { DatePicker } from "@/components/DatePicker";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OrderBriefPanel } from "@/components/admin/OrderBriefPanel";
 import { ClientSpaceLinks } from "@/components/admin/DeliveryControls";
@@ -82,10 +83,10 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
             <label className="block text-sm font-medium">Livrables (un par ligne)<textarea name="deliverables" defaultValue={q.deliverables.join("\n")} required rows={5} className={input} /></label>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-medium">Montant total (€)<input name="price" defaultValue={q.totalPrice ? q.totalPrice / 100 : ""} type="number" min="0.50" max="1000000" step="0.01" required className={input} /></label>
-              <label className="block text-sm font-medium">Valable jusqu’au<input name="validUntil" defaultValue={q.validUntil} type="date" required min={new Date().toISOString().slice(0, 10)} className={input} /></label>
+              <DatePicker name="validUntil" label="Valable jusqu’au" locale="fr" defaultValue={q.validUntil} required min={new Date().toISOString().slice(0, 10)} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <input type="hidden" name="paymentType" value="acompte" /><p className="text-sm text-muted">Le client choisit entre acompte et paiement int?gral ? l?acceptation.</p>
+              <input type="hidden" name="paymentType" value="acompte" /><p className="text-sm text-muted">Le client choisit entre acompte et paiement intégral à l’acceptation.</p>
               <label className="block text-sm font-medium">Acompte (%)<input name="depositPercent" type="number" min="1" max="99" step="1" defaultValue={q.depositPercent || 30} className={input} /><span className="mt-1 block text-xs text-muted">Utilisé uniquement pour le paiement avec acompte.</span></label>
             </div>
           </div>

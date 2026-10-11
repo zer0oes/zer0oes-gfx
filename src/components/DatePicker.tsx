@@ -6,11 +6,13 @@ import { inputClass } from "./ui";
 
 const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
-export function DatePicker({ name, label, locale, defaultValue = "", min, max, required = false, compact = false }: { name: string; label: string; locale: Locale; defaultValue?: string; min?: string; max?: string; required?: boolean; compact?: boolean }) {
+// onChange : date choisie (AAAA-MM-JJ, vide si effacée), pour un formulaire qui enregistre autre chose que la date seule
+export function DatePicker({ name, label, locale, defaultValue = "", min, max, required = false, compact = false, onChange }: { name: string; label: string; locale: Locale; defaultValue?: string; min?: string; max?: string; required?: boolean; compact?: boolean; onChange?: (value: string) => void }) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const [value, setValue] = useState(/^\d{4}-\d{2}-\d{2}$/.test(defaultValue) ? defaultValue : "");
+  const [value, setRawValue] = useState(/^\d{4}-\d{2}-\d{2}$/.test(defaultValue) ? defaultValue : "");
+  const setValue = (next: string) => { setRawValue(next); onChange?.(next); };
   const [month, setMonth] = useState<Date | null>(null);
   const [open, setOpen] = useState(false);
   const en = locale === "en";
