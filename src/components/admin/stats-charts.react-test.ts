@@ -5,6 +5,19 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { summarize, type StatEvent } from "../../lib/stats";
 import { VisitsChart } from "./stats-charts";
 
+test("le mois en cours reste entier et ses jours futurs ne sont pas des journées mesurées", () => {
+  const points = summarize([], { start: "2026-10-01", end: "2026-10-31" }).points;
+  const html = renderToStaticMarkup(createElement(VisitsChart, {
+    points, today: "2026-10-11", dayHref: "/admin/statistiques?periode=mois&ref=2026-10",
+  }));
+  assert.equal(points.length, 31);
+  assert.match(html, /aria-label="31 oct\. : à venir"/);
+  assert.match(html, />31<\/text>/);
+  assert.match(html, /jour=2026-10-11/);
+  assert.doesNotMatch(html, /jour=2026-10-12/);
+  assert.match(html, /31 oct\.<span[^>]*>À venir<\/span><\/th><td[^>]*>—<\/td>/);
+});
+
 test("les chiffres de production correspondent aux barres et au tableau, sans superposition", () => {
   const counts = [[5, 3, 16], [6, 11, 68], [7, 7, 17], [8, 5, 14], [9, 4, 4], [10, 2, 2], [11, 7, 7]];
   const events: StatEvent[] = counts.flatMap(([day, visitors, views]) => Array.from({ length: views }, (_, i) => ({

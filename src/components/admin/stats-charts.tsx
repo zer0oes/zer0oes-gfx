@@ -1,13 +1,12 @@
-// Graphiques de la page Statistiques : SVG rendus côté serveur, avec description et tableau des données.
+"use client";
+
+// Graphiques de la page Statistiques, avec description et tableau des données.
+import { useEffect, useRef, useState } from "react";
 import { ChartTooltip } from "./ChartTooltip";
 import Link from "next/link";
 import type { Ranked, StatsPoint } from "@/lib/stats";
 
-const W = 720;
-const H = 240;
 const PAD = { top: 14, right: 14, bottom: 36, left: 48 };
-const innerW = W - PAD.left - PAD.right;
-const innerH = H - PAD.top - PAD.bottom;
 
 function niceMax(v: number) {
   if (v <= 5) return 5;
@@ -19,7 +18,23 @@ function niceMax(v: number) {
 const nf = (n: number) => n.toLocaleString("fr-FR");
 
 // Deux barres distinctes par date : aucune série ne masque l'autre à valeurs égales.
-export function VisitsChart({ points, dayHref, selectedDay }: { points: StatsPoint[]; dayHref?: string; selectedDay?: string }) {
+export function VisitsChart({ points, dayHref, selectedDay, today }: { points: StatsPoint[]; dayHref?: string; selectedDay?: string; today?: string }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [{ width: W, height: H }, setSize] = useState({ width: 720, height: 240 });
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const width = Math.round(entry.contentRect.width);
+      const height = Math.round(entry.contentRect.height);
+      if (width <= 0 || height <= 0) return;
+      setSize((previous) => previous.width === width && previous.height === height ? previous : { width, height });
+    });
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, []);
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
   const max = niceMax(Math.max(0, ...points.flatMap((p) => [p.views, p.visitors])));
   const y = (v: number) => PAD.top + ((max - v) / max) * innerH;
   const step = innerW / Math.max(1, points.length);
@@ -34,7 +49,7 @@ export function VisitsChart({ points, dayHref, selectedDay }: { points: StatsPoi
     <>
       <div className="overflow-x-auto overscroll-x-contain rounded-lg" tabIndex={0} role="region" aria-label="Graphique des visites, défilement horizontal sur petit écran">
       <div className="min-w-[640px]">
-      <ChartTooltip><svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-[240px] w-full sm:h-[280px]" role="group" aria-label={`${nf(visitors)} visiteurs et ${nf(views)} pages vues sur la période. Détail dans le tableau des données.`}>
+      <ChartTooltip><svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-[240px] w-full sm:h-[280px]" role="group" aria-label={`${nf(visitors)} visiteurs et ${nf(views)} pages vues sur la période. Détail dans le tableau des données.`}>
         <g fontSize="13" fill="var(--foreground)">
           {[max, max / 2, 0].map((t) => (
             <g key={t}>
@@ -46,15 +61,18 @@ export function VisitsChart({ points, dayHref, selectedDay }: { points: StatsPoi
           ))}
           {points.map((p, i) => {
             if (i % every !== 0 && i !== points.length - 1) return null;
-            const label = <text x={x(i)} y={H - 10} textAnchor="middle">{p.axis}</text>;
-            return dayHref && p.start === p.end
+            const future = !!today && p.start > today;
+            const label = <text x={x(i)} y={H - 10} textAnchor="middle" opacity={future ? 0.4 : 1}>{p.axis}</text>;
+            return dayHref && p.start === p.end && !future
               ? <Link key={p.key} href={`${dayHref}&jour=${p.start}`} prefetch={false} scroll={false} aria-label={`Afficher le détail du ${p.label}`} className="hover:fill-accent focus-visible:fill-accent">{label}</Link>
               : <g key={p.key}>{label}</g>;
           })}
         </g>
         {points.map((p, i) => {
-          const selectable = dayHref && p.start === p.end;
-          const value = `${nf(p.visitors)} visiteurs · ${nf(p.views)} pages vues`;
+          const future = !!today && p.start > today;
+          const selectable = dayHref && p.start === p.end && !future;
+          const value = future ? "À venir" : `${nf(p.visitors)} visiteurs · ${nf(p.views)} pages vues`;
+          if (future) return <g key={p.key} aria-label={`${p.label} : à venir`}><rect x={x(i) - step / 2} y={PAD.top} width={step} height={innerH} fill="var(--muted)" opacity="0.06" /></g>;
           const bars = <g data-chart-label={p.label} data-chart-value={value} data-chart-color="var(--accent)" aria-label={`${p.label} : ${value}`}>
             <rect x={x(i) - step / 2} y={PAD.top} width={step} height={innerH} fill="var(--accent)" opacity={selectedDay === p.start ? 0.15 : 0} className="hover:opacity-10" />
             {p.views > 0 && (
@@ -79,6 +97,7 @@ export function VisitsChart({ points, dayHref, selectedDay }: { points: StatsPoi
           <span className="size-3 rounded-sm" style={{ background: "var(--accent-2)" }} />
           Pages vues
         </li>
+        {today && points.some((p) => p.start > today) && <li className="flex items-center gap-2"><span className="size-3 rounded-sm bg-muted/20" />À venir</li>}
       </ul>
       <details className="mt-3 text-sm">
         <summary className="cursor-pointer text-muted hover:text-foreground">Voir les données</summary>
@@ -95,9 +114,9 @@ export function VisitsChart({ points, dayHref, selectedDay }: { points: StatsPoi
             <tbody className="divide-y divide-border">
               {points.map((p) => (
                 <tr key={p.key}>
-                <th scope="row" className="whitespace-nowrap px-2 py-1.5 font-normal">{dayHref && p.start === p.end ? <Link href={`${dayHref}&jour=${p.start}`} prefetch={false} scroll={false} className="text-accent underline underline-offset-4">{p.label}</Link> : p.label}</th>
-                  <td className="px-2 py-1.5 text-right tabular-nums">{nf(p.visitors)}</td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">{nf(p.views)}</td>
+                <th scope="row" className="whitespace-nowrap px-2 py-1.5 font-normal">{dayHref && p.start === p.end && (!today || p.start <= today) ? <Link href={`${dayHref}&jour=${p.start}`} prefetch={false} scroll={false} className="text-accent underline underline-offset-4">{p.label}</Link> : <>{p.label}{today && p.start > today && <span className="ml-2 text-muted">À venir</span>}</>}</th>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{today && p.start > today ? "—" : nf(p.visitors)}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{today && p.start > today ? "—" : nf(p.views)}</td>
                 </tr>
               ))}
             </tbody>
