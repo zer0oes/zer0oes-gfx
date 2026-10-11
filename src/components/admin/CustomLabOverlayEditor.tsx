@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { saveLabAction } from "@/app/admin/custom-lab-actions";
 import { parseLabContent } from "@/lib/custom-lab/model";
-import { DEFAULT_OVERLAY, ITEM_LABELS, MIN_ITEM_SIZE, createItem, itemLabel, newItemId, snapPosition, snapTargets, type OverlayData, type OverlayItem, type OverlayItemType } from "@/lib/custom-lab/overlay";
+import { DEFAULT_OVERLAY, ITEM_LABELS, MAX_GUIDES, MIN_ITEM_SIZE, createItem, itemLabel, itemsBounds, newItemId, snapGuide, snapPosition, snapTargets, type OverlayData, type OverlayItem, type OverlayItemType } from "@/lib/custom-lab/overlay";
 import { buildLabPreview, labEventMessage, labLoadMessage } from "@/lib/custom-lab/preview";
 import { widgetInstance } from "@/lib/custom-lab/widget-instance";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
@@ -41,7 +41,25 @@ const ALIGN_TOOLS: { key: Align; icon: MaterialIconName; label: string }[] = [
   { key: "bottom", icon: "align_vertical_bottom", label: "Aligner en bas" },
   { key: "center", icon: "filter_center_focus", label: "Centrer dans la scène" },
 ];
-type EyeDropperApi = new () => { open: () => Promise<{ sRGBHex: string }> };
+// Règles autour de la scène (épaisseur en px d'écran) ; graduation choisie pour rester lisible au zoom courant
+const RULER = 20;
+function Ruler({ side, size, scale, onPointerDown }: { side: "top" | "left"; size: number; scale: number; onPointerDown: (e: React.PointerEvent) => void }) {
+  const step = [10, 25, 50, 100, 200, 250, 500, 1000].find((n) => n * scale >= 60) ?? 1000;
+  const ticks = Array.from({ length: Math.floor(size / step) + 1 }, (_, i) => i * step);
+  const top = side === "top";
+  return (
+    <div
+      onPointerDown={onPointerDown}
+      title="Glisse vers la scène pour poser un repère"
+      className={`relative select-none overflow-hidden bg-[#12141b] text-[9px] leading-none text-[var(--cl-muted)] ${top ? "cursor-row-resize border-b" : "cursor-col-resize border-r"} border-[var(--cl-line)]`}
+      style={top ? { width: size * scale, height: RULER } : { width: RULER, height: size * scale }}
+    >
+      {ticks.map((v) => (
+        <span key={v} className="absolute border-[var(--cl-line)]" style={top ? { left: v * scale, top: 0, height: RULER, borderLeftWidth: 1, paddingLeft: 2, paddingTop: 2 } : { top: v * scale, left: 0, width: RULER, borderTopWidth: 1, paddingTop: 2, paddingLeft: 2, writingMode: "vertical-rl" }}>{v}</span>
+      ))}
+    </div>
+  );
+}
 const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const;
 type Handle = (typeof HANDLES)[number];
 const handlePos: Record<Handle, string> = {
@@ -163,7 +181,10 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
   const saving = useRef(false);
   const [status, setStatus] = useState("");
   const [pending, startTransition] = useTransition();
-  const [selected, setSelected] = useState<string | null>(null);
+  // Calques sélectionnés (Maj + clic pour en ajouter ou en retirer) ; un calque groupé entraîne tout son groupe
+  const [selection, setSelection] = useState<string[]>([]);
+  const selected = selection.length === 1 ? selection[0] : null;
+  const setSelected = useCallback((itemId: string | null) => setSelection(itemId ? [itemId] : []), []);
   const [hovered, setHovered] = useState<string | null>(null);
   const [panel, setPanel] = useState<"layers" | "props">("layers");
   // Un overlay ne s'installe que sur StreamElements : ses widgets utilisent leur code StreamElements
@@ -173,8 +194,12 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
   // null : scène ajustée à la largeur disponible ; sinon zoom choisi avec − / +
   const [zoom, setZoom] = useState<number | null>(null);
   const scale = zoom ?? fitScale;
-  // Aimantation aux bords et centres (règle de la barre d'outils ; Alt la coupe pendant un geste)
-  const [snap, setSnap] = useState(true);
+  // Règles et repères (bouton règle de la barre d'outils)
+  const [rulers, setRulers] = useState(false);
+  const [guideDrag, setGuideDrag] = useState<{ axis: "x" | "y"; index: number | null; pos: number; inside: boolean } | null>(null);
+  const stageEl = useRef<HTMLDivElement>(null);
+  // Pipette : style copié d'un texte ou d'une forme, appliqué aux calques du même type cliqués ensuite
+  const [stylePick, setStylePick] = useState<{ type: OverlayItemType; style: Record<string, unknown> } | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const addMenu = useRef<HTMLDivElement>(null);
   const confirmDelete = useRef<HTMLDialogElement>(null);
@@ -190,6 +215,16 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
   const current = data.items.find((it) => it.id === selected) ?? null;
   // Taille d'origine de la création affichée dans le calque widget sélectionné
   const currentSize = current?.type === "widget" && current.widgetId ? byId.get(current.widgetId)?.content.size : undefined;
+  const selectedItems = data.items.filter((it) => selection.includes(it.id));
+  // Identifiants donnés, complétés par tous les membres de leurs groupes
+  const withGroups = (ids: string[]) => {
+    const groups = new Set(data.items.filter((it) => ids.includes(it.id) && it.group).map((it) => it.group));
+    return data.items.filter((it) => ids.includes(it.id) || (it.group && groups.has(it.group))).map((it) => it.id);
+  };
+  const select = (itemId: string, additive = false) => {
+    const ids = withGroups([itemId]);
+    setSelection((sel) => (!additive ? ids : ids.every((x) => sel.includes(x)) ? sel.filter((x) => !ids.includes(x)) : [...sel, ...ids.filter((x) => !sel.includes(x))]));
+  };
 
   // --- Données et historique ---
   // Scène la plus récente (lue par les gestes et l'historique, mise à jour à chaque modification)
@@ -236,17 +271,40 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
     setSelected(item.id);
     setPanel("props");
   };
-  const remove = useCallback((itemId: string) => {
-    setData((d) => ({ ...d, items: d.items.filter((it) => it.id !== itemId) }));
-    setSelected(null);
+  const remove = useCallback((ids: string[]) => {
+    setData((d) => ({ ...d, items: d.items.filter((it) => !ids.includes(it.id)) }));
+    setSelection([]);
   }, [setData]);
-  const duplicate = useCallback((itemId: string) => {
-    const it = data.items.find((x) => x.id === itemId);
-    if (!it) return;
-    const copy = { ...structuredClone(it), id: newItemId(), x: it.x + 24, y: it.y + 24, z: Math.max(...data.items.map((x) => x.z), 0) + 1, name: it.name ? `${it.name} (copie)` : undefined };
-    setData((d) => ({ ...d, items: [...d.items, copy] }));
-    setSelected(copy.id);
+  // Copies décalées, au-dessus des autres calques ; un groupe copié devient un nouveau groupe
+  const duplicate = useCallback((ids: string[]) => {
+    const originals = data.items.filter((x) => ids.includes(x.id)).sort((a, b) => a.z - b.z);
+    if (!originals.length) return;
+    const top = Math.max(...data.items.map((x) => x.z), 0);
+    const groups = new Map<string, string>();
+    const copyGroup = (g: string) => groups.get(g) ?? groups.set(g, newItemId().replace("it-", "g-")).get(g);
+    const copies = originals.map((it, i) => ({ ...structuredClone(it), id: newItemId(), x: it.x + 24, y: it.y + 24, z: top + i + 1, name: it.name ? `${it.name} (copie)` : undefined, group: it.group ? copyGroup(it.group) : undefined }));
+    setData((d) => ({ ...d, items: [...d.items, ...copies] }));
+    setSelection(copies.map((c) => c.id));
   }, [data.items, setData]);
+  const canGroup = selection.length > 1 && !(selectedItems.every((it) => it.group) && new Set(selectedItems.map((it) => it.group)).size === 1);
+  const canUngroup = selectedItems.some((it) => it.group);
+  const group = () => {
+    if (!canGroup) return;
+    const g = newItemId().replace("it-", "g-");
+    setData((d) => ({ ...d, items: d.items.map((it) => (selection.includes(it.id) ? { ...it, group: g } : it)) }));
+    setStatus(`${selection.length} calques groupés.`);
+  };
+  const ungroup = () => {
+    if (!canUngroup) return;
+    setData((d) => ({ ...d, items: d.items.map((it) => (selection.includes(it.id) ? { ...it, group: undefined } : it)) }));
+    setStatus("Calques dégroupés.");
+  };
+  const applyStyle = (item: OverlayItem) => {
+    if (!stylePick) return;
+    if (item.type !== stylePick.type || item.locked) return setStatus(`La pipette s’applique ${stylePick.type === "text" ? "à un calque texte" : "à une forme"} non verrouillé${stylePick.type === "text" ? "" : "e"}.`);
+    updateProps(item.id, stylePick.style);
+    setStatus(`Style appliqué à « ${itemLabel(item, widgetName)} ».`);
+  };
 
   // --- Enregistrement (manuel, automatique, Ctrl + S) ---
   function save(auto = false) {
@@ -311,67 +369,84 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
         redo();
         return;
       }
-      if (!selected) return;
-      const it = data.items.find((x) => x.id === selected);
-      if (!it) return;
+      if (e.key === "Escape" && stylePick) {
+        setStylePick(null);
+        setStatus("");
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        if (e.shiftKey) ungroup();
+        else group();
+        return;
+      }
+      if (!selection.length) return;
       if (mod && e.key.toLowerCase() === "d") {
         e.preventDefault();
-        duplicate(selected);
+        duplicate(selection);
       } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
-        remove(selected);
-      } else if (e.key.startsWith("Arrow") && !it.locked) {
+        remove(selection);
+      } else if (e.key.startsWith("Arrow")) {
         e.preventDefault();
         const step = e.shiftKey ? 10 : 1;
         const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
         const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
-        updateItem(selected, { x: it.x + dx, y: it.y + dy });
-      } else if (e.key === "Escape") setSelected(null);
+        setData((d) => ({ ...d, items: d.items.map((it) => (selection.includes(it.id) && !it.locked ? { ...it, x: it.x + dx, y: it.y + dy } : it)) }));
+      } else if (e.key === "Escape") setSelection([]);
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [selected, data.items, undo, redo, remove, duplicate, updateItem]);
+  });
 
   // --- Échelle de la scène (ajustée à la largeur disponible) ---
   useEffect(() => {
     const el = stageBox.current;
     if (!el) return;
-    const fit = () => setFitScale(Math.min(1, el.clientWidth / data.width));
+    const fit = () => setFitScale(Math.min(1, (el.clientWidth - (rulers ? RULER : 0)) / data.width));
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [data.width]);
+  }, [data.width, rulers]);
 
   // --- Déplacement et redimensionnement à la souris ---
+  // Clic sur un calque : pipette, sélection (Maj : ajoute ou retire), puis déplacement de toute la sélection
+  // (aimantée sur son rectangle englobant) ou redimensionnement d'un calque seul par ses poignées
   function startDrag(e: React.PointerEvent, item: OverlayItem, handle?: Handle) {
     if (e.button !== 0) return;
     e.stopPropagation();
-    setSelected(item.id);
+    if (stylePick) return applyStyle(item);
+    if (e.shiftKey && !handle) return select(item.id, true);
+    const movers = handle || selection.includes(item.id) ? (handle ? [item.id] : selection) : withGroups([item.id]);
+    if (!selection.includes(item.id)) setSelection(movers);
     if (item.locked) return;
     e.preventDefault();
+    const moving = data.items.filter((it) => movers.includes(it.id) && !it.locked);
+    const starts = new Map(moving.map((it) => [it.id, { x: it.x, y: it.y }]));
+    const box = itemsBounds(moving);
     const start = { x: e.clientX, y: e.clientY, item: { ...item } };
-    const tx = snapTargets(data, "x", item.id);
-    const ty = snapTargets(data, "y", item.id);
+    const tx = snapTargets(data, "x", movers, rulers);
+    const ty = snapTargets(data, "y", movers, rulers);
     const threshold = 8 / scale;
     let recorded = false;
     const move = (ev: PointerEvent) => {
       const dx = (ev.clientX - start.x) / scale;
       const dy = (ev.clientY - start.y) / scale;
       if (!recorded && Math.abs(dx) + Math.abs(dy) < 1) return;
-      const it = start.item;
-      let { x, y, w, h } = it;
       let gx: number | null = null;
       let gy: number | null = null;
       if (!handle) {
-        const free = ev.altKey || !snap;
-        const sx = free ? { pos: Math.round(it.x + dx), guide: null } : snapPosition(it.x + dx, it.w, tx, threshold);
-        const sy = free ? { pos: Math.round(it.y + dy), guide: null } : snapPosition(it.y + dy, it.h, ty, threshold);
-        x = sx.pos;
-        y = sy.pos;
+        const sx = ev.altKey ? { pos: Math.round(box.x + dx), guide: null } : snapPosition(box.x + dx, box.w, tx, threshold);
+        const sy = ev.altKey ? { pos: Math.round(box.y + dy), guide: null } : snapPosition(box.y + dy, box.h, ty, threshold);
+        const ox = sx.pos - box.x;
+        const oy = sy.pos - box.y;
         gx = sx.guide;
         gy = sy.guide;
+        setData((d) => ({ ...d, items: d.items.map((it) => { const p0 = starts.get(it.id); return p0 ? { ...it, x: p0.x + ox, y: p0.y + oy } : it; }) }), !recorded);
       } else {
+        const it = start.item;
+        let { x, y, w, h } = it;
         if (handle.includes("e")) w = Math.max(MIN_ITEM_SIZE, Math.round(it.w + dx));
         if (handle.includes("s")) h = Math.max(MIN_ITEM_SIZE, Math.round(it.h + dy));
         if (handle.includes("w")) {
@@ -390,8 +465,8 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
           if (handle.includes("w")) x = it.x + it.w - w;
           if (handle.includes("n")) y = it.y + it.h - h;
         }
+        updateItem(it.id, { x, y, w, h }, !recorded);
       }
-      updateItem(it.id, { x, y, w, h }, !recorded);
       recorded = true;
       setGuides({ x: gx, y: gy });
     };
@@ -406,30 +481,72 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
     window.addEventListener("pointercancel", end);
   }
 
+  // --- Repères : tirés d'une règle (top : horizontal, gauche : vertical), déplacés, ou supprimés en les ramenant
+  // sur la règle. Attirés par le centre de la scène, ou par les bords et le centre de la sélection.
+  function startGuide(e: React.PointerEvent, axis: "x" | "y", index: number | null) {
+    if (e.button !== 0 || !stageEl.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const size = axis === "x" ? data.width : data.height;
+    const box = selectedItems.length ? itemsBounds(selectedItems) : null;
+    const targets = box ? (axis === "x" ? [box.x, box.x + box.w / 2, box.x + box.w] : [box.y, box.y + box.h / 2, box.y + box.h]) : [size / 2];
+    const at = (ev: { clientX: number; clientY: number }) => {
+      const r = stageEl.current!.getBoundingClientRect();
+      const raw = (axis === "x" ? ev.clientX - r.left : ev.clientY - r.top) / scale;
+      return { axis, index, pos: snapGuide(raw, targets, 8 / scale), inside: raw >= 0 && raw <= size };
+    };
+    setGuideDrag(at(e));
+    const move = (ev: PointerEvent) => setGuideDrag(at(ev));
+    const end = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+      const { pos, inside } = at(ev);
+      setGuideDrag(null);
+      if (index === null && !inside) return;
+      setData((d) => {
+        const list = [...(d.guides?.[axis] ?? [])];
+        if (index !== null) list.splice(index, 1);
+        if (inside) list.push(pos);
+        return { ...d, guides: { x: d.guides?.x ?? [], y: d.guides?.y ?? [], [axis]: list.slice(0, MAX_GUIDES) } };
+      });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+  }
+
   // --- Barre d'outils : alignement dans la scène, pipette, zoom, menu « Ajouter » ---
+  // Un calque seul ou un groupe s'aligne sur la scène ; plusieurs calques s'alignent entre eux
+  // (« Centrer dans la scène » déplace toujours la sélection d'un bloc)
   const align = (key: Align) => {
-    if (!current || current.locked) return;
-    const { w, h } = current;
-    const x = key === "left" ? 0 : key === "right" ? data.width - w : key === "hcenter" || key === "center" ? Math.round((data.width - w) / 2) : current.x;
-    const y = key === "top" ? 0 : key === "bottom" ? data.height - h : key === "vcenter" || key === "center" ? Math.round((data.height - h) / 2) : current.y;
-    updateItem(current.id, { x, y });
+    const items = selectedItems.filter((it) => !it.locked);
+    if (!items.length) return;
+    const block = itemsBounds(items);
+    const asBlock = key === "center" || items.length === 1 || (Boolean(items[0].group) && items.every((it) => it.group === items[0].group));
+    const ref = asBlock ? { x: 0, y: 0, w: data.width, h: data.height } : block;
+    const place = (pos: number, len: number, start: number, size: number, where: "start" | "middle" | "end" | null) => (where === "start" ? start : where === "end" ? start + size - len : where === "middle" ? Math.round(start + (size - len) / 2) : pos);
+    const hx = key === "left" ? "start" : key === "right" ? "end" : key === "hcenter" || key === "center" ? "middle" : null;
+    const vy = key === "top" ? "start" : key === "bottom" ? "end" : key === "vcenter" || key === "center" ? "middle" : null;
+    const ids = items.map((it) => it.id);
+    setData((d) => ({
+      ...d,
+      items: d.items.map((it) => {
+        if (!ids.includes(it.id)) return it;
+        if (asBlock) return { ...it, x: it.x + place(block.x, block.w, ref.x, ref.w, hx) - block.x, y: it.y + place(block.y, block.h, ref.y, ref.h, vy) - block.y };
+        return { ...it, x: place(it.x, it.w, ref.x, ref.w, hx), y: place(it.y, it.h, ref.y, ref.h, vy) };
+      }),
+    }));
   };
-  // Pipette du navigateur (Chrome, Edge) : la couleur va au texte ou au fond de la forme sélectionnée, sinon dans le presse-papiers
-  const pickColor = async () => {
-    const EyeDropper = (window as Window & { EyeDropper?: EyeDropperApi }).EyeDropper;
-    if (!EyeDropper) return setStatus("La pipette n’est disponible que dans Chrome ou Edge.");
-    try {
-      const { sRGBHex } = await new EyeDropper().open();
-      if (current?.type === "text") updateProps(current.id, { color: sRGBHex });
-      else if (current?.type === "shape") updateProps(current.id, { fill: sRGBHex });
-      else {
-        await navigator.clipboard?.writeText(sRGBHex);
-        return setStatus(`Couleur ${sRGBHex} copiée.`);
-      }
-      setStatus(`Couleur ${sRGBHex} appliquée.`);
-    } catch {
-      // Pipette fermée avec Échap : rien à faire
+  // Pipette : copie le style complet (tout sauf le texte) du calque texte ou de la forme sélectionné
+  const pickStyle = () => {
+    if (stylePick) {
+      setStylePick(null);
+      return setStatus("");
     }
+    if (current?.type !== "text" && current?.type !== "shape") return setStatus("Sélectionne d’abord un calque texte ou une forme dont tu veux copier le style.");
+    setStylePick({ type: current.type, style: Object.fromEntries(Object.entries(current.props).filter(([k]) => k !== "content")) });
+    setStatus(`Style copié : clique sur ${current.type === "text" ? "un calque texte" : "une forme"} pour l’appliquer. Échap ou la pipette pour arrêter.`);
   };
   const zoomBy = (dir: 1 | -1) => setZoom(dir > 0 ? ZOOM_STEPS.find((z) => z > scale + 0.001) ?? ZOOM_STEPS[ZOOM_STEPS.length - 1] : [...ZOOM_STEPS].reverse().find((z) => z < scale - 0.001) ?? ZOOM_STEPS[0]);
   useEffect(() => {
@@ -495,9 +612,9 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
       </details>
 
       <div role="toolbar" aria-label="Outils de l’overlay" className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--cl-line)] bg-[#12141b] p-2">
-        <button type="button" className={toolActive} aria-pressed="true" aria-label="Sélection" title="Sélection"><MaterialIcon name="arrow_selector_tool" className="size-5" /></button>
+        <button type="button" className={stylePick ? toolIcon : toolActive} aria-pressed={!stylePick} onClick={() => { setStylePick(null); setStatus(""); }} aria-label="Sélection" title="Sélection (Maj + clic : plusieurs calques)"><MaterialIcon name="arrow_selector_tool" className="size-5" /></button>
         <button type="button" className={toolIcon} onClick={() => add("text")} aria-label="Ajouter un texte" title="Texte"><MaterialIcon name="title" className="size-5" /></button>
-        <button type="button" className={toolIcon} onClick={pickColor} aria-label="Pipette" title="Pipette : prélever une couleur à l’écran"><MaterialIcon name="colorize" className="size-[18px]" /></button>
+        <button type="button" className={stylePick ? toolActive : toolIcon} aria-pressed={Boolean(stylePick)} onClick={pickStyle} aria-label="Pipette" title="Pipette : copier le style du texte ou de la forme sélectionné"><MaterialIcon name="colorize" className="size-[18px]" /></button>
         <div ref={addMenu} className="relative">
           <button type="button" className={`${toolIcon} !w-auto gap-2 px-3 text-sm`} aria-haspopup="menu" aria-expanded={addOpen} onClick={() => setAddOpen(!addOpen)}><MaterialIcon name="add" className="size-4" />Ajouter<MaterialIcon name="expand_more" className="size-4" /></button>
           {addOpen && (
@@ -517,19 +634,21 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
             </div>
           )}
         </div>
-        {current && (
+        {selectedItems.length > 0 && (
           <>
             <ToolSeparator />
-            <button type="button" className={toolIcon} onClick={() => duplicate(current.id)} aria-label="Dupliquer le calque" title="Dupliquer (Ctrl + D)"><MaterialIcon name="content_copy" className="size-[18px]" /></button>
-            <button type="button" className={toolIcon} onClick={() => confirmDelete.current?.showModal()} aria-label="Supprimer le calque" title="Supprimer"><MaterialIcon name="delete" className="size-[18px]" /></button>
+            {canGroup && <button type="button" className={toolIcon} onClick={group} aria-label="Grouper" title="Grouper (Ctrl + G)"><MaterialIcon name="select_all" className="size-[18px]" /></button>}
+            {canUngroup && <button type="button" className={toolIcon} onClick={ungroup} aria-label="Dégrouper" title="Dégrouper (Ctrl + Maj + G)"><MaterialIcon name="deselect" className="size-[18px]" /></button>}
+            <button type="button" className={toolIcon} onClick={() => duplicate(selection)} aria-label="Dupliquer" title="Dupliquer (Ctrl + D)"><MaterialIcon name="content_copy" className="size-[18px]" /></button>
+            <button type="button" className={toolIcon} onClick={() => confirmDelete.current?.showModal()} aria-label="Supprimer" title="Supprimer"><MaterialIcon name="delete" className="size-[18px]" /></button>
             <ToolSeparator />
             {ALIGN_TOOLS.map((t) => (
-              <button key={t.key} type="button" className={toolIcon} disabled={current.locked} onClick={() => align(t.key)} aria-label={t.label} title={t.label}><MaterialIcon name={t.icon} className="size-[18px]" /></button>
+              <button key={t.key} type="button" className={toolIcon} disabled={selectedItems.every((it) => it.locked)} onClick={() => align(t.key)} aria-label={t.label} title={t.label}><MaterialIcon name={t.icon} className="size-[18px]" /></button>
             ))}
           </>
         )}
         <ToolSeparator />
-        <button type="button" className={snap ? toolActive : toolIcon} aria-pressed={snap} onClick={() => setSnap(!snap)} aria-label="Aimantation" title={snap ? "Aimantation activée (Alt la coupe pendant un geste)" : "Aimantation désactivée"}><MaterialIcon name="straighten" className="size-5" /></button>
+        <button type="button" className={rulers ? toolActive : toolIcon} aria-pressed={rulers} onClick={() => setRulers(!rulers)} aria-label="Règles et repères" title={rulers ? "Masquer les règles et les repères" : "Afficher les règles : glisse depuis une règle pour poser un repère"}><MaterialIcon name="straighten" className="size-5" /></button>
         <ToolSeparator />
         <div className="flex items-center gap-1">
           <button type="button" className={toolIcon} onClick={() => zoomBy(-1)} disabled={scale <= ZOOM_STEPS[0]} aria-label="Dézoomer" title="Dézoomer"><MaterialIcon name="remove" className="size-5" /></button>
@@ -544,14 +663,22 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
         <p className="font-display text-lg font-bold">Es-tu sûre de vouloir supprimer ?</p>
         <div className="mt-6 flex justify-end gap-3">
           <button type="button" onClick={() => confirmDelete.current?.close()} className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">Annuler</button>
-          <button type="button" onClick={() => { if (current) remove(current.id); confirmDelete.current?.close(); }} className="rounded-full bg-red-500/90 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Supprimer</button>
+          <button type="button" onClick={() => { remove(selection); confirmDelete.current?.close(); }} className="rounded-full bg-red-500/90 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Supprimer</button>
         </div>
       </dialog>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div ref={stageBox} className="min-w-0">
           <div className={zoom === null ? "" : "max-h-[75vh] overflow-auto rounded-md"}>
-          <div className="relative overflow-hidden rounded-md border border-[var(--cl-line)]" style={{ width: data.width * scale, height: data.height * scale }} onPointerDown={() => setSelected(null)}>
+          <div className={rulers ? "grid w-max" : ""} style={rulers ? { gridTemplateColumns: `${RULER}px auto` } : undefined}>
+          {rulers && (
+            <>
+              <div className="border-b border-r border-[var(--cl-line)] bg-[#12141b]" />
+              <Ruler side="top" size={data.width} scale={scale} onPointerDown={(e) => startGuide(e, "y", null)} />
+              <Ruler side="left" size={data.height} scale={scale} onPointerDown={(e) => startGuide(e, "x", null)} />
+            </>
+          )}
+          <div ref={stageEl} className={`relative overflow-hidden ${rulers ? "" : "rounded-md border border-[var(--cl-line)]"} ${stylePick ? "cursor-copy" : ""}`} style={{ width: data.width * scale, height: data.height * scale }} onPointerDown={() => { if (!stylePick) setSelection([]); }}>
             <div className="absolute left-0 top-0 origin-top-left bg-[repeating-conic-gradient(#1b1d26_0_25%,#14161d_0_50%)] bg-[length:32px_32px]" style={{ width: data.width, height: data.height, transform: `scale(${scale})` }}>
               {[...data.items].sort((a, b) => a.z - b.z).map((item) =>
                 item.hidden ? null : (
@@ -566,17 +693,17 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
                   >
                     <ItemContent item={item} source={item.widgetId ? byId.get(item.widgetId) : undefined} platform={platform} register={register} />
                     {/* Contour discret de chaque calque, plus marqué au survol (scène ou liste des calques) */}
-                    {selected !== item.id && (
+                    {!selection.includes(item.id) && (
                       <div className={`pointer-events-none absolute inset-0 ${hovered === item.id ? "outline-dashed outline-[var(--cl-accent)]" : "outline-dashed outline-white/25"}`} style={{ outlineWidth: (hovered === item.id ? 2 : 1) / scale }} />
                     )}
-                    {(selected === item.id || hovered === item.id) && (
+                    {(selection.includes(item.id) || hovered === item.id) && (
                       <span className="pointer-events-none absolute left-0 flex items-center gap-1 whitespace-nowrap rounded bg-[var(--cl-accent)] font-semibold text-[#0d0f13]" style={{ ...(item.y < 24 / scale ? { top: 4 / scale, left: 4 / scale } : { bottom: "100%", marginBottom: 4 / scale }), fontSize: 12 / scale, padding: `${2 / scale}px ${6 / scale}px`, zIndex: 1 }}>
                         <MaterialIcon name={TYPE_ICONS[item.type]} className="size-[1.1em]" />{itemLabel(item, widgetName)}
                       </span>
                     )}
-                    {selected === item.id && (
+                    {selection.includes(item.id) && (
                       <div className="pointer-events-none absolute inset-0 outline outline-[3px] outline-[var(--cl-accent)]" style={{ outlineWidth: 2 / scale }}>
-                        {!item.locked &&
+                        {selected === item.id && !item.locked &&
                           HANDLES.map((h) => (
                             <span
                               key={h}
@@ -590,12 +717,23 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
                   </div>
                 ),
               )}
+              {selectedItems.length > 1 && (() => {
+                const b = itemsBounds(selectedItems);
+                return <div className="pointer-events-none absolute outline-dashed outline-[var(--cl-accent)]" style={{ left: b.x, top: b.y, width: b.w, height: b.h, outlineWidth: 1 / scale, outlineOffset: 6 / scale, zIndex: 99998 }} />;
+              })()}
+              {rulers && (["x", "y"] as const).flatMap((axis) => (data.guides?.[axis] ?? []).map((pos, i) => (guideDrag?.axis === axis && guideDrag.index === i ? null : (
+                <div key={`${axis}-${i}`} onPointerDown={(e) => startGuide(e, axis, i)} title="Glisse ce repère sur la règle pour le supprimer" className={`absolute ${axis === "x" ? "top-0 h-full cursor-col-resize" : "left-0 w-full cursor-row-resize"}`} style={axis === "x" ? { left: pos - 4 / scale, width: 9 / scale, zIndex: 99999 } : { top: pos - 4 / scale, height: 9 / scale, zIndex: 99999 }}>
+                  <div className="absolute bg-cyan-400" style={axis === "x" ? { left: 4 / scale, top: 0, bottom: 0, width: 1 / scale } : { top: 4 / scale, left: 0, right: 0, height: 1 / scale }} />
+                </div>
+              ))))}
+              {guideDrag?.inside && <div className="pointer-events-none absolute bg-cyan-300" style={guideDrag.axis === "x" ? { left: guideDrag.pos, top: 0, height: "100%", width: 1 / scale, zIndex: 100000 } : { top: guideDrag.pos, left: 0, width: "100%", height: 1 / scale, zIndex: 100000 }} />}
               {guides.x !== null && <div className="pointer-events-none absolute top-0 h-full bg-pink-400" style={{ left: guides.x, width: 1 / scale, zIndex: 100000 }} />}
               {guides.y !== null && <div className="pointer-events-none absolute left-0 w-full bg-pink-400" style={{ top: guides.y, height: 1 / scale, zIndex: 100000 }} />}
             </div>
           </div>
           </div>
-          <p className="mt-2 text-[11px] text-[var(--cl-muted)]">Clic : sélectionner · Glisser : déplacer · Poignées : redimensionner (Maj : proportions) · Alt : sans aimantation · Flèches : décaler (Maj : 10 px) · Suppr : supprimer · Ctrl + D : dupliquer</p>
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--cl-muted)]">Clic : sélectionner (Maj : plusieurs calques) · Glisser : déplacer · Poignées : redimensionner (Maj : proportions) · Alt : sans aimantation · Flèches : décaler (Maj : 10 px) · Suppr : supprimer · Ctrl + D : dupliquer · Ctrl + G : grouper (Maj : dégrouper)</p>
         </div>
 
         <aside className="cl-fields !static !max-h-none">
@@ -611,12 +749,12 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
                 const handle = sort.handle(i);
                 return (
                   <li key={item.id} aria-label={itemLabel(item, widgetName)} onPointerEnter={() => setHovered(item.id)} onPointerLeave={() => setHovered((h) => (h === item.id ? null : h))} className="py-[3px]">
-                    <div className={`flex items-center gap-2 rounded-lg border px-2 py-2 text-sm ${selected === item.id ? "border-[var(--cl-accent)] bg-[#ac8bfa1f]" : hovered === item.id ? "border-[var(--cl-accent)]/60 bg-white/5" : "border-[var(--cl-line)] bg-[#151720]"} ${item.hidden ? "opacity-60" : ""}`}>
+                    <div className={`flex items-center gap-2 rounded-lg border px-2 py-2 text-sm ${selection.includes(item.id) ? "border-[var(--cl-accent)] bg-[#ac8bfa1f]" : hovered === item.id ? "border-[var(--cl-accent)]/60 bg-white/5" : "border-[var(--cl-line)] bg-[#151720]"} ${item.hidden ? "opacity-60" : ""}`}>
                     <span {...handle} role="button" tabIndex={0} aria-label={`Déplacer le calque ${itemLabel(item, widgetName)}`} title="Glisser pour changer l’ordre d’affichage · ↑/↓ au clavier" className="inline-flex size-7 shrink-0 cursor-grab items-center justify-center rounded text-[var(--cl-muted)] hover:bg-[#ac8bfa1f] hover:text-[var(--cl-accent)] active:cursor-grabbing"><MaterialIcon name="drag_indicator" className="size-5" /></span>
                     <span className="grid size-7 shrink-0 place-items-center rounded-md bg-white/5 text-[var(--cl-accent)]" title={ITEM_LABELS[item.type]}><MaterialIcon name={TYPE_ICONS[item.type]} className="size-4" /></span>
-                    <button type="button" onClick={() => { setSelected(item.id); setPanel("props"); }} className="grid min-w-0 flex-1 text-left leading-tight">
+                    <button type="button" onClick={(e) => { if (stylePick) return applyStyle(item); select(item.id, e.shiftKey); if (!e.shiftKey && !item.group) setPanel("props"); }} className="grid min-w-0 flex-1 text-left leading-tight">
                       <span className="truncate font-medium text-[#e3e5ec]">{itemLabel(item, widgetName)}</span>
-                      <span className="text-[10px] text-[var(--cl-muted)]">{ITEM_LABELS[item.type]}{item.type === "widget" && hasOverrides(item) ? " · réglages personnalisés" : ""}</span>
+                      <span className="text-[10px] text-[var(--cl-muted)]">{ITEM_LABELS[item.type]}{item.type === "widget" && hasOverrides(item) ? " · réglages personnalisés" : ""}{item.group ? " · groupe" : ""}</span>
                     </button>
                     <button type="button" onClick={() => updateItem(item.id, { hidden: !item.hidden })} title={item.hidden ? "Afficher" : "Masquer"} aria-label={item.hidden ? "Afficher le calque" : "Masquer le calque"} className={`inline-flex ${item.hidden ? "text-[var(--cl-muted)]" : ""}`}><MaterialIcon name={item.hidden ? "visibility_off" : "visibility"} className="size-4" /></button>
                     <button type="button" onClick={() => updateItem(item.id, { locked: !item.locked })} title={item.locked ? "Déverrouiller" : "Verrouiller"} aria-label={item.locked ? "Déverrouiller le calque" : "Verrouiller le calque"} className={`inline-flex ${item.locked ? "text-[var(--cl-accent)]" : "text-[var(--cl-muted)]"}`}><MaterialIcon name={item.locked ? "lock" : "lock_open"} className="size-4" /></button>
@@ -629,7 +767,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
             {!data.items.length && <p className="cl-field-hint mt-4">Aucun calque : ajoute un texte, une image ou un widget.</p>}
             </>
           ) : !current ? (
-            <p className="cl-field-hint mt-4">Sélectionne un calque dans la scène ou dans la liste des calques.</p>
+            <p className="cl-field-hint mt-4">{selection.length > 1 ? `${selection.length} calques sélectionnés : la barre d’outils permet de les grouper, aligner, dupliquer ou supprimer.` : "Sélectionne un calque dans la scène ou dans la liste des calques."}</p>
           ) : (
             <div className="mt-4 grid gap-3 text-xs">
               <span className="cl-eyebrow uppercase !mb-0">Taille et position</span>
@@ -703,8 +841,8 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
               )}
 
               <div className="-mx-[18px] flex gap-2 border-t border-[var(--cl-line)] px-[18px] pt-3">
-                <button type="button" className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-2 text-xs font-semibold border-border bg-surface text-foreground hover:border-accent" onClick={() => duplicate(current.id)}><MaterialIcon name="content_copy" className="size-4" />Dupliquer</button>
-                <button type="button" className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-2 text-xs font-semibold border-red-400/50 bg-red-500/10 text-red-300 hover:border-red-400 hover:bg-red-500/20" onClick={() => remove(current.id)}><MaterialIcon name="delete" className="size-4" />Supprimer</button>
+                <button type="button" className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-2 text-xs font-semibold border-border bg-surface text-foreground hover:border-accent" onClick={() => duplicate([current.id])}><MaterialIcon name="content_copy" className="size-4" />Dupliquer</button>
+                <button type="button" className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-2 text-xs font-semibold border-red-400/50 bg-red-500/10 text-red-300 hover:border-red-400 hover:bg-red-500/20" onClick={() => remove([current.id])}><MaterialIcon name="delete" className="size-4" />Supprimer</button>
               </div>
             </div>
           )}

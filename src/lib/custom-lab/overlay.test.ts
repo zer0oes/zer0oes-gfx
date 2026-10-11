@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_OVERLAY, MAX_OVERLAY_ITEMS, createItem, itemLabel, parseOverlay, snapPosition, snapTargets } from "./overlay";
+import { DEFAULT_OVERLAY, MAX_OVERLAY_ITEMS, createItem, itemLabel, itemsBounds, parseOverlay, snapGuide, snapPosition, snapTargets } from "./overlay";
 
 test("overlay : un nouveau calque est centré, au-dessus des autres", () => {
   const first = createItem(DEFAULT_OVERLAY, "shape");
@@ -44,4 +44,27 @@ test("overlay : lecture tolérante et bornée", () => {
   assert.deepEqual(parsed.items[1].props, {});
   assert.equal(parseOverlay({ items: Array.from({ length: 300 }, () => ({ type: "shape" })) }).items.length, MAX_OVERLAY_ITEMS);
   assert.deepEqual(parseOverlay(null), { ...DEFAULT_OVERLAY, items: [] });
+});
+
+test("overlay : groupes et repères conservés, valeurs invalides écartées", () => {
+  const parsed = parseOverlay({
+    width: 1920, height: 1080,
+    items: [{ type: "text", id: "a", group: "g-1" }, { type: "shape", id: "b", group: "<script>" }],
+    guides: { x: [960, -5, "x", 4000], y: [540.4] },
+  });
+  assert.equal(parsed.items[0].group, "g-1");
+  assert.equal(parsed.items[1].group, undefined);
+  assert.deepEqual(parsed.guides, { x: [960], y: [540] });
+  assert.equal(parseOverlay({ guides: { x: [], y: [] } }).guides, undefined);
+});
+
+test("overlay : repères des règles, aimantation et rectangle englobant", () => {
+  const data = { width: 1000, height: 500, items: [], guides: { x: [300], y: [] } };
+  assert.ok(snapTargets(data, "x", [], true).includes(300));
+  assert.ok(!snapTargets(data, "x", []).includes(300));
+  assert.equal(snapGuide(497, [500], 8), 500);
+  assert.equal(snapGuide(480, [500], 8), 480);
+  const a = createItem(data, "shape", { x: 10, y: 20, w: 100, h: 50 });
+  const b = createItem(data, "shape", { x: 200, y: 5, w: 10, h: 10 });
+  assert.deepEqual(itemsBounds([a, b]), { x: 10, y: 5, w: 200, h: 65 });
 });
