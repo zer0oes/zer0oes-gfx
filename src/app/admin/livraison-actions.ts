@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { checkDeliveryLink, DELIVERABLE_MAX_BYTES, deliverablePath, pendingPreview, previewsEmail, isDeliverableType, mediaKind, newDeliveryToken, deliveryLocked, deliveryLockedMessage } from "@/lib/delivery";
+import { checkDeliveryLink, DELIVERABLE_MAX_BYTES, deliverablePath, pendingPreview, previewsEmail, isDeliverableType, mediaKind, newDeliveryToken, deliveryLocked, deliveryLockedMessage, manualPlannedKey } from "@/lib/delivery";
 import { notify, sendToCustomer } from "@/lib/notify";
 import { siteUrl } from "@/lib/site-url";
 import { s3Configured, s3DeliverableDelete, s3DeliverableUpload } from "@/lib/s3";
@@ -53,6 +53,20 @@ export async function addDeliveryLinkAction(formData: FormData) {
   } else await getStore().addDeliverable({ orderId, kind: "lien", label, url });
   await refreshDeliveryPages(orderId);
   back(orderId, { ok: "Lien ajouté." });
+}
+
+// Livrable vide (juste un nom) : l'aperçu et les fichiers s'ajoutent ensuite depuis son panneau
+export async function addEmptyDeliverableAction(input: { orderId: string; label: string }): Promise<{ error?: string }> {
+  await requireAdmin();
+  const label = input.label.trim().slice(0, 120);
+  if (!label) return { error: "Donne un nom au livrable." };
+  const store = getStore();
+  const order = await store.getOrder(input.orderId);
+  if (!order) return { error: "Commande introuvable." };
+  if (deliveryLocked(order, await store.listDeliverables(order.id))) return { error: deliveryLockedMessage };
+  await store.addDeliverable({ orderId: order.id, kind: "fichier", plannedKey: manualPlannedKey(), label, finalAssets: [] });
+  await refreshDeliveryPages(order.id);
+  return {};
 }
 
 // Lien d'installation d'un widget ou pack d'alertes : lien d'importation Streamlabs, ou code de partage c4ldas
@@ -218,7 +232,8 @@ export async function attachDeliverablePreview(input: { orderId: string; id: str
   if (!input.path.startsWith(`${input.orderId}/`)) return { error: "Chemin de fichier invalide." };
   const kind = mediaKind(input.path);
   if (!kind) return { error: "L'aperçu doit être une image (PNG, JPG, WEBP, SVG) ou une vidéo (MP4, WEBM)." };
-  if (kind === "video") return { error: "Utilise une image d’aperçu : les vidéos doivent être transcodées avant publication." };
+  // Vidéo : lue telle quelle dans l'espace client (logo par-dessus), à envoyer en basse résolution
+  if (kind === "video" && !/\.(mp4|webm)$/i.test(input.path)) return { error: "La vidéo d’aperçu doit être en MP4 ou WebM." };
   const store = getStore();
   const order = await store.getOrder(input.orderId);
   if (!order) return { error: "Commande introuvable." };

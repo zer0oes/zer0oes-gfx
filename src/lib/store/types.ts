@@ -82,7 +82,7 @@ export type Deliverable = {
   previewVersions?: { path: string; publishedAt: string }[];
   plannedKey?: string;
   // install : lien d'installation (Streamlabs : url ; StreamElements : code c4ldas, url facultative)
-  finalAssets?: { path?: string; url?: string; label: string; install?: "streamlabs" | "streamelements"; code?: string }[];
+  finalAssets?: { path?: string; url?: string; label: string; install?: "streamlabs" | "streamelements"; code?: string; folder?: boolean }[];
   id: string;
   orderId: string;
   kind: "lien" | "fichier";

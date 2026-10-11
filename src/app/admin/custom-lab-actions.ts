@@ -5,11 +5,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { LAB_MAX_BYTES, newLabContent, parseLabContent } from "@/lib/custom-lab/model";
 import { randomUUID } from "node:crypto";
-import { deleteLabDocument, getLabDocument, LabConflictError, listLabDocuments, listLabSources, saveLabDocument, setLabPositions } from "@/lib/custom-lab/store";
-import { labOverlayHtml, labPlatformZip, type LabExportFile } from "@/lib/custom-lab/export";
+import { deleteLabDocument, getLabDocument, LabConflictError, listLabDocuments, saveLabDocument, setLabPositions } from "@/lib/custom-lab/store";
+import { labPlatformZip, type LabExportFile } from "@/lib/custom-lab/export";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
 import type { LabContent } from "@/lib/custom-lab/types";
-import { deliverablePath, deliveryLocked } from "@/lib/delivery";
+import { deliverablePath, deliveryLocked, manualPlannedKey } from "@/lib/delivery";
 import { s3Configured, s3DeliverableDelete } from "@/lib/s3";
 import { getStore } from "@/lib/store";
 import { orderStatuses } from "@/lib/store/types";
@@ -173,7 +173,7 @@ export async function listLabDeliveryTargetsAction(): Promise<LabDeliveryTarget[
   return targets.filter((t): t is LabDeliveryTarget => t !== null);
 }
 
-// Génère les fichiers de la création (zip par plateforme, ou page HTML d'un overlay) et les dépose comme
+// Génère les fichiers d'un widget ou d'un pack d'alertes (zip d'un dossier par plateforme) et les dépose comme
 // fichiers HD d'un livrable : nouveau (avec un nom) ou existant. Un fichier du même nom est remplacé,
 // sauf s'il a déjà été téléchargé par le client (le nouveau est alors ajouté à côté).
 export async function deliverLabAction(input: { id: string; orderId: string; targetId?: string; name?: string; platforms: Platform[] }): Promise<{ ok: true; message: string } | { ok: false; message: string }> {
@@ -181,6 +181,8 @@ export async function deliverLabAction(input: { id: string; orderId: string; tar
   const store = getStore();
   const [document, order] = await Promise.all([getLabDocument(input.id), store.getOrder(input.orderId)]);
   if (!document) return { ok: false, message: "Création introuvable." };
+  // Un overlay se livre en vidéo / PNG ou en lien d'import rapide, ajoutés depuis la commande
+  if (document.kind === "overlay") return { ok: false, message: "Un overlay se livre en vidéo, PNG ou lien d’import rapide, depuis la commande." };
   if (!order) return { ok: false, message: "Commande introuvable." };
   if (!store.saveDeliverableFile) return { ok: false, message: "Aucun stockage de livrables configuré." };
   const items = await store.listDeliverables(order.id);
@@ -194,21 +196,17 @@ export async function deliverLabAction(input: { id: string; orderId: string; tar
 
   let files: LabExportFile[];
   try {
-    if (document.kind === "overlay") {
-      const sources = Object.fromEntries((await listLabSources()).map((d) => [d.id, { name: d.name, project: d.project, kind: d.kind, variants: d.variants }]));
-      // Un overlay ne s'installe que sur StreamElements
-      files = [labOverlayHtml(document, sources, "streamelements")];
-    } else files = platforms.map((p) => labPlatformZip(document, p));
+    files = platforms.map((p) => labPlatformZip(document, p));
   } catch (error) {
     return { ok: false, message: error instanceof Error ? `Création invalide : ${error.message}` : "Création invalide." };
   }
 
-  const uploaded: { path: string; label: string }[] = [];
+  const uploaded: { path: string; label: string; folder?: boolean }[] = [];
   try {
     for (const file of files) {
       const path = deliverablePath(order.id, file.filename, randomUUID().slice(0, 8));
       await store.saveDeliverableFile(path, file.data);
-      uploaded.push({ path, label: file.label });
+      uploaded.push({ path, label: file.label, ...(file.folder ? { folder: true } : {}) });
     }
   } catch (error) {
     console.error(error);
@@ -226,7 +224,7 @@ export async function deliverLabAction(input: { id: string; orderId: string; tar
     // Anciens fichiers remplacés : retirés du stockage s'ils ne servent plus (aperçu, autre fichier)
     if (s3Configured()) for (const p of replaced) if (p !== target.previewPath && p !== target.storagePath && !assets.some((a) => a.path === p)) await s3DeliverableDelete(p).catch((e) => console.error(e));
   } else {
-    await store.addDeliverable({ orderId: order.id, kind: "fichier", label: name, itemType: document.kind === "alertbox" ? "alerte" : document.kind, finalAssets: uploaded });
+    await store.addDeliverable({ orderId: order.id, kind: "fichier", plannedKey: manualPlannedKey(), label: name, itemType: document.kind === "alertbox" ? "alerte" : document.kind, finalAssets: uploaded });
   }
   revalidatePath(`/admin/commandes/${order.id}`);
   revalidatePath("/admin/commandes");

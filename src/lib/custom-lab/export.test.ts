@@ -10,6 +10,8 @@ test("livraison : zip d'un widget par plateforme", () => {
   assert.equal(se.filename, "mon-widget-streamelements.zip");
   assert.equal(se.label, "Mon Widget — StreamElements");
   assert.equal(String.fromCharCode(se.data[0], se.data[1]), "PK");
+  const names = new TextDecoder().decode(se.data);
+  for (const file of ["widget.html", "widget.css", "widget.js", "fields.json"]) assert.match(names, new RegExp(`mon-widget-streamelements/${file.replace(".", "\\.")}`));
   assert.equal(labPlatformZip(widget, "streamlabs").label, "Mon Widget — Streamlabs");
   assert.equal(labPlatformZip({ ...newLabContent("alertbox"), name: "Alertes" }, "streamlabs").contentType, "application/zip");
 });

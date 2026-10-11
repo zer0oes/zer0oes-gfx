@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { deliveryLocked, portalEmail } from "./delivery";
+import { attachmentDisposition, deliveryLocked, portalEmail } from "./delivery";
 
 test("la confirmation regroupe le brief et le suivi derrière un seul lien", () => {
   const url = "https://example.com/commande/private-token";
@@ -79,4 +79,10 @@ test("commande entièrement validée : retrait verrouillé tant qu'elle n'est pa
   assert.equal(deliveryLocked({ status: "en_cours" }, done), false);
   assert.equal(deliveryLocked({ status: "livree" }, [...done, {}]), false);
   assert.equal(deliveryLocked({ status: "livree" }, []), false);
+});
+
+test("le nom de téléchargement accepte tirets longs et accents (S3 refuse l'en-tête hors ISO-8859-1)", () => {
+  const header = attachmentDisposition("zer0oes - Gaming scene — overlay OBS é.html");
+  assert.equal(header, `attachment; filename="zer0oes - Gaming scene - overlay OBS e.html"; filename*=UTF-8''zer0oes%20-%20Gaming%20scene%20%E2%80%94%20overlay%20OBS%20%C3%A9.html`);
+  assert.match(header, /^[\x20-\x7e]+$/);
 });
