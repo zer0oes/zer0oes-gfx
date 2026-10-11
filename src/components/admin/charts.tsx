@@ -166,13 +166,14 @@ export function PaymentsChart({ points }: { points: SeriesPoint[] }) {
           { label: kindLabels.complet, color: colors.complet },
           { label: kindLabels.acompte, color: colors.acompte },
           { label: kindLabels.solde, color: colors.solde },
-          { label: kindLabels.remboursement, color: colors.remboursement },
+          // Remboursements : seulement si la série en contient (le tableau de bord les déduit du paiement d'origine)
+          ...(points.some((p) => p.refunds > 0) ? [{ label: kindLabels.remboursement, color: colors.remboursement }] : []),
         ]}
       />
       <DataTable
         caption="Encaissements par type de paiement"
-        head={["Période", kindLabels.complet, kindLabels.acompte, kindLabels.solde, kindLabels.remboursement, "Chiffre d'affaires"]}
-        rows={points.map((p) => [p.label, formatPrice(p.complet), formatPrice(p.acompte), formatPrice(p.solde), p.refunds ? `−${formatPrice(p.refunds)}` : "—", formatPrice(p.revenue)])}
+        head={["Période", kindLabels.complet, kindLabels.acompte, kindLabels.solde, "Chiffre d'affaires"]}
+        rows={points.map((p) => [p.label, formatPrice(p.complet), formatPrice(p.acompte), formatPrice(p.solde), formatPrice(p.revenue)])}
       />
     </>
   );

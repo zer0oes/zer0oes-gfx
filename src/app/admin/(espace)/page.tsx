@@ -10,6 +10,7 @@ import {
   periodKinds,
   revenueByOffer,
   series,
+  netOfRefunds,
   totals,
   type Period,
 } from "@/lib/dashboard";
@@ -42,6 +43,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/admin"
   const { today, sample, finance, period, orders, allOrders, quotes, movs, inPeriod } = await loadDashboard(periodParams(await searchParams));
   const t = totals(inPeriod, finance);
   const points = series(movs, period, finance, today);
+  const paymentPoints = series(netOfRefunds(movs), period, finance, today);
   const decls = declarations(movs, finance, period, today);
   const next = nextDeclaration(movs, finance, today);
   const outstanding = outstandingBalances(orders);
@@ -162,8 +164,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/admin"
       </section>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <ChartCard id="encaissements" title="Encaissements" description="Par date d'encaissement, selon le type de paiement.">
-          <PaymentsChart points={points} />
+        <ChartCard id="encaissements" title="Encaissements" description="Par date d'encaissement, selon le type de paiement. Une commande remboursée est retirée de son jour de paiement.">
+          <PaymentsChart points={paymentPoints} />
         </ChartCard>
         <ChartCard id="cumul" title="Chiffre d'affaires et net cumulés" description="Ce qu'il te reste après frais Stripe et cotisations.">
           <CumulativeChart points={points} />
