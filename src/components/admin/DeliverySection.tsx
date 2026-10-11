@@ -109,7 +109,7 @@ export async function DeliverySection({ order, items, message }: { order: Order;
               })}</ul>
               <DeliveryUpload orderId={order.id} targetId={d.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} saveScope={`livrable-${d.id}`} />
               {/* Plateforme d'installation : texte explicatif et choix StreamElements / Streamlabs */}
-              <div className="-mx-4 space-y-3 border-y border-border p-4">
+              <div className="-mx-4 space-y-3 border-t border-border px-4 pt-4">
                 <p className="text-sm font-semibold">Lien d’installation</p>
                 <p className="text-xs text-muted">Le client voit un bouton « Installer sur … » avec les instructions, après validation et paiement. Les fichiers ZIP restent téléchargeables.</p>
                 <ul className="list-disc space-y-1 pl-5 text-xs text-muted">
