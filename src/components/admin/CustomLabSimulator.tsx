@@ -49,7 +49,7 @@ export function CustomLabSimulator({ platform, dispatch, onStatus }: { platform:
       <div className="cl-simulator-body"><p className="cl-field-label">Événement</p>{events.map((entry) => {
         const form = forms[entry.key];
         const sub = "sub" in entry;
-        return <details key={entry.key} className="cl-event-item" open={entry.key === "message" ? true : undefined}><summary><MaterialIcon name={entry.icon} className="size-4" />{entry.label}<span className="cl-chevron inline-flex"><MaterialIcon name="expand_more" className="size-4" /></span></summary><div className="cl-event-body">
+        return <details key={entry.key} className="cl-event-item"><summary><MaterialIcon name={entry.icon} className="size-4" />{entry.label}<span className="cl-chevron inline-flex"><MaterialIcon name="expand_more" className="size-4" /></span></summary><div className="cl-event-body">
           <label>{sub ? subscriberNameLabel(form.subType) : "Pseudo"}<input value={form.name} placeholder="Aléatoire si vide" onChange={(e) => update(entry.key, "name", e.target.value)} /></label>
           {entry.key === "message" && <label className="cl-checkbox">Diffuseur (pseudo de la chaîne)<input type="checkbox" checked={form.broadcaster} onChange={(e) => update(entry.key, "broadcaster", e.target.checked)} /></label>}
           {sub && <label>Type d’abonnement<select value={form.subType} onChange={(e) => update(entry.key, "subType", e.target.value)}><option value="tier1">Sub classique</option><option value="prime">Sub Prime</option><option value="gift">Sub-Gift</option><option value="communitygift">Community Gift</option></select></label>}
