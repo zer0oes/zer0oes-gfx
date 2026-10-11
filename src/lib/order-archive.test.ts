@@ -21,10 +21,14 @@ test("les overlays multiples et les packs ne reçoivent qu'un guide de chaque ty
   assert.deepEqual(archiveGuides([{ ...item, itemType: "guide", label: "Guide overlays" }]), []);
 });
 
-test("un fichier client ne peut pas écraser le guide automatique", () => {
+test("un dossier par livrable, et un fichier client ne peut pas écraser le guide automatique", () => {
+  const two = archiveEntries("o", [item, { ...item, id: "b", finalAssets: [{ path: "o/a.png", label: "Logo" }, { path: "o/b.png", label: "Logo" }] }]);
+  assert.deepEqual(two.map((e) => e.name), ["Avatar/Tartifl8 - Avatar.png", "Avatar (2)/Logo.png", "Avatar (2)/Logo (2).png"]);
   const filename = "guide-installation-overlay-obs.html";
   const entries = archiveEntries("o", [{ ...item, finalAssets: [{ path: `o/${filename}`, label: filename }] }], [filename]);
-  assert.equal(entries[0].name, "guide-installation-overlay-obs (2).html");
+  assert.equal(entries[0].name, "Avatar/guide-installation-overlay-obs.html");
+  // Le dossier d'un livrable ne peut pas non plus prendre le nom d'un guide
+  assert.equal(archiveEntries("o", [{ ...item, label: filename }], [filename])[0].name, `${filename} (2)/Tartifl8 - Avatar.png`);
 });
 
 test("le ZIP exige tous les aperçus validés, les fichiers prêts et le paiement intégral", () => {
@@ -38,7 +42,7 @@ test("le ZIP exige tous les aperçus validés, les fichiers prêts et le paiemen
 
 test("les noms gardent les extensions et les doublons ne sont pas écrasés", () => {
   const entries = archiveEntries("o", [item, { ...item, id: "b" }]);
-  assert.deepEqual(entries.map((entry) => entry.name), ["Tartifl8 - Avatar.png", "Tartifl8 - Avatar (2).png"]);
+  assert.deepEqual(entries.map((entry) => entry.name), ["Avatar/Tartifl8 - Avatar.png", "Avatar (2)/Tartifl8 - Avatar.png"]);
   assert.throws(() => archiveEntries("other", [item]));
 });
 
