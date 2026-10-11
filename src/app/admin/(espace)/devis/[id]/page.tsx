@@ -81,7 +81,7 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
             <label className="block text-sm font-medium">Détail de la prestation<textarea name="description" defaultValue={q.description} required maxLength={5000} rows={4} className={input} /></label>
             <label className="block text-sm font-medium">Livrables (un par ligne)<textarea name="deliverables" defaultValue={q.deliverables.join("\n")} required rows={5} className={input} /></label>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-medium">Montant total HT (€)<input name="price" defaultValue={q.totalPrice ? q.totalPrice / 100 : ""} type="number" min="0.50" max="1000000" step="0.01" required className={input} /></label>
+              <label className="block text-sm font-medium">Montant total (€)<input name="price" defaultValue={q.totalPrice ? q.totalPrice / 100 : ""} type="number" min="0.50" max="1000000" step="0.01" required className={input} /></label>
               <label className="block text-sm font-medium">Valable jusqu’au<input name="validUntil" defaultValue={q.validUntil} type="date" required min={new Date().toISOString().slice(0, 10)} className={input} /></label>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -103,7 +103,7 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
           </div>
           <p className="mt-3 text-sm text-muted">{q.deliverables.length} livrable{q.deliverables.length > 1 ? "s" : ""} inclus</p>
           <div className="mt-6 flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-sm font-semibold">{formatPrice(q.totalPrice)} HT</p><p className="mt-1 text-sm text-muted">{q.paymentType === "acompte" ? `Acompte ${q.depositPercent} % : ${formatPrice(Math.round(q.totalPrice * (q.depositPercent ?? 0) / 100))}, puis solde` : "Règlement intégral"}</p><p className="mt-1 text-xs text-muted">Valable jusqu’au {new Date(`${q.validUntil}T12:00:00Z`).toLocaleDateString("fr-FR", { timeZone: "UTC" })}</p></div>
+            <div><p className="text-sm font-semibold">{formatPrice(q.totalPrice)}</p><p className="mt-1 text-sm text-muted">{q.paymentType === "acompte" ? `Acompte ${q.depositPercent} % : ${formatPrice(Math.round(q.totalPrice * (q.depositPercent ?? 0) / 100))}, puis solde` : "Règlement intégral"}</p><p className="mt-1 text-xs text-muted">Valable jusqu’au {new Date(`${q.validUntil}T12:00:00Z`).toLocaleDateString("fr-FR", { timeZone: "UTC" })}</p></div>
             <div className="ml-auto flex items-center justify-end gap-3">
               {editable && <Link href={`/admin/devis/${q.id}?modifier=1#proposition`} className="rounded-full border border-accent px-5 py-2.5 text-sm font-semibold text-accent hover:bg-accent/10">Modifier la proposition</Link>}
               {q.status === "propose" && !q.sendingAt && <form action={sendProjectQuote}><input type="hidden" name="id" value={q.id} /><input type="hidden" name="updatedAt" value={q.updatedAt} /><button className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background">Envoyer le devis par e-mail</button></form>}

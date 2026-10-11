@@ -9,7 +9,7 @@ export const metadata = { title: "Devis" };
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" });
 const columns = [
   { key: "date", label: "Date" }, { key: "client", label: "Client" },
-  { key: "offre", label: "Projet / Offre" }, { key: "montant", label: "Total HT" },
+  { key: "offre", label: "Projet / Offre" }, { key: "montant", label: "Total" },
   { key: "validite", label: "Validité" }, { key: "statut", label: "Statut" },
 ] as const;
 type SortKey = (typeof columns)[number]["key"];

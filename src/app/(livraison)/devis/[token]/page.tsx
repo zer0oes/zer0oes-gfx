@@ -58,7 +58,7 @@ export default async function QuotePortal({ params, searchParams }: { params: Pr
       <section aria-labelledby="montant" className={`mt-4 ${block}`}>
         <h2 id="montant" className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">{en ? "Quote summary and payment" : "Récapitulatif et paiement"}</h2>
         <dl className="mt-3 grid gap-3 sm:grid-cols-3">
-          <div><dt className="text-xs text-muted">{en ? "Total project price excl. tax" : "Prix total du projet HT"}</dt><dd className="font-display text-lg font-bold">{formatPrice(q.totalPrice, locale)}</dd></div>
+          <div><dt className="text-xs text-muted">{en ? "Total project price" : "Prix total du projet"}</dt><dd className="font-display text-lg font-bold">{formatPrice(q.totalPrice, locale)}</dd></div>
           <div><dt className="text-xs text-muted">{en ? "Valid until" : "Valable jusqu’au"}</dt><dd className="mt-1 text-sm font-semibold">{dateFmt.format(new Date(`${q.validUntil}T12:00:00Z`))}</dd></div>
           <div><dt className="text-xs text-muted">{en ? "Prepared for" : "Préparé pour"}</dt><dd className="mt-1 break-words text-sm font-semibold">{q.name}</dd></div>
         </dl>
