@@ -1,3 +1,4 @@
+import { readStoredZip } from "./custom-lab/zip";
 import { downloadFilename, itemType, previewPublished, unlockState } from "./delivery";
 import type { Deliverable, Order } from "./store/types";
 
@@ -40,4 +41,15 @@ export function archiveEntries(orderId: string, items: Deliverable[], reservedNa
       return { ...asset, itemId: item.id, name };
     });
   });
+}
+
+// Dossier livré par le Laboratoire (zip d'un seul dossier) : ses fichiers vont dans un dossier du même nom que
+// l'entrée, sans zip dans le zip. null si le zip n'est pas lisible : il est alors archivé tel quel.
+export function folderFiles(entryName: string, data: Uint8Array) {
+  const files = readStoredZip(data);
+  if (!files?.length) return null;
+  const folder = entryName.replace(/\.zip$/i, "");
+  const inner = files.map((file) => ({ ...file, name: file.name.split("/").slice(1).join("/") }));
+  if (inner.some((file) => !file.name || file.name.split("/").some((part) => !part || part === "..") || file.name.endsWith("/"))) return null;
+  return inner.map((file) => ({ name: `${folder}/${file.name}`, data: file.data }));
 }

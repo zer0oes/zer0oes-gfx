@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { archiveEntries, archiveGuides, canDownloadArchive } from "./order-archive";
+import { archiveEntries, archiveGuides, canDownloadArchive, folderFiles } from "./order-archive";
+import { labPlatformZip } from "./custom-lab/export";
+import { newLabContent } from "./custom-lab/model";
 import type { Deliverable } from "./store/types";
 
 const item: Deliverable = { id: "a", orderId: "o", createdAt: "now", kind: "fichier", label: "Avatar", plannedKey: "avatar", publishedAt: "now", approvedAt: "now", finalAssets: [{ path: "o/avatar.png", label: "Tartifl8 - Avatar" }] };
@@ -38,4 +40,14 @@ test("les noms gardent les extensions et les doublons ne sont pas écrasés", ()
   const entries = archiveEntries("o", [item, { ...item, id: "b" }]);
   assert.deepEqual(entries.map((entry) => entry.name), ["Tartifl8 - Avatar.png", "Tartifl8 - Avatar (2).png"]);
   assert.throws(() => archiveEntries("other", [item]));
+});
+
+test("un dossier du Laboratoire est déplié dans l'archive, sans zip dans le zip", () => {
+  const zip = labPlatformZip({ ...newLabContent("widget"), name: "Mon Widget" }, "streamelements");
+  assert.equal(zip.folder, true);
+  const files = folderFiles("Mon Widget — StreamElements.zip", zip.data);
+  assert.ok(files);
+  const names = files.map((f) => f.name);
+  for (const name of ["widget.html", "widget.css", "widget.js", "fields.json"]) assert.ok(names.includes(`Mon Widget — StreamElements/${name}`), name);
+  assert.equal(folderFiles("x.zip", new Uint8Array([1, 2, 3])), null);
 });

@@ -12,11 +12,13 @@ import { buildAlertboxExport, buildPlatformExport, slugifyWidgetName, type Alert
 import { createZip } from "./zip";
 import { streamlabsWidgetReadme } from "./streamlabs-widgets";
 
-export type LabExportFile = { filename: string; label: string; data: Uint8Array; contentType: string };
+// folder : zip d'un seul dossier, déplié tel quel dans l'archive de la commande (pas de zip dans le zip)
+export type LabExportFile = { filename: string; label: string; data: Uint8Array; contentType: string; folder?: boolean };
 
 export const PLATFORM_NAMES: Record<Platform, string> = { [PLATFORM_STREAM_ELEMENTS]: "StreamElements", [PLATFORM_STREAMLABS]: "Streamlabs" };
 
-// Zip d'un widget ou d'un pack d'alertes pour une plateforme (mêmes fichiers que le bouton Exporter)
+// Zip d'un widget ou d'un pack d'alertes pour une plateforme (mêmes fichiers que le bouton Exporter) :
+// un dossier au nom de la création avec le code HTML, CSS, JS et Fields de cette plateforme
 export function labPlatformZip(raw: LabContent, platform: Platform): LabExportFile {
   const content = parseLabContent(raw);
   const variant = content.variants[platform];
@@ -30,11 +32,13 @@ export function labPlatformZip(raw: LabContent, platform: Platform): LabExportFi
     const readme = platform === PLATFORM_STREAMLABS ? streamlabsWidgetReadme(content.streamlabsWidget ?? "custom") : null;
     if (readme) files = { ...files, "README.txt": readme };
   }
+  const folder = `${slugifyWidgetName(content.name)}-${platform}`;
   return {
-    filename: `${slugifyWidgetName(content.name)}-${platform}.zip`,
+    filename: `${folder}.zip`,
     label: `${content.name} — ${PLATFORM_NAMES[platform]}`,
-    data: createZip(files),
+    data: createZip(Object.fromEntries(Object.entries(files).map(([path, text]) => [`${folder}/${path}`, text]))),
     contentType: "application/zip",
+    folder: true,
   };
 }
 

@@ -203,12 +203,12 @@ export async function deliverLabAction(input: { id: string; orderId: string; tar
     return { ok: false, message: error instanceof Error ? `Création invalide : ${error.message}` : "Création invalide." };
   }
 
-  const uploaded: { path: string; label: string }[] = [];
+  const uploaded: { path: string; label: string; folder?: boolean }[] = [];
   try {
     for (const file of files) {
       const path = deliverablePath(order.id, file.filename, randomUUID().slice(0, 8));
       await store.saveDeliverableFile(path, file.data);
-      uploaded.push({ path, label: file.label });
+      uploaded.push({ path, label: file.label, ...(file.folder ? { folder: true } : {}) });
     }
   } catch (error) {
     console.error(error);
