@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { isDeliveryToken, downloadFilename } from "@/lib/delivery";
-import { canDownloadArchive, archiveEntries, archiveGuides } from "@/lib/order-archive";
+import { canDownloadArchive, archiveEntries, archiveGuides, folderFiles } from "@/lib/order-archive";
 import { filesExpired } from "@/lib/portal";
 import { getStore } from "@/lib/store";
 
@@ -25,9 +25,18 @@ export async function GET(_request: Request, { params }: RouteContext<"/commande
   // Lire avant de commencer le flux : un guide manquant ne doit pas livrer un ZIP incomplet.
   const guideFiles = await Promise.all(guides.map(async (name) => ({ name, data: await readFile(path.join(process.cwd(), "public", name)) })));
   const entries = archiveEntries(order.id, items, guides);
+  // Dossiers du Laboratoire : lus avant le flux pour être dépliés dans l'archive
+  const folders = new Map<string, { name: string; data: Uint8Array }[] | null>();
+  for (const entry of entries) if (entry.folder && entry.path) folders.set(entry.name, folderFiles(entry.name, await store.readDeliverableFile(entry.path)));
   const archive = new ZipArchive({ zlib: { level: 1 } });
   for (const guide of guideFiles) archive.append(guide.data, { name: guide.name });
   for (const entry of entries) {
+    const files = folders.get(entry.name);
+    if (files) {
+      if (!await store.beginFinalAccess(entry.itemId, [entry.path!])) return new Response("Validation et paiement intégral requis.", { status: 403, headers });
+      for (const file of files) archive.append(Buffer.from(file.data), { name: file.name });
+      continue;
+    }
     const read = store.readDeliverableFile;
     const source = Readable.from((async function* () {
       const data = entry.path ? Buffer.from(await read(entry.path)) : Buffer.from(`[InternetShortcut]\r\nURL=${entry.url}\r\n`);

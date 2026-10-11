@@ -1,6 +1,5 @@
 import {
   addDeliveryLinkAction,
-  addInstallLinkAction,
   createPortalLinkAction,
   deleteDeliverableAction,
   removeDeliverablePreviewAction,
@@ -95,9 +94,9 @@ export async function DeliverySection({ order, items, message }: { order: Order;
               <h4 className="font-semibold">Aperçu client</h4>
               {ready && order.deliveryToken && <div className="rounded-lg border border-border bg-background p-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/commande/${order.deliveryToken}/${d.id}/apercu`} alt={`Aperçu protégé de ${d.label}`} className="max-h-56 w-full object-contain" />
+                {(d.previewType ?? mediaKind(d.previewPath)) === "video" ? <video src={`/commande/${order.deliveryToken}/${d.id}/apercu`} controls muted playsInline preload="metadata" className="max-h-56 w-full" /> : <img src={`/commande/${order.deliveryToken}/${d.id}/apercu`} alt={`Aperçu protégé de ${d.label}`} className="max-h-56 w-full object-contain" />}
               </div>}
-              {!ready && <p className="text-sm text-muted">Ajoute une image de présentation. Elle sera réduite et filigranée côté serveur.</p>}
+              {!ready && <p className="text-sm text-muted">Ajoute une image ou une vidéo de présentation. L’image est réduite et filigranée côté serveur ; la vidéo est lue telle quelle avec ton logo par-dessus, envoie-la en basse résolution.</p>}
               {d.finalAccessedAt || d.accessedFinalAssets?.length ? <p className="text-xs text-muted">Déjà téléchargé par le client : l’aperçu ne peut plus être remplacé.</p> : <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} saveScope={`livrable-${d.id}`} />}
               {d.previewPath && !locked && !(d.finalAccessedAt || d.accessedFinalAssets?.length) && <form action={removeDeliverablePreviewAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-xs text-muted hover:text-red-300">Retirer l’aperçu</button></form>}
             </section>
@@ -109,22 +108,17 @@ export async function DeliverySection({ order, items, message }: { order: Order;
                 return <li key={i} className="flex items-center justify-between gap-3"><span>✓ {asset.label} ({asset.install === "streamlabs" ? "installation Streamlabs" : asset.install === "streamelements" ? `installation StreamElements · code ${asset.code ?? "—"}` : asset.url ? "lien d’import" : "fichier"}){downloaded && <span className="ml-1 text-xs text-muted">· {asset.install ? "installé" : "téléchargé"}</span>}</span>{!locked && order.status !== "terminee" && !(downloaded && d.approvedAt) && <ConfirmDelete action={removeFinalAssetAction} id={d.id} fields={{ orderId: order.id, index: String(i) }} label="" question={`Retirer « ${asset.label} » des fichiers définitifs ?`} icon />}</li>;
               })}</ul>
               <DeliveryUpload orderId={order.id} targetId={d.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} saveScope={`livrable-${d.id}`} />
-              <form action={addDeliveryLinkAction} className="space-y-3"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="targetId" value={d.id} /><input name="label" required placeholder="Nom du lien d’import" aria-label="Nom du lien d’import" className={input} /><input name="url" type="url" required placeholder="https://…" aria-label="Adresse du lien d’import" className={input} /><button className="rounded-full border border-border px-4 py-2 text-sm">Ajouter le lien d’import</button></form>
-              {/* Lien d'installation : Streamlabs (lien d'importation du Widget Theme) ou StreamElements (code de partage c4ldas) */}
-              <form action={addInstallLinkAction} className="-mx-4 space-y-3 border-t border-border px-4 pt-4">
-                <input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="targetId" value={d.id} />
+              {/* Plateforme d'installation : texte explicatif et choix StreamElements / Streamlabs */}
+              <div className="-mx-4 space-y-3 border-t border-border px-4 pt-4">
                 <p className="text-sm font-semibold">Lien d’installation</p>
                 <p className="text-xs text-muted">Le client voit un bouton « Installer sur … » avec les instructions, après validation et paiement. Les fichiers ZIP restent téléchargeables.</p>
                 <ul className="list-disc space-y-1 pl-5 text-xs text-muted">
                   <li>Streamlabs : partage le Widget Theme depuis <a href={STREAMLABS_THEMES_URL} target="_blank" rel="noopener noreferrer" className="text-accent underline">streamlabs.com › Widget Themes ↗</a> et colle le lien d’importation.</li>
                   <li>StreamElements : génère le code de partage sur <a href={C4LDAS_URL} target="_blank" rel="noopener noreferrer" className="text-accent underline">c4ldas SE API ↗</a> (« Share overlay / widget ») et colle-le.</li>
                 </ul>
-                <Segmented name="platform" options={[["streamlabs", "Streamlabs"], ["streamelements", "StreamElements"]]} defaultValue="streamlabs" />
-                <input name="url" type="url" placeholder="Lien d’importation Streamlabs, ou lien de partage StreamElements (facultatif)" aria-label="Lien d’importation ou de partage" className={input} />
-                <input name="code" placeholder="Code de partage c4ldas (StreamElements)" aria-label="Code de partage c4ldas" autoComplete="off" className={input} />
-                <input name="label" placeholder="Nom affiché (facultatif, sinon « Installer sur … »)" aria-label="Nom affiché" className={input} />
-                <button className="rounded-full border border-border px-4 py-2 text-sm">Ajouter le lien d’installation</button>
-              </form>
+                <Segmented name="platform" options={[["streamelements", "StreamElements"], ["streamlabs", "Streamlabs"]]} defaultValue="streamelements" />
+              </div>
+              <form action={addDeliveryLinkAction} className="space-y-3"><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="targetId" value={d.id} /><input name="label" required placeholder="Nom du lien d’import" aria-label="Nom du lien d’import" className={input} /><input name="url" type="url" required placeholder="https://…" aria-label="Adresse du lien d’import" className={input} /><button className="rounded-full border border-border px-4 py-2 text-sm">Ajouter le lien d’import</button></form>
             </section>
             {!!d.clientNotes?.length && <section className="space-y-3"><h4 className="font-semibold">Retours du client</h4>{d.clientNotes.map((note, i) => <div key={i} className="rounded-lg border border-amber-400/30 p-3"><p className="text-xs text-muted">{dateFmt.format(new Date(note.at))}</p><p className="mt-1 whitespace-pre-wrap text-sm">{note.body}</p></div>)}</section>}
             <section className="space-y-3 rounded-xl border border-border bg-background/40 p-4">
