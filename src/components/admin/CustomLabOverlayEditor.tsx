@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
-import { saveLabAction } from "@/app/admin/custom-lab-actions";
+import { createLabSourceAction, saveLabAction } from "@/app/admin/custom-lab-actions";
+import { OVERLAY_ICONS, isOverlayIcon } from "@/lib/custom-lab/icons";
 import { parseLabContent } from "@/lib/custom-lab/model";
 import { DEFAULT_OVERLAY, ITEM_LABELS, MAX_GUIDES, MIN_ITEM_SIZE, createItem, itemLabel, itemsBounds, newItemId, snapGuide, snapPosition, snapTargets, type OverlayData, type OverlayItem, type OverlayItemType } from "@/lib/custom-lab/overlay";
 import { buildLabPreview, labEventMessage, labLoadMessage } from "@/lib/custom-lab/preview";
@@ -109,6 +110,9 @@ function ItemContent({ item, source, platform, register }: { item: OverlayItem; 
       </div>
     );
   }
+  if (item.type === "image" && isOverlayIcon(p.icon)) {
+    return <svg viewBox="0 0 24 24" className="h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path fill={String(p.iconColor || "#ffffff")} d={OVERLAY_ICONS[p.icon].path} /></svg>;
+  }
   if (item.type === "image") {
     // eslint-disable-next-line @next/next/no-img-element
     return p.src ? <img src={String(p.src)} alt="" draggable={false} className="h-full w-full" style={{ objectFit: (p.fit as "contain" | "cover") || "contain" }} /> : <Placeholder label="Image : choisis un fichier" />;
@@ -203,6 +207,9 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
   const [addOpen, setAddOpen] = useState(false);
   const addMenu = useRef<HTMLDivElement>(null);
   const confirmDelete = useRef<HTMLDialogElement>(null);
+  // Fenêtres du menu « Ajouter » : bibliothèque, icônes, média depuis un lien
+  const [picker, setPicker] = useState<"library" | "icon" | "link" | null>(null);
+  const [link, setLink] = useState("");
   const past = useRef<OverlayData[]>([]);
   const future = useRef<OverlayData[]>([]);
   // Nombre d'étapes à annuler / rétablir (copie des piles, lisible pendant le rendu)
@@ -211,7 +218,10 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
   const frames = useRef(new Map<string, HTMLIFrameElement>());
   const data = content.overlay ?? DEFAULT_OVERLAY;
   const dirty = JSON.stringify(content) !== saved;
-  const byId = useMemo(() => new Map(sources.map((s) => [s.id, s])), [sources]);
+  // Créations ajoutées depuis « Nouveau widget » / « Nouvelle alerte » pendant la session
+  const [created, setCreated] = useState<OverlaySource[]>([]);
+  const allSources = useMemo(() => [...sources, ...created], [sources, created]);
+  const byId = useMemo(() => new Map(allSources.map((s) => [s.id, s])), [allSources]);
   const current = data.items.find((it) => it.id === selected) ?? null;
   // Taille d'origine de la création affichée dans le calque widget sélectionné
   const currentSize = current?.type === "widget" && current.widgetId ? byId.get(current.widgetId)?.content.size : undefined;
@@ -548,6 +558,40 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
     setStylePick({ type: current.type, style: Object.fromEntries(Object.entries(current.props).filter(([k]) => k !== "content")) });
     setStatus(`Style copié : clique sur ${current.type === "text" ? "un calque texte" : "une forme"} pour l’appliquer. Échap ou la pipette pour arrêter.`);
   };
+  // « Nouveau widget » / « Nouvelle alerte » : création rangée dans le projet de l'overlay, posée comme calque
+  // et ouverte dans un nouvel onglet pour être éditée
+  const createSource = async (kind: "widget" | "alertbox") => {
+    setAddOpen(false);
+    const tab = window.open("", "_blank");
+    const result = await createLabSourceAction(kind, content.project);
+    if (!result.ok) {
+      tab?.close();
+      return setStatus(result.message);
+    }
+    const source = result.source;
+    setCreated((list) => [...list, source]);
+    const size = source.content.size;
+    add("widget", { widgetId: source.id, name: source.name, ...(size ? { w: size.width, h: size.height, x: Math.round((data.width - size.width) / 2), y: Math.round((data.height - size.height) / 2) } : {}) });
+    if (tab) tab.location.href = `/admin/laboratoire/${source.id}`;
+    setStatus(`${kind === "alertbox" ? "Nouvelle alerte créée" : "Nouveau widget créé"} dans « ${source.project} » et ouvert dans un nouvel onglet.`);
+  };
+  const addIcon = (icon: string) => {
+    setPicker(null);
+    add("image", { name: OVERLAY_ICONS[icon].label, w: 160, h: 160, x: Math.round((data.width - 160) / 2), y: Math.round((data.height - 160) / 2), props: { icon, iconColor: "#ffffff", fit: "contain" } });
+  };
+  // Image ou vidéo par son adresse (vidéo reconnue à son extension)
+  const addLink = () => {
+    const url = link.trim();
+    if (!/^https:\/\/\S+$/.test(url)) return setStatus("Colle une adresse qui commence par https://");
+    const type = /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url) ? "video" : "image";
+    setPicker(null);
+    setLink("");
+    add(type, { props: { ...createItem(data, type).props, src: url } });
+  };
+  const addSource = (source: OverlaySource) => {
+    setPicker(null);
+    add("widget", { widgetId: source.id, name: source.name, ...sourceSize(source.id) });
+  };
   const zoomBy = (dir: 1 | -1) => setZoom(dir > 0 ? ZOOM_STEPS.find((z) => z > scale + 0.001) ?? ZOOM_STEPS[ZOOM_STEPS.length - 1] : [...ZOOM_STEPS].reverse().find((z) => z < scale - 0.001) ?? ZOOM_STEPS[0]);
   useEffect(() => {
     if (!addOpen) return;
@@ -618,19 +662,29 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
         <div ref={addMenu} className="relative">
           <button type="button" className={`${toolIcon} !w-auto gap-2 px-3 text-sm`} aria-haspopup="menu" aria-expanded={addOpen} onClick={() => setAddOpen(!addOpen)}><MaterialIcon name="add" className="size-4" />Ajouter<MaterialIcon name="expand_more" className="size-4" /></button>
           {addOpen && (
-            <div role="menu" className="absolute left-0 top-full z-30 mt-1 max-h-80 w-72 overflow-auto rounded-xl border border-[var(--cl-line)] bg-[#151720] py-1 shadow-2xl">
-              {(["image", "video", "shape"] as const).map((type) => (
-                <button key={type} type="button" role="menuitem" className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[#ac8bfa1f]" onClick={() => { setAddOpen(false); if (type === "shape") add(type); else openLabMedia(type, (url) => add(type, { props: { ...createItem(data, type).props, src: url } })); }}>
-                  <MaterialIcon name={TYPE_ICONS[type]} className="size-4 text-[var(--cl-accent)]" />{ITEM_LABELS[type]}
+            <div role="menu" className="absolute left-0 top-full z-30 mt-1 w-56 rounded-xl border border-[var(--cl-line)] bg-[#151720] p-1.5 shadow-2xl">
+              {([
+                ["library", "Widget / Alerte", "widgets"],
+                ["new-widget", "Nouveau widget", "add_circle"],
+                ["new-alert", "Nouvelle alerte", "add_circle"],
+                null,
+                ["image", "Image", "image"],
+                ["icon", "Icône", "star"],
+                ["shape", "Forme", "category"],
+                ["video", "Vidéo", "videocam"],
+                ["link", "Depuis un lien", "link"],
+              ] as const).map((entry, i) => entry === null ? <div key={i} className="-mx-1.5 my-1.5 border-t border-[var(--cl-line)]" /> : (
+                <button key={entry[0]} type="button" role="menuitem" className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#e3e5ec] hover:bg-[#ac8bfa1f]" onClick={() => {
+                  const key = entry[0];
+                  setAddOpen(false);
+                  if (key === "new-widget" || key === "new-alert") void createSource(key === "new-alert" ? "alertbox" : "widget");
+                  else if (key === "library" || key === "icon" || key === "link") setPicker(key);
+                  else if (key === "shape") add("shape");
+                  else openLabMedia(key, (url) => add(key, { props: { ...createItem(data, key).props, src: url } }));
+                }}>
+                  <MaterialIcon name={entry[2]} className="size-4 text-[var(--cl-muted)]" />{entry[1]}
                 </button>
               ))}
-              <div className="my-1 border-t border-[var(--cl-line)]" />
-              <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--cl-muted)]">Widget ou alertes</p>
-              {sources.length ? sources.map((s) => (
-                <button key={s.id} type="button" role="menuitem" className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[#ac8bfa1f]" onClick={() => { setAddOpen(false); add("widget", { widgetId: s.id, name: s.name, ...sourceSize(s.id) }); }}>
-                  <MaterialIcon name={s.content.kind === "alertbox" ? "notifications_active" : "widgets"} className="size-4 text-[var(--cl-accent)]" /><span className="min-w-0 truncate">{s.name}<span className="text-[var(--cl-muted)]"> · {s.project}</span></span>
-                </button>
-              )) : <p className="px-3 py-2 text-sm text-[var(--cl-muted)]">Aucune création dans la bibliothèque.</p>}
             </div>
           )}
         </div>
@@ -666,6 +720,46 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
           <button type="button" onClick={() => { remove(selection); confirmDelete.current?.close(); }} className="rounded-full bg-red-500/90 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Supprimer</button>
         </div>
       </dialog>
+      {picker && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onPointerDown={(e) => { if (e.target === e.currentTarget) setPicker(null); }} onKeyDown={(e) => { if (e.key === "Escape") setPicker(null); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="cl-picker-title" className="w-full max-w-md overflow-hidden rounded-2xl border border-[var(--cl-line)] bg-[#12141b] shadow-2xl">
+            <header className="flex items-start justify-between gap-4 border-b border-[var(--cl-line)] px-5 py-4">
+              <div><span className="cl-eyebrow">OVERLAY</span><h2 id="cl-picker-title" className="font-semibold text-[#e3e5ec]">{picker === "library" ? "Widget / Alerte" : picker === "icon" ? "Icône" : "Depuis un lien"}</h2></div>
+              <button type="button" autoFocus className={toolIcon} aria-label="Fermer" onClick={() => setPicker(null)}><MaterialIcon name="close" className="size-4" /></button>
+            </header>
+            {picker === "library" && (
+              <ul className="max-h-[60vh] overflow-auto px-3 py-3">
+                {allSources.length ? allSources.map((entry) => (
+                  <li key={entry.id}>
+                    {/* eslint-disable-next-line react-hooks/refs -- faux positif : add() n'est appelée qu'au clic */}
+                    <button type="button" className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm font-semibold text-[#e3e5ec] hover:bg-[#ac8bfa1f]" onClick={() => addSource(entry)}>
+                      <MaterialIcon name={entry.content.kind === "alertbox" ? "notifications_active" : "widgets"} className="size-4 text-[var(--cl-muted)]" />
+                      <span className="min-w-0 truncate">{entry.name}</span>
+                      <span className="ml-auto shrink-0 text-xs font-normal text-[var(--cl-muted)]">{entry.project}</span>
+                    </button>
+                  </li>
+                )) : <li className="px-2 py-2 text-sm text-[var(--cl-muted)]">Aucun widget ni pack d’alertes dans la bibliothèque.</li>}
+              </ul>
+            )}
+            {picker === "icon" && (
+              <div className="grid max-h-[60vh] grid-cols-4 gap-2 overflow-auto p-4 sm:grid-cols-6">
+                {Object.entries(OVERLAY_ICONS).map(([name, icon]) => (
+                  <button key={name} type="button" title={icon.label} aria-label={icon.label} className="grid aspect-square place-items-center rounded-lg border border-[var(--cl-line)] bg-[#1b1d26] text-[#e3e5ec] hover:border-[var(--cl-accent)]" onClick={() => addIcon(name)}>
+                    <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true"><path fill="currentColor" d={icon.path} /></svg>
+                  </button>
+                ))}
+              </div>
+            )}
+            {picker === "link" && (
+              <form className="grid gap-3 p-5" onSubmit={(e) => { e.preventDefault(); addLink(); }}>
+                <label className="grid gap-1 text-sm">Adresse de l’image ou de la vidéo<input autoFocus className={input} value={link} placeholder="https://…" onChange={(e) => setLink(e.target.value)} /></label>
+                <p className="text-xs text-[var(--cl-muted)]">Une adresse en .mp4, .webm ou .mov crée un calque vidéo, sinon un calque image.</p>
+                <button type="submit" className={`${toolButton} justify-self-end`}>Ajouter</button>
+              </form>
+            )}
+          </section>
+        </div>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div ref={stageBox} className="min-w-0">
@@ -803,7 +897,12 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
                 </>
               )}
 
-              {(current.type === "image" || current.type === "video") && (
+              {current.type === "image" && isOverlayIcon(p.icon) ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="grid gap-1">Icône<select className={input} value={String(p.icon)} onChange={(e) => updateProps(current.id, { icon: e.target.value })}>{Object.entries(OVERLAY_ICONS).map(([name, icon]) => <option key={name} value={name}>{icon.label}</option>)}</select></label>
+                  <label className="grid gap-1">Couleur<input type="color" className="h-8 w-full" value={String(p.iconColor || "#ffffff")} onChange={(e) => updateProps(current.id, { iconColor: e.target.value })} /></label>
+                </div>
+              ) : (current.type === "image" || current.type === "video") && (
                 <>
                   <label className="grid gap-1">Adresse<input className={input} value={String(p.src || "")} placeholder="https://…" onChange={(e) => updateProps(current.id, { src: e.target.value })} /></label>
                   <button type="button" className={toolButton} onClick={() => openLabMedia(current.type === "image" ? "image" : "video", (url) => updateProps(current.id, { src: url }))}>Choisir dans les médias…</button>
@@ -832,7 +931,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
 
               {current.type === "widget" && (
                 <>
-                  <label className="grid gap-1">Création affichée<select className={input} value={current.widgetId ?? ""} onChange={(e) => updateItem(current.id, { widgetId: e.target.value || undefined, props: { ...current.props, widgetOverrides: {} } })}><option value="">— Choisir —</option>{sources.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.project}</option>)}</select></label>
+                  <label className="grid gap-1">Création affichée<select className={input} value={current.widgetId ?? ""} onChange={(e) => updateItem(current.id, { widgetId: e.target.value || undefined, props: { ...current.props, widgetOverrides: {} } })}><option value="">— Choisir —</option>{allSources.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.project}</option>)}</select></label>
                   {currentSize && <button type="button" className={`${toolButton} justify-self-center`} onClick={() => updateItem(current.id, { w: currentSize.width, h: currentSize.height })}><MaterialIcon name="fullscreen" className="size-4" />Taille d’origine ({currentSize.width} × {currentSize.height})</button>}
                   {current.widgetId && <Link href={`/admin/laboratoire/${current.widgetId}`} className="inline-flex items-center gap-1 text-[var(--cl-accent)] hover:underline">Ouvrir cette création dans l’éditeur<MaterialIcon name="arrow_forward" className="size-4" /></Link>}
                   <p className="cl-field-hint">Les événements simulés (bouton en bas à droite) sont envoyés à tous les widgets de la scène.</p>

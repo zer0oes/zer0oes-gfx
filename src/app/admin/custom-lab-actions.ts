@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { deleteLabDocument, getLabDocument, LabConflictError, listLabDocuments, listLabSources, saveLabDocument, setLabPositions } from "@/lib/custom-lab/store";
 import { labOverlayHtml, labPlatformZip, type LabExportFile } from "@/lib/custom-lab/export";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
+import type { LabContent } from "@/lib/custom-lab/types";
 import { deliverablePath, deliveryLocked } from "@/lib/delivery";
 import { s3Configured, s3DeliverableDelete } from "@/lib/s3";
 import { getStore } from "@/lib/store";
@@ -28,6 +29,20 @@ export async function createLabAction(form: FormData) {
   }
   revalidatePath("/admin/laboratoire");
   redirect(`/admin/laboratoire/${id}`);
+}
+
+// « Nouveau widget » / « Nouvelle alerte » depuis l'éditeur d'overlay : création rangée dans le projet de l'overlay,
+// renvoyée pour être posée aussitôt comme calque (l'éditeur l'ouvre dans un nouvel onglet)
+export async function createLabSourceAction(kind: "widget" | "alertbox", project: string): Promise<{ ok: true; source: { id: string; name: string; project: string; content: LabContent } } | { ok: false; message: string }> {
+  await requireAdmin();
+  try {
+    const base = newLabContent(kind === "alertbox" ? "alertbox" : "widget");
+    const d = await saveLabDocument({ ...base, name: kind === "alertbox" ? "Nouvelle alerte" : base.name, project: project.trim() || base.project });
+    revalidatePath("/admin/laboratoire");
+    return { ok: true, source: { id: d.id, name: d.name, project: d.project, content: { name: d.name, project: d.project, kind: d.kind, variants: d.variants, ...(d.size ? { size: d.size } : {}) } } };
+  } catch (error) {
+    return { ok: false, message: error instanceof LabStorageError && error.reason === "setup" ? "Le Laboratoire n’est pas encore configuré." : "Création impossible pour le moment." };
+  }
 }
 
 export async function importLabAction(form: FormData) {
