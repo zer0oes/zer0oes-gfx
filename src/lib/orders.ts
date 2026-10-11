@@ -312,19 +312,39 @@ async function realStripeFee(sessionId: string): Promise<number | undefined> {
 // rien n'est marqué payé tant que payment_status n'est pas « paid » (moyens de
 // paiement différés : virement, PayPal selon les cas…).
 // Espace commande du client : lien privé créé à l'enregistrement de la commande et envoyé par
-// e-mail une seule fois (un webhook rejoué trouve le lien existant et n'envoie rien).
+// e-mail une seule fois après succès ; un échec peut être repris au prochain passage.
 async function openPortal(order: Order) {
-  if (order.deliveryToken) return;
-  const token = newDeliveryToken();
-  await getStore().updateOrder(order.id, { deliveryToken: token });
+  if (order.confirmationSentAt) return;
+  const token = order.deliveryToken ?? newDeliveryToken();
+  if (!order.deliveryToken) await getStore().updateOrder(order.id, { deliveryToken: token });
   if (!order.customerEmail) return;
   const base = await siteUrl();
   const mail = portalEmail({
     offerName: order.offerName,
     url: `${base}/commande/${token}`,
-    briefUrl: `${base}/merci?session_id=${encodeURIComponent(order.stripeSessionId)}`,
   });
-  await sendToCustomer({ to: order.customerEmail, subject: mail.subject, text: mail.text }).catch((e) => console.error(e));
+  const result = await sendToCustomer({ to: order.customerEmail, ...mail, idempotencyKey: `order-confirmation/${order.id}` });
+  if (result.sent) await getStore().updateOrder(order.id, { confirmationSentAt: new Date().toISOString() });
+}
+
+// Le retour Checkout peut précéder le webhook, notamment sur localhost.
+// La session est toujours relue chez Stripe avant d'enregistrer le paiement.
+export async function syncCheckoutOrder(sessionId: string): Promise<Order | null> {
+  const store = getStore();
+  let order = await store.getOrderBySession(sessionId);
+  if (sessionId.startsWith("cs_") && (!order || !order.confirmationSentAt)) {
+    const stripe = getStripe();
+    if (stripe) {
+      try {
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (session.payment_status === "paid" && session.currency === "eur" && session.metadata?.kind === "commande") {
+          await handleCheckoutCompleted(session);
+        }
+      } catch (error) { console.error("Confirmation de commande :", error); }
+      order = await store.getOrderBySession(sessionId);
+    }
+  }
+  return order;
 }
 
 export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
@@ -502,6 +522,7 @@ export async function attachBrief(sessionId: string, brief: Record<string, strin
     ...(!order.customerEmail && email ? { customerEmail: email } : {}),
   });
   await ensureDeliveryPlan({ ...order, brief });
+  if (order.demo) await openPortal({ ...order, customerEmail: order.customerEmail || email });
   return order;
 }
 

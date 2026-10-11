@@ -218,6 +218,20 @@ PayPal ou différé peut arriver quelques minutes après.
 
 ## Resend
 
+**Aperçu local des mails** : avec `npm run dev`, ouvrir
+`http://localhost:3000/api/dev/mails`. Choisir une confirmation, un brief admin,
+une annulation, une livraison ou un accusé de réception. Les aperçus utilisent les
+vrais modèles avec des données fictives, sans envoyer de mail. Cette page est
+disponible uniquement en développement et renvoie 404 en production.
+
+La confirmation client est envoyée après vérification du paiement Stripe, par le webhook
+ou au retour sur la page « Merci » (utile en local). Un envoi échoué peut être repris
+en rouvrant cette page. Appliquer la migration `20261011000100_order_confirmation.sql`
+pour enregistrer les confirmations envoyées dans Supabase.
+
+En mode démo sans Stripe, l'adresse cliente est connue uniquement après l'envoi du brief :
+la confirmation part à ce moment-là. Sans `RESEND_API_KEY`, les mails restent dans les logs.
+
 1. Créer un compte sur [resend.com](https://resend.com), puis **Domains > Add domain** avec ton domaine.
 2. Ajouter dans la zone DNS OVH les enregistrements indiqués par Resend (SPF, DKIM…) et attendre la vérification.
 3. Créer une clé API et renseigner `RESEND_API_KEY`, `NOTIFY_EMAIL` et `NOTIFY_FROM`.

@@ -8,10 +8,12 @@ export function nonEmptyNotificationFields(fields: Record<string, string>) {
 export function adminEmailHtml(subject: string, fields: Record<string, string>, replyTo?: string) {
   fields = nonEmptyNotificationFields(fields);
   const entries = Object.entries(fields);
-  const adminLinks = entries.filter(([, value]) => {
+  const links = entries.filter(([, value]) => {
     try { const url = new URL(value.trim()); return /^https?:$/.test(url.protocol); }
     catch { return false; }
   });
+  const administrationLinks = links.filter(([label]) => label === "Administration");
+  const adminLinks = administrationLinks.length ? administrationLinks : links;
   const normalize = (label: string) => label.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/-/g, "");
   const groups = [
     ["client", "nom", "email", "chaine"],
