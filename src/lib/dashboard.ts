@@ -78,6 +78,23 @@ export function movements(orders: Order[], invoices: Invoice[], f: FinanceSettin
   return out.sort((a, b) => a.at.localeCompare(b.at));
 }
 
+// Pour le graphique des encaissements : un remboursement retire le paiement d'origine (au jour de ce
+// paiement) au lieu d'apparaître comme une perte le jour du remboursement. Une commande remboursée en
+// entier disparaît donc du graphique ; les totaux et l'URSSAF gardent les mouvements réels.
+export function netOfRefunds(movs: Movement[]): Movement[] {
+  const refunded = new Map<string, number>();
+  for (const m of movs) if (m.kind === "remboursement") refunded.set(m.orderId, (refunded.get(m.orderId) ?? 0) - m.amount);
+  const out: Movement[] = [];
+  for (const m of movs) {
+    if (m.kind === "remboursement") continue;
+    const left = refunded.get(m.orderId) ?? 0;
+    const taken = Math.min(left, m.amount);
+    if (taken) refunded.set(m.orderId, left - taken);
+    if (m.amount - taken > 0) out.push({ ...m, amount: m.amount - taken });
+  }
+  return out;
+}
+
 export const within = (m: { day: string }, start: string, end: string) => m.day >= start && m.day <= end;
 
 // --- Totaux ----------------------------------------------------------------------------

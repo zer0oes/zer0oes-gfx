@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   bucketsFor,
   deadlineOf,
+  netOfRefunds,
   declarations,
   movements,
   nextDeclaration,
@@ -219,4 +220,16 @@ test("données d'exemple : reproductibles et jusqu'à aujourd'hui", () => {
   assert.ok(a.length > 30);
   assert.ok(a.every((o) => o.demo && parisDay(o.createdAt) <= "2026-10-03" && (!o.balancePaidAt || parisDay(o.balancePaidAt) <= "2026-10-03")));
   assert.ok(a.some((o) => o.refunds?.length));
+});
+
+test("graphique des encaissements : un remboursement retire le paiement d'origine, sans montant négatif", () => {
+  const base = { offerName: "Premier look", customer: "c", demo: false, fee: 0, feeEstimated: false };
+  const movs = [
+    { ...base, orderId: "a", at: "2026-10-08T10:00:00Z", day: "2026-10-08", kind: "complet" as const, amount: 39000 },
+    { ...base, orderId: "a", at: "2026-10-11T10:00:00Z", day: "2026-10-11", kind: "remboursement" as const, amount: -39000 },
+    { ...base, orderId: "b", at: "2026-10-08T10:00:00Z", day: "2026-10-08", kind: "acompte" as const, amount: 10000 },
+    { ...base, orderId: "b", at: "2026-10-09T10:00:00Z", day: "2026-10-09", kind: "solde" as const, amount: 20000 },
+    { ...base, orderId: "b", at: "2026-10-10T10:00:00Z", day: "2026-10-10", kind: "remboursement" as const, amount: -15000 },
+  ];
+  assert.deepEqual(netOfRefunds(movs).map((m) => [m.orderId, m.kind, m.amount]), [["b", "solde", 15000]]);
 });
