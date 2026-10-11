@@ -140,12 +140,12 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
               </Row>
               <Row label="Formule">{order.offerName}</Row>
               <Row label="Remise logo">
-                {order.hasLogo ? `oui (−${formatPrice(order.logoDiscount)} HT, prix catalogue ${formatPrice(order.listPrice)})` : "non"}
+                {order.hasLogo ? `oui (−${formatPrice(order.logoDiscount)}, prix catalogue ${formatPrice(order.listPrice)})` : "non"}
               </Row>
               <Row label="Paiement">{paymentSummary(order)}</Row>
               {order.promoCode && <Row label="Remise promotionnelle">{order.promoCode} · −{formatPrice(order.promoDiscount ?? 0)}</Row>}
-              <Row label="Encaissé">{formatPrice(order.amountPaid)} HT</Row>
-              <Row label="Solde dû">{due > 0 ? `${formatPrice(due)} HT` : "aucun"}</Row>
+              <Row label="Encaissé">{formatPrice(order.amountPaid)}</Row>
+              <Row label="Solde dû">{due > 0 ? formatPrice(due) : "aucun"}</Row>
               <Row label="Session Stripe">
                 <code className="text-xs text-muted">{order.stripeSessionId}</code>
               </Row>
@@ -155,7 +155,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
             {due > 0 ? (
               <>
                 <p className="mt-2 text-sm text-muted">
-                  Reste à régler : <strong className="text-foreground">{formatPrice(due)} HT</strong>. Le montant est
+                  Reste à régler : <strong className="text-foreground">{formatPrice(due)}</strong>. Le montant est
                   recalculé côté serveur au moment de créer le lien.
                 </p>
                 <BalanceLinkForm orderId={order.id} existingUrl={order.balanceUrl} />
@@ -210,7 +210,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
                   <span className="font-medium">
                     {inv.kind === "acompte" ? "Facture d'acompte" : inv.kind === "solde" ? "Facture de solde" : "Facture"}
                   </span>
-                  <span>{formatPrice(inv.amount)} HT</span>
+                  <span>{formatPrice(inv.amount)}</span>
                   {inv.number && <span className="text-muted">n° {inv.number}</span>}
                   {inv.status === "emise" ? (
                     <span className="text-emerald-300">{inv.demo ? "simulée (démo)" : "émise et payée"}</span>

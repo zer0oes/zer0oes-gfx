@@ -18,7 +18,7 @@ const columns: { key: SortKey | "brief"; label: string }[] = [
   { key: "client", label: "Client" },
   { key: "offre", label: "Offre" },
   { key: "brief", label: "Brief" },
-  { key: "montant", label: "Payé / Total HT" },
+  { key: "montant", label: "Payé / Total" },
   { key: "solde", label: "Solde dû" },
   { key: "statut", label: "Statut" },
 ];

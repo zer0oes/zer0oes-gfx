@@ -99,12 +99,12 @@ export async function sendBalanceLink(_prev: AdminFormState, formData: FormData)
     if (order.customerEmail) {
       ({ sent } = await sendToCustomer({
         to: order.customerEmail,
-        subject: `Ta commande zer0oes gfx : paiement du solde (${formatPrice(due)} HT)`,
+        subject: `Ta commande zer0oes gfx : paiement du solde (${formatPrice(due)})`,
         text: [
           "Bonjour,",
           "",
           `Ta commande « ${order.offerName} » est prête à être livrée.`,
-          `Le solde à régler est de ${formatPrice(due)} HT. Tu peux le payer en ligne ici :`,
+          `Le solde à régler est de ${formatPrice(due)}. Tu peux le payer en ligne ici :`,
           url,
           "",
           "Dès réception du paiement, je t'envoie les fichiers définitifs.",
@@ -119,9 +119,9 @@ export async function sendBalanceLink(_prev: AdminFormState, formData: FormData)
       ok: true,
       message: order.customerEmail
         ? sent
-          ? `Lien envoyé à ${order.customerEmail} (${formatPrice(due)} HT).`
-          : `Lien créé (${formatPrice(due)} HT). E-mail non envoyé (Resend non configuré) : copie le lien ci-dessous.`
-        : `Lien créé (${formatPrice(due)} HT). Aucun e-mail client connu : copie le lien ci-dessous.`,
+          ? `Lien envoyé à ${order.customerEmail} (${formatPrice(due)}).`
+          : `Lien créé (${formatPrice(due)}). E-mail non envoyé (Resend non configuré) : copie le lien ci-dessous.`
+        : `Lien créé (${formatPrice(due)}). Aucun e-mail client connu : copie le lien ci-dessous.`,
     };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "Erreur lors de la création du lien." };
