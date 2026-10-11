@@ -1,12 +1,28 @@
-import { downloadFilename, previewPublished, unlockState } from "./delivery";
+import { downloadFilename, itemType, previewPublished, unlockState } from "./delivery";
 import type { Deliverable, Order } from "./store/types";
 
 export function canDownloadArchive(order: Pick<Order, "totalPrice" | "amountPaid">, items: Deliverable[]) {
   return items.length > 0 && items.every((item) => previewPublished(item) && unlockState(order, item) === "debloque" && Boolean(item.storagePath || item.url || item.finalAssets?.length));
 }
 
-export function archiveEntries(orderId: string, items: Deliverable[]) {
-  const used = new Set<string>();
+export function archiveGuides(items: Deliverable[]) {
+  const types = new Set(items.map((item) => {
+    const type = itemType(item);
+    // Les anciennes commandes à la carte peuvent avoir un type générique « Visuel ».
+    if (["visuel", "video", "fichier"].includes(type)) {
+      if (/\b(?:widgets?|alertes?|alerts?)\b/i.test(item.label)) return "widget";
+      if (/\boverlays?\b/i.test(item.label)) return "overlay";
+    }
+    return type;
+  }));
+  return [
+    ...(types.has("overlay") ? ["guide-installation-overlay-obs.html"] : []),
+    ...(types.has("widget") || types.has("alerte") ? ["guide-installation-widgets.html"] : []),
+  ];
+}
+
+export function archiveEntries(orderId: string, items: Deliverable[], reservedNames: string[] = []) {
+  const used = new Set<string>(reservedNames.map((name) => name.toLowerCase()));
   return items.flatMap((item) => {
     // Code d'installation StreamElements sans lien : rien à archiver (il s'installe depuis l'espace commande)
     const assets = [...(item.finalAssets ?? []).filter((asset) => asset.path || asset.url), ...(item.storagePath || item.url ? [{ path: item.storagePath, url: item.url, label: item.label }] : [])];

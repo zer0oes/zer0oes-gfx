@@ -4,6 +4,9 @@ import type { NextConfig } from "next";
 const mediaHost = process.env.NEXT_PUBLIC_MEDIA_URL ? new URL(process.env.NEXT_PUBLIC_MEDIA_URL) : null;
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/commande/*/archive": ["./public/guide-installation-overlay-obs.html", "./public/guide-installation-widgets.html"],
+  },
   images: {
     remotePatterns: mediaHost ? [{ protocol: "https", hostname: mediaHost.hostname, pathname: "/**" }] : [],
   },

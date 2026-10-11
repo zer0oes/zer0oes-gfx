@@ -309,6 +309,11 @@ Adresse : `/admin`. Saisir ton e-mail, puis cliquer sur le lien reçu.
   « Envoyer la livraison au client » : le client reçoit par e-mail le lien d'une page privée
   `/livraison/<jeton>` (non indexée) où il importe ses overlays et télécharge ses fichiers
   (liens de téléchargement valables 10 minutes, régénérés à chaque clic).
+  L'archive complète de la commande inclut automatiquement le guide HTML overlay
+  pour les overlays et le guide HTML widgets pour les widgets et packs d'alertes.
+  Chaque guide est ajouté une seule fois, même avec plusieurs créations ou un pack.
+  Les guides de référence se trouvent dans `public/guide-installation-overlay-obs.html`
+  et `public/guide-installation-widgets.html` ; les modifier met à jour les futurs ZIP.
   Après validation de tous les livrables dans son espace commande, le client peut laisser
   un témoignage facultatif et choisir, via une case décochée par défaut, d’autoriser sa
   diffusion sur le site (accueil et portfolio). L’avis, le choix de diffusion et sa date
