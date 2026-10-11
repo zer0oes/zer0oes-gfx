@@ -45,6 +45,13 @@ export function downloadFilename(label: string, originalPath: string) {
   return extension && !base.toLowerCase().endsWith(extension.toLowerCase()) ? `${base}${extension}` : base;
 }
 
+// En-tête Content-Disposition valable avec accents et tirets longs : nom ASCII de secours + nom UTF-8 (RFC 6266).
+// S3 refuse les en-têtes hors ISO-8859-1 (« — » dans « Overlay — overlay OBS »).
+export function attachmentDisposition(filename: string) {
+  const ascii = filename.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\u2013\u2014]/g, "-").replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "");
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`;
+}
+
 export function deliverablePath(orderId: string, filename: string, unique: string) {
   return `${orderId}/${unique}-${safeFilename(filename)}`;
 }
