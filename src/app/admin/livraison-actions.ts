@@ -218,7 +218,8 @@ export async function attachDeliverablePreview(input: { orderId: string; id: str
   if (!input.path.startsWith(`${input.orderId}/`)) return { error: "Chemin de fichier invalide." };
   const kind = mediaKind(input.path);
   if (!kind) return { error: "L'aperçu doit être une image (PNG, JPG, WEBP, SVG) ou une vidéo (MP4, WEBM)." };
-  if (kind === "video") return { error: "Utilise une image d’aperçu : les vidéos doivent être transcodées avant publication." };
+  // Vidéo : lue telle quelle dans l'espace client (logo par-dessus), à envoyer en basse résolution
+  if (kind === "video" && !/\.(mp4|webm)$/i.test(input.path)) return { error: "La vidéo d’aperçu doit être en MP4 ou WebM." };
   const store = getStore();
   const order = await store.getOrder(input.orderId);
   if (!order) return { error: "Commande introuvable." };

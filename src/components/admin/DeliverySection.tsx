@@ -94,9 +94,9 @@ export async function DeliverySection({ order, items, message }: { order: Order;
               <h4 className="font-semibold">Aperçu client</h4>
               {ready && order.deliveryToken && <div className="rounded-lg border border-border bg-background p-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/commande/${order.deliveryToken}/${d.id}/apercu`} alt={`Aperçu protégé de ${d.label}`} className="max-h-56 w-full object-contain" />
+                {(d.previewType ?? mediaKind(d.previewPath)) === "video" ? <video src={`/commande/${order.deliveryToken}/${d.id}/apercu`} controls muted playsInline preload="metadata" className="max-h-56 w-full" /> : <img src={`/commande/${order.deliveryToken}/${d.id}/apercu`} alt={`Aperçu protégé de ${d.label}`} className="max-h-56 w-full object-contain" />}
               </div>}
-              {!ready && <p className="text-sm text-muted">Ajoute une image de présentation. Elle sera réduite et filigranée côté serveur.</p>}
+              {!ready && <p className="text-sm text-muted">Ajoute une image ou une vidéo de présentation. L’image est réduite et filigranée côté serveur ; la vidéo est lue telle quelle avec ton logo par-dessus, envoie-la en basse résolution.</p>}
               {d.finalAccessedAt || d.accessedFinalAssets?.length ? <p className="text-xs text-muted">Déjà téléchargé par le client : l’aperçu ne peut plus être remplacé.</p> : <DeliveryUpload orderId={order.id} supabaseUrl={supabaseUrl()} supabaseKey={supabasePublishableKey()} previewFor={d.id} saveScope={`livrable-${d.id}`} />}
               {d.previewPath && !locked && !(d.finalAccessedAt || d.accessedFinalAssets?.length) && <form action={removeDeliverablePreviewAction}><input type="hidden" name="orderId" value={order.id} /><input type="hidden" name="id" value={d.id} /><button className="text-xs text-muted hover:text-red-300">Retirer l’aperçu</button></form>}
             </section>

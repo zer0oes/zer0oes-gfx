@@ -105,7 +105,7 @@ export function DeliveryUpload({
         {/* Sans panneau, l'envoi part dès le dépôt : à cocher avant */}
         <label className="flex w-full items-start gap-2 text-xs"><input type="checkbox" checked={alsoHd} disabled={busy} onChange={(event) => setAlsoHd(event.target.checked)} className="mt-0.5 accent-[var(--accent)]" /><span>Utiliser aussi l’original comme fichier HD<span className="mt-1 block text-muted">L’aperçu reste protégé. L’original sera téléchargeable après validation et paiement intégral.</span></span></label>
         <div className="w-full">
-          <FileDrop compact file={deferred || busy ? file : null} onFile={(f) => { setFile(f); if (f && !deferred) send(f); }} disabled={busy} accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" label="Image d’aperçu" hint={`${deferred ? "envoyée à l’enregistrement" : "envoyée dès le dépôt"} · PNG, JPG, WebP ou SVG`} />
+          <FileDrop compact file={deferred || busy ? file : null} onFile={(f) => { setFile(f); if (f && !deferred) send(f); }} disabled={busy} accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg,video/mp4,video/webm" label="Image ou vidéo d’aperçu" hint={`${deferred ? "envoyé à l’enregistrement" : "envoyé dès le dépôt"} · PNG, JPG, WebP, SVG, MP4 ou WebM`} />
         </div>
         {status && (
           <span role="status" className="text-xs text-muted">
