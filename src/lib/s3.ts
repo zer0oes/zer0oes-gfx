@@ -1,6 +1,7 @@
 import "server-only";
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { attachmentDisposition } from "@/lib/delivery";
 import { mediaBaseUrl } from "@/lib/media";
 
 // Stockage des médias du portfolio sur Amazon S3 (bucket S3_BUCKET, région AWS_REGION).
@@ -65,7 +66,7 @@ export async function s3DeliverableUrl(path: string, filename?: string) {
     new GetObjectCommand({
       Bucket: bucket(),
       Key: privateKey(path),
-      ...(filename ? { ResponseContentDisposition: `attachment; filename="${filename.replace(/"/g, "")}"` } : {}),
+      ...(filename ? { ResponseContentDisposition: attachmentDisposition(filename) } : {}),
     }),
     { expiresIn: 600 },
   );

@@ -19,7 +19,6 @@ export function CustomLabDeliver({ id, kind, name, platform, dirty, className, r
   const [mode, setMode] = useState<"new" | "existing">("new");
   const [targetId, setTargetId] = useState("");
   const [label, setLabel] = useState("");
-  const [platforms, setPlatforms] = useState<string>(platform);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string; orderId?: string } | null>(null);
 
@@ -27,7 +26,6 @@ export function CustomLabDeliver({ id, kind, name, platform, dirty, className, r
   const open = async () => {
     setMessage(null);
     setLabel(name);
-    setPlatforms(platform);
     (document.getElementById(DRAWER) as HTMLDialogElement | null)?.showModal();
     try {
       const list = await listLabDeliveryTargetsAction();
@@ -50,7 +48,8 @@ export function CustomLabDeliver({ id, kind, name, platform, dirty, className, r
         id,
         orderId,
         ...(mode === "existing" ? { targetId } : { name: label.trim() }),
-        platforms: (kind === "overlay" ? ["streamelements"] : platforms === "both" ? ["streamelements", "streamlabs"] : [platforms]) as Platform[],
+        // Code de la plateforme de l'onglet ouvert
+        platforms: [platform],
       });
       setMessage({ ok: result.ok, text: result.message, orderId: result.ok ? orderId : undefined });
       if (result.ok) setTargets(await listLabDeliveryTargetsAction().catch(() => targets));
@@ -60,7 +59,8 @@ export function CustomLabDeliver({ id, kind, name, platform, dirty, className, r
     setBusy(false);
   };
 
-  const what = kind === "overlay" ? "la page HTML de l’overlay (source navigateur OBS)" : kind === "alertbox" ? "le zip du pack d’alertes" : "le zip du widget";
+  const platformName = platform === "streamlabs" ? "Streamlabs" : "StreamElements";
+  const what = `un zip avec le dossier ${kind === "alertbox" ? "du pack d’alertes" : "du widget"} (HTML, CSS, JS et Fields ${platformName})`;
   return (
     <>
       {renderTrigger ? renderTrigger(() => { void open(); }) : <button type="button" onClick={open} disabled={dirty} title={dirty ? "Enregistrement en cours : la livraison utilise la version enregistrée" : "Livrer dans une commande"} className={className}>
@@ -109,11 +109,7 @@ export function CustomLabDeliver({ id, kind, name, platform, dirty, className, r
             ) : (
               <p className="text-sm text-muted">Cette commande n’a pas encore de livrable.</p>
             )}
-            {kind === "overlay" ? (
-              <p className="text-xs text-muted">Overlay : widgets livrés avec leur code StreamElements (un overlay ne s’installe pas sur Streamlabs).</p>
-            ) : (
-              <Segmented name="livrer-plateforme" legend="Plateformes" value={platforms} onChange={setPlatforms} options={[["streamelements", "StreamElements"], ["streamlabs", "Streamlabs"], ["both", "Les deux"]]} />
-            )}
+            <p className="text-xs text-muted">Plateforme : {platformName} (onglet ouvert dans l’éditeur). Change d’onglet pour livrer l’autre version.</p>
             {mode === "existing" && <p className="text-xs text-muted">Un fichier du même nom déjà présent est remplacé, sauf si le client l’a déjà téléchargé.</p>}
           </>
         )}

@@ -47,6 +47,34 @@ export function createZip(files: Record<string, string>): Uint8Array {
   return concatBytes([...localParts, ...centralParts, end]);
 }
 
+// Relit une archive produite par createZip (méthode "stored") : null si elle contient une entrée compressée
+// ou si sa structure est invalide. Sert à déplier un dossier du Laboratoire dans l'archive de la commande.
+export function readStoredZip(data: Uint8Array): { name: string; data: Uint8Array }[] | null {
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const end = data.length - 22;
+  if (end < 0 || view.getUint32(end, true) !== 0x06054b50) return null;
+  const count = view.getUint16(end + 10, true);
+  let offset = view.getUint32(end + 16, true);
+  const entries: { name: string; data: Uint8Array }[] = [];
+  const decoder = new TextDecoder();
+  for (let i = 0; i < count; i += 1) {
+    if (offset + 46 > data.length || view.getUint32(offset, true) !== 0x02014b50) return null;
+    const method = view.getUint16(offset + 10, true);
+    const size = view.getUint32(offset + 20, true);
+    const nameLength = view.getUint16(offset + 28, true);
+    const extraLength = view.getUint16(offset + 30, true);
+    const commentLength = view.getUint16(offset + 32, true);
+    const local = view.getUint32(offset + 42, true);
+    if (method !== 0 || local + 30 > data.length || view.getUint32(local, true) !== 0x04034b50) return null;
+    const name = decoder.decode(data.subarray(offset + 46, offset + 46 + nameLength));
+    const start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
+    if (start + size > data.length) return null;
+    entries.push({ name, data: data.subarray(start, start + size) });
+    offset += 46 + nameLength + extraLength + commentLength;
+  }
+  return entries;
+}
+
 interface EntryHeaderValues {
   time: number;
   date: number;

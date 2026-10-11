@@ -45,6 +45,13 @@ export function downloadFilename(label: string, originalPath: string) {
   return extension && !base.toLowerCase().endsWith(extension.toLowerCase()) ? `${base}${extension}` : base;
 }
 
+// En-tête Content-Disposition valable avec accents et tirets longs : nom ASCII de secours + nom UTF-8 (RFC 6266).
+// S3 refuse les en-têtes hors ISO-8859-1 (« — » dans « Overlay — overlay OBS »).
+export function attachmentDisposition(filename: string) {
+  const ascii = filename.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\u2013\u2014]/g, "-").replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "");
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`;
+}
+
 export function deliverablePath(orderId: string, filename: string, unique: string) {
   return `${orderId}/${unique}-${safeFilename(filename)}`;
 }
@@ -148,6 +155,11 @@ export function unlockState(order: { totalPrice: number; amountPaid: number }, d
   if (!d.approvedAt) return "a_valider";
   return order.totalPrice - order.amountPaid > 0 ? "solde_a_regler" : "debloque";
 }
+
+// Livrable ajouté à la main sans fichier principal (vide, ou fichiers du Laboratoire) : clé « prévue » propre,
+// pour respecter la contrainte de la base et attendre son aperçu comme un livrable du plan de l'offre
+export const MANUAL_KEY_PREFIX = "ajout-";
+export const manualPlannedKey = () => `${MANUAL_KEY_PREFIX}${globalThis.crypto.randomUUID().slice(0, 8)}`;
 
 export function previewPublished(item: { plannedKey?: string; publishedAt?: string; approvedAt?: string }) {
   return !item.plannedKey || Boolean(item.publishedAt);

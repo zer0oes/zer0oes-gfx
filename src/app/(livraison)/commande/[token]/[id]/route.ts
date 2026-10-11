@@ -1,4 +1,4 @@
-import { isDeliveryToken, downloadFilename, unlockState, previewPublished } from "@/lib/delivery";
+import { isDeliveryToken, downloadFilename, attachmentDisposition, unlockState, previewPublished } from "@/lib/delivery";
 import { filesExpired } from "@/lib/portal";
 import { getStore } from "@/lib/store";
 import { installAccessKey } from "@/lib/install-links";
@@ -41,7 +41,7 @@ export async function GET(request: Request, { params }: RouteContext<"/commande/
     if (asset.url) return deliver(Response.redirect(asset.url, 302), asset.install ? installAccessKey(asset) : asset.url);
     if (!asset.path || !asset.path.startsWith(`${order.id}/`)) return notFound();
     if (store.deliverableDownloadUrl) return deliver(Response.redirect(await store.deliverableDownloadUrl(asset.path, downloadFilename(asset.label, asset.path)), 302), asset.path);
-    if (store.readDeliverableFile) return deliver(new Response(Buffer.from(await store.readDeliverableFile(asset.path)), { headers: { ...headers, "Content-Type": "application/octet-stream", "Content-Disposition": `attachment; filename="${downloadFilename(asset.label, asset.path)}"` } }), asset.path);
+    if (store.readDeliverableFile) return deliver(new Response(Buffer.from(await store.readDeliverableFile(asset.path)), { headers: { ...headers, "Content-Type": "application/octet-stream", "Content-Disposition": attachmentDisposition(downloadFilename(asset.label, asset.path)) } }), asset.path);
     return notFound();
   }
 
@@ -57,7 +57,7 @@ export async function GET(request: Request, { params }: RouteContext<"/commande/
   if (store.readDeliverableFile) {
     const data = await store.readDeliverableFile(item.storagePath);
     return deliver(new Response(Buffer.from(data), {
-      headers: { ...headers, "Content-Type": "application/octet-stream", "Content-Disposition": `attachment; filename="${filename}"` },
+      headers: { ...headers, "Content-Type": "application/octet-stream", "Content-Disposition": attachmentDisposition(filename) },
     }), item.storagePath);
   }
   return notFound();

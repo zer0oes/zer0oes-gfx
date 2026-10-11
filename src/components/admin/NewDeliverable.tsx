@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { addEmptyDeliverableAction } from "@/app/admin/livraison-actions";
 import { DeliveryUpload } from "./DeliveryUpload";
 import { Drawer, DrawerButton } from "./Drawer";
 import { flushUploads, hasPendingUploads } from "./pending-uploads";
@@ -9,7 +10,8 @@ import { flushUploads, hasPendingUploads } from "./pending-uploads";
 const DRAWER = "livrable-nouveau";
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 
-// Nouveau livrable dans un panneau latéral : un nom, puis un lien d'import ou un fichier, envoyés à l'enregistrement
+// Nouveau livrable dans un panneau latéral : un nom, puis un lien d'import ou un fichier, envoyés à l'enregistrement.
+// Sans fichier ni lien, le livrable est créé vide (aperçu et fichiers ajoutés plus tard depuis son panneau).
 export function NewDeliverable({ orderId, supabaseUrl, supabaseKey, linkAction }: {
   orderId: string;
   supabaseUrl?: string;
@@ -26,6 +28,17 @@ export function NewDeliverable({ orderId, supabaseUrl, supabaseKey, linkAction }
   const save = async () => {
     setError("");
     if (!name.trim()) return setError("Donne un nom au livrable.");
+    const empty = kind === "link" ? !url.trim() : !hasPendingUploads(DRAWER);
+    if (empty) {
+      setBusy(true);
+      const result = await addEmptyDeliverableAction({ orderId, label: name.trim() }).catch(() => ({ error: "Connexion interrompue. Réessaie dans un instant." }));
+      setBusy(false);
+      if (result.error) return setError(result.error);
+      (document.getElementById(DRAWER) as HTMLDialogElement | null)?.close();
+      setName("");
+      router.refresh();
+      return;
+    }
     if (kind === "link") {
       if (!/^https:\/\//.test(url.trim())) return setError("Le lien doit commencer par https://.");
       setBusy(true);
@@ -36,7 +49,6 @@ export function NewDeliverable({ orderId, supabaseUrl, supabaseKey, linkAction }
       await linkAction(form); // redirige vers la commande
       return;
     }
-    if (!hasPendingUploads(DRAWER)) return setError("Choisis ou dépose un fichier.");
     setBusy(true);
     const failed = await flushUploads(DRAWER);
     setBusy(false);

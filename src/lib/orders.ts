@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { abbyConfigured, createAbbyApi } from "@/lib/abby";
 import { invoicePayment, type InvoiceDeps, type PaymentInput } from "@/lib/invoicing";
-import { newDeliveryToken, portalEmail, previewPublished } from "@/lib/delivery";
+import { MANUAL_KEY_PREFIX, newDeliveryToken, portalEmail, previewPublished } from "@/lib/delivery";
 import { notify, sendToCustomer } from "@/lib/notify";
 import { siteUrl } from "@/lib/site-url";
 import {
@@ -486,7 +486,7 @@ export async function ensureDeliveryPlan(order: Order) {
   const store = getStore();
   if (!order.brief) return;
   const existing = await store.listDeliverables(order.id);
-  if (existing.some((item) => item.plannedKey)) return;
+  if (existing.some((item) => item.plannedKey && !item.plannedKey.startsWith(MANUAL_KEY_PREFIX))) return;
   let template = order.deliveryTemplate;
   if (!template) {
     template = (await store.getCatalog()).packs.find((pack) => pack.id === order.packId)?.deliverables ?? [];

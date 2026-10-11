@@ -13,6 +13,7 @@ import Link from "next/link";
 import { site } from "@/data/site";
 import { notFound } from "next/navigation";
 import { OrderPreview } from "@/components/OrderPreview";
+import { OrderVideoPreview } from "@/components/OrderVideoPreview";
 import { ClientTestimonialForm } from "@/components/ClientTestimonialForm";
 import { PreviewActions } from "@/components/PreviewActions";
 import { OrderLiveRefresh } from "@/components/OrderLiveRefresh";
@@ -240,17 +241,7 @@ function Preview({ d, token, tx }: { d: Deliverable; token: string; tx: Texts })
       </div>
     );
   }
-  if (kind === "video") {
-    // Pas de calque de protection par-dessus : il bloquerait les commandes de lecture.
-    // Filigrane posé sur la vidéo (sans capter les clics), téléchargement retiré du lecteur.
-    return (
-      <div className="relative overflow-hidden rounded-xl border border-border bg-background">
-        <video src={src} controls muted playsInline preload="metadata" controlsList="nodownload noplaybackrate" disablePictureInPicture className="aspect-video w-full" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-zeroes-gfx.png" alt="" aria-hidden draggable={false} className="pointer-events-none absolute left-1/2 top-[42%] w-2/5 -translate-x-1/2 -translate-y-1/2 opacity-25" />
-      </div>
-    );
-  }
+  if (kind === "video") return <OrderVideoPreview src={src} en={tx.previewAlt === "Preview"} />;
   return (
     <OrderPreview src={src} alt={`${tx.previewAlt} — ${d.label}`} en={tx.previewAlt === "Preview"} />
   );

@@ -40,8 +40,10 @@ export async function GET(request: Request, { params }: RouteContext<"/commande/
   if (!source) return notFound();
 
   if ((item.previewType ?? mediaKind(source)) === "video") {
-    // Aucune vidéo originale n’est exposée comme aperçu sans transcodage garanti.
-    return notFound();
+    // Lecture dans la page : lien temporaire sans pièce jointe, sinon le fichier servi directement
+    if (store.deliverableDownloadUrl) return new Response(null, { status: 302, headers: { ...headers, Location: await store.deliverableDownloadUrl(source) } });
+    const type = /\.webm$/i.test(source) ? "video/webm" : "video/mp4";
+    return new Response(Buffer.from(await store.readDeliverableFile(source)), { headers: { ...headers, "Content-Type": type } });
   }
 
   const resized = await sharp(await store.readDeliverableFile(source), { animated: false })
