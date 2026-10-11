@@ -1,9 +1,12 @@
-// Graphiques du tableau de bord : SVG rendus côté serveur, chacun avec
+"use client";
+
+// Graphiques du tableau de bord, chacun avec
 // une description pour les lecteurs d'écran et un tableau des données.
 import type { Declaration, SeriesPoint } from "@/lib/dashboard";
 import { declarationStateLabels, formatDay, kindLabels } from "@/lib/dashboard";
 import { formatPrice } from "@/lib/pricing";
 import { ChartTooltip } from "./ChartTooltip";
+import { useChartSize } from "./use-chart-size";
 
 export const colors = {
   acompte: "var(--accent)",
@@ -21,11 +24,7 @@ export function shortPrice(cents: number) {
   return `${Math.round(e).toLocaleString("fr-FR")} €`;
 }
 
-const W = 720;
-const H = 260;
 const PAD = { top: 14, right: 14, bottom: 36, left: 74 };
-const innerW = W - PAD.left - PAD.right;
-const innerH = H - PAD.top - PAD.bottom;
 
 function niceMax(v: number) {
   if (v <= 0) return 10000;
@@ -47,11 +46,12 @@ function Legend({ items }: { items: { label: string; color: string; line?: boole
   );
 }
 
-function Axes({ max, min, labels }: { max: number; min: number; labels: { x: number; text: string }[] }) {
+function Axes({ max, min, labels, width: W, height: H }: { max: number; min: number; labels: { x: number; text: string; future?: boolean }[]; width: number; height: number }) {
+  const innerH = H - PAD.top - PAD.bottom;
   const y = (v: number) => PAD.top + ((max - v) / (max - min)) * innerH;
   const ticks = [max, max / 2, 0, ...(min < 0 ? [min] : [])];
   return (
-    <g fontSize="15" fill="var(--muted)">
+    <g fontSize="13" fill="var(--foreground)">
       {ticks.map((t) => (
         <g key={t}>
           <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--border)" strokeDasharray={t === 0 ? undefined : "3 4"} />
@@ -61,7 +61,7 @@ function Axes({ max, min, labels }: { max: number; min: number; labels: { x: num
         </g>
       ))}
       {labels.map((l) => (
-        <text key={`${l.x}-${l.text}`} x={l.x} y={H - 10} textAnchor="middle">
+        <text key={`${l.x}-${l.text}`} x={l.x} y={H - 10} textAnchor="middle" opacity={l.future ? 0.4 : 1}>
           {l.text}
         </text>
       ))}
@@ -71,7 +71,7 @@ function Axes({ max, min, labels }: { max: number; min: number; labels: { x: num
 
 function xLabels(points: SeriesPoint[], x: (i: number) => number) {
   const every = Math.ceil(points.length / 12);
-  return points.flatMap((p, i) => (i % every === 0 ? [{ x: x(i), text: p.axis }] : []));
+  return points.flatMap((p, i) => (i % every === 0 || i === points.length - 1 ? [{ x: x(i), text: p.axis, future: p.future }] : []));
 }
 
 function DataTable({ caption, head, rows }: { caption: string; head: string[]; rows: (string | number)[][] }) {
@@ -79,7 +79,7 @@ function DataTable({ caption, head, rows }: { caption: string; head: string[]; r
     <details className="mt-3 text-sm">
       <summary className="cursor-pointer text-muted hover:text-foreground">Voir les données</summary>
       <div className="mt-2 overflow-x-auto">
-        <table className="w-full min-w-[480px] text-left">
+        <table className="w-full min-w-[480px] text-left text-xs sm:text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead className="text-xs uppercase tracking-wider text-muted">
             <tr>
@@ -115,7 +115,7 @@ function DataTable({ caption, head, rows }: { caption: string; head: string[]; r
 
 export function ChartCard({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
   return (
-    <section aria-labelledby={id} className="rounded-2xl border border-border bg-surface p-4 sm:p-6">
+    <section aria-labelledby={id} className="min-w-0 rounded-2xl border border-border bg-surface p-4 sm:p-6">
       <h2 id={id} className="font-display text-lg font-bold">
         {title}
       </h2>
@@ -127,19 +127,25 @@ export function ChartCard({ id, title, description, children }: { id: string; ti
 
 // Encaissements par type de paiement (barres empilées), remboursements sous l'axe.
 export function PaymentsChart({ points }: { points: SeriesPoint[] }) {
+  const { svgRef, width: W, height: H } = useChartSize();
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
   const max = niceMax(Math.max(...points.map((p) => p.acompte + p.solde + p.complet)));
   const minRaw = Math.max(...points.map((p) => p.refunds));
   const min = minRaw > 0 ? -niceMax(minRaw) : 0;
   const y = (v: number) => PAD.top + ((max - v) / (max - min)) * innerH;
-  const step = innerW / points.length;
+  const step = innerW / Math.max(1, points.length);
   const x = (i: number) => PAD.left + step * i + step / 2;
   const bw = Math.max(2, Math.min(40, step * 0.7));
   const total = points.reduce((s, p) => s + p.revenue, 0);
 
   return (
     <>
-      <ChartTooltip><svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={`Encaissements sur la période : ${formatPrice(total)} de chiffre d'affaires, remboursements déduits. Détail dans le tableau des données.`}>
-        <Axes max={max} min={min} labels={xLabels(points, x)} />
+      <div className="overflow-x-auto overscroll-x-contain rounded-lg" tabIndex={0} role="region" aria-label="Graphique des encaissements, défilement horizontal sur petit écran">
+      <div className="min-w-[640px] sm:min-w-0">
+      <ChartTooltip><svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block h-[240px] w-full sm:h-[280px]" role="img" aria-label={`Encaissements sur la période : ${formatPrice(total)} de chiffre d'affaires, remboursements déduits. Détail dans le tableau des données.`}>
+        {points.map((p, i) => p.future && <rect key={`future-${p.key}`} x={x(i) - step / 2} y={PAD.top} width={step} height={innerH} fill="var(--muted)" opacity="0.06" aria-label={`${p.label} : à venir`} />)}
+        <Axes max={max} min={min} labels={xLabels(points, x)} width={W} height={H} />
         {points.map((p, i) => {
           let top = 0;
           const segs = (["complet", "acompte", "solde"] as const).map((k) => {
@@ -161,6 +167,8 @@ export function PaymentsChart({ points }: { points: SeriesPoint[] }) {
           );
         })}
       </svg></ChartTooltip>
+      </div></div>
+      <p className="mt-2 text-xs text-muted sm:hidden">Fais défiler le graphique horizontalement pour voir toutes les dates.</p>
       <Legend
         items={[
           { label: kindLabels.complet, color: colors.complet },
@@ -168,6 +176,7 @@ export function PaymentsChart({ points }: { points: SeriesPoint[] }) {
           { label: kindLabels.solde, color: colors.solde },
           // Remboursements : seulement si la série en contient (le tableau de bord les déduit du paiement d'origine)
           ...(points.some((p) => p.refunds > 0) ? [{ label: kindLabels.remboursement, color: colors.remboursement }] : []),
+          ...(points.some((p) => p.future) ? [{ label: "À venir", color: "var(--muted)" }] : []),
         ]}
       />
       <DataTable
@@ -181,6 +190,9 @@ export function PaymentsChart({ points }: { points: SeriesPoint[] }) {
 
 // Chiffre d'affaires et net cumulés sur la période.
 export function CumulativeChart({ points }: { points: SeriesPoint[] }) {
+  const { svgRef, width: W, height: H } = useChartSize();
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
   const max = niceMax(Math.max(...points.map((p) => Math.max(p.cumulativeRevenue, p.cumulativeNet))));
   const minRaw = Math.min(0, ...points.map((p) => p.cumulativeNet));
   const min = minRaw < 0 ? -niceMax(-minRaw) : 0;
@@ -192,13 +204,23 @@ export function CumulativeChart({ points }: { points: SeriesPoint[] }) {
 
   return (
     <>
+      <div className="overflow-x-auto overscroll-x-contain rounded-lg" tabIndex={0} role="region" aria-label="Graphique du cumul, défilement horizontal sur petit écran">
+      <div className="min-w-[640px] sm:min-w-0">
       <ChartTooltip><svg
+        ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
-        className="h-auto w-full"
+        width={W} height={H}
+        className="block h-[240px] w-full sm:h-[280px]"
         role="img"
         aria-label={`Cumul sur la période : ${formatPrice(last?.cumulativeRevenue ?? 0)} de chiffre d'affaires, ${formatPrice(last?.cumulativeNet ?? 0)} de net. Détail dans le tableau des données.`}
       >
-        <Axes max={max} min={min} labels={xLabels(points, x)} />
+        {points.some((p) => p.future) && (() => {
+          const first = points.findIndex((p) => p.future);
+          const step = innerW / Math.max(1, points.length - 1);
+          const start = Math.max(PAD.left, x(first) - step / 2);
+          return <rect x={start} y={PAD.top} width={W - PAD.right - start} height={innerH} fill="var(--muted)" opacity="0.06" aria-label="Période à venir" />;
+        })()}
+        <Axes max={max} min={min} labels={xLabels(points, x)} width={W} height={H} />
         {(["cumulativeRevenue", "cumulativeNet"] as const).map((k) => (
           <g key={k}>
             <polyline points={line(k)} fill="none" stroke={k === "cumulativeRevenue" ? colors.revenue : colors.net} strokeWidth="2.5" strokeLinejoin="round" />
@@ -209,10 +231,13 @@ export function CumulativeChart({ points }: { points: SeriesPoint[] }) {
           </g>
         ))}
       </svg></ChartTooltip>
+      </div></div>
+      <p className="mt-2 text-xs text-muted sm:hidden">Fais défiler le graphique horizontalement pour voir toutes les dates.</p>
       <Legend
         items={[
           { label: "Chiffre d'affaires cumulé", color: colors.revenue, line: true },
           { label: "Net cumulé (après frais et cotisations)", color: colors.net, line: true },
+          ...(points.some((p) => p.future) ? [{ label: "À venir", color: "var(--muted)" }] : []),
         ]}
       />
       <DataTable

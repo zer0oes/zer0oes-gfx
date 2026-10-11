@@ -100,6 +100,14 @@ export function pageLabel(path: string): string {
 
 export type Ranked = { label: string; count: number };
 
+// Un filtre ne peut cibler qu'une date réelle, passée ou courante, de la période affichée.
+export function selectedStatsDay(value: unknown, period: { start: string; end: string }, today: string): string | undefined {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+  const date = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) return undefined;
+  return value >= period.start && value <= period.end && value <= today ? value : undefined;
+}
+
 function rank(values: (string | undefined)[], limit = 10): Ranked[] {
   const counts = new Map<string, number>();
   for (const v of values) if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
