@@ -55,6 +55,20 @@ export async function addDeliveryLinkAction(formData: FormData) {
   back(orderId, { ok: "Lien ajouté." });
 }
 
+// Livrable vide (juste un nom) : l'aperçu et les fichiers s'ajoutent ensuite depuis son panneau
+export async function addEmptyDeliverableAction(input: { orderId: string; label: string }): Promise<{ error?: string }> {
+  await requireAdmin();
+  const label = input.label.trim().slice(0, 120);
+  if (!label) return { error: "Donne un nom au livrable." };
+  const store = getStore();
+  const order = await store.getOrder(input.orderId);
+  if (!order) return { error: "Commande introuvable." };
+  if (deliveryLocked(order, await store.listDeliverables(order.id))) return { error: deliveryLockedMessage };
+  await store.addDeliverable({ orderId: order.id, kind: "fichier", label, finalAssets: [] });
+  await refreshDeliveryPages(order.id);
+  return {};
+}
+
 // Lien d'installation d'un widget ou pack d'alertes : lien d'importation Streamlabs, ou code de partage c4ldas
 // StreamElements (lien de partage facultatif). Ajouté aux fichiers définitifs, débloqués après validation et paiement.
 export async function addInstallLinkAction(formData: FormData) {
