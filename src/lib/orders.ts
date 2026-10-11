@@ -483,6 +483,7 @@ export async function attachBrief(sessionId: string, brief: Record<string, strin
   if (store.kind === "static" || !sessionId) return null;
   const order = await store.getOrderBySession(sessionId);
   if (!order) return null;
+  if (order.status === "annulee" || order.status === "annulation_en_cours") throw new Error("Cette commande est annulée ou en cours d’annulation.");
   if ((order.briefReceivedAt || order.brief) && !allowUpdate) return order;
   if (allowUpdate) {
     if (order.deliveredAt || (await store.listDeliverables(order.id)).some(previewPublished)) throw new Error("Le brief est verrouillé après publication des aperçus.");

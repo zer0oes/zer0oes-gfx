@@ -83,4 +83,18 @@ try {
 }
 if (!refused) throw new Error("Un client peut écrire sur la commande d'un autre !");
 console.log("espace client : 1 commande visible pour son client, 0 pour un autre, écriture croisée refusée");
+const cancellationRefused = async (sql: string) => {
+  let blocked = false;
+  try { await db.exec(sql); } catch { blocked = true; }
+  if (!blocked) throw new Error("Transition d’annulation non autorisée acceptée");
+};
+await cancellationRefused(`update public.orders set status = 'annulee' where id = '${orderId}'`);
+await db.exec(`update public.orders set status = 'en_cours' where id = '${orderId}'`);
+await cancellationRefused(`update public.orders set status = 'annulation_en_cours' where id = '${orderId}'`);
+await db.exec(`update public.orders set status = 'brief_recu' where id = '${orderId}';
+  update public.orders set status = 'annulation_en_cours' where id = '${orderId}'`);
+await cancellationRefused(`update public.orders set status = 'en_cours' where id = '${orderId}'`);
+await db.exec(`update public.orders set status = 'annulee' where id = '${orderId}'`);
+await cancellationRefused(`update public.orders set status = 'brief_recu' where id = '${orderId}'`);
+console.log("annulation : début de création et reprise des commandes annulées refusés");
 await db.close();

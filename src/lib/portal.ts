@@ -22,7 +22,7 @@ type PortalOrder = {
   completedAt?: string;
 };
 
-const rank: Record<OrderStatus, number> = { payee: 0, brief_attente: 0, brief_recu: 1, en_cours: 2, livree: 3, solde_paye: 4, terminee: 5 };
+const rank: Record<OrderStatus, number> = { payee: 0, brief_attente: 0, brief_recu: 1, en_cours: 2, livree: 3, solde_paye: 4, terminee: 5, annulation_en_cours: -1, annulee: -1 };
 
 export function filesExpireAt(order: Pick<PortalOrder, "completedAt">) {
   if (!order.completedAt) return null;
