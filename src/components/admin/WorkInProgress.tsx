@@ -17,6 +17,7 @@ export function WorkInProgress({ orders, quotes }: { orders: Order[]; quotes: Pr
     .filter((q) => q.status === "demande" || (q.status === "propose" && !quoteExpired(q)))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const due = active.reduce((sum, o) => sum + balanceDue(o), 0);
+  const count = (status: Order["status"]) => active.filter((o) => o.status === status).length;
 
   return (
     <section aria-labelledby="en-cours" className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -28,7 +29,11 @@ export function WorkInProgress({ orders, quotes }: { orders: Order[]; quotes: Pr
           </h3>
           <Link href="/admin/commandes" className="text-sm text-accent hover:underline">Toutes →</Link>
         </div>
-        {due > 0 && <p className="mt-1 text-xs text-muted">{formatPrice(due)} de soldes à encaisser</p>}
+        {/* Résumé par étape, comme pour les devis */}
+        <p className="mt-1 text-xs text-muted">
+          {count("brief_recu")} brief(s) reçu(s) · {count("en_cours")} en cours · {count("livree")} livrée(s)
+          {due > 0 && <> · {formatPrice(due)} de soldes à encaisser</>}
+        </p>
         {active.length ? (
           <ul className="mt-3 divide-y divide-border">
             {active.slice(0, MAX).map((o) => (
