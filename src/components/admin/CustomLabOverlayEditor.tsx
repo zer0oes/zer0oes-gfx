@@ -655,7 +655,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
         </div>
       </details>
 
-      <div role="toolbar" aria-label="Outils de l’overlay" className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--cl-line)] bg-[#12141b] p-2">
+      <div role="toolbar" aria-label="Outils de l’overlay" className="mb-3 flex flex-wrap items-center gap-2">
         <button type="button" className={stylePick ? toolIcon : toolActive} aria-pressed={!stylePick} onClick={() => { setStylePick(null); setStatus(""); }} aria-label="Sélection" title="Sélection (Maj + clic : plusieurs calques)"><MaterialIcon name="arrow_selector_tool" className="size-5" /></button>
         <button type="button" className={toolIcon} onClick={() => add("text")} aria-label="Ajouter un texte" title="Texte"><MaterialIcon name="title" className="size-5" /></button>
         <button type="button" className={stylePick ? toolActive : toolIcon} aria-pressed={Boolean(stylePick)} onClick={pickStyle} aria-label="Pipette" title="Pipette : copier le style du texte ou de la forme sélectionné"><MaterialIcon name="colorize" className="size-[18px]" /></button>
