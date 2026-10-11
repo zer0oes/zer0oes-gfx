@@ -1,12 +1,20 @@
 "use client";
 import { useState } from "react";
-function localDate(iso: string) {
+import { DatePicker } from "@/components/DatePicker";
+
+// Jour local (AAAA-MM-JJ) d'une date ISO, et retour : début du jour pour « Début », fin du jour pour « Fin »
+const dayOf = (iso: string) => {
   if (!iso) return "";
   const d = new Date(iso);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-}
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const toIso = (day: string, end: boolean) => (day ? new Date(`${day}T${end ? "23:59:59.999" : "00:00:00"}`).toISOString() : "");
+
 export function MarketingDates({ startsAt = "", endsAt = "" }: { startsAt?: string; endsAt?: string }) {
   const [start, setStart] = useState(startsAt);
   const [end, setEnd] = useState(endsAt);
-  return <div className="grid gap-4 sm:grid-cols-2">{[{ name: "startsAt", label: "Début (facultatif)", value: start, set: setStart }, { name: "endsAt", label: "Fin (facultative)", value: end, set: setEnd }].map((f) => <label key={f.name} className="grid gap-2 text-sm">{f.label}<input type="hidden" name={f.name} value={f.value} /><input type="datetime-local" defaultValue={localDate(f.value)} onChange={(e) => f.set(e.target.value ? new Date(e.target.value).toISOString() : "")} className="rounded-lg border border-border bg-background px-3 py-2" /><span className="text-xs text-muted">Heure locale de ton navigateur</span></label>)}</div>;
+  return <div className="grid gap-4 sm:grid-cols-2">
+    <div><input type="hidden" name="startsAt" value={start} /><DatePicker name="startsAtDay" label="Début (facultatif)" locale="fr" defaultValue={dayOf(startsAt)} onChange={(day) => setStart(toIso(day, false))} /><span className="mt-1 block text-xs text-muted">Dès le début de ce jour.</span></div>
+    <div><input type="hidden" name="endsAt" value={end} /><DatePicker name="endsAtDay" label="Fin (facultative)" locale="fr" defaultValue={dayOf(endsAt)} onChange={(day) => setEnd(toIso(day, true))} /><span className="mt-1 block text-xs text-muted">Jusqu’à la fin de ce jour.</span></div>
+  </div>;
 }

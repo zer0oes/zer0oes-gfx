@@ -6,11 +6,14 @@ import { inputClass } from "./ui";
 
 const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
-export function DatePicker({ name, label, locale, defaultValue = "", min, max, required = false, compact = false }: { name: string; label: string; locale: Locale; defaultValue?: string; min?: string; max?: string; required?: boolean; compact?: boolean }) {
+// onChange : date choisie (AAAA-MM-JJ, vide si effacée), pour un formulaire qui enregistre autre chose que la date seule.
+// inline : libellé à gauche du champ, sur la même ligne (filtres de période)
+export function DatePicker({ name, label, locale, defaultValue = "", min, max, required = false, compact = false, inline = false, onChange }: { name: string; label: string; locale: Locale; defaultValue?: string; min?: string; max?: string; required?: boolean; compact?: boolean; inline?: boolean; onChange?: (value: string) => void }) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const [value, setValue] = useState(/^\d{4}-\d{2}-\d{2}$/.test(defaultValue) ? defaultValue : "");
+  const [value, setRawValue] = useState(/^\d{4}-\d{2}-\d{2}$/.test(defaultValue) ? defaultValue : "");
+  const setValue = (next: string) => { setRawValue(next); onChange?.(next); };
   const [month, setMonth] = useState<Date | null>(null);
   const [open, setOpen] = useState(false);
   const en = locale === "en";
@@ -37,13 +40,13 @@ export function DatePicker({ name, label, locale, defaultValue = "", min, max, r
   const changeMonth = (delta: number) => setMonth((current) => current && new Date(current.getFullYear(), current.getMonth() + delta, 1));
 
   return (
-    <div ref={root} className="relative min-w-0" onKeyDown={(event) => { if (event.key === "Escape" && open) { event.preventDefault(); close(); } }} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
-      <span id={`${id}-label`} className="mb-1.5 block text-sm font-medium">{label}</span>
+    <div ref={root} className={`relative min-w-0 ${inline ? "flex items-center gap-2" : ""}`} onKeyDown={(event) => { if (event.key === "Escape" && open) { event.preventDefault(); close(); } }} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
+      <span id={`${id}-label`} className={inline ? "shrink-0 text-sm font-medium" : "mb-1.5 block text-sm font-medium"}>{label}</span>
       <input className="sr-only" tabIndex={-1} aria-label={label} name={name} value={value} required={required} onChange={(event) => setValue(event.target.value)} onInvalid={() => trigger.current?.focus()} />
       <button ref={trigger} type="button" aria-labelledby={`${id}-label ${id}-value`} aria-expanded={open} aria-controls={`${id}-calendar`} aria-haspopup="dialog" onClick={() => {
         if (!open) setMonth(selected ?? new Date());
         setOpen(!open);
-      }} className={`${compact ? "min-h-11 w-full rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm" : inputClass} flex items-center justify-between gap-3 text-left`}>
+      }} className={`${compact ? `min-h-11 ${inline ? "w-40" : "w-full"} rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm` : inputClass} flex items-center justify-between gap-3 text-left`}>
         <span id={`${id}-value`} className={value ? "" : "text-muted"}>{selected ? new Intl.DateTimeFormat(language, compact ? { day: "2-digit", month: "2-digit", year: "numeric" } : { day: "numeric", month: "long", year: "numeric" }).format(selected) : en ? "Choose a date" : "Choisir une date"}</span>
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0 text-accent"><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M16 3v4M8 3v4M3 11h18" /></svg>
       </button>

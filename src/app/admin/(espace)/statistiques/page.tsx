@@ -117,11 +117,11 @@ export default async function StatsPage({ searchParams }: PageProps<"/admin/stat
       </div>
 
       {period.kind === "perso" && (
-        <form action="/admin/statistiques" className="mt-4 flex flex-wrap items-end gap-3">
+        <form action="/admin/statistiques" className="mt-4 flex flex-wrap items-center gap-3">
           <input type="hidden" name="periode" value="perso" />
-          <DatePicker key={`debut-${period.start}`} name="debut" label="Du" locale="fr" defaultValue={period.start} required compact />
-          <DatePicker key={`fin-${period.end}`} name="fin" label="Au" locale="fr" defaultValue={period.end} required compact />
-          <button type="submit" className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-background">
+          <DatePicker key={`debut-${period.start}`} name="debut" label="Du" locale="fr" defaultValue={period.start} required compact inline />
+          <DatePicker key={`fin-${period.end}`} name="fin" label="au" locale="fr" defaultValue={period.end} required compact inline />
+          <button type="submit" className="min-h-11 rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-background">
             Afficher
           </button>
         </form>

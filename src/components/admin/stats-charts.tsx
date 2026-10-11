@@ -1,7 +1,7 @@
 "use client";
 
 // Graphiques de la page Statistiques, avec description et tableau des données.
-import { useEffect, useRef, useState } from "react";
+import { useChartSize } from "./use-chart-size";
 import { ChartTooltip } from "./ChartTooltip";
 import Link from "next/link";
 import type { Ranked, StatsPoint } from "@/lib/stats";
@@ -19,20 +19,7 @@ const nf = (n: number) => n.toLocaleString("fr-FR");
 
 // Deux barres distinctes par date : aucune série ne masque l'autre à valeurs égales.
 export function VisitsChart({ points, dayHref, selectedDay, today }: { points: StatsPoint[]; dayHref?: string; selectedDay?: string; today?: string }) {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const [{ width: W, height: H }, setSize] = useState({ width: 720, height: 240 });
-  useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const observer = new ResizeObserver(([entry]) => {
-      const width = Math.round(entry.contentRect.width);
-      const height = Math.round(entry.contentRect.height);
-      if (width <= 0 || height <= 0) return;
-      setSize((previous) => previous.width === width && previous.height === height ? previous : { width, height });
-    });
-    observer.observe(svg);
-    return () => observer.disconnect();
-  }, []);
+  const { svgRef, width: W, height: H } = useChartSize();
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
   const max = niceMax(Math.max(0, ...points.flatMap((p) => [p.views, p.visitors])));
