@@ -65,6 +65,10 @@ export async function sendToCustomer({
   attachments,
   idempotencyKey,
   contactReceipt = false,
+  footer,
+  eyebrow,
+  heading,
+  highlights,
 }: {
   to: string;
   subject: string;
@@ -72,6 +76,10 @@ export async function sendToCustomer({
   attachments?: { filename: string; content: Uint8Array }[];
   idempotencyKey?: string;
   contactReceipt?: boolean;
+  footer?: string;
+  eyebrow?: string;
+  heading?: string;
+  highlights?: string[];
 }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -79,7 +87,7 @@ export async function sendToCustomer({
     console.info(`[e-mail client → ${to}] ${subject}\n${text}${files}`);
     return { sent: false };
   }
-  const logo = await inlineLogo(customerEmailHtml(subject, text, contactReceipt));
+  const logo = await inlineLogo(customerEmailHtml(subject, text, contactReceipt, footer, { eyebrow, heading, highlights }));
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) },

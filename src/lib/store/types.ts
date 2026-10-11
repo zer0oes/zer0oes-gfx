@@ -152,6 +152,7 @@ export type Order = {
   refunds?: Refund[];
   // Lien privé de l'espace commande (/commande/<jeton>) et date d'envoi de la livraison
   deliveryToken?: string;
+  confirmationSentAt?: string;
   deliveredAt?: string;
   // Clôture du projet (statut « Terminée ») : point de départ de la conservation des fichiers
   completedAt?: string;
@@ -196,6 +197,7 @@ export type OrderPatch = Partial<
     | "balancePaymentIntentId"
     | "refunds"
     | "deliveryToken"
+    | "confirmationSentAt"
     | "deliveredAt"
     | "testimonial"
   >

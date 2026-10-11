@@ -30,10 +30,21 @@ export function emailButton(url: string, label: string) {
 }
 
 /** Common client template. Text remains authoritative and is also sent as plain text. */
-export function customerEmailHtml(subject: string, text: string, contactReceipt = false) {
+export function customerEmailHtml(subject: string, text: string, contactReceipt = false, customFooter?: string, presentation: { eyebrow?: string; heading?: string; highlights?: string[] } = {}) {
   const en = /^Your\b/i.test(subject);
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const body: string[] = [];
+  const highlight = (line: string) => {
+    const phrases = (presentation.highlights ?? []).filter(Boolean).sort((a, b) => b.length - a.length);
+    if (!phrases.length) return escape(line);
+    const pattern = new RegExp(phrases.map((phrase) => phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
+    let html = "", start = 0;
+    for (const match of line.matchAll(pattern)) {
+      html += escape(line.slice(start, match.index)) + `<strong style="color:#a78bfa;font-weight:bold;">${escape(match[0])}</strong>`;
+      start = match.index + match[0].length;
+    }
+    return html + escape(line.slice(start));
+  };
   let bullets: string[] = [];
   const flush = () => {
     if (!bullets.length) return;
@@ -44,19 +55,23 @@ export function customerEmailHtml(subject: string, text: string, contactReceipt 
     if (line.startsWith("• ")) { bullets.push(line.slice(2)); continue; }
     flush();
     if (!line.trim() || line === "Aurore — zer0oes gfx") continue;
+    if (contactReceipt && line === (en ? "Summary" : "Récapitulatif")) {
+      body.push(`<p style="margin:24px 0 12px;color:#a78bfa;font-size:11px;line-height:18px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;">${escape(line)}</p>`);
+      continue;
+    }
     if (/^https?:\/\/\S+$/.test(line.trim())) {
       body.push(button(line.trim(), en));
     } else {
-      body.push(`<p style="margin:0 0 16px;color:#ece9f5;font-size:15px;line-height:26px;overflow-wrap:anywhere;">${escape(line)}</p>`);
+      body.push(`<p style="margin:0 0 16px;color:#ece9f5;font-size:15px;line-height:26px;overflow-wrap:anywhere;">${highlight(line)}</p>`);
     }
   }
   flush();
   const footer = contactReceipt ? (en ? "Want to add something? Simply reply to this email." : "Une précision à ajouter ? Réponds simplement à ce mail.") : en ? "Keep your order link private: it gives access to your personal space.<br>Any questions? Simply reply to this email."
     : "Garde ton lien de commande pour toi : il donne accès à ton espace privé.<br>Une question ? Réponds simplement à ce mail.";
-  return emailLayout(subject, body.join("\n"), { en, footer });
+  return emailLayout(subject, body.join("\n"), { en, footer: customFooter ? escape(customFooter) : footer, ...presentation });
 }
 
-export function emailLayout(subject: string, body: string, { en = false, footer, admin = false }: { en?: boolean; footer: string; admin?: boolean }) {
+export function emailLayout(subject: string, body: string, { en = false, footer, admin = false, eyebrow, heading }: { en?: boolean; footer: string; admin?: boolean; eyebrow?: string; heading?: string }) {
   return `<!doctype html><html lang="${en ? "en" : "fr"}" xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="x-apple-disable-message-reformatting"><title>${escape(subject)}</title>
 <!--[if !mso]><!--><style>
 @font-face{font-family:Poppins;font-style:normal;font-weight:400;src:url('${escape(emailAssetOrigin)}/fonts/email/Poppins-Regular.ttf') format('truetype')}
@@ -69,7 +84,7 @@ export function emailLayout(subject: string, body: string, { en = false, footer,
 <!--[if mso]><table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0"><tr><td><![endif]-->
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#1d1a2b" style="width:100%;max-width:600px;background-color:#1d1a2b;border:1px solid #2a2640;border-radius:20px;border-collapse:separate;border-spacing:0;overflow:hidden;font-family:Poppins,Arial,Helvetica,sans-serif;color:#ece9f5;">
 <tr><td align="center" bgcolor="#15131f" style="background-color:#15131f;background-image:linear-gradient(#15131f,#15131f);padding:30px 24px;border-bottom:1px solid #2a2640;border-radius:20px 20px 0 0;"><img src="${escape(emailAssetOrigin)}/logo-zeroes-gfx.png" width="220" alt="zer0oes gfx" border="0" style="display:block;width:220px;max-width:100%;height:auto;color:#ece9f5;font-size:20px;"></td></tr>
-<tr><td style="padding:32px 24px;"><p style="margin:0 0 12px;color:#a78bfa;font-size:11px;line-height:18px;font-weight:bold;letter-spacing:2px;">${admin ? "NOTIFICATION ADMIN" : "ZER0OES GFX"}</p><h1 style="font-family:Lexend,Poppins,Arial,Helvetica,sans-serif;margin:0 0 24px;color:#ece9f5;font-size:26px;line-height:34px;font-weight:bold;">${escape(subject)}</h1>${body}${admin ? "" : '<p style="margin:24px 0 0;color:#ece9f5;font-size:15px;line-height:26px;"><strong>Aurore</strong> <span style="color:#a39fb8;">· zer0oes gfx</span></p>'}</td></tr>
+<tr><td style="padding:32px 24px;">${admin || eyebrow ? `<p style="margin:0 0 12px;color:#a78bfa;font-size:11px;line-height:18px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;">${escape(admin ? "NOTIFICATION ADMIN" : eyebrow!)}</p>` : ""}<h1 style="font-family:Lexend,Poppins,Arial,Helvetica,sans-serif;margin:0 0 24px;color:#ece9f5;font-size:26px;line-height:34px;font-weight:bold;">${escape(heading ?? subject)}</h1>${body}${admin ? "" : '<p style="margin:24px 0 0;color:#ece9f5;font-size:15px;line-height:26px;"><strong>Aurore</strong></p>'}</td></tr>
 <tr><td bgcolor="#15131f" style="background-color:#15131f;padding:20px 24px;border-top:1px solid #2a2640;text-align:center;border-radius:0 0 20px 20px;color:#a39fb8;font-size:12px;line-height:20px;">${footer}</td></tr></table>
 <!--[if mso]></td></tr></table><![endif]-->
 <p style="margin:20px 0 0;color:#a39fb8;font-family:Poppins,Arial,Helvetica,sans-serif;font-size:11px;line-height:18px;">zer0oes gfx · ${en ? "Visual identities for streamers" : "Identités visuelles pour streameurs"}</p>

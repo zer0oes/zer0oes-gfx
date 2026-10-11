@@ -7,7 +7,7 @@ import { asLocale, href, type Locale } from "@/lib/i18n";
 import { notify, sendToCustomer } from "@/lib/notify";
 import { contactReceiptMessage } from "@/lib/contact-receipt";
 import { recordFormSent } from "@/lib/stats-server";
-import { attachBrief, paymentSummary, quote, quoteMetadata, recordDemoOrder } from "@/lib/orders";
+import { attachBrief, paymentSummary, quote, quoteMetadata, recordDemoOrder, syncCheckoutOrder } from "@/lib/orders";
 import { formatPrice, getPack, logoDiscountLabel, paymentLabel } from "@/lib/pricing";
 import { siteUrl } from "@/lib/site-url";
 import { trOfferName } from "@/lib/translations-en";
@@ -230,19 +230,12 @@ async function briefForm(
   let deliveryAnswers: Record<string, string> = {};
   try {
     const store = getStore();
-    const order = sessionId ? await store.getOrderBySession(sessionId) : null;
-    if (editingBrief && !order) return { ok: false, message: locale === "en" ? "Order not found." : "Commande introuvable." };
+    const order = sessionId ? await syncCheckoutOrder(sessionId) : null;
+    if (!order || store.kind === "static") return { ok: false, message: locale === "en" ? "Unable to find your order. Please refresh and try again." : "Impossible de retrouver ta commande. Actualise la page et réessaie." };
     if (editingBrief && (order?.briefRevisions?.length ?? 0) >= 2) return { ok: false, message: locale === "en" ? "You’ve reached the limit of 2 brief updates. Please contact me for further changes." : "La limite de 2 modifications du brief est atteinte. Contacte-moi pour tout autre changement." };
     if (!editingBrief && (order?.briefReceivedAt || order?.brief)) return { ok: true, message: locale === "en" ? "Your brief has already been received. You can follow your project in your order space." : "Ton brief a déjà été reçu. Tu peux suivre ton projet dans ton espace commande." };
-    let packId = order?.packId;
+    const packId = order.packId;
     let deliveryTemplate = order?.deliveryTemplate;
-    if (!packId && sessionId && !sessionId.startsWith("demo_")) {
-      const session = await getStripe()?.checkout.sessions.retrieve(sessionId);
-      if (session?.payment_status === "paid") {
-        packId = session.metadata?.packId;
-        deliveryTemplate = Object.entries(session.metadata ?? {}).filter(([key]) => key.startsWith("deliveryTemplate_")).sort(([a], [b]) => Number(a.split("_")[1]) - Number(b.split("_")[1])).map(([, value]) => value);
-      }
-    }
     if (packId === "options" || packId?.startsWith("option:")) {
       if (!deliveryTemplate?.length) return { ok: false, message: locale === "en" ? "Unable to verify your products. Please refresh." : "Impossible de vérifier tes créations. Actualise la page." };
       const fields = productBriefFields(withoutInstallLine(deliveryTemplate), (name) => field(formData, name));
@@ -295,8 +288,11 @@ async function briefForm(
     .filter(Boolean)
     .join(" / ");
   let revisionFields: Record<string, string> = {};
+  let adminOrderUrl = "";
   try {
     const order = await attachBrief(sessionId, brief, email, editingBrief);
+    if (!order) return { ok: false, message: locale === "en" ? "Unable to save your brief. Please try again." : "Impossible d’enregistrer ton brief. Réessaie." };
+    adminOrderUrl = `${await siteUrl()}/admin/commandes/${order.id}`;
     if (order) {
       const revisions = order.briefRevisions ?? [];
       if (editingBrief && revisions.length) {
@@ -308,21 +304,14 @@ async function briefForm(
       revalidatePath("/merci");
       revalidatePath("/en/merci");
       orderLabel = `${order.offerName}${order.hasLogo ? " — logo fourni" : ""} — ${paymentSummary(order)} — commande ${order.id}`;
-    } else {
-      const stripe = getStripe();
-      if (stripe && sessionId && !sessionId.startsWith("demo_")) {
-        const s = await stripe.checkout.sessions.retrieve(sessionId);
-        orderLabel = `${s.metadata?.offerName ?? s.metadata?.packId ?? "?"} — ${s.payment_status} — ${s.id}`;
-      }
     }
   } catch (e) {
     console.error(e);
-    if (editingBrief) return { ok: false, message: locale === "en" ? "Unable to save your changes. Please try again." : "Impossible d’enregistrer tes modifications. Réessaie." };
-    orderLabel = `${orderLabel} (session ${sessionId})`;
+    return { ok: false, message: locale === "en" ? "Unable to save your brief. Please try again." : "Impossible d’enregistrer ton brief. Réessaie." };
   }
 
   try {
-    await notify({ subject: `[${editingBrief ? "Brief modifié" : "Brief"}] ${channel}`, replyTo: email, fields: { Commande: orderLabel, ...revisionFields, ...brief, ...languageField(formLocale(formData)) } });
+    await notify({ subject: `[${editingBrief ? "Brief modifié" : "Brief"}] ${channel}`, replyTo: email, fields: { Commande: orderLabel, ...revisionFields, ...brief, ...languageField(formLocale(formData)), Administration: adminOrderUrl } });
   } catch (e) {
     console.error(e);
     return { ok: false, message: "L'envoi a échoué, réessaie ou envoie ton brief par e-mail." };
