@@ -48,8 +48,8 @@ export function CustomLabDeliver({ id, kind, name, platform, dirty, className, r
         id,
         orderId,
         ...(mode === "existing" ? { targetId } : { name: label.trim() }),
-        // Code de la plateforme de l'onglet ouvert (un overlay ne s'installe que sur StreamElements)
-        platforms: [kind === "overlay" ? "streamelements" : platform],
+        // Code de la plateforme de l'onglet ouvert
+        platforms: [platform],
       });
       setMessage({ ok: result.ok, text: result.message, orderId: result.ok ? orderId : undefined });
       if (result.ok) setTargets(await listLabDeliveryTargetsAction().catch(() => targets));
@@ -60,7 +60,7 @@ export function CustomLabDeliver({ id, kind, name, platform, dirty, className, r
   };
 
   const platformName = platform === "streamlabs" ? "Streamlabs" : "StreamElements";
-  const what = kind === "overlay" ? "la page HTML de l’overlay (source navigateur OBS)" : `un zip avec le dossier ${kind === "alertbox" ? "du pack d’alertes" : "du widget"} (HTML, CSS, JS et Fields ${platformName})`;
+  const what = `un zip avec le dossier ${kind === "alertbox" ? "du pack d’alertes" : "du widget"} (HTML, CSS, JS et Fields ${platformName})`;
   return (
     <>
       {renderTrigger ? renderTrigger(() => { void open(); }) : <button type="button" onClick={open} disabled={dirty} title={dirty ? "Enregistrement en cours : la livraison utilise la version enregistrée" : "Livrer dans une commande"} className={className}>
@@ -109,11 +109,7 @@ export function CustomLabDeliver({ id, kind, name, platform, dirty, className, r
             ) : (
               <p className="text-sm text-muted">Cette commande n’a pas encore de livrable.</p>
             )}
-            {kind === "overlay" ? (
-              <p className="text-xs text-muted">Overlay : widgets livrés avec leur code StreamElements (un overlay ne s’installe pas sur Streamlabs).</p>
-            ) : (
-              <p className="text-xs text-muted">Plateforme : {platformName} (onglet ouvert dans l’éditeur). Change d’onglet pour livrer l’autre version.</p>
-            )}
+            <p className="text-xs text-muted">Plateforme : {platformName} (onglet ouvert dans l’éditeur). Change d’onglet pour livrer l’autre version.</p>
             {mode === "existing" && <p className="text-xs text-muted">Un fichier du même nom déjà présent est remplacé, sauf si le client l’a déjà téléchargé.</p>}
           </>
         )}
