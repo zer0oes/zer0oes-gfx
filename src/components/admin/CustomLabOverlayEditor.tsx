@@ -25,6 +25,23 @@ export type OverlaySource = { id: string; name: string; project: string; content
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 const toolButton = "inline-flex items-center gap-1 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground hover:border-accent";
+// Barre d'outils façon StreamerLab : boutons carrés à icône, groupes séparés par des filets verticaux
+const toolIcon = "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--cl-line)] bg-[#1b1d26] text-[#e3e5ec] transition-colors hover:border-[var(--cl-accent)] disabled:pointer-events-none disabled:opacity-35";
+const toolActive = "inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--cl-accent)] text-[#0d0f13]";
+const ToolSeparator = () => <span aria-hidden="true" className="w-px self-stretch bg-[var(--cl-line)]" />;
+// Paliers du zoom manuel (« Ajuster » revient à la scène ajustée à la largeur)
+const ZOOM_STEPS = [0.1, 0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2];
+type Align = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom" | "center";
+const ALIGN_TOOLS: { key: Align; icon: MaterialIconName; label: string }[] = [
+  { key: "left", icon: "align_horizontal_left", label: "Aligner à gauche" },
+  { key: "hcenter", icon: "align_horizontal_center", label: "Centrer horizontalement" },
+  { key: "right", icon: "align_horizontal_right", label: "Aligner à droite" },
+  { key: "top", icon: "align_vertical_top", label: "Aligner en haut" },
+  { key: "vcenter", icon: "align_vertical_center", label: "Centrer verticalement" },
+  { key: "bottom", icon: "align_vertical_bottom", label: "Aligner en bas" },
+  { key: "center", icon: "filter_center_focus", label: "Centrer dans la scène" },
+];
+type EyeDropperApi = new () => { open: () => Promise<{ sRGBHex: string }> };
 const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const;
 type Handle = (typeof HANDLES)[number];
 const handlePos: Record<Handle, string> = {
@@ -152,7 +169,15 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
   // Un overlay ne s'installe que sur StreamElements : ses widgets utilisent leur code StreamElements
   const platform: Platform = "streamelements";
   const [guides, setGuides] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
-  const [scale, setScale] = useState(0.5);
+  const [fitScale, setFitScale] = useState(0.5);
+  // null : scène ajustée à la largeur disponible ; sinon zoom choisi avec − / +
+  const [zoom, setZoom] = useState<number | null>(null);
+  const scale = zoom ?? fitScale;
+  // Aimantation aux bords et centres (règle de la barre d'outils ; Alt la coupe pendant un geste)
+  const [snap, setSnap] = useState(true);
+  const [addOpen, setAddOpen] = useState(false);
+  const addMenu = useRef<HTMLDivElement>(null);
+  const confirmDelete = useRef<HTMLDialogElement>(null);
   const past = useRef<OverlayData[]>([]);
   const future = useRef<OverlayData[]>([]);
   // Nombre d'étapes à annuler / rétablir (copie des piles, lisible pendant le rendu)
@@ -311,7 +336,7 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
   useEffect(() => {
     const el = stageBox.current;
     if (!el) return;
-    const fit = () => setScale(Math.min(1, el.clientWidth / data.width));
+    const fit = () => setFitScale(Math.min(1, el.clientWidth / data.width));
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
@@ -339,8 +364,9 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
       let gx: number | null = null;
       let gy: number | null = null;
       if (!handle) {
-        const sx = ev.altKey ? { pos: Math.round(it.x + dx), guide: null } : snapPosition(it.x + dx, it.w, tx, threshold);
-        const sy = ev.altKey ? { pos: Math.round(it.y + dy), guide: null } : snapPosition(it.y + dy, it.h, ty, threshold);
+        const free = ev.altKey || !snap;
+        const sx = free ? { pos: Math.round(it.x + dx), guide: null } : snapPosition(it.x + dx, it.w, tx, threshold);
+        const sy = free ? { pos: Math.round(it.y + dy), guide: null } : snapPosition(it.y + dy, it.h, ty, threshold);
         x = sx.pos;
         y = sy.pos;
         gx = sx.guide;
@@ -379,6 +405,45 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
     window.addEventListener("pointerup", end);
     window.addEventListener("pointercancel", end);
   }
+
+  // --- Barre d'outils : alignement dans la scène, pipette, zoom, menu « Ajouter » ---
+  const align = (key: Align) => {
+    if (!current || current.locked) return;
+    const { w, h } = current;
+    const x = key === "left" ? 0 : key === "right" ? data.width - w : key === "hcenter" || key === "center" ? Math.round((data.width - w) / 2) : current.x;
+    const y = key === "top" ? 0 : key === "bottom" ? data.height - h : key === "vcenter" || key === "center" ? Math.round((data.height - h) / 2) : current.y;
+    updateItem(current.id, { x, y });
+  };
+  // Pipette du navigateur (Chrome, Edge) : la couleur va au texte ou au fond de la forme sélectionnée, sinon dans le presse-papiers
+  const pickColor = async () => {
+    const EyeDropper = (window as Window & { EyeDropper?: EyeDropperApi }).EyeDropper;
+    if (!EyeDropper) return setStatus("La pipette n’est disponible que dans Chrome ou Edge.");
+    try {
+      const { sRGBHex } = await new EyeDropper().open();
+      if (current?.type === "text") updateProps(current.id, { color: sRGBHex });
+      else if (current?.type === "shape") updateProps(current.id, { fill: sRGBHex });
+      else {
+        await navigator.clipboard?.writeText(sRGBHex);
+        return setStatus(`Couleur ${sRGBHex} copiée.`);
+      }
+      setStatus(`Couleur ${sRGBHex} appliquée.`);
+    } catch {
+      // Pipette fermée avec Échap : rien à faire
+    }
+  };
+  const zoomBy = (dir: 1 | -1) => setZoom(dir > 0 ? ZOOM_STEPS.find((z) => z > scale + 0.001) ?? ZOOM_STEPS[ZOOM_STEPS.length - 1] : [...ZOOM_STEPS].reverse().find((z) => z < scale - 0.001) ?? ZOOM_STEPS[0]);
+  useEffect(() => {
+    if (!addOpen) return;
+    const close = (event: PointerEvent | KeyboardEvent) => {
+      if (event instanceof KeyboardEvent ? event.key === "Escape" : !addMenu.current?.contains(event.target as Node)) setAddOpen(false);
+    };
+    window.addEventListener("pointerdown", close);
+    window.addEventListener("keydown", close);
+    return () => {
+      window.removeEventListener("pointerdown", close);
+      window.removeEventListener("keydown", close);
+    };
+  }, [addOpen]);
 
   // --- Événements simulés : envoyés à tous les widgets de la scène ---
   const register = useCallback((itemId: string, el: HTMLIFrameElement | null) => {
@@ -429,22 +494,63 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
         </div>
       </details>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        {(["text", "image", "video", "shape"] as const).map((type) => (
-          <button key={type} type="button" className={toolButton} onClick={() => type === "image" || type === "video" ? openLabMedia(type === "image" ? "image" : "video", (url) => add(type, { props: { ...createItem(data, type).props, src: url } })) : add(type)}>+ {ITEM_LABELS[type]}</button>
-        ))}
-        <select aria-label="Ajouter un widget de la bibliothèque" className={`${toolButton} !w-auto pr-8`} value="" onChange={(e) => { if (e.target.value) add("widget", { widgetId: e.target.value, name: byId.get(e.target.value)?.name, ...sourceSize(e.target.value) }); }}>
-          <option value="">+ Widget ou alertes…</option>
-          {sources.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.project} · {s.content.kind === "alertbox" ? "alertes" : "widget"}</option>)}
-        </select>
-        <span className="mx-1 h-5 w-px bg-[var(--cl-line)]" />
-        <button type="button" className={toolButton} onClick={undo} disabled={!hist.undo} title="Annuler (Ctrl + Z)"><MaterialIcon name="undo" className="size-4" />Annuler</button>
-        <button type="button" className={toolButton} onClick={redo} disabled={!hist.redo} title="Rétablir (Ctrl + Y)"><MaterialIcon name="redo" className="size-4" />Rétablir</button>
-        <span className="ml-auto text-[11px] text-[var(--cl-muted)]">Zoom {Math.round(scale * 100)} % · Alt : sans aimantation · Maj : proportions</span>
+      <div role="toolbar" aria-label="Outils de l’overlay" className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--cl-line)] bg-[#12141b] p-2">
+        <button type="button" className={toolActive} aria-pressed="true" aria-label="Sélection" title="Sélection"><MaterialIcon name="arrow_selector_tool" className="size-5" /></button>
+        <button type="button" className={toolIcon} onClick={() => add("text")} aria-label="Ajouter un texte" title="Texte"><MaterialIcon name="title" className="size-5" /></button>
+        <button type="button" className={toolIcon} onClick={pickColor} aria-label="Pipette" title="Pipette : prélever une couleur à l’écran"><MaterialIcon name="colorize" className="size-[18px]" /></button>
+        <div ref={addMenu} className="relative">
+          <button type="button" className={`${toolIcon} !w-auto gap-2 px-3 text-sm`} aria-haspopup="menu" aria-expanded={addOpen} onClick={() => setAddOpen(!addOpen)}><MaterialIcon name="add" className="size-4" />Ajouter<MaterialIcon name="expand_more" className="size-4" /></button>
+          {addOpen && (
+            <div role="menu" className="absolute left-0 top-full z-30 mt-1 max-h-80 w-72 overflow-auto rounded-xl border border-[var(--cl-line)] bg-[#151720] py-1 shadow-2xl">
+              {(["image", "video", "shape"] as const).map((type) => (
+                <button key={type} type="button" role="menuitem" className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[#ac8bfa1f]" onClick={() => { setAddOpen(false); if (type === "shape") add(type); else openLabMedia(type, (url) => add(type, { props: { ...createItem(data, type).props, src: url } })); }}>
+                  <MaterialIcon name={TYPE_ICONS[type]} className="size-4 text-[var(--cl-accent)]" />{ITEM_LABELS[type]}
+                </button>
+              ))}
+              <div className="my-1 border-t border-[var(--cl-line)]" />
+              <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--cl-muted)]">Widget ou alertes</p>
+              {sources.length ? sources.map((s) => (
+                <button key={s.id} type="button" role="menuitem" className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[#ac8bfa1f]" onClick={() => { setAddOpen(false); add("widget", { widgetId: s.id, name: s.name, ...sourceSize(s.id) }); }}>
+                  <MaterialIcon name={s.content.kind === "alertbox" ? "notifications_active" : "widgets"} className="size-4 text-[var(--cl-accent)]" /><span className="min-w-0 truncate">{s.name}<span className="text-[var(--cl-muted)]"> · {s.project}</span></span>
+                </button>
+              )) : <p className="px-3 py-2 text-sm text-[var(--cl-muted)]">Aucune création dans la bibliothèque.</p>}
+            </div>
+          )}
+        </div>
+        {current && (
+          <>
+            <ToolSeparator />
+            <button type="button" className={toolIcon} onClick={() => duplicate(current.id)} aria-label="Dupliquer le calque" title="Dupliquer (Ctrl + D)"><MaterialIcon name="content_copy" className="size-[18px]" /></button>
+            <button type="button" className={toolIcon} onClick={() => confirmDelete.current?.showModal()} aria-label="Supprimer le calque" title="Supprimer"><MaterialIcon name="delete" className="size-[18px]" /></button>
+            <ToolSeparator />
+            {ALIGN_TOOLS.map((t) => (
+              <button key={t.key} type="button" className={toolIcon} disabled={current.locked} onClick={() => align(t.key)} aria-label={t.label} title={t.label}><MaterialIcon name={t.icon} className="size-[18px]" /></button>
+            ))}
+          </>
+        )}
+        <ToolSeparator />
+        <button type="button" className={snap ? toolActive : toolIcon} aria-pressed={snap} onClick={() => setSnap(!snap)} aria-label="Aimantation" title={snap ? "Aimantation activée (Alt la coupe pendant un geste)" : "Aimantation désactivée"}><MaterialIcon name="straighten" className="size-5" /></button>
+        <ToolSeparator />
+        <div className="flex items-center gap-1">
+          <button type="button" className={toolIcon} onClick={() => zoomBy(-1)} disabled={scale <= ZOOM_STEPS[0]} aria-label="Dézoomer" title="Dézoomer"><MaterialIcon name="remove" className="size-5" /></button>
+          <button type="button" className="min-w-[4.5rem] rounded-lg px-2 py-2 text-sm text-[#e3e5ec] hover:bg-white/5" onClick={() => setZoom(null)} title="Ajuster la scène à la largeur">{zoom === null ? "Ajuster" : `${Math.round(scale * 100)} %`}</button>
+          <button type="button" className={toolIcon} onClick={() => zoomBy(1)} disabled={scale >= ZOOM_STEPS[ZOOM_STEPS.length - 1]} aria-label="Zoomer" title="Zoomer"><MaterialIcon name="add" className="size-5" /></button>
+        </div>
+        <ToolSeparator />
+        <button type="button" className={toolIcon} onClick={undo} disabled={!hist.undo} aria-label="Annuler" title="Annuler (Ctrl + Z)"><MaterialIcon name="undo" className="size-5" /></button>
+        <button type="button" className={toolIcon} onClick={redo} disabled={!hist.redo} aria-label="Rétablir" title="Rétablir (Ctrl + Y)"><MaterialIcon name="redo" className="size-5" /></button>
       </div>
+      <dialog ref={confirmDelete} aria-label="Es-tu sûre de vouloir supprimer ?" onClick={(event) => { if (event.target === event.currentTarget) confirmDelete.current?.close(); }} className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-border bg-surface p-6 text-foreground shadow-2xl backdrop:bg-black/70">
+        <p className="font-display text-lg font-bold">Es-tu sûre de vouloir supprimer ?</p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button type="button" onClick={() => confirmDelete.current?.close()} className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">Annuler</button>
+          <button type="button" onClick={() => { if (current) remove(current.id); confirmDelete.current?.close(); }} className="rounded-full bg-red-500/90 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Supprimer</button>
+        </div>
+      </dialog>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div ref={stageBox} className="min-w-0">
+          <div className={zoom === null ? "" : "max-h-[75vh] overflow-auto rounded-md"}>
           <div className="relative overflow-hidden rounded-md border border-[var(--cl-line)]" style={{ width: data.width * scale, height: data.height * scale }} onPointerDown={() => setSelected(null)}>
             <div className="absolute left-0 top-0 origin-top-left bg-[repeating-conic-gradient(#1b1d26_0_25%,#14161d_0_50%)] bg-[length:32px_32px]" style={{ width: data.width, height: data.height, transform: `scale(${scale})` }}>
               {[...data.items].sort((a, b) => a.z - b.z).map((item) =>
@@ -488,7 +594,8 @@ export function CustomLabOverlayEditor({ initial, sources, projects = [] }: { in
               {guides.y !== null && <div className="pointer-events-none absolute left-0 w-full bg-pink-400" style={{ top: guides.y, height: 1 / scale, zIndex: 100000 }} />}
             </div>
           </div>
-          <p className="mt-2 text-[11px] text-[var(--cl-muted)]">Clic : sélectionner · Glisser : déplacer · Poignées : redimensionner · Flèches : décaler (Maj : 10 px) · Suppr : supprimer · Ctrl + D : dupliquer</p>
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--cl-muted)]">Clic : sélectionner · Glisser : déplacer · Poignées : redimensionner (Maj : proportions) · Alt : sans aimantation · Flèches : décaler (Maj : 10 px) · Suppr : supprimer · Ctrl + D : dupliquer</p>
         </div>
 
         <aside className="cl-fields !static !max-h-none">
