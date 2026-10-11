@@ -90,7 +90,7 @@ function PackForm({ pack, formId }: { pack: Pack; formId: string }) {
         <Field label="Nom">
           <TranslationInput translationKey={`translation:pack:${pack.id}:name`} name="name" defaultValue={pack.name} required className={input} />
         </Field>
-        <Field label="Prix affiché (€ HT)" hint="Prix de la formule de base, ou prix « à partir de ».">
+        <Field label="Prix affiché (€)" hint="Prix de la formule de base, ou prix « à partir de ».">
           <input name="price" defaultValue={euros(pack.price)} inputMode="decimal" required className={input} />
         </Field>
       </div>
@@ -124,7 +124,7 @@ function PackForm({ pack, formId }: { pack: Pack; formId: string }) {
           {rows.map((f, i) => (
             <div key={i} className="grid gap-2 sm:grid-cols-[1fr_8rem_9rem_1fr]">
               <TranslationInput translationKey={`translation:pack:${pack.id}:formula:${f?.id ?? `new-${i}`}:label`} name={`formula_label_${i}`} defaultValue={f?.label} placeholder="Libellé" aria-label="Libellé de la formule" className={input} />
-              <input name={`formula_price_${i}`} defaultValue={f ? euros(f.price) : ""} placeholder="Prix € HT" inputMode="decimal" aria-label="Prix de la formule" className={input} />
+              <input name={`formula_price_${i}`} defaultValue={f ? euros(f.price) : ""} placeholder="Prix €" inputMode="decimal" aria-label="Prix de la formule" className={input} />
               <input name={`formula_id_${i}`} defaultValue={f?.id} placeholder="identifiant" aria-label="Identifiant de la formule" className={input} />
               <input name={`formula_stripe_${i}`} defaultValue={f?.stripePriceId} placeholder="price_… (optionnel)" aria-label="Prix Stripe" className={input} />
             </div>
@@ -397,7 +397,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
               <Field label="Acompte (%)" hint="Proposé à la commande en ligne.">
                 <input name="depositPercent" type="number" min={0} max={100} defaultValue={settings.depositPercent} required className={input} />
               </Field>
-              <Field label="Remise « logo existant » (€ HT)">
+              <Field label="Remise « logo existant » (€)">
                 <input name="logoDiscount" defaultValue={euros(settings.logoDiscount)} inputMode="decimal" required className={input} />
               </Field>
               <Field label="Délai de livraison (jours ouvrés)" hint="Ex. « 7 à 14 ».">
@@ -523,7 +523,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           <details className={`${card} text-sm`}>
             <summary className="cursor-pointer font-semibold">Comment lire les tableaux</summary>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-muted">
-              <li><strong className="text-foreground">Encaissé HT</strong> : ce que paie le client (pas de TVA en franchise en base).</li>
+              <li><strong className="text-foreground">Encaissé</strong> : ce que paie le client (pas de TVA en franchise en base).</li>
               <li>
                 <strong className="text-foreground">Frais Stripe</strong> : {formatRate(finance.stripePercent)} + {euro(finance.stripeFixed)} par paiement. Un
                 acompte puis un solde font deux paiements, donc deux frais fixes. Sur une commande réelle, les frais réels
@@ -562,7 +562,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                       {formulas.map((f) => (
                         <NetTable
                           key={f.id}
-                          title={`${f.id === formulas[0].id ? p.name : `${p.name} — ${f.label}`} · ${p.priceFrom ? "à partir de " : ""}${euro(f.price)} HT`}
+                          title={`${f.id === formulas[0].id ? p.name : `${p.name} — ${f.label}`} · ${p.priceFrom ? "à partir de " : ""}${euro(f.price)}`}
                           cases={priceCases(f.price, settings, p.checkout)}
                           finance={finance}
                         />

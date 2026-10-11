@@ -386,7 +386,7 @@ export function PageBuilder({ streamerId, streamerName, initial, custom, works }
                 setOpenBlock(copy.id);
               }}
               onRemove={() => window.confirm("Supprimer ce bloc ?") && setBlocks(page.blocks.filter((x) => x.id !== b.id))}
-              sortClass={sort.rowClass(i)}
+              sortClass=""
               handle={sort.handle(i)}
             />
             );

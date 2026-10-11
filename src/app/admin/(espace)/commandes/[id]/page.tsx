@@ -13,7 +13,7 @@ import { formatRate, netBreakdown } from "@/lib/finance";
 import { paymentSummary, ensureDeliveryPlan } from "@/lib/orders";
 import { depositAmount, formatPrice } from "@/lib/pricing";
 import { balanceDue, getStore } from "@/lib/store";
-import { retryInvoiceAction, reviewBriefRevisionAction } from "../../../actions";
+import { retryCancellationAction, retryInvoiceAction, reviewBriefRevisionAction } from "../../../actions";
 
 export const metadata: Metadata = { title: "Commande" };
 
@@ -66,6 +66,12 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
         </div>
         <div className="flex flex-col items-end gap-3">
           <OrderStatusSelect key={order.status} orderId={order.id} status={order.status} />
+          {order.status === "annulation_en_cours" && <form action={retryCancellationAction} className="max-w-xs text-right">
+            <input type="hidden" name="id" value={order.id} />
+            <p className="text-xs text-muted">Le client a demandé l’annulation, mais le remboursement Stripe n’a pas abouti.</p>
+            <button className="mt-2 rounded-full border border-border px-4 py-2 text-sm hover:border-accent">Relancer le remboursement</button>
+          </form>}
+          {sp.annulation && <p role="status" className={`max-w-xs text-right text-xs ${sp.annulation === "erreur" ? "text-rose-300" : "text-emerald-300"}`}>{sp.annulation === "erreur" ? "Le remboursement a encore échoué. Vérifie le paiement dans Stripe." : sp.annulation === "attente" ? "Commande annulée. Le remboursement est en cours de traitement chez Stripe." : "Commande annulée et remboursée."}</p>}
           {order.deliveryToken && <a href={`/commande/${order.deliveryToken}`} target="_blank" rel="noopener noreferrer" className="block text-right text-sm font-semibold text-accent hover:underline">Voir l’espace client ↗</a>}
         </div>
       </header>
@@ -134,12 +140,12 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
               </Row>
               <Row label="Formule">{order.offerName}</Row>
               <Row label="Remise logo">
-                {order.hasLogo ? `oui (−${formatPrice(order.logoDiscount)} HT, prix catalogue ${formatPrice(order.listPrice)})` : "non"}
+                {order.hasLogo ? `oui (−${formatPrice(order.logoDiscount)}, prix catalogue ${formatPrice(order.listPrice)})` : "non"}
               </Row>
               <Row label="Paiement">{paymentSummary(order)}</Row>
               {order.promoCode && <Row label="Remise promotionnelle">{order.promoCode} · −{formatPrice(order.promoDiscount ?? 0)}</Row>}
-              <Row label="Encaissé">{formatPrice(order.amountPaid)} HT</Row>
-              <Row label="Solde dû">{due > 0 ? `${formatPrice(due)} HT` : "aucun"}</Row>
+              <Row label="Encaissé">{formatPrice(order.amountPaid)}</Row>
+              <Row label="Solde dû">{due > 0 ? formatPrice(due) : "aucun"}</Row>
               <Row label="Session Stripe">
                 <code className="text-xs text-muted">{order.stripeSessionId}</code>
               </Row>
@@ -149,7 +155,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
             {due > 0 ? (
               <>
                 <p className="mt-2 text-sm text-muted">
-                  Reste à régler : <strong className="text-foreground">{formatPrice(due)} HT</strong>. Le montant est
+                  Reste à régler : <strong className="text-foreground">{formatPrice(due)}</strong>. Le montant est
                   recalculé côté serveur au moment de créer le lien.
                 </p>
                 <BalanceLinkForm orderId={order.id} existingUrl={order.balanceUrl} />
@@ -204,7 +210,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
                   <span className="font-medium">
                     {inv.kind === "acompte" ? "Facture d'acompte" : inv.kind === "solde" ? "Facture de solde" : "Facture"}
                   </span>
-                  <span>{formatPrice(inv.amount)} HT</span>
+                  <span>{formatPrice(inv.amount)}</span>
                   {inv.number && <span className="text-muted">n° {inv.number}</span>}
                   {inv.status === "emise" ? (
                     <span className="text-emerald-300">{inv.demo ? "simulée (démo)" : "émise et payée"}</span>

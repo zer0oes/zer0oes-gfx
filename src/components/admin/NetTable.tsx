@@ -33,7 +33,7 @@ export function NetTable({ title, cases, finance }: { title: string; cases: NetC
         <thead className="text-xs text-muted">
           <tr>
             <th className="px-3 py-2 text-left font-medium">Cas</th>
-            <th className={`${td} font-medium`}>Encaissé HT</th>
+            <th className={`${td} font-medium`}>Encaissé</th>
             <th className={`${td} font-medium`}>Frais Stripe</th>
             <th className={`${td} font-medium`}>URSSAF</th>
             <th className={`${td} font-medium`}>CFP</th>

@@ -228,12 +228,20 @@ export const localStore: Store = {
   updateOrder: (id, patch) =>
     mutate((d) => {
       const o = d.orders.find((x) => x.id === id);
+      if (o && ["annulation_en_cours", "annulee"].includes(o.status) && patch.status && patch.status !== o.status && !(o.status === "annulation_en_cours" && patch.status === "annulee")) throw new Error("Commande annulée ou en cours d’annulation.");
       if (o) Object.assign(o, patch, { completedAt: o.completedAt ?? patch.completedAt ?? undefined }, { updatedAt: new Date().toISOString() });
       if (o && readyToClose(o, (d.deliverables ?? []).filter((item) => item.orderId === id))) {
         o.status = "terminee";
         o.completedAt ??= new Date().toISOString();
       }
     }),
+  claimOrderCancellation: (expected) => mutate((data) => {
+    const order = data.orders.find((item) => item.id === expected.id);
+    if (!order || order.updatedAt !== expected.updatedAt || !["payee", "brief_attente", "brief_recu"].includes(order.status) || (data.deliverables ?? []).some((item) => item.orderId === order.id && item.publishedAt)) return false;
+    order.status = "annulation_en_cours";
+    order.updatedAt = new Date().toISOString();
+    return true;
+  }),
   reviewBriefRevision: (expected, at, state) => mutate((data) => {
     const order = data.orders?.find((item) => item.id === expected.id);
     if (!order || order.updatedAt !== expected.updatedAt) return false;

@@ -5,6 +5,8 @@ import { useQuotePayment } from "./QuotePayment";
 import { QuoteDeclineForm } from "./QuoteDeclineForm";
 import { acceptQuoteCheckout, savePaidQuoteBrief } from "@/app/(livraison)/devis/actions";
 import { formatPrice } from "@/lib/pricing";
+import { BRIEF_PLATFORM_KEY, briefDeliveryNeeds } from "@/lib/brief-delivery";
+import { BriefDeliveryQuestions } from "./BriefDeliveryQuestions";
 
 export function QuoteAcceptForm({ token, en, request, deliverables, updatedAt, totalPrice, depositPercent, briefMode = false }: { token: string; en: boolean; request: Record<string, string>; deliverables: string[]; updatedAt: string; totalPrice: number; depositPercent: number; briefMode?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -55,6 +57,7 @@ export function QuoteAcceptForm({ token, en, request, deliverables, updatedAt, t
         <input type="hidden" name="payment" value={payment} />
         <div className="grid gap-4 sm:grid-cols-2">{fields.map(([name, label, value]) => <label key={name} className="block text-sm font-medium">{label}<input name={name} defaultValue={value || ""} maxLength={name === "logoLink" ? 1000 : 500} className={input} /></label>)}</div>
         <label className="block text-sm font-medium">{en ? "Your universe / mood *" : "Ton univers / ambiance *"}<textarea name="universe" required autoFocus maxLength={5000} defaultValue={request["Univers / ambiance"] || request.Projet || request.Message || ""} rows={4} className={input} /></label>
+        <BriefDeliveryQuestions mode="quote-brief" needs={briefDeliveryNeeds(deliverables)} en={en} streamTool={request[BRIEF_PLATFORM_KEY]} />
         {deliverables.map((label, i) => <label key={i} className="block text-sm font-medium">{label} *<textarea name={`creation_${i}`} required maxLength={5000} rows={3} placeholder={en ? "Content, style, texts, dimensions…" : "Contenu, style, textes, dimensions…"} className={input} /></label>)}
         <label className="block text-sm font-medium">{en ? "References / inspiration" : "Références / inspirations"}<textarea name="references" maxLength={5000} defaultValue={request.Inspirations || ""} rows={3} className={input} /></label>
         <label className="block text-sm font-medium">{en ? "Additional notes" : "Remarques complémentaires"}<textarea name="notes" maxLength={5000} rows={3} className={input} /></label>

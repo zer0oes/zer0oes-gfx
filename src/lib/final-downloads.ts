@@ -1,11 +1,12 @@
 import type { Deliverable } from "./store/types";
+import { installAccessKey } from "./install-links";
 
 export function hasFinalAccess(item: Pick<Deliverable, "finalAccessedAt" | "accessedFinalAssets">) {
   return Boolean(item.finalAccessedAt || item.accessedFinalAssets?.length);
 }
 
 export function finalAssetKeys(item: Pick<Deliverable, "storagePath" | "url" | "finalAssets">) {
-  return [...new Set([item.storagePath, item.url, ...(item.finalAssets ?? []).map((asset) => asset.path ?? asset.url)].filter((key): key is string => Boolean(key)))];
+  return [...new Set([item.storagePath, item.url, ...(item.finalAssets ?? []).map((asset) => asset.path ?? (asset.install ? installAccessKey(asset) : asset.url))].filter((key): key is string => Boolean(key)))];
 }
 
 export function allFinalsAccessed(item: Pick<Deliverable, "storagePath" | "url" | "finalAssets" | "accessedFinalAssets">) {

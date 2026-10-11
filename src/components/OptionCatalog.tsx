@@ -15,6 +15,7 @@ import { ProductPreview } from "./ProductPreview";
 import { ProductCompatibility } from "./ProductCompatibility";
 import { useOfferNavigation } from "./OfferTabs";
 import { OfferPrice, SaleBadge } from "./ui";
+import { briefDeliveryNeeds, INSTALL_SUPPLEMENT_ENABLED } from "@/lib/brief-delivery";
 
 function CheckoutButton({ disabled, locale }: { disabled: boolean; locale: Locale }) {
   const { pending } = useFormStatus();
@@ -79,18 +80,23 @@ function ProductCard({ product, locale, add, texts }: { product: ReturnType<type
   </article>;
 }
 
-export function OptionCatalog({ options, packs, settings, locale, texts }: { options: Option[]; packs: Pack[]; settings: PricingSettings; locale: Locale; texts: CatalogTexts }) {
+export function OptionCatalog({ options, packs, settings, locale, texts, installOption }: { options: Option[]; packs: Pack[]; settings: PricingSettings; locale: Locale; texts: CatalogTexts; installOption?: Option }) {
   const showPack = useOfferNavigation();
   const [filter, setFilter] = useState("all");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [message, setMessage] = useState("");
   const cartId = useId();
   const selected = options.filter((o) => !o.priceFrom && quantities[o.id] > 0);
-  const items = selected.map((o) => ({ id: o.id, quantity: quantities[o.id] }));
-  const total = selected.reduce((sum, o) => sum + o.price * quantities[o.id], 0);
-  const recommendation = recommendPack(packs, options, items, settings);
+  const cartItems = selected.map((o) => ({ id: o.id, quantity: quantities[o.id] }));
+  // Installation : code ajouté par le client (inclus) ou installation par zer0oes_GFX (supplément)
+  const [install, setInstall] = useState<"" | "self" | "zer0oes">("");
+  const needsInstall = INSTALL_SUPPLEMENT_ENABLED && Boolean(installOption) && briefDeliveryNeeds(selected.map((o) => o.name)).platform;
+  const installed = needsInstall && install === "zer0oes" ? installOption : undefined;
+  const items = installed ? [...cartItems, { id: installed.id, quantity: 1 }] : cartItems;
+  const total = selected.reduce((sum, o) => sum + o.price * quantities[o.id], 0) + (installed?.price ?? 0);
+  const recommendation = recommendPack(packs, options, cartItems, settings);
   const tooMany = items.length > 20 || JSON.stringify(items).length > 500;
-  const count = items.reduce((sum, item) => sum + item.quantity, 0);
+  const count = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const labels: Record<string, string> = locale === "en" ? { all: "All", overlays: "Overlays", emotes: "Emotes", branding: "Visual identity", motion: "Animation" } : { all: "Tout", overlays: "Overlays", emotes: "Emotes", branding: "Identité visuelle", motion: "Animation" };
   const products = optionProducts(options, (o) => texts.content[o.id]?.group ?? null).filter((product) => filter === "all" || product.category === filter).sort((a, b) => filter === "all" ? Number(a.variants.every((v) => v.priceFrom)) - Number(b.variants.every((v) => v.priceFrom)) : 0);
   const change = (id: string, quantity: number) => setQuantities((current) => ({ ...current, [id]: quantity }));
@@ -115,6 +121,19 @@ export function OptionCatalog({ options, packs, settings, locale, texts }: { opt
           <input type="hidden" name="optionItems" value={JSON.stringify(items)} /><input type="hidden" name="expectedPrice" value={total} /><input type="hidden" name="lang" value={locale} />
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {selected.length ? <ul className="divide-y divide-border">{selected.map((o) => <li key={o.id} className="space-y-1 px-4 py-2 text-sm"><div className="flex items-center justify-between gap-2"><p title={o.name} className="min-w-0 flex-1 truncate font-medium">{o.name.replace(/\s*\((?:unité|unit|each)\)/gi, "").replace(/\bfixe(s?)\b/gi, "statique$1").trim()}</p><button type="button" aria-label={t(locale, { fr: `Retirer ${o.name}`, en: `Remove ${o.name}` })} onClick={() => change(o.id, 0)} className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-accent/10 hover:text-accent focus-visible:outline-2 focus-visible:outline-accent"><svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6" /></svg></button></div><div className="flex items-center justify-between gap-2"><label className="flex items-center gap-2"><span className="text-xs text-muted">{t(locale, { fr: "Qté", en: "Qty" })}</span><input type="number" min={1} max={20} step={1} aria-label={t(locale, { fr: `Quantité de ${o.name}`, en: `Quantity of ${o.name}` })} value={quantities[o.id]} onChange={(e) => { const next = Number(e.target.value); if (Number.isInteger(next) && next >= 1 && next <= 20) change(o.id, next); }} className="catalog-quantity h-8 w-14 rounded-md border border-border bg-background px-2 text-center text-sm" /></label><span className="font-semibold">{formatPrice(o.price * quantities[o.id], locale)}</span></div></li>)}</ul> : <p className="px-4 py-3 text-sm text-muted">{t(locale, { fr: "Ajoute une création pour commencer ta commande.", en: "Add a creation to start your order." })}</p>}
+          {needsInstall && installOption && <fieldset className="border-t border-border px-4 py-3 text-sm">
+            <legend className="sr-only">{t(locale, { fr: "Installation", en: "Installation" })}</legend>
+            <p className="font-semibold">{t(locale, { fr: "Installation sur StreamElements ou Streamlabs *", en: "Installation on StreamElements or Streamlabs *" })}</p>
+            <div className="mt-2 space-y-2">
+              {([["self", t(locale, { fr: "J’ajoute moi-même le code", en: "I’ll add the code myself" }), t(locale, { fr: "Tu reçois le HTML, le CSS et le JavaScript à coller dans ta plateforme.", en: "You receive the HTML, CSS and JavaScript to paste into your platform." }), t(locale, { fr: "Inclus", en: "Included" })], ["zer0oes", t(locale, { fr: "Installation par zer0oes_GFX", en: "Installation by zer0oes_GFX" }), t(locale, { fr: "Tu invites le compte zer0oes_GFX comme éditeur et j’installe tout pour toi.", en: "You invite the zer0oes_GFX account as an editor and I install everything for you." }), `+ ${formatPrice(installOption.price, locale)}`]] as const).map(([value, label, hint, price]) => (
+                <label key={value} className="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-2.5 text-xs transition-colors hover:border-accent/60 has-[:checked]:border-accent has-[:checked]:bg-accent/10">
+                  <input type="radio" name="installChoice" value={value} checked={install === value} onChange={() => setInstall(value)} className="mt-0.5 accent-[var(--accent)]" />
+                  <span className="min-w-0 flex-1"><span className="flex justify-between gap-2 font-semibold text-foreground"><span>{label}</span><span className="shrink-0">{price}</span></span><span className="mt-0.5 block text-muted">{hint}</span></span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-muted">{t(locale, { fr: "Tu choisiras StreamElements ou Streamlabs dans ton brief.", en: "You’ll choose StreamElements or Streamlabs in your brief." })}</p>
+          </fieldset>}
           {recommendation && <div className="mx-3 my-2 space-y-2 rounded-xl border border-accent/40 bg-accent/10 p-3 text-xs" aria-live="polite">
             <p>{recommendation.pack.name}{recommendation.formula && recommendation.formula.id !== "base" ? ` · ${recommendation.formula.label}` : ""}{recommendation.hasLogo ? t(locale, { fr: " — logo fourni", en: " — logo supplied" }) : ""} · {recommendation.pack.priceFrom ? t(locale, { fr: "à partir de ", en: "from " }) : ""}{formatPrice(recommendation.price, locale)}</p>
             <p className="text-accent">{t(locale, { fr: "Économie : ", en: "Savings: " })}{recommendation.remaining.length ? t(locale, { fr: "à confirmer avec les compléments", en: "to confirm with add-ons" }) : total > recommendation.price ? `${formatPrice(total - recommendation.price, locale)} (${((total - recommendation.price) / total * 100).toLocaleString(locale, { maximumFractionDigits: 1 })} %)` : t(locale, { fr: "aucune sur cette sélection", en: "none for this selection" })}</p>
@@ -131,7 +150,8 @@ export function OptionCatalog({ options, packs, settings, locale, texts }: { opt
           <p aria-live="polite" className="mb-3 flex justify-between text-lg font-bold"><span>Total</span><span>{formatPrice(total, locale)}</span></p>
           {selected.length > 0 && <label className="mb-3 flex items-start gap-2 text-xs text-muted"><input type="checkbox" name="cgv" required className="mt-0.5 accent-[var(--accent)]" /><span>{locale === "fr" ? <>J&apos;accepte les <Link href={href(locale, "/cgv")} className="underline">CGV</Link> et demande le démarrage dès le paiement, avant la fin du délai de rétractation.</> : <>I accept the <Link href={href(locale, "/cgv")} className="underline">terms of sale</Link> and request work to start upon payment, before the withdrawal period ends.</>}</span></label>}
           {tooMany && <p role="alert" className="mb-3 text-xs text-muted">{t(locale, { fr: "Contacte-moi pour un devis groupé de cette taille.", en: "Contact me for a combined quote of this size." })}</p>}
-          <CheckoutButton locale={locale} disabled={!items.length || tooMany || total < 50} />
+          <CheckoutButton locale={locale} disabled={!cartItems.length || tooMany || total < 50 || (needsInstall && !install)} />
+          {needsInstall && !install && <p className="mt-2 text-center text-[11px] text-accent">{t(locale, { fr: "Choisis le mode d’installation pour continuer.", en: "Choose the installation option to continue." })}</p>}
           <p className="mt-2 text-center text-[11px] text-muted">{t(locale, { fr: "Une seule modification incluse par création.", en: "One revision included per creation." })}</p>
           <p className="mt-1 text-center text-[11px] leading-relaxed text-muted"><span className="block">{t(locale, { fr: "Paiement sécurisé · En une fois", en: "Secure payment · Paid in full" })}</span><span className="block">{t(locale, { fr: "Brief à compléter après paiement", en: "Complete your brief after payment" })}</span></p>
           </div>

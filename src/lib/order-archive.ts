@@ -8,7 +8,8 @@ export function canDownloadArchive(order: Pick<Order, "totalPrice" | "amountPaid
 export function archiveEntries(orderId: string, items: Deliverable[]) {
   const used = new Set<string>();
   return items.flatMap((item) => {
-    const assets = [...(item.finalAssets ?? []), ...(item.storagePath || item.url ? [{ path: item.storagePath, url: item.url, label: item.label }] : [])];
+    // Code d'installation StreamElements sans lien : rien à archiver (il s'installe depuis l'espace commande)
+    const assets = [...(item.finalAssets ?? []).filter((asset) => asset.path || asset.url), ...(item.storagePath || item.url ? [{ path: item.storagePath, url: item.url, label: item.label }] : [])];
     return assets.map((asset) => {
       if (asset.path && !asset.path.startsWith(`${orderId}/`)) throw new Error("Chemin de fichier invalide.");
       if (!asset.path && !asset.url) throw new Error("Fichier final manquant.");

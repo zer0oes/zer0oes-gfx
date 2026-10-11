@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Données locales (non suivies) et bibliothèques tierces minifiées
+    ".data/**",
+    "public/streamerlab/**",
   ]),
 ]);
 

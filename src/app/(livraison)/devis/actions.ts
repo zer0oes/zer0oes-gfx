@@ -7,6 +7,7 @@ import { createBalanceLink, ensureDeliveryPlan } from "@/lib/orders";
 import { siteUrl } from "@/lib/site-url";
 import { notify } from "@/lib/notify";
 import { parseQuoteBrief } from "@/lib/quote-brief";
+import { readProductBrief } from "@/lib/product-brief";
 import type { FormState } from "@/app/actions";
 
 export async function sendPaidQuoteBrief(_state: FormState, data: FormData): Promise<FormState> {
@@ -14,7 +15,8 @@ export async function sendPaidQuoteBrief(_state: FormState, data: FormData): Pro
   if (!isDeliveryToken(token)) return { ok: false, message: "Accès invalide." };
   const q = await getStore().getQuoteByToken(token);
   if (!q) return { ok: false, message: "Devis introuvable." };
-  q.deliverables.forEach((_, i) => data.set(`creation_${i}`, String(data.get(`productBrief_${i}`) ?? "")));
+  // Réponse de chaque création (une par alerte ou par emote réunies en une seule)
+  readProductBrief(q.deliverables, (name) => String(data.get(name) ?? "")).forEach((value, i) => data.set(`creation_${i}`, value));
   const result = await savePaidQuoteBrief(null, data);
   return result ? { ok: false, message: result.error } : { ok: true, message: "Brief reçu." };
 }
@@ -38,7 +40,7 @@ export async function savePaidQuoteBrief(_state: { error: string } | null, data:
   if (!order || !q || q.orderId !== order.id || order.amountPaid <= 0) return { error: "Le paiement doit être confirmé avant l’envoi du brief." };
   if (q.briefCompletedAt) redirect(`/commande/${token}`);
   const brief = parseQuoteBrief(data, q.deliverables, q.optionalBriefDeliverables, q.requiredBriefFields ?? ["email", "channel", "universe"]);
-  if (!brief) return { error: "Complète ton univers et chaque création." };
+  if (!brief) return { error: "Complète ton univers, chaque création et, selon ta commande, la plateforme de tes widgets et alertes et la livraison de tes overlays." };
   const now = new Date().toISOString();
   await store.updateOrder(order.id, { brief: { ...order.brief, ...brief, "E-mail": order.customerEmail, Plateforme: String(data.get("platform") ?? "").slice(0, 100), "Éléments à inclure": String(data.get("elements") ?? "").slice(0, 5000) }, briefReceivedAt: now, status: "brief_recu" });
   await ensureDeliveryPlan({ ...order, brief });
