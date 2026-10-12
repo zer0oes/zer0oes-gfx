@@ -78,7 +78,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
                       fill
                       draggable={false}
                       sizes="(min-width: 1024px) 560px, 100vw"
-                      className="object-cover transition duration-500 group-hover:scale-105"
+                      className={`object-cover transition duration-500 ${coverVideo ? "" : "group-hover:scale-105"}`}
                     />
                     {coverVideo && <HoverVideo src={coverVideo} />}
                   </ProtectedMedia>

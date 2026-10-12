@@ -214,7 +214,8 @@ export function Media({
             priority={priority}
             draggable={false}
             sizes={sizes}
-            className="object-cover transition duration-700 group-hover:scale-[1.02]"
+            // Léger zoom au survol pour une image seule ; une vidéo se contente de jouer en boucle
+            className={`object-cover transition duration-700 ${work.video ? "" : "group-hover:scale-[1.02]"}`}
           />
           {work.video && <HoverVideo src={work.video} />}
         </ProtectedMedia>
