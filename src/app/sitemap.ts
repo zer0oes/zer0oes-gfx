@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
 import { siteOrigin } from "@/lib/site-origin";
+import { withoutDrafts } from "@/data/portfolio";
 import { getStore } from "@/lib/store";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { streamers } = await getStore().getPortfolio();
+  const { streamers } = withoutDrafts(await getStore().getPortfolio());
   const pages = ["", "/offres", "/portfolio", "/a-propos", "/contact", "/cgv", "/mentions-legales", "/confidentialite"];
   const all = [
     ...pages.map((path) => ({ path, priority: path === "" ? 1 : path === "/offres" ? 0.9 : 0.5 })),

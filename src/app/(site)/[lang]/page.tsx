@@ -7,7 +7,7 @@ import { PackCard } from "@/components/PackCard";
 import { ReviewsCarousel } from "@/components/ReviewsCarousel";
 import { TestimonialQuote, testimonialImage } from "@/components/TestimonialQuote";
 import { HoverVideo } from "@/components/HoverVideo";
-import { projectHref, type Work } from "@/data/portfolio";
+import { projectHref, withoutDrafts, type Work } from "@/data/portfolio";
 import { resolveHome } from "@/lib/home-content";
 import { activePacks } from "@/lib/pricing";
 import { ProtectedMedia } from "@/components/protection";
@@ -83,7 +83,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
     store.getHomeContent(),
     store.listTestimonials(),
   ]);
-  const { works, streamers } = trDeep(lang, portfolio);
+  const { works, streamers } = trDeep(lang, withoutDrafts(portfolio));
   // Textes et visuels choisis dans l'admin (Admin > Accueil), sinon contenu d'origine
   const c = resolveHome(stored, lang);
   // Visuel choisi : « - » masque la partie, vide = choix automatique
