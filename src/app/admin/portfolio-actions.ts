@@ -14,6 +14,8 @@ import { s3Configured, s3Delete, s3SignedUpload } from "@/lib/s3";
 import { getStore } from "@/lib/store";
 import { checkUpload, sniffType, storagePath, type MediaKind } from "@/lib/uploads";
 import { watermarkImage } from "@/lib/watermark";
+import { projectCategory, projectName, projectSource, projectUrl } from "@/lib/order-to-project";
+import sharp from "sharp";
 
 const text = (f: FormData, k: string, max = 2000) => (f.get(k)?.toString() ?? "").trim().slice(0, max);
 const slug = (s: string) =>
@@ -58,10 +60,91 @@ export async function saveStreamerAction(formData: FormData) {
   const id = existing || slug(name);
   const url = text(formData, "url", 300);
   if (url && !mediaUrl(url)) done(back, "Le lien de la chaîne doit commencer par https://.");
-  await getStore().saveStreamer({ id, name, description: text(formData, "description", 300), url: url || undefined });
+  const store = getStore();
+  // Brouillon et commande d'origine conservés : ce formulaire ne modifie que les informations
+  const current = existing ? (await store.getPortfolio()).streamers.find((s) => s.id === existing) : undefined;
+  await store.saveStreamer({ id, name, description: text(formData, "description", 300), url: url || undefined, draft: current?.draft, orderId: current?.orderId });
   await saveAdminTranslations(formData, `streamer:${id}`, ["name", "description"]);
   // Nouveau projet : on ouvre directement sa fiche
   done(projectAdmin(id));
+}
+
+// Publication d'un projet en brouillon, ou retour en brouillon (masqué sur le site)
+export async function setStreamerDraftAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const id = text(formData, "id", 60);
+  const streamer = (await store.getPortfolio()).streamers.find((s) => s.id === id);
+  if (!streamer) done("/admin/portfolio", "Projet introuvable.");
+  await store.saveStreamer({ ...streamer, draft: formData.get("draft") === "1" || undefined });
+  done(projectAdmin(id));
+}
+
+// Commande terminée → projet du portfolio en brouillon : nom et lien de la chaîne repris du brief,
+// une réalisation par livrable montrable (visuel redimensionné et filigrané, ou aperçu vidéo),
+// avis du client repris seulement s'il en a autorisé la diffusion.
+export async function convertOrderToProjectAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const orderId = text(formData, "orderId", 60);
+  const back = `/admin/commandes/${encodeURIComponent(orderId)}`;
+  const order = await store.getOrder(orderId);
+  if (!order) done("/admin/commandes", "Commande introuvable.");
+  if (order.status !== "terminee") done(back, "Seule une commande terminée peut devenir un projet du portfolio.");
+  const { streamers, works } = await store.getPortfolio();
+  const already = streamers.find((s) => s.orderId === order.id);
+  if (already) done(projectAdmin(already.id));
+
+  const unique = (base: string, taken: Set<string>) => {
+    let id = base;
+    for (let n = 2; taken.has(id); n++) id = `${base.slice(0, 56)}-${n}`;
+    taken.add(id);
+    return id;
+  };
+  const name = projectName(order);
+  const id = unique(slug(name) || "projet", new Set(streamers.map((s) => s.id)));
+  await store.saveStreamer({ id, name, description: "", url: projectUrl(order), draft: true, orderId: order.id });
+  // Projet le plus récent en tête du portfolio
+  await store.reorderStreamers([id, ...streamers.map((s) => s.id)]);
+
+  const { watermark } = await store.getProtection();
+  const workIds = new Set(works.map((w) => w.id));
+  let failed = 0;
+  for (const item of await store.listDeliverables(order.id)) {
+    const category = projectCategory(item);
+    const source = projectSource(item);
+    if (!category || !source || !store.readDeliverableFile) continue;
+    try {
+      const bytes = await store.readDeliverableFile(source.path);
+      let media: { data: Uint8Array; type: string };
+      if (source.kind === "image") {
+        // Le fichier HD livré au client ne part jamais tel quel dans le stockage public
+        const resized = new Uint8Array(await sharp(bytes, { animated: false }).resize({ width: 1920, height: 1920, fit: "inside", withoutEnlargement: true }).webp({ quality: 88 }).toBuffer());
+        media = (await watermarkImage(resized, watermark, "image")) ?? { data: resized, type: "image/webp" };
+      } else {
+        const type = sniffType(bytes);
+        if (!type || checkUpload("video", type, bytes.length)) throw new Error(`Vidéo non reprise : ${item.label}`);
+        media = { data: bytes, type };
+      }
+      const url = await store.uploadAsset(storagePath(id, item.label, media.type), media.data, media.type);
+      await store.saveWork({
+        id: unique(slug(`${id}-${item.label}`) || `${id}-visuel`, workIds),
+        streamer: id,
+        category,
+        title: item.label.slice(0, 120),
+        description: "",
+        image: source.kind === "image" ? url : undefined,
+        video: source.kind === "video" ? url : undefined,
+        colors: ["#7c3aed", "#06b6d4"],
+      });
+    } catch (e) {
+      console.error(e);
+      failed++;
+    }
+  }
+  const review = order.testimonial;
+  if (review?.consent) await store.saveTestimonial({ streamerId: id, author: review.author, quote: review.quote, consent: true, onHome: false });
+  done(projectAdmin(id), failed ? `Projet créé, mais ${failed} visuel${failed > 1 ? "s n’ont" : " n’a"} pas pu être repris. Ajoute-le${failed > 1 ? "s" : ""} à la main.` : undefined);
 }
 
 export async function deleteStreamerAction(formData: FormData) {

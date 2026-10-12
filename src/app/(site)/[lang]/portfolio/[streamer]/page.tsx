@@ -7,7 +7,7 @@ import { BuilderView } from "@/components/BuilderView";
 import { TestimonialQuote, testimonialImage } from "@/components/TestimonialQuote";
 import { WorkGrid } from "@/components/WorkGrid";
 import { caseStudies } from "@/data/case-studies";
-import { categories, projectHref, type Category } from "@/data/portfolio";
+import { categories, projectHref, withoutDrafts, type Category } from "@/data/portfolio";
 import { projectPage } from "@/lib/project-page";
 import { asLocale, href, t, type Locale } from "@/lib/i18n";
 import { languageAlternates } from "@/lib/seo";
@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
 async function findStreamer(id: string, locale: Locale) {
-  const portfolio = trDeep(locale, await getStore().getPortfolio());
+  const portfolio = trDeep(locale, withoutDrafts(await getStore().getPortfolio()));
   return { ...portfolio, streamer: portfolio.streamers.find((s) => s.id === id) };
 }
 
