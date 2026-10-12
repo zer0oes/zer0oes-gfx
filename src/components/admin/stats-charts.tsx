@@ -49,9 +49,10 @@ export function VisitsChart({ points, dayHref, selectedDay, today }: { points: S
           {points.map((p, i) => {
             if (i % every !== 0 && i !== points.length - 1) return null;
             const future = !!today && p.start > today;
-            const label = <text x={x(i)} y={H - 10} textAnchor="middle" opacity={future ? 0.4 : 1}>{p.axis}</text>;
+            // Couleur posée sur le texte lui-même : un lien SVG ne la transmet pas toujours (date affichée en noir).
+            const label = <text x={x(i)} y={H - 10} textAnchor="middle" opacity={future ? 0.4 : 1} className="fill-foreground group-hover:fill-accent group-focus-visible:fill-accent">{p.axis}</text>;
             return dayHref && p.start === p.end && !future
-              ? <Link key={p.key} href={`${dayHref}&jour=${p.start}`} prefetch={false} scroll={false} aria-label={`Afficher le détail du ${p.label}`} className="hover:fill-accent focus-visible:fill-accent">{label}</Link>
+              ? <Link key={p.key} href={`${dayHref}&jour=${p.start}`} prefetch={false} scroll={false} aria-label={`Afficher le détail du ${p.label}`} className="group">{label}</Link>
               : <g key={p.key}>{label}</g>;
           })}
         </g>
