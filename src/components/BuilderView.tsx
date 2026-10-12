@@ -363,20 +363,32 @@ function ScenesBlock({ block: b, items, openWork }: { block: Block; items: { w: 
       <div className="lg:col-span-8">
         {/* key : relance l'aperçu vidéo au changement de scène */}
         <Media key={active.w.id} work={active.w} onOpen={() => openWork(active.w)} image={active.s.image} aspect={active.s.aspect} sizes="(min-width: 1024px) 760px, 100vw" />
+        {/* Navigation dans l'esprit du carrousel d'avis de l'accueil : points, la scène affichée en pastille nommée */}
         {items.length > 1 && (
-          <div role="tablist" aria-label={t(locale, { fr: "Scènes", en: "Scenes" })} className="mt-3 flex flex-wrap justify-between gap-2">
-            {items.map((s, i) => (
-              <button
-                key={s.w.id}
-                type="button"
-                role="tab"
-                aria-selected={s === active}
-                onClick={() => setCurrent(i)}
-                className={`rounded-full px-3 py-1 text-sm transition ${s === active ? "bg-surface-2 font-semibold text-foreground" : "text-muted hover:text-foreground"}`}
-              >
-                {say(s.s.caption, locale) || s.w.title}
-              </button>
-            ))}
+          <div role="tablist" aria-label={t(locale, { fr: "Scènes", en: "Scenes" })} className="mt-5 flex h-9 items-center justify-center gap-2.5">
+            {items.map((s, i) => {
+              const name = say(s.s.caption, locale) || s.w.title;
+              return (
+                <button
+                  key={s.w.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={s === active}
+                  aria-label={s === active ? undefined : name}
+                  onClick={() => setCurrent(i)}
+                  className={`group relative rounded-full transition-all duration-300 ${s === active ? "border-2 border-transparent px-4 py-1.5 text-sm font-semibold text-foreground" : "size-2.5 bg-muted/40 outline-none hover:bg-accent hover:ring-4 hover:ring-accent/25 focus-visible:bg-accent focus-visible:ring-4 focus-visible:ring-accent/40"}`}
+                  // Pastille sombre cernée du dégradé de l'accueil : texte clair, bien lisible
+                  style={s === active ? { background: "linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(90deg, var(--accent-3), var(--accent-2)) border-box" } : undefined}
+                >
+                  {s === active ? name : (
+                    // Infobulle aux couleurs du site (nom de la scène), au survol et au clavier
+                    <span aria-hidden="true" className="pointer-events-none absolute bottom-full left-1/2 mb-3 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-xl border border-border bg-surface-2 px-3 py-1.5 text-xs font-semibold text-foreground opacity-0 shadow-xl transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                      {name}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
