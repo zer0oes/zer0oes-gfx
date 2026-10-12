@@ -14,6 +14,8 @@ import { paymentSummary, ensureDeliveryPlan } from "@/lib/orders";
 import { depositAmount, formatPrice } from "@/lib/pricing";
 import { balanceDue, getStore } from "@/lib/store";
 import { retryCancellationAction, retryInvoiceAction, reviewBriefRevisionAction } from "../../../actions";
+import { convertOrderToProjectAction } from "../../../portfolio-actions";
+import { ConvertToProjectButton } from "@/components/admin/ConvertToProjectButton";
 
 export const metadata: Metadata = { title: "Commande" };
 
@@ -35,12 +37,13 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
   const sp = await searchParams;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.slice(0, 300);
   const store = getStore();
-  const [order, finance, invoices] = await Promise.all([store.getOrder(id), store.getFinance(), store.listInvoices(id)]);
+  const [order, finance, invoices, portfolio] = await Promise.all([store.getOrder(id), store.getFinance(), store.listInvoices(id), store.getPortfolio()]);
   if (!order) notFound();
   const projectQuote = order.deliveryToken && order.packId === "sur-mesure" ? await store.getQuoteByToken(order.deliveryToken) : null;
   await ensureDeliveryPlan(order);
   const deliverables = await store.listDeliverables(id);
   const due = balanceDue(order);
+  const project = portfolio.streamers.find((s) => s.orderId === order.id);
 
   // Paiements réellement encaissés (acompte puis solde, ou paiement unique)
   const deposit = depositAmount(order.totalPrice, { depositPercent: order.depositPercent, logoDiscount: 0, deliveryDays: "" });
@@ -107,6 +110,21 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
             )}
           </OrderBriefPanel>
         <DeliverySection order={order} items={deliverables} message={{ ok: one(sp.enregistre), error: one(sp.erreur) }} />
+        {(order.status === "terminee" || project) && (
+          <section className={`${card} flex flex-wrap items-center justify-between gap-3`}>
+            <div>
+              <h2 className="font-semibold">Portfolio</h2>
+              <p className="mt-1 text-sm text-muted">
+                {project
+                  ? <>Projet « {project.name} » {project.draft ? "en brouillon, masqué sur le site" : "publié sur le site"}.</>
+                  : "Crée un projet en brouillon avec les visuels livrés (redimensionnés et filigranés), le lien de la chaîne et l’avis du client s’il en a autorisé la diffusion."}
+              </p>
+            </div>
+            {project
+              ? <Link href={`/admin/portfolio/projet/${encodeURIComponent(project.id)}`} className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">Ouvrir le projet</Link>
+              : <form action={convertOrderToProjectAction}><input type="hidden" name="orderId" value={order.id} /><ConvertToProjectButton /></form>}
+          </section>
+        )}
         {order.testimonial && (<section className={card}>
               <h2 className="font-semibold">Avis du client</h2>
               <p className="mt-3 whitespace-pre-wrap text-sm">{order.testimonial.quote}</p>

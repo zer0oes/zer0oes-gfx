@@ -5,7 +5,7 @@ import { HoverVideo } from "@/components/HoverVideo";
 import { ProtectedMedia } from "@/components/protection";
 import { PageHeader } from "@/components/ui";
 import { caseStudies } from "@/data/case-studies";
-import { categories, projectHref } from "@/data/portfolio";
+import { categories, projectHref, withoutDrafts } from "@/data/portfolio";
 import { resolveHome } from "@/lib/home-content";
 import { asLocale, href, t } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
@@ -36,7 +36,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const lang = asLocale((await params).lang);
   const store = getStore();
   const [portfolio, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
-  const { streamers, works } = trDeep(lang, portfolio);
+  const { streamers, works } = trDeep(lang, withoutDrafts(portfolio));
   // Textes modifiables dans Admin > Portfolio
   const texts = resolveHome(stored, lang);
   return (
@@ -78,7 +78,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
                       fill
                       draggable={false}
                       sizes="(min-width: 1024px) 560px, 100vw"
-                      className="object-cover transition duration-500 group-hover:scale-105"
+                      className={`object-cover transition duration-500 ${coverVideo ? "" : "group-hover:scale-105"}`}
                     />
                     {coverVideo && <HoverVideo src={coverVideo} />}
                   </ProtectedMedia>

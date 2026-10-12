@@ -109,6 +109,7 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps<"/a
                           <Link href={`/admin/portfolio/projet/${s.id}`} className="font-medium after:absolute after:inset-0 hover:text-accent">
                             {s.name}
                           </Link>
+                          {s.draft && <span className="ml-2 text-xs text-amber-300">Brouillon</span>}
                           {s.description && <p className="truncate text-xs text-muted">{s.description}</p>}
                         </div>
                       </div>

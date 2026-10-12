@@ -7,7 +7,7 @@ import { PackCard } from "@/components/PackCard";
 import { ReviewsCarousel } from "@/components/ReviewsCarousel";
 import { TestimonialQuote, testimonialImage } from "@/components/TestimonialQuote";
 import { HoverVideo } from "@/components/HoverVideo";
-import { projectHref, type Work } from "@/data/portfolio";
+import { projectHref, withoutDrafts, type Work } from "@/data/portfolio";
 import { resolveHome } from "@/lib/home-content";
 import { activePacks } from "@/lib/pricing";
 import { ProtectedMedia } from "@/components/protection";
@@ -28,7 +28,7 @@ function Showcase({ work, href, sizes }: { work: Work; href: string; sizes: stri
   return (
     <Link href={href} data-hover-root className="group block overflow-hidden rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent">
       <ProtectedMedia className="aspect-video">
-        <Image src={work.image!} alt={work.title} fill draggable={false} sizes={sizes} className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+        <Image src={work.image!} alt={work.title} fill draggable={false} sizes={sizes} className={`object-cover transition duration-500 ${work.video ? "" : "group-hover:scale-[1.03]"}`} />
         {work.video && <HoverVideo src={work.video} autoPlayOnTouch={false} />}
       </ProtectedMedia>
     </Link>
@@ -83,7 +83,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
     store.getHomeContent(),
     store.listTestimonials(),
   ]);
-  const { works, streamers } = trDeep(lang, portfolio);
+  const { works, streamers } = trDeep(lang, withoutDrafts(portfolio));
   // Textes et visuels choisis dans l'admin (Admin > Accueil), sinon contenu d'origine
   const c = resolveHome(stored, lang);
   // Visuel choisi : « - » masque la partie, vide = choix automatique

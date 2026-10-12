@@ -6,17 +6,20 @@ import { useState } from "react";
 import { logoutAction } from "@/app/admin/actions";
 import { AdminNavigation } from "./AdminNavigation";
 import { MaterialIcon } from "./MaterialIcon";
+import { AdminMobileMenu } from "./AdminMobileMenu";
 
 export function AdminSidebar({ email, storeKind, pendingOrders, pendingQuotes }: { email: string; storeKind: "supabase" | "local" | "static"; pendingOrders: number; pendingQuotes: number }) {
   const [collapsed, setCollapsed] = useState(false);
   const toggleLabel = collapsed ? "Déplier le menu" : "Replier le menu";
   return (
-    <aside className={`flex flex-col border-b border-border bg-surface transition-[width] duration-200 motion-reduce:transition-none md:sticky md:top-0 md:h-dvh md:shrink-0 md:self-start md:border-b-0 md:border-r ${collapsed ? "md:w-20" : "md:w-64"}`}>
+    <>
+    <AdminMobileMenu email={email} pendingOrders={pendingOrders} pendingQuotes={pendingQuotes} />
+    <aside className={`hidden flex-col border-border bg-surface transition-[width] duration-200 motion-reduce:transition-none md:sticky md:top-0 md:flex md:h-dvh md:shrink-0 md:self-start md:border-r ${collapsed ? "md:w-20" : "md:w-64"}`}>
       <div className="shrink-0 p-3">
         <div className={`flex items-center gap-2 ${collapsed ? "md:flex-col" : "justify-between"}`}>
           <Link href="/admin" aria-label="Tableau de bord — zer0oes gfx" className="inline-flex min-w-0 items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-accent">
             <Image src="/favicon.ico" alt="" width={40} height={40} unoptimized className="size-10 shrink-0 object-contain" />
-            <span className={collapsed ? "sr-only" : "font-display text-base font-bold"}>Administation</span>
+            <span className={collapsed ? "sr-only" : "font-display text-base font-bold"}>Administration</span>
           </Link>
           <button type="button" onClick={() => setCollapsed((value) => !value)} aria-label={toggleLabel} title={toggleLabel}
             aria-expanded={!collapsed} aria-controls="admin-navigation"
@@ -39,5 +42,6 @@ export function AdminSidebar({ email, storeKind, pendingOrders, pendingQuotes }:
         </button>
       </form>
     </aside>
+    </>
   );
 }

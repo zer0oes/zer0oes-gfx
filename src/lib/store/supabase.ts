@@ -317,6 +317,8 @@ export const supabaseStore: Store = {
           name: s.name as string,
           description: s.description as string,
           url: opt<string>(s.url),
+          draft: s.draft === true || undefined,
+          orderId: opt<string>(s.order_id),
         }),
       ),
       works: (check(works) as Row[]).map((w) =>
@@ -469,6 +471,8 @@ export const supabaseStore: Store = {
           name: s.name,
           description: s.description,
           url: s.url ?? null,
+          draft: s.draft ?? false,
+          order_id: s.orderId ?? null,
         }),
     );
   },

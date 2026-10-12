@@ -1,6 +1,32 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DIRECT, deviceOf, isBot, pageLabel, sourceOf, summarize, type StatEvent } from "./stats";
+import { DIRECT, deviceOf, isBot, pageLabel, selectedStatsDay, sourceOf, summarize, type StatEvent } from "./stats";
+
+test("sélection du jour : date réelle dans la période, sans jours futurs ni paramètres multiples", () => {
+  const period = { start: "2026-10-01", end: "2026-10-31" };
+  assert.equal(selectedStatsDay("2026-10-05", period, "2026-10-11"), "2026-10-05");
+  for (const day of [undefined, ["2026-10-05", "2026-10-06"], "2026-09-30", "2026-10-12", "2026-10-32", "2026-02-30", "incorrect"]) {
+    assert.equal(selectedStatsDay(day, period, "2026-10-11"), undefined);
+  }
+  assert.equal(selectedStatsDay("2026-02-30", { start: "2026-02-01", end: "2026-03-31" }, "2026-10-11"), undefined);
+});
+
+test("détail journalier : pages et provenance suivent le jour de Paris, même sans visites", () => {
+  const events: StatEvent[] = [
+    { createdAt: "2026-10-04T22:30:00Z", kind: "vue", path: "/portfolio", visitor: "a", source: "Instagram", device: "mobile" },
+    { createdAt: "2026-10-05T09:00:00Z", kind: "clic", path: "/portfolio", label: "Contact" },
+    { createdAt: "2026-10-05T22:30:00Z", kind: "vue", path: "/offres", visitor: "b", source: "Google", device: "ordinateur" },
+  ];
+  const day = summarize(events, { start: "2026-10-05", end: "2026-10-05" });
+  assert.deepEqual(day.pages, [{ label: "Portfolio", count: 1 }]);
+  assert.deepEqual(day.sources, [{ label: "Instagram", count: 1 }]);
+  assert.deepEqual(day.devices, [{ label: "Mobile", count: 1 }]);
+  assert.equal(day.clicks, 1);
+  const empty = summarize(events, { start: "2026-10-07", end: "2026-10-07" });
+  assert.deepEqual(empty.pages, []);
+  assert.deepEqual(empty.sources, []);
+  assert.equal(empty.visitors, 0);
+});
 
 test("provenance : utm, réseaux, moteurs, accès direct, navigation interne", () => {
   const site = "www.zer0oes-gfx.com";
