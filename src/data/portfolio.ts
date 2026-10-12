@@ -18,7 +18,16 @@ export const categories: { id: Category; label: string }[] = [
   { id: "reseaux", label: "Réseaux sociaux" },
 ];
 
-export type Streamer = { id: string; name: string; description: string; url?: string };
+// draft : projet masqué sur le site (créé depuis une commande, à relire avant publication) ;
+// orderId : commande dont il est issu
+export type Streamer = { id: string; name: string; description: string; url?: string; draft?: boolean; orderId?: string };
+
+// Ce que voit le site : sans les projets en brouillon ni leurs réalisations
+export function withoutDrafts<P extends { streamers: Streamer[]; works: { streamer: string }[] }>(p: P): P {
+  const hidden = new Set(p.streamers.filter((s) => s.draft).map((s) => s.id));
+  if (!hidden.size) return p;
+  return { ...p, streamers: p.streamers.filter((s) => !hidden.has(s.id)), works: p.works.filter((w) => !hidden.has(w.streamer)) };
+}
 
 export const streamers: Streamer[] = [
   // Du plus récent au plus ancien (ordre d'affichage du portfolio)

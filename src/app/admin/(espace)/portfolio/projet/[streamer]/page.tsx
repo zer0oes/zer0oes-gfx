@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { categories } from "@/data/portfolio";
 import { getStore } from "@/lib/store";
-import { deleteStreamerAction, moveWorkAction, saveStreamerAction, saveTestimonialAction } from "../../../../portfolio-actions";
+import { deleteStreamerAction, moveWorkAction, saveStreamerAction, saveTestimonialAction, setStreamerDraftAction } from "../../../../portfolio-actions";
 
 export const metadata: Metadata = { title: "Projet" };
 
@@ -31,11 +31,24 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
         ← Tous les projets
       </Link>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="font-display text-3xl font-bold">{s.name}</h1>
-        <Link href={`/portfolio/${s.id}`} target="_blank" className="text-sm text-accent hover:underline">
-          Voir la page ↗
-        </Link>
+        <h1 className="font-display text-3xl font-bold">{s.name}{s.draft && <span className="ml-3 align-middle text-sm font-medium text-amber-300">Brouillon</span>}</h1>
+        {!s.draft && (
+          <Link href={`/portfolio/${s.id}`} target="_blank" className="text-sm text-accent hover:underline">
+            Voir la page ↗
+          </Link>
+        )}
       </div>
+      <form action={setStreamerDraftAction} className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm ${s.draft ? "border-amber-500/40 bg-amber-500/10" : "border-border"}`}>
+        <input type="hidden" name="id" value={s.id} />
+        <input type="hidden" name="draft" value={s.draft ? "0" : "1"} />
+        <p className={s.draft ? "text-amber-200" : "text-muted"}>
+          {s.draft ? "Projet masqué sur le site. Relis les textes et les visuels (aperçu dans « Mettre en page »), puis publie-le." : "Projet visible sur le site."}
+          {s.orderId && <> <Link href={`/admin/commandes/${s.orderId}`} className="text-accent hover:underline">Commande d’origine</Link></>}
+        </p>
+        <button type="submit" className={s.draft ? "rounded-full bg-accent px-4 py-2 font-semibold text-background hover:brightness-110" : "rounded-full border border-border px-4 py-2 hover:border-accent"}>
+          {s.draft ? "Publier sur le site" : "Repasser en brouillon"}
+        </button>
+      </form>
       {enregistre && (
         <p role="status" className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">
           Enregistré.
