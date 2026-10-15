@@ -14,7 +14,7 @@ import { Hint } from "./Hint";
 import { ProductPreview } from "./ProductPreview";
 import { ProductCompatibility } from "./ProductCompatibility";
 import { useOfferNavigation } from "./OfferTabs";
-import { OfferPrice, SaleBadge } from "./ui";
+import { OfferPrice } from "./ui";
 import { briefDeliveryNeeds, INSTALL_SUPPLEMENT_ENABLED } from "@/lib/brief-delivery";
 
 function CheckoutButton({ disabled, locale }: { disabled: boolean; locale: Locale }) {
@@ -56,7 +56,7 @@ function ProductCard({ product, locale, add, texts }: { product: ReturnType<type
   return <article style={{ "--product-color": optionThemeColors[product.category] } as CSSProperties} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--product-color)_35%,var(--border))] bg-surface">
     <div className="relative">
       <ProductPreview option={option} animated={animatedOf(option)} locale={locale} />
-      <SaleBadge item={option} locale={locale} className="absolute right-3 top-3" />
+
     </div>
     <div className="flex flex-col gap-2.5 p-4">
       <div><h3 className="font-display text-lg font-bold">{content?.groupName || (emotes && bySize ? "Emotes" : title.main)}<Hint hint={texts.hints[glossaryIdFor(option.name) ?? ""]} /></h3>{!content?.groupName && !(emotes && bySize) && title.detail && <p className="mt-1 text-xs text-muted">{title.detail}</p>}</div>

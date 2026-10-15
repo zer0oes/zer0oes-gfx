@@ -98,9 +98,10 @@ export async function respondProjectQuote(data: FormData) {
   if (accept && payment !== "total" && payment !== "acompte") redirect(`/devis/${token}?erreur=paiement`);
   if (accept && ((data.get("checkoutFirst") !== "1" && !brief) || quote?.updatedAt !== data.get("updatedAt"))) redirect(`/devis/${token}?erreur=brief`);
   const declineReason = accept ? "" : String(data.get("declineReason") ?? "").trim().slice(0, 2000);
-  try { id = await store.respondQuote(token, accept, declineReason, brief || undefined, accept ? payment as "total" | "acompte" : undefined); }
+  try { id = await store.respondQuote(token, accept, declineReason, brief || undefined, accept ? payment as "total" | "acompte" : undefined, accept ? Number(data.get("expectedPrice")) : undefined); }
   catch (e) { console.error(e); redirect(`/devis/${token}?erreur=indisponible`); }
   if (id) {
+    revalidatePath("/", "layout");
     const order = await store.getOrder(id);
     if (order) await ensureDeliveryPlan(order).catch((e) => console.error(e));
   }

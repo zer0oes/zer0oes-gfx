@@ -208,6 +208,12 @@ export function balanceDue(o: Pick<Order, "totalPrice" | "amountPaid">) {
 }
 
 export interface Store {
+  getCarouselSlides(): Promise<import("@/lib/announcement-carousel").AnnouncementSlide[]>;
+  saveCarouselSlides(slides: import("@/lib/announcement-carousel").AnnouncementSlide[]): Promise<void>;
+  saveLaunchSettings(settings: import("@/lib/launch-offer").LaunchSettings): Promise<void>;
+  getLaunchState(): Promise<import("@/lib/launch-offer").LaunchState>;
+  reserveLaunchSlot(id: string): Promise<boolean>;
+  settleLaunchSlot(id: string, paid: boolean): Promise<void>;
   listQuotes(): Promise<import("@/lib/quotes").ProjectQuote[]>;
   getQuote(id: string): Promise<import("@/lib/quotes").ProjectQuote | null>;
   getQuoteByToken(token: string): Promise<import("@/lib/quotes").ProjectQuote | null>;
@@ -215,7 +221,7 @@ export interface Store {
   deleteQuote(id: string, expectedUpdatedAt: string): Promise<boolean>;
   proposeQuote(quote: import("@/lib/quotes").ProjectQuote, expectedUpdatedAt: string): Promise<boolean>;
   saveQuoteMailState(quote: import("@/lib/quotes").ProjectQuote, expectedUpdatedAt: string): Promise<boolean>;
-  respondQuote(token: string, accept: boolean, declineReason?: string, brief?: Record<string, string>, payment?: "total" | "acompte"): Promise<string | null>;
+  respondQuote(token: string, accept: boolean, declineReason?: string, brief?: Record<string, string>, payment?: "total" | "acompte", expectedPrice?: number): Promise<string | null>;
   reopenQuote(token: string): Promise<boolean>;
   recordQuotePayment(id: string, key: string, amount: number, fee?: number): Promise<boolean>;
   listBanners(): Promise<Banner[]>;

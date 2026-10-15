@@ -3,16 +3,15 @@ import { Analytics } from "@/components/Analytics";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { AnnouncementBanners } from "@/components/AnnouncementBanners";
+import { LaunchAnnouncement } from "@/components/LaunchAnnouncement";
 import { I18nProvider } from "@/components/I18nProvider";
 import { ProtectionProvider } from "@/components/protection";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { isLocale, locales } from "@/lib/i18n";
 import { getStore } from "@/lib/store";
 
-// Pages publiques régénérées au plus toutes les 5 minutes : une modification de la base faite
-// hors de l'admin (ex. npm run db:portfolio) finit par apparaître sans redéploiement.
-// Les enregistrements faits dans l'admin, eux, rafraîchissent le site immédiatement.
-export const revalidate = 300;
+// Relire le quota et la date à chaque requête pour activer/arrêter l'offre programmée.
+export const revalidate = 0;
 
 // Deux langues seulement : /fr/… (servi sans préfixe par le proxy) et /en/…
 export const dynamicParams = false;
@@ -29,6 +28,7 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
     <I18nProvider locale={lang}>
       <ProtectionProvider value={protection}>
         <Header />
+        <LaunchAnnouncement locale={lang} />
         <AnnouncementBanners banners={banners} locale={lang} />
         {/* reveal-page : blocs animés au chargement et au scroll sur toutes les pages (voir ScrollReveal) */}
         <main lang={lang} className="reveal-page flex-1">

@@ -12,6 +12,18 @@ const form = (values: Record<string, string | string[]>) => {
 
 const base = { name: "Zoé", email: "zoe@exemple.fr", message: "Un overlay néon pour mes lives", consent: "1" };
 
+test("audit gratuit : chaîne obligatoire et provenance LinkedIn conservée", () => {
+  const audit = { ...base, type: "Audit gratuit de ma chaîne", referral: "LinkedIn" };
+  for (const channel of ["", "javascript:alert(1)", "pas-un-lien"]) {
+    assert.equal(parseContact(...form({ ...audit, channel })).ok, false);
+  }
+  const result = parseContact(...form({ ...audit, channel: "https://twitch.tv/exemple" }));
+  assert.ok(result.ok);
+  assert.equal(result.request.type, audit.type);
+  assert.equal(result.request.fields.Chaîne, "https://twitch.tv/exemple");
+  assert.equal(result.request.fields["M'a trouvée via"], "LinkedIn");
+});
+
 test("demande complète : choix filtrés et mis en forme", () => {
   const r = parseContact(
     ...form({

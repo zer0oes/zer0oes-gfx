@@ -92,9 +92,11 @@ export function SaleBadge({ item, locale = "fr", upTo = false, compact = false, 
   const percent = discountPercent(item);
   if (!percent) return null;
   const number = new Intl.NumberFormat(locale === "fr" ? "fr-FR" : "en-GB", { maximumFractionDigits: 2 }).format(percent);
-  return <span aria-label={`${upTo ? locale === "fr" ? "Jusqu’à " : "Up to " : ""}−${number} %`} style={{ background: "linear-gradient(135deg, color-mix(in srgb, var(--accent-3) 45%, #111020), color-mix(in srgb, var(--accent) 45%, #111020), color-mix(in srgb, var(--accent-2) 45%, #111020))", textShadow: "0 1px 2px rgb(0 0 0 / 45%)" }} className={`z-10 inline-flex shrink-0 flex-col items-center justify-center rounded-full border border-white/40 text-center font-extrabold leading-none text-white ${compact ? "size-10" : "size-16"} ${number.length > 4 ? compact ? "text-[9px]" : "text-xs" : compact ? "text-xs" : "text-lg"} ${className}`}>
-    {upTo && <span aria-hidden className="mb-0.5 text-[8px] font-medium">{locale === "fr" ? "Jusqu’à" : "Up to"}</span>}
-    <span aria-hidden className="whitespace-nowrap">−{number}%</span>
+  return <span aria-label={`${upTo ? locale === "fr" ? "Jusqu’à " : "Up to " : ""}−${number} %`} className={`z-10 inline-flex shrink-0 -rotate-6 rounded-xl bg-gradient-to-br from-accent-3/80 via-accent/70 to-accent-2/70 p-px font-display font-bold leading-none ${compact ? "h-8 min-w-11" : "h-12 min-w-19"} ${className}`}>
+    <span aria-hidden className={`flex w-full flex-col items-center justify-center rounded-[11px] bg-[linear-gradient(135deg,#2a1d37,#15131f_65%)] ${compact ? "px-1.5" : "px-2.5"}`}>
+      {upTo && <span className="mb-1 text-[8px] font-medium text-accent">{locale === "fr" ? "Jusqu’à" : "Up to"}</span>}
+      <span className={`text-gradient whitespace-nowrap tracking-tight ${number.length > 4 ? compact ? "text-[10px]" : "text-sm" : compact ? "text-xs" : "text-[23px]"}`}>−{number}<span className={compact ? "text-[9px]" : "text-sm"}>%</span></span>
+    </span>
   </span>;
 }
 

@@ -4,7 +4,7 @@ import { BRIEF_INSTALL_KEY, BRIEF_PLATFORM_KEY, installChoices, pickChoice, stre
 // qui ne retient que les valeurs de ces listes) et mise en forme de la demande.
 
 // Onglet « Projet sur-mesure »
-export const requestTypes = ["Projet sur mesure", "Demande de devis", "Question sur une offre", "Suivi d'une commande", "Collaboration / partenariat", "Autre demande", "Devis Univers complet"];
+export const requestTypes = ["Projet sur mesure", "Audit gratuit de ma chaîne", "Demande de devis", "Question sur une offre", "Suivi d'une commande", "Collaboration / partenariat", "Autre demande", "Devis Univers complet"];
 // Onglet « Message simple »
 export const messageSubjects = ["Question sur une offre", "Collaboration / partenariat", "Autre"];
 export const budgets = ["Moins de 500 €", "500 à 1 000 €", "1 000 à 2 000 €", "Plus de 2 000 €"];
@@ -12,11 +12,12 @@ export const platforms = ["Twitch", "YouTube", "TikTok", "Instagram", "Autre"];
 export const identityLevels = ["Oui", "Partiellement", "Non"];
 export const styles = ["Sombre", "Néon", "Minimaliste", "Rétro", "Gaming", "Coloré", "Autre"];
 export const providedAssets = ["Logo", "Charte graphique", "Police(s)", "Mascotte / personnage", "Images / illustrations", "Aucun élément pour l'instant"];
-export const referralSources = ["Twitch", "Instagram", "TikTok", "Google", "Recommandation", "Autre"];
+export const referralSources = ["Twitch", "YouTube", "LinkedIn", "Instagram", "TikTok", "Google", "Recommandation", "Autre"];
 export const MAX_REFERENCES = 5;
 
 // Affichage en anglais des choix (la valeur envoyée reste la valeur française ci-dessus)
 const choicesEn: Record<string, string> = {
+  "Audit gratuit de ma chaîne": "Free channel audit",
   "Projet sur mesure": "Custom project",
   "Demande de devis": "Quote request",
   "Suivi d'une commande": "Order follow-up",
@@ -51,6 +52,7 @@ export function choiceLabel(locale: "fr" | "en", value: string) {
 
 // Messages renvoyés au visiteur par les formulaires (contact, message, brief), en anglais sur /en
 const messagesEn: Record<string, string> = {
+  "Indique un lien valide vers ta chaîne pour demander ton audit gratuit.": "Please provide a valid channel link to request your free audit.",
   "Merci d'indiquer ton nom, un e-mail valide et quelques mots sur ce que tu as en tête (10 caractères minimum).":
     "Please give your name, a valid email and a few words about what you have in mind (10 characters minimum).",
   "Merci d'indiquer ton nom, un e-mail valide et ton message (10 caractères minimum).":
@@ -117,6 +119,9 @@ export function parseContact(get: Get, getAll: GetAll): { ok: true; request: Con
   if (refs.some((r) => !r)) return { ok: false, message: "Les inspirations doivent être des liens (https://…), un par ligne." };
 
   const type = one(get("type"), requestTypes) || "Projet sur mesure";
+  if (type === "Audit gratuit de ma chaîne" && !webLink(get("channel"))) {
+    return { ok: false, message: "Indique un lien valide vers ta chaîne pour demander ton audit gratuit." };
+  }
   const style = pick(getAll("style"), styles);
   const styleOther = text("styleOther", 200);
   const join = (a: string[]) => a.join(", ");

@@ -1,4 +1,5 @@
 import { quoteEditable, quoteExpired, type ProjectQuote } from "@/lib/quotes";
+import { launchActive, launchQuote, LAUNCH_CODE, type LaunchSettings } from "@/lib/launch-offer";
 import { reviewedRevisions } from "@/lib/brief-review";
 import { hasFinalAccess, readyToClose } from "@/lib/final-downloads";
 import "server-only";
@@ -20,6 +21,9 @@ import type { Deliverable, Invoice, Order, Portfolio, Store, Testimonial } from 
 // Magasin JSON local, pour développer et tester l'admin sans Supabase.
 // Fichier .data/dev-store.json (ignoré par git). Interdit en production.
 type Data = Catalog & Portfolio & {
+  carouselSlides?: import("@/lib/announcement-carousel").AnnouncementSlide[];
+  launchSettings?: LaunchSettings;
+  launchSlots?: Record<string, "held" | "paid" | "released">;
   banners?: Banner[];
   affiliateLinks?: AffiliateLink[];
   promotions?: Promotion[];
@@ -82,6 +86,25 @@ function upsertAt<T extends { id: string }>(list: T[], item: T, position?: numbe
 }
 
 export const localStore: Store = {
+  getCarouselSlides: async () => (await load()).carouselSlides ?? [],
+  saveCarouselSlides: (slides) => mutate((d) => { d.carouselSlides = slides; }),
+  saveLaunchSettings: (settings) => mutate((d) => { d.launchSettings = settings; }),
+  getLaunchState: async () => {
+    const d = await load();
+    const orders = d.orders.filter((o) => !o.demo && o.promoCode?.split(", ").includes(LAUNCH_CODE) && (o.amountPaid > 0 || o.stripeSessionId.startsWith("devis_")));
+    return { ...(d.launchSettings ?? { enabled: false, startsAt: "" }), ordersRemaining: Math.max(0, 10 - orders.length), remaining: Math.max(0, 10 - Object.values(d.launchSlots ?? {}).filter((s) => s !== "released").length) };
+  },
+  reserveLaunchSlot: (id) => mutate((d) => {
+    const slots = d.launchSlots ??= {};
+    if (slots[id]) return slots[id] === "held";
+    if (!launchActive({ ...(d.launchSettings ?? { enabled: false }), remaining: 10 })) return false;
+    if (Object.values(slots).filter((s) => s !== "released").length >= 10) return false;
+    slots[id] = "held";
+    return true;
+  }),
+  settleLaunchSlot: (id, paid) => mutate((d) => {
+    if (d.launchSlots?.[id] === "held") d.launchSlots[id] = paid ? "paid" : "released";
+  }),
   reopenQuote: (token) => mutate((d) => {
     const q = d.quotes?.find((item) => item.token === token);
     if (!q || q.status !== "refuse" || q.orderId || quoteExpired(q)) return false;
@@ -120,10 +143,16 @@ export const localStore: Store = {
     if (!current || current.updatedAt !== expected) return false;
     Object.assign(current, q); return true;
   }),
-  respondQuote: (token, accept, declineReason = "", brief = {}, payment) => mutate((d) => {
+  respondQuote: (token, accept, declineReason = "", brief = {}, payment, expectedPrice) => mutate((d) => {
     const q = d.quotes?.find((x) => x.token === token);
     if (q?.status === "accepte") return q.orderId ?? null;
     if (!q || q.status !== "propose" || quoteExpired(q)) throw new Error("Devis indisponible ou expiré.");
+    if (accept && q.launchPercent) {
+      const remaining = 10 - Object.values(d.launchSlots ?? {}).filter((s) => s !== "released").length;
+      const preview = launchQuote(q, { ...(d.launchSettings ?? { enabled: false }), remaining });
+      if (expectedPrice !== preview.totalPrice) throw new Error("Le prix a changé. Actualise la page.");
+      Object.assign(q, preview);
+    }
     if (accept && payment === "acompte") {
       const percent = q.depositPercent || 30;
       const amount = Math.round(q.totalPrice * percent / 100);
@@ -134,11 +163,13 @@ export const localStore: Store = {
     const id = randomUUID();
     d.orders.unshift({ id, createdAt: q.updatedAt, updatedAt: q.updatedAt, stripeSessionId: `devis_${q.id}`,
       demo: false, packId: "sur-mesure", revisionsIncluded: q.revisionsIncluded ?? 2, formulaId: "base", offerName: q.title, paymentType: payment ?? q.paymentType ?? "acompte",
-      hasLogo: false, listPrice: q.totalPrice, totalPrice: q.totalPrice, amountPaid: 0, depositPercent: payment === "acompte" ? q.depositPercent || 30 : payment === "total" ? 0 : q.depositPercent ?? 0,
+      hasLogo: false, listPrice: q.launchBasePrice ?? q.totalPrice, totalPrice: q.totalPrice, amountPaid: 0, depositPercent: payment === "acompte" ? q.depositPercent || 30 : payment === "total" ? 0 : q.depositPercent ?? 0,
+      ...(q.launchBasePrice ? { promoCode: LAUNCH_CODE, promoDiscount: q.launchBasePrice - q.totalPrice } : {}),
       logoDiscount: 0, customerName: q.name, customerEmail: q.email, status: "brief_attente", notes: [],
       brief: { ...q.request, ...brief, "Proposition acceptée": q.description }, briefReceivedAt: q.updatedAt,
       deliveryTemplate: q.deliverables, deliveryToken: q.token });
     q.status = "accepte"; q.orderId = id; q.acceptedAt = q.updatedAt;
+    if (q.launchBasePrice) (d.launchSlots ??= {})[q.id] = "paid";
     return id;
   }),
   listAffiliateLinks: async () => (await load()).affiliateLinks ?? [],

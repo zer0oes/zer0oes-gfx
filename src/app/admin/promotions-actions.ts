@@ -6,6 +6,35 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { bannerPages, normalizeCode, parseSalePrices, safeBannerLink, type Banner, type Promotion } from "@/lib/promotions";
 import { getStore } from "@/lib/store";
+import { parseParisSchedule } from "@/lib/launch-schedule";
+import { LAUNCH_CODE } from "@/lib/launch-offer";
+import { parseCarouselSlides } from "@/lib/announcement-carousel";
+
+export async function saveCarouselAction(_previous: { ok: boolean; message: string } | null, form: FormData) {
+  await requireAdmin();
+  try {
+    const raw = String(form.get("slides") ?? "");
+    if (raw.length > 20000) throw new Error("Le contenu du carrousel est trop long.");
+    const slides = parseCarouselSlides(JSON.parse(raw));
+    await getStore().saveCarouselSlides(slides);
+    revalidatePath("/[lang]", "layout");
+    return { ok: true, message: "Diapos, traductions et ordre enregistrés." };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Enregistrement impossible." };
+  }
+}
+
+export async function saveLaunchOfferAction(f: FormData) {
+  await requireAdmin();
+  try {
+    const enabled = f.get("enabled") === "on";
+    const day = text(f, "launchDay", 10);
+    const startsAt = day ? parseParisSchedule(day, text(f, "launchTime", 5)) : "";
+    if (enabled && !startsAt) throw new Error("Choisis la date de début avant d’activer l’offre.");
+    await getStore().saveLaunchSettings({ enabled, startsAt });
+  } catch (e) { finish(e instanceof Error ? e.message : "Programmation impossible."); }
+  finish();
+}
 
 const text = (f: FormData, k: string, max = 300) => (f.get(k)?.toString() ?? "").trim().slice(0, max);
 function finish(error?: string): never {
@@ -46,6 +75,7 @@ export async function savePromotionAction(f: FormData) {
     const existing = (await store.listPromotions()).find((p) => p.id === promotionId);
     const code = (mode === "sale" ? existing?.code : normalizeCode(text(f, "code", 60))) || `${mode === "sale" ? "PROMO" : "FIDELITE"}-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
     if (!/^[A-Z0-9_-]{4,60}$/.test(code)) throw new Error("Code : 4 à 60 lettres, chiffres, tirets ou underscores.");
+    if (code === LAUNCH_CODE) throw new Error("Ce code est réservé à l’offre de lancement.");
     if ((await store.listPromotions()).some((p) => p.id !== promotionId && p.code === code)) throw new Error("Ce code existe déjà.");
     const kind = mode === "sale" ? "percent" : text(f, "kind") === "fixed" ? "fixed" : "percent";
     const raw = text(f, "value").replace(",", ".");

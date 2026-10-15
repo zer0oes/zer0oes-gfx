@@ -4,6 +4,8 @@ import { MarketingDates } from "@/components/admin/MarketingDates";
 import { saveBannerAction, savePromotionAction, deleteMarketingAction } from "@/app/admin/promotions-actions";
 import type { Catalog } from "@/lib/pricing";
 import { PromotionFields } from "./PromotionFields";
+import { LaunchOfferPanel } from "./LaunchOfferPanel";
+import { CarouselEditor } from "./CarouselEditor";
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 const button = "rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-background";
@@ -36,8 +38,10 @@ function PromotionForm({ promotion, catalog }: { promotion?: Promotion; catalog:
 }
 export async function MarketingPanel() {
   const store = getStore();
-  const [banners, promotions, catalog] = await Promise.all([store.listBanners(), store.listPromotions(), store.getCatalog()]);
+  const [banners, promotions, catalog, slides] = await Promise.all([store.listBanners(), store.listPromotions(), store.getCatalog(), store.getCarouselSlides()]);
   return <div className="mt-6 space-y-8"><p className="text-sm text-muted">Annonce tes offres sous le header et prépare les codes à envoyer à tes clients.</p>
+    <LaunchOfferPanel />
+    <CarouselEditor initialSlides={slides} />
     <section className="space-y-4"><h2 className="text-xl font-semibold">Bandeaux</h2>{banners.map((b) => <details key={b.id} className="rounded-2xl border border-border bg-surface p-5"><summary className="cursor-pointer font-medium"><span className="mr-2 rounded-full border border-border px-2 py-0.5 text-xs">{status(b)}</span>{b.text}</summary><div className="mt-5"><BannerForm banner={b} /></div></details>)}<details className="rounded-2xl border border-border bg-surface p-5"><summary className="cursor-pointer font-medium">+ Nouveau bandeau</summary><div className="mt-5"><BannerForm /></div></details></section>
     <section className="space-y-4"><h2 className="text-xl font-semibold">Remises et fidélité</h2>{promotions.map((p) => <details key={p.id} className="rounded-2xl border border-border bg-surface p-5"><summary className="cursor-pointer font-medium"><span className="mr-2 rounded-full border border-border px-2 py-0.5 text-xs">{status(p)}</span>{p.label || "Remise"} · {p.mode === "sale" ? `${Object.keys(p.salePrices ?? {}).length} produit(s) en promotion` : `${p.code} · ${p.kind === "percent" ? `${p.value} %` : `${p.value / 100} €`}`}</summary><div className="mt-5"><PromotionForm promotion={p} catalog={catalog} /></div></details>)}<details className="rounded-2xl border border-border bg-surface p-5"><summary className="cursor-pointer font-medium">+ Nouvelle remise</summary><div className="mt-5"><PromotionForm catalog={catalog} /></div></details></section>
   </div>;

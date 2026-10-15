@@ -5,6 +5,7 @@
 
 import { intlLocale, type Locale } from "@/lib/i18n";
 import { trDeep } from "@/lib/translations-en";
+import { hasLaunchOffer } from "@/lib/launch-offer";
 
 export type Formula = {
   normalPrice?: number;
@@ -117,8 +118,10 @@ export function orderPrice(price: number, hasLogo: boolean, s: PricingSettings) 
 }
 
 // Identité signature : 765 € avec création du logo, 515 € avec logo fourni.
-export function packPricingSettings(settings: PricingSettings, packId: string): PricingSettings {
-  return packId === "identite-signature" ? { ...settings, logoDiscount: 25000 } : settings;
+export function packPricingSettings(settings: PricingSettings, packId: string, promotionCode?: string): PricingSettings {
+  const packSettings = packId === "identite-signature" ? { ...settings, logoDiscount: 25000 } : settings;
+  // Pendant le lancement, le logo fourni et le pack sont tous deux réduits de moitié.
+  return hasLaunchOffer(promotionCode) ? { ...packSettings, logoDiscount: Math.round(packSettings.logoDiscount / 2) } : packSettings;
 }
 
 export function amountToPay(price: number, payment: PaymentType, s: PricingSettings) {

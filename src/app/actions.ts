@@ -1,5 +1,7 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+import { hasLaunchOffer } from "@/lib/launch-offer";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { formMessage, parseContact, parseMessage } from "@/lib/contact-form";
@@ -90,8 +92,13 @@ export async function createCheckout(formData: FormData) {
   const formula = !optionItems && !optionId ? pack?.formulas?.find((f) => f.id === q.formulaId) : undefined;
   const base = await siteUrl();
   const s = catalog.settings;
+  const launchSlot = hasLaunchOffer(q.promoCode) ? randomUUID() : undefined;
+  if (launchSlot && !await getStore().reserveLaunchSlot(launchSlot)) redirect(to("/offres?prix_modifie=1"));
+  if (launchSlot) revalidatePath("/", "layout");
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
+    // Réservation conservée jusqu'à confirmation Stripe (expiration ou paiement).
+    expires_at: Math.floor(Date.now() / 1000) + 1800,
     line_items: [
       formula?.stripePriceId && q.payment === "total" && !q.hasLogo && !q.promoCode
         ? { price: formula.stripePriceId, quantity: 1 }
@@ -121,7 +128,7 @@ export async function createCheckout(formData: FormData) {
             },
           },
     ],
-    metadata: quoteMetadata(q),
+    metadata: { ...quoteMetadata(q), ...(launchSlot ? { launchSlot } : {}) },
     // Page de paiement Stripe dans la langue du visiteur
     locale: locale === "en" ? "en" : "fr",
     // Coordonnées pour la facture Abby (nom, adresse ; société et SIRET / TVA pour les pros)
@@ -145,6 +152,16 @@ export async function createCheckout(formData: FormData) {
     ],
     success_url: `${base}${to("/merci")}?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${base}${to("/offres")}?annule=1`,
+  }, launchSlot ? { idempotencyKey: `launch-${launchSlot}` } : undefined).catch(async (error: unknown) => {
+    const type = error && typeof error === "object" && "type" in error ? error.type : "";
+    if (launchSlot && ["StripeInvalidRequestError", "StripeAuthenticationError", "StripePermissionError"].includes(String(type))) {
+      await getStore().settleLaunchSlot(launchSlot, false);
+      revalidatePath("/", "layout");
+    } else if (launchSlot) {
+      // Une erreur réseau peut masquer une session déjà créée : ne pas revendre sa place.
+      console.error("Session Stripe incertaine, réservation de lancement conservée :", launchSlot);
+    }
+    throw error;
   });
 
   redirect(session.url!);
