@@ -71,7 +71,7 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(110deg,rgba(167,139,250,0.13),transparent_55%,rgba(34,211,238,0.06))]" />
     <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-accent-3/60 via-accent/70 to-accent-2/50" />
     {/* Progression de la diapo affichée (même dégradé que la ligne du haut), relancée à chaque changement ou reprise */}
-    {rotating && <div key={`${current}-${manualChange}`} aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-accent-3/60 via-accent/70 to-accent-2/50"
+    {rotating && <div key={`${current}-${manualChange}`} aria-hidden className="absolute inset-x-0 top-px h-px bg-gradient-to-r from-accent-3/60 via-accent/70 to-accent-2/50"
       style={{ animation: `banner-progress ${SLIDE_MS}ms linear forwards` }} />}
     <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
       {/* Présentation centrée, sans bouton : toute la diapo est le lien. Les diapos partagent la même
