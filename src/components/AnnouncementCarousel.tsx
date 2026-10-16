@@ -7,6 +7,7 @@ import { splitLocale, type Locale } from "@/lib/i18n";
 import { pagesMatch } from "@/lib/promotions";
 import { headlineParts, remainingPlacesText, slideHref, type AnnouncementSlide } from "@/lib/announcement-carousel";
 
+const SLIDE_MS = 7000;
 type CampaignStatus = { active: boolean; remaining: number | null };
 export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides: AnnouncementSlide[]; locale: Locale; initialStatus: CampaignStatus }) {
   const [status, setStatus] = useState(initialStatus);
@@ -39,7 +40,7 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
 
   useEffect(() => {
     if (!rotating) return;
-    const timer = window.setInterval(() => setIndex((i) => (i + 1) % count), 7000);
+    const timer = window.setInterval(() => setIndex((i) => (i + 1) % count), SLIDE_MS);
     return () => window.clearInterval(timer);
   }, [rotating, count, manualChange]);
 
@@ -69,6 +70,9 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
     onKeyDown={(event) => { if (count > 1 && ["ArrowLeft", "ArrowRight"].includes(event.key)) { event.preventDefault(); select(current + (event.key === "ArrowRight" ? 1 : -1)); } }}>
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(110deg,rgba(167,139,250,0.13),transparent_55%,rgba(34,211,238,0.06))]" />
     <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-accent-3/60 via-accent/70 to-accent-2/50" />
+    {/* Progression de la diapo affichée (même dégradé que la ligne du haut), relancée à chaque changement ou reprise */}
+    {rotating && <div key={`${current}-${manualChange}`} aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-accent-3/60 via-accent/70 to-accent-2/50"
+      style={{ animation: `banner-progress ${SLIDE_MS}ms linear forwards` }} />}
     <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
       {/* Présentation centrée, sans bouton : toute la diapo est le lien. Les diapos partagent la même
           cellule de grille, donc le bandeau garde la hauteur de la plus grande. */}

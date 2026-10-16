@@ -127,6 +127,11 @@ body {
 /* Apparition au chargement et au scroll (pages .reveal-page, composant ScrollReveal) */
 /* Chargement : fondu léger de chaque bloc extérieur, en CSS pour jouer dès le premier affichage.
    « backwards » seulement : une fois fini, le JavaScript peut masquer les blocs hors écran. */
+@keyframes banner-progress {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
 @keyframes reveal-load {
   from {
     opacity: 0;
