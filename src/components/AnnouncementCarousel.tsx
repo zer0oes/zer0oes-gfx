@@ -88,10 +88,10 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
           const title = badgeEnd > 0 ? copy.title.slice(badgeEnd + 1).trim() : copy.title;
           return <div key={slide.id} role="group" aria-roledescription={en ? "slide" : "diapositive"} aria-label={`${i + 1} / ${count}`} aria-hidden={!selected} inert={!selected}
             data-slide={slide.id} data-active={selected}
-            className={`col-start-1 row-start-1 flex flex-col items-center gap-2 py-3 text-center md:col-[1/5] md:grid md:grid-cols-subgrid md:items-center md:gap-0 md:py-2 md:text-left transition-opacity duration-500 ease-in-out motion-reduce:transition-none ${selected ? "visible opacity-100" : "pointer-events-none invisible opacity-0"}`}>
-            {badge ? <p className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-accent/50 bg-accent/10 px-3 py-1.5 text-[10px] font-bold uppercase leading-none tracking-[0.14em] text-accent md:mr-5 md:justify-self-stretch"><span aria-hidden className="text-sm leading-none">✦</span><span>{badge}</span></p> : <span aria-hidden className="hidden md:block" />}
+            className={`col-start-1 row-start-1 flex flex-col items-center gap-2 py-3 text-center md:col-[1/5] md:grid md:grid-cols-subgrid md:items-center md:gap-0 md:py-5 md:text-left transition-opacity duration-500 ease-in-out motion-reduce:transition-none ${selected ? "visible opacity-100" : "pointer-events-none invisible opacity-0"}`}>
+            {badge ? <p className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-accent/50 bg-accent/10 px-3 py-1.5 text-[10px] font-bold uppercase leading-none tracking-[0.14em] text-accent md:mr-6 md:px-4 md:py-2 md:text-[11px] md:justify-self-stretch"><span aria-hidden className="text-sm leading-none">✦</span><span>{badge}</span></p> : <span aria-hidden className="hidden md:block" />}
             <div className="min-w-0 md:pr-5">
-              <p className="text-base font-medium leading-snug text-foreground">
+              <p className="text-base font-medium leading-snug text-foreground md:text-lg">
                 {headlineParts(title).map((part, n) => part.highlight
                   ? <strong key={n} className="text-gradient whitespace-nowrap font-bold">{part.text}</strong>
                   : <span key={n}>{part.text}</span>)}
@@ -102,7 +102,7 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
               </div>}
             </div>
             <Link href={slideHref(locale, copy.buttonHref)}
-              className={`mt-1 inline-flex min-h-10 w-full items-center justify-center whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent md:col-start-4 md:mt-0 md:min-h-9 md:w-auto md:justify-self-stretch ${slide.id === "launch" ? "bg-accent text-background hover:bg-foreground" : "border border-accent/70 text-accent hover:bg-accent/10"}`}>
+              className={`mt-1 inline-flex min-h-10 w-full items-center justify-center whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent md:col-start-4 md:mt-0 md:min-h-11 md:w-auto md:px-6 md:justify-self-stretch ${slide.id === "launch" ? "bg-accent text-background hover:bg-foreground" : "border border-accent/70 text-accent hover:bg-accent/10"}`}>
               {copy.buttonLabel}
             </Link>
           </div>;
