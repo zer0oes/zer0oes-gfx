@@ -15,12 +15,13 @@ export function parseCarouselSlides(input: unknown): AnnouncementSlide[] {
       const raw = s.content?.[locale];
       const copy = {} as SlideCopy;
       for (const [field, max] of Object.entries({ title: 600, conditions: 400, remainingText: 150, buttonLabel: 80, buttonHref: 500 })) {
+        if (field === "buttonLabel" && raw?.[field] === undefined) { copy.buttonLabel = ""; continue; }
         if (typeof raw?.[field] !== "string" || raw[field].length > max) throw new Error(`Champ ${field} invalide (${locale}).`);
         copy[field as keyof SlideCopy] = raw[field].trim();
       }
       if (raw?.badge !== undefined && (typeof raw.badge !== "string" || raw.badge.length > 80)) throw new Error(`Champ pastille invalide (${locale}).`);
       if (raw?.badge !== undefined) copy.badge = raw.badge.trim();
-      if (!copy.title || !copy.buttonLabel || !copy.buttonHref || !safeBannerLink(copy.buttonHref)) throw new Error(`Renseigne le titre, le bouton et un lien interne ou HTTPS (${locale}).`);
+      if (!copy.title || !copy.buttonHref || !safeBannerLink(copy.buttonHref)) throw new Error(`Renseigne le titre et un lien interne ou HTTPS (${locale}).`);
       if (Object.values(copy).some((text) => /\bHT\b/i.test(text))) throw new Error("La mention HT ne doit pas apparaître dans les diapos.");
       if (s.id === "launch" && copy.remainingText && !copy.remainingText.includes("{count}")) throw new Error("Le compteur doit utiliser {count}, remplacé par les vraies commandes.");
       content[locale] = copy;
