@@ -11,6 +11,7 @@ import { PromotionFields } from "./PromotionFields";
 import { BannerFields } from "./BannerFields";
 import { LaunchOfferForm, launchStatus } from "./LaunchOfferPanel";
 import { Switch } from "./Switch";
+import { SubmitButton } from "./SubmitButton";
 
 const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 const save = "rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110";
@@ -92,16 +93,16 @@ export async function DiscountsPanel({ feedback }: { feedback: Feedback }) {
         </tbody>
       </table>
     </div>
-    <Drawer id="remise-lancement" kicker="Remise" title="Offre de lancement" openOnLoad={feedback.open === "lancement"} footer={<><span /><button type="submit" form="remise-lancement-form" className={save}>Enregistrer la programmation</button></>}>
+    <Drawer id="remise-lancement" kicker="Remise" title="Offre de lancement" openOnLoad={feedback.open === "lancement"} footer={<><span /><SubmitButton form={"remise-lancement-form"} label="Enregistrer la programmation" className={save} /></>}>
       <Notice feedback={feedback} id="lancement" />
       <LaunchOfferForm state={launch} formId="remise-lancement-form" />
     </Drawer>
     {promotions.map((p) => <Drawer key={p.id} id={`remise-${p.id}`} kicker="Remise" title={promoName(p)} openOnLoad={feedback.open === p.id}
-      footer={<><ConfirmDelete action={deleteMarketingAction} id={p.id} icon label="Supprimer la remise" fields={{ kind: "promotion" }} question={`Es-tu sûre de vouloir supprimer « ${promoName(p)} » ?${banners.some((b) => b.linkedTo === p.id) ? " Son bandeau ne s’affichera plus." : ""}`} /><button type="submit" form={`remise-form-${p.id}`} className={save}>Enregistrer la remise</button></>}>
+      footer={<><ConfirmDelete action={deleteMarketingAction} id={p.id} icon label="Supprimer la remise" fields={{ kind: "promotion" }} question={`Es-tu sûre de vouloir supprimer « ${promoName(p)} » ?${banners.some((b) => b.linkedTo === p.id) ? " Son bandeau ne s’affichera plus." : ""}`} /><SubmitButton form={`remise-form-${p.id}`} label="Enregistrer la remise" className={save} /></>}>
       <Notice feedback={feedback} id={p.id} />
       <PromotionForm promotion={p} catalog={catalog} formId={`remise-form-${p.id}`} />
     </Drawer>)}
-    <Drawer id="remise-nouvelle" kicker="Remise" title="Nouvelle remise" openOnLoad={feedback.open === "nouvelle"} footer={<><span /><button type="submit" form="remise-form-nouvelle" className={save}>Créer la remise</button></>}>
+    <Drawer id="remise-nouvelle" kicker="Remise" title="Nouvelle remise" openOnLoad={feedback.open === "nouvelle"} footer={<><span /><SubmitButton form={"remise-form-nouvelle"} label="Créer la remise" className={save} /></>}>
       <Notice feedback={feedback} id="nouvelle" />
       <PromotionForm catalog={catalog} formId="remise-form-nouvelle" />
     </Drawer>
@@ -144,11 +145,11 @@ export async function BannersPanel({ feedback, linkTo }: { feedback: Feedback; l
       </table>
     </div> : <p className="rounded-2xl border border-border bg-surface p-5 text-sm text-muted">Aucun bandeau pour l’instant.</p>}
     {banners.map((b) => <Drawer key={b.id} id={`bandeau-${b.id}`} kicker="Bandeau" title={b.badge || "Bandeau"} openOnLoad={feedback.open === b.id}
-      footer={<><ConfirmDelete action={deleteMarketingAction} id={b.id} icon label="Supprimer le bandeau" fields={{ kind: "banner" }} /><button type="submit" form={`bandeau-form-${b.id}`} className={save}>Enregistrer le bandeau</button></>}>
+      footer={<><ConfirmDelete action={deleteMarketingAction} id={b.id} icon label="Supprimer le bandeau" fields={{ kind: "banner" }} /><SubmitButton form={`bandeau-form-${b.id}`} label="Enregistrer le bandeau" className={save} /></>}>
       <Notice feedback={feedback} id={b.id} />
       <form id={`bandeau-form-${b.id}`} action={saveBannerAction} className="space-y-6"><BannerFields banner={b} promotions={choices} /></form>
     </Drawer>)}
-    <Drawer id="bandeau-nouveau" kicker="Bandeau" title="Nouveau bandeau" openOnLoad={feedback.open === "nouveau"} footer={<><span /><button type="submit" form="bandeau-form-nouveau" className={save}>Créer le bandeau</button></>}>
+    <Drawer id="bandeau-nouveau" kicker="Bandeau" title="Nouveau bandeau" openOnLoad={feedback.open === "nouveau"} footer={<><span /><SubmitButton form={"bandeau-form-nouveau"} label="Créer le bandeau" className={save} /></>}>
       <Notice feedback={feedback} id="nouveau" />
       <form id="bandeau-form-nouveau" action={saveBannerAction} className="space-y-6"><BannerFields promotions={choices} linkedTo={linkTo} /></form>
     </Drawer>

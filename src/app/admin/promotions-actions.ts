@@ -45,12 +45,13 @@ export async function saveBannerAction(f: FormData) {
   try {
     const store = getStore();
     const bannerId = id(f);
-    const [banners, promotions] = await Promise.all([store.listBanners(), store.listPromotions()]);
+    const banners = await store.listBanners();
     const existing = banners.find((b) => b.id === bannerId);
     const pages = f.getAll("pages").map(String).filter((p) => p === "*" || bannerPages.some((x) => x.path === p));
     const link = text(f, "link", 500);
     const linkedTo = text(f, "linkedTo", 40);
-    if (linkedTo && linkedTo !== LAUNCH_LINK && !promotions.some((p) => p.id === linkedTo)) throw new Error("Remise liée introuvable.");
+    // La liste des remises n'est relue que pour un bandeau lié à une remise
+    if (linkedTo && linkedTo !== LAUNCH_LINK && !(await store.listPromotions()).some((p) => p.id === linkedTo)) throw new Error("Remise liée introuvable.");
     const copy = Object.fromEntries(Object.entries(copyFields).flatMap(([field, max]) => [[field, text(f, field, max)], [`${field}En`, text(f, `${field}En`, max)]])) as Record<string, string>;
     if (!copy.text) throw new Error("Écris la phrase du bandeau.");
     if (!pages.length) throw new Error("Choisis au moins une page.");
@@ -74,10 +75,10 @@ export async function reorderBannersAction(ids: string[]) {
   await requireAdmin();
   const store = getStore();
   const banners = await store.listBanners();
-  for (const banner of banners) {
+  await Promise.all(banners.flatMap((banner) => {
     const position = ids.indexOf(banner.id);
-    if (position >= 0 && banner.position !== position) await store.saveBanner({ ...banner, position });
-  }
+    return position >= 0 && banner.position !== position ? [store.saveBanner({ ...banner, position })] : [];
+  }));
   revalidatePath("/", "layout");
 }
 export async function savePromotionAction(f: FormData) {
