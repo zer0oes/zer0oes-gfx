@@ -97,10 +97,10 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
                   : <span key={n}>{part.text}</span>)}
                 <svg aria-hidden width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 inline-block align-[-1px] text-accent transition-transform group-hover:translate-x-1 motion-reduce:transition-none"><path d="M2 7h10M8 3l4 4-4 4" /></svg>
               </span>
-              {(copy.conditions || remaining) && <span className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-sm leading-5">
-                {copy.conditions && <span className="text-muted">{copy.conditions}</span>}
-                {remaining && <span className="font-semibold text-accent">{remaining}</span>}
+              {remaining && <span className="text-base font-medium leading-5 text-foreground">
+                {copy.remainingText.split("{count}").map((part, n) => <span key={n}>{n > 0 && <strong className="font-bold text-accent">{status.remaining}</strong>}{part}</span>)}
               </span>}
+              {copy.conditions && <span className="text-xs leading-4 text-muted">{copy.conditions}</span>}
             </Link>
           </div>;
         })}

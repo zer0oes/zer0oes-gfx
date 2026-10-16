@@ -11,7 +11,7 @@ test("carrousel accessible : grille commune, diapo inactive inerte, points et vr
   assert.match(html, /aria-roledescription="carousel"/);
   assert.match(html, /aria-live="polite"/);
   assert.match(html, /aria-hidden="true" inert=""/);
-  assert.match(html, /Plus que 6 places/);
+  assert.match(html, /Plus que <\/span><span><strong[^>]*>6<\/strong> places/);
   assert.match(html, /Afficher la diapo 2/);
   assert.equal((html.match(/col-start-1 row-start-1/g) ?? []).length, 2);
 });
