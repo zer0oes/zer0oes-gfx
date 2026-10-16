@@ -89,7 +89,7 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
             data-slide={slide.id} data-active={selected}
             className={`col-start-1 row-start-1 flex transition-opacity duration-500 ease-in-out motion-reduce:transition-none ${selected ? "visible opacity-100" : "pointer-events-none invisible opacity-0"}`}>
             <Link href={slideHref(locale, copy.buttonHref)}
-              className="group flex w-full flex-col items-center justify-center gap-2 py-5 text-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent md:px-28">
+              className="group flex w-full flex-col items-center justify-start gap-2 py-5 text-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent md:px-28">
               {badge && <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-accent/50 bg-accent/10 px-4 py-1.5 text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-accent transition group-hover:border-accent group-hover:bg-accent/20"><span aria-hidden className="text-sm leading-none">✦</span><span>{badge}</span></span>}
               <span className="text-base font-medium leading-snug text-foreground md:text-lg">
                 {headlineParts(title).map((part, n) => part.highlight
