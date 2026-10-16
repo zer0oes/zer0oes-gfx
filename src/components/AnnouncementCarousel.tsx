@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { Locale } from "@/lib/i18n";
-import { headlineParts, remainingPlacesText, slideHref, slideSchedule, type AnnouncementSlide } from "@/lib/announcement-carousel";
+import { splitLocale, type Locale } from "@/lib/i18n";
+import { pagesMatch } from "@/lib/promotions";
+import { headlineParts, remainingPlacesText, slideHref, type AnnouncementSlide } from "@/lib/announcement-carousel";
 
-type CampaignStatus = { active: boolean; started?: boolean; remaining: number | null };
+type CampaignStatus = { active: boolean; remaining: number | null };
 export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides: AnnouncementSlide[]; locale: Locale; initialStatus: CampaignStatus }) {
   const [status, setStatus] = useState(initialStatus);
   const [index, setIndex] = useState(0);
@@ -17,7 +19,9 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
   const [manualChange, setManualChange] = useState(0);
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const swiped = useRef(false);
-  const activeSlides = slides.filter((s) => s.enabled && (s.id === "launch" ? status.active : !slideSchedule(s).followLaunch || status.started));
+  const path = splitLocale(usePathname() ?? "/").path;
+  // Bandeaux de la page courante ; ceux de l'offre de lancement suivent son état relu toutes les 30 secondes
+  const activeSlides = slides.filter((s) => pagesMatch(s.pages, path) && (!s.launch || status.active));
   const count = activeSlides.length;
   const current = count ? index % count : 0;
   const rotating = count > 1 && auto && !hovered && !focused && visible && !reducedMotion;
@@ -47,7 +51,7 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
         const response = await fetch("/api/announcements", { cache: "no-store", signal: controller.signal });
         if (!response.ok) return;
         const next = await response.json();
-        if (typeof next.active === "boolean" && typeof next.started === "boolean" && (next.remaining === null || Number.isSafeInteger(next.remaining) && next.remaining >= 0)) setStatus(next);
+        if (typeof next.active === "boolean" && (next.remaining === null || Number.isSafeInteger(next.remaining) && next.remaining >= 0)) setStatus(next);
       } catch { /* Conserver la dernière valeur réellement lue, sans inventer de compteur. */ }
     };
     const timer = window.setInterval(refresh, 30000);
@@ -80,15 +84,13 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
         onClickCapture={(event) => { if (swiped.current) { event.preventDefault(); swiped.current = false; } }}>
         {activeSlides.map((slide, i) => {
           const copy = slide.content[locale];
-          const remaining = slide.id === "launch" ? remainingPlacesText(copy.remainingText, status.remaining) : "";
+          const remaining = slide.launch ? remainingPlacesText(copy.remainingText, status.remaining) : "";
           const selected = i === current;
-          const badgeEnd = slide.id === "launch" ? copy.title.indexOf(":") : -1;
-          const badge = copy.badge ?? (badgeEnd > 0 ? copy.title.slice(0, badgeEnd).trim() : "");
-          const title = badgeEnd > 0 ? copy.title.slice(badgeEnd + 1).trim() : copy.title;
+          const { badge, title } = copy;
           return <div key={slide.id} role="group" aria-roledescription={en ? "slide" : "diapositive"} aria-label={`${i + 1} / ${count}`} aria-hidden={!selected} inert={!selected}
             data-slide={slide.id} data-active={selected}
             className={`col-start-1 row-start-1 flex transition-opacity duration-500 ease-in-out motion-reduce:transition-none ${selected ? "visible opacity-100" : "pointer-events-none invisible opacity-0"}`}>
-            <Link href={slideHref(locale, copy.buttonHref)}
+            <Link href={slideHref(locale, copy.href)}
               className="group flex w-full flex-col items-center justify-start gap-2 py-5 text-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent md:px-28">
               {badge && <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-accent/50 bg-accent/10 px-4 py-1.5 text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-accent transition group-hover:border-accent group-hover:bg-accent/20"><span aria-hidden className="text-sm leading-none">✦</span><span>{badge}</span></span>}
               <span className="text-base font-medium leading-snug text-foreground md:text-lg">

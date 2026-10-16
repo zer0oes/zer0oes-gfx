@@ -208,8 +208,6 @@ export function balanceDue(o: Pick<Order, "totalPrice" | "amountPaid">) {
 }
 
 export interface Store {
-  getCarouselSlides(): Promise<import("@/lib/announcement-carousel").AnnouncementSlide[]>;
-  saveCarouselSlides(slides: import("@/lib/announcement-carousel").AnnouncementSlide[]): Promise<void>;
   saveLaunchSettings(settings: import("@/lib/launch-offer").LaunchSettings): Promise<void>;
   getLaunchState(): Promise<import("@/lib/launch-offer").LaunchState>;
   reserveLaunchSlot(id: string): Promise<boolean>;

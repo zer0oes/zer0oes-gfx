@@ -1,44 +1,38 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
 import { test } from "node:test";
-import { headlineParts, parseCarouselSlides, remainingPlacesText, slideHref, slideInWindow } from "./announcement-carousel";
-const seed = () => JSON.parse(fs.readFileSync("supabase/migrations/20261016000200_announcement_carousel.sql", "utf8").split("$slides$")[1]);
-test("diapos : édition bilingue, ordre et activation conservés, pourcentages mis en valeur", () => {
-  const input = seed().reverse();
-  input[0].enabled = false;
-  input[0].content.en.buttonLabel = "Review my channel";
-  const slides = parseCarouselSlides(input);
-  assert.equal(slides[0].id, "audit");
-  assert.equal(slides[0].enabled, false);
-  assert.equal(slides[0].content.en.buttonLabel, "Review my channel");
-  assert.deepEqual(headlineParts(slides[1].content.fr.title).filter((p) => p.highlight).map((p) => p.text), ["−50 %", "−25 %"]);
+import { bannerSlide, headlineParts, remainingPlacesText, slideHref } from "./announcement-carousel";
+import { bannerScheduled, sortBanners, type Banner, type Promotion } from "./promotions";
+
+const banner = (over: Partial<Banner> = {}): Banner => ({ id: "b1", enabled: true, text: "−50 % sur les packs", textEn: "", code: "", link: "/offres", linkLabel: "", linkLabelEn: "",
+  pages: ["*"], startsAt: "", endsAt: "", tone: "violet", badge: "Offre de lancement", badgeEn: "Launch offer", conditions: "Remise automatique", ...over });
+const promo = (over: Partial<Promotion> = {}): Promotion => ({ id: "p1", enabled: true, code: "FIDELITE", label: "Fidélité", kind: "percent", value: 10, startsAt: "", endsAt: "", packIds: [], ...over });
+
+test("bandeau → diapo : un champ anglais vide reprend le français, l'offre de lancement est repérée", () => {
+  const slide = bannerSlide(banner({ linkedTo: "launch" }));
+  assert.equal(slide.launch, true);
+  assert.equal(slide.content.en.badge, "Launch offer");
+  assert.equal(slide.content.en.title, "−50 % sur les packs");
+  assert.equal(slide.content.en.conditions, "Remise automatique");
+  assert.equal(bannerSlide(banner()).launch, false);
+  assert.deepEqual(headlineParts(slide.content.fr.title).filter((p) => p.highlight).map((p) => p.text), ["−50 %"]);
 });
-test("aucun compteur fabriqué, aucun lien dangereux, aucune mention HT", () => {
+test("aucun compteur fabriqué, liens localisés", () => {
   assert.equal(remainingPlacesText("Plus que {count} places", null), "");
   assert.equal(remainingPlacesText("Plus que {count} places", -1), "");
   assert.equal(remainingPlacesText("Plus que {count} places", 7), "Plus que 7 places");
   assert.equal(remainingPlacesText("Plus que 10 places", 7), "");
-  for (const value of ["javascript:alert(1)", "//evil.example", "http://evil.example"]) {
-    const input = seed(); input[0].content.fr.buttonHref = value;
-    assert.throws(() => parseCarouselSlides(input));
-  }
-  const withTax = seed(); withTax[0].content.en.title = "Prices HT";
-  assert.throws(() => parseCarouselSlides(withTax));
-  const fakeCounter = seed(); fakeCounter[0].content.fr.remainingText = "Plus que 5 places";
-  assert.throws(() => parseCarouselSlides(fakeCounter));
-  assert.throws(() => parseCarouselSlides([seed()[0], seed()[0]]));
   assert.equal(slideHref("en", "/offres"), "/en/offres");
   assert.equal(slideHref("en", "/en/offres"), "/en/offres");
   assert.equal(slideHref("fr", "https://example.com/audit"), "https://example.com/audit");
 });
-
-test("programmation d'une diapo : dates propres vérifiées, suivi de l'offre par défaut", () => {
-  const input = seed();
-  input[1].schedule = { followLaunch: false, startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2026-11-30T22:59:59.999Z" };
-  const [, audit] = parseCarouselSlides(input);
-  assert.equal(slideInWindow(audit, Date.parse("2026-10-20T00:00:00Z")), false);
-  assert.equal(slideInWindow(audit, Date.parse("2026-11-10T00:00:00Z")), true);
-  assert.equal(slideInWindow(parseCarouselSlides(seed())[1], 0), true);
-  input[1].schedule = { followLaunch: false, startsAt: "2026-11-30T00:00:00.000Z", endsAt: "2026-11-01T00:00:00.000Z" };
-  assert.throws(() => parseCarouselSlides(input), /après le début/);
+test("programmation : dates propres, remise liée, remise supprimée ; ordre du carrousel", () => {
+  const nov = banner({ startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2026-11-30T23:00:00.000Z" });
+  assert.equal(bannerScheduled(nov, [], Date.parse("2026-10-20T00:00:00Z")), false);
+  assert.equal(bannerScheduled(nov, [], Date.parse("2026-11-10T00:00:00Z")), true);
+  assert.equal(bannerScheduled(banner({ enabled: false }), []), false);
+  const linked = banner({ linkedTo: "p1" });
+  assert.equal(bannerScheduled(linked, [promo()]), true);
+  assert.equal(bannerScheduled(linked, [promo({ enabled: false })]), false);
+  assert.equal(bannerScheduled(linked, []), false);
+  assert.deepEqual(sortBanners([banner({ id: "b", position: 1 }), banner({ id: "a", position: 0 }), banner({ id: "c" })]).map((b) => b.id), ["a", "b", "c"]);
 });

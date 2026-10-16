@@ -7,10 +7,18 @@ export const bannerPages = [
   { path: "/confidentialite", label: "Confidentialité" }, { path: "/cgv", label: "CGV" },
 ] as const;
 
+// Bandeau sous le menu. text / textEn : la phrase ; badge : la pastille ; conditions : la note en petit dessous ;
+// remainingText : compteur de places de l'offre de lancement ({count}). Tout le bandeau est le lien.
+// carousel : tourne avec les autres bandeaux du carrousel (sinon affiché fixe). linkedTo : "" = ses propres dates,
+// "launch" = pendant l'offre de lancement, sinon l'id d'une remise (affiché pendant la remise).
+// code, linkLabel, linkLabelEn, tone : anciens bandeaux, conservés mais plus affichés.
 export type Banner = {
   id: string; enabled: boolean; text: string; textEn: string; code: string;
   link: string; linkLabel: string; linkLabelEn: string; pages: string[];
   startsAt: string; endsAt: string; tone: "violet" | "pink" | "teal";
+  badge?: string; badgeEn?: string; conditions?: string; conditionsEn?: string;
+  remainingText?: string; remainingTextEn?: string;
+  carousel?: boolean; linkedTo?: string; position?: number;
 };
 export type Promotion = {
   mode?: "code" | "sale";
@@ -25,8 +33,24 @@ export type AffiliateLink = { id: string; name: string; url: string; notes: stri
 export function activePeriod(item: { enabled: boolean; startsAt: string; endsAt: string }, now = Date.now()) {
   return item.enabled && (!item.startsAt || Date.parse(item.startsAt) <= now) && (!item.endsAt || Date.parse(item.endsAt) > now);
 }
+export function pagesMatch(pages: string[], path: string) {
+  return pages.some((page) => page === "*" || page === path || (page === "/portfolio" && path.startsWith("/portfolio/")));
+}
 export function bannerMatches(banner: Banner, path: string, now = Date.now()) {
-  return activePeriod(banner, now) && banner.pages.some((page) => page === "*" || page === path || (page === "/portfolio" && path.startsWith("/portfolio/")));
+  return activePeriod(banner, now) && pagesMatch(banner.pages, path);
+}
+export const LAUNCH_LINK = "launch";
+// Ordre du carrousel : position choisie dans l'admin, puis texte
+export function sortBanners(banners: Banner[]) {
+  return [...banners].sort((a, b) => (a.position ?? 999) - (b.position ?? 999) || a.text.localeCompare(b.text));
+}
+// Période d'un bandeau hors offre de lancement : celle de la remise liée, ou ses propres dates.
+// Une remise liée supprimée ou désactivée masque le bandeau.
+export function bannerScheduled(banner: Banner, promotions: Promotion[], now = Date.now()) {
+  if (!banner.enabled) return false;
+  if (!banner.linkedTo) return activePeriod(banner, now);
+  const promotion = promotions.find((p) => p.id === banner.linkedTo);
+  return !!promotion && activePeriod(promotion, now);
 }
 // Une seule réduction promotionnelle, appliquée après la remise pour logo fourni.
 export function discountedPrice(price: number, promotion: Pick<Promotion, "kind" | "value">) {

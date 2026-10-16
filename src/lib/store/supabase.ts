@@ -213,16 +213,6 @@ async function fetchOrders(filter: (q: OrdersQuery) => OrdersQuery) {
 }
 
 export const supabaseStore: Store = {
-  async getCarouselSlides() {
-    const result = await db().from("marketing_carousel_slides").select("id, enabled, content").order("position");
-    if (result.error?.code === "PGRST205") return [];
-    // La programmation est rangée dans le JSON content (clé schedule), à côté des textes fr / en.
-    return (check(result) as { id: "launch" | "audit"; enabled: boolean; content: Record<string, unknown> }[]).map(({ content: { schedule, ...content }, ...slide }) =>
-      ({ ...slide, ...(schedule ? { schedule } : {}), content }) as import("@/lib/announcement-carousel").AnnouncementSlide);
-  },
-  async saveCarouselSlides(slides) {
-    check(await db().rpc("save_marketing_carousel", { slides: slides.map(({ schedule, content, ...slide }) => ({ ...slide, content: schedule ? { ...content, schedule } : content })) }));
-  },
   async saveLaunchSettings(settings) {
     check(await db().from("launch_offer").update({ enabled: settings.enabled, starts_at: settings.startsAt || null }).eq("id", true));
   },

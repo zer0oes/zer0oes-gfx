@@ -4,25 +4,10 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { bannerPages, normalizeCode, parseSalePrices, safeBannerLink, type Banner, type Promotion } from "@/lib/promotions";
+import { bannerPages, LAUNCH_LINK, normalizeCode, parseSalePrices, safeBannerLink, type Banner, type Promotion } from "@/lib/promotions";
 import { getStore } from "@/lib/store";
 import { parseParisSchedule } from "@/lib/launch-schedule";
 import { LAUNCH_CODE } from "@/lib/launch-offer";
-import { parseCarouselSlides } from "@/lib/announcement-carousel";
-
-export async function saveCarouselAction(_previous: { ok: boolean; message: string } | null, form: FormData) {
-  await requireAdmin();
-  try {
-    const raw = String(form.get("slides") ?? "");
-    if (raw.length > 20000) throw new Error("Le contenu du carrousel est trop long.");
-    const slides = parseCarouselSlides(JSON.parse(raw));
-    await getStore().saveCarouselSlides(slides);
-    revalidatePath("/[lang]", "layout");
-    return { ok: true, message: "Diapos, traductions et ordre enregistrés." };
-  } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "Enregistrement impossible." };
-  }
-}
 
 export async function saveLaunchOfferAction(f: FormData) {
   await requireAdmin();
@@ -32,14 +17,16 @@ export async function saveLaunchOfferAction(f: FormData) {
     const startsAt = day ? parseParisSchedule(day, text(f, "launchTime", 5)) : "";
     if (enabled && !startsAt) throw new Error("Choisis la date de début avant d’activer l’offre.");
     await getStore().saveLaunchSettings({ enabled, startsAt });
-  } catch (e) { finish(e instanceof Error ? e.message : "Programmation impossible."); }
-  finish();
+  } catch (e) { finish(e instanceof Error ? e.message : "Programmation impossible.", "remises", "lancement"); }
+  finish(undefined, "remises");
 }
 
 const text = (f: FormData, k: string, max = 300) => (f.get(k)?.toString() ?? "").trim().slice(0, max);
-function finish(error?: string): never {
+// Retour à l'onglet, avec le panneau de l'élément rouvert (open) pour afficher le message
+function finish(error: string | undefined, tab: "remises" | "bandeaux", open = ""): never {
   revalidatePath("/", "layout");
-  redirect(`/admin/offres?onglet=promotions&${error ? `erreur=${encodeURIComponent(error)}` : "enregistre=1"}`);
+  const panel = open ? `&ouvrir=${encodeURIComponent(open)}` : "";
+  redirect(`/admin/offres?onglet=${tab}${panel}&${error ? `erreur=${encodeURIComponent(error)}` : "enregistre=1"}`);
 }
 function period(f: FormData) {
   const startsAt = text(f, "startsAt"), endsAt = text(f, "endsAt");
@@ -52,19 +39,46 @@ const id = (f: FormData) => {
   if (value && !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) throw new Error("Identifiant invalide.");
   return value || randomUUID();
 };
+const copyFields = { badge: 80, text: 600, conditions: 400, remainingText: 150 } as const;
 export async function saveBannerAction(f: FormData) {
   await requireAdmin();
   try {
+    const store = getStore();
+    const bannerId = id(f);
+    const [banners, promotions] = await Promise.all([store.listBanners(), store.listPromotions()]);
+    const existing = banners.find((b) => b.id === bannerId);
     const pages = f.getAll("pages").map(String).filter((p) => p === "*" || bannerPages.some((x) => x.path === p));
-    const message = text(f, "text"), link = text(f, "link", 500);
-    if (!message || !pages.length) throw new Error("Renseigne un message et au moins une page.");
-    if (!safeBannerLink(link)) throw new Error("Utilise un lien interne (/offres) ou une adresse HTTPS.");
-    const tone = text(f, "tone");
-    const banner: Banner = { id: id(f), enabled: f.get("enabled") === "on", text: message, textEn: text(f, "textEn"), code: normalizeCode(text(f, "code", 60)), link,
-      linkLabel: text(f, "linkLabel", 80), linkLabelEn: text(f, "linkLabelEn", 80), pages, tone: tone === "pink" || tone === "teal" ? tone : "violet", ...period(f) };
-    await getStore().saveBanner(banner);
-  } catch (e) { finish(e instanceof Error ? e.message : "Enregistrement impossible."); }
-  finish();
+    const link = text(f, "link", 500);
+    const linkedTo = text(f, "linkedTo", 40);
+    if (linkedTo && linkedTo !== LAUNCH_LINK && !promotions.some((p) => p.id === linkedTo)) throw new Error("Remise liée introuvable.");
+    const copy = Object.fromEntries(Object.entries(copyFields).flatMap(([field, max]) => [[field, text(f, field, max)], [`${field}En`, text(f, `${field}En`, max)]])) as Record<string, string>;
+    if (!copy.text) throw new Error("Écris la phrase du bandeau.");
+    if (!pages.length) throw new Error("Choisis au moins une page.");
+    if (!link || !safeBannerLink(link)) throw new Error("Utilise un lien interne (/offres) ou une adresse HTTPS.");
+    if (Object.values(copy).some((t) => /\bHT\b/i.test(t))) throw new Error("La mention HT ne doit pas apparaître dans les bandeaux.");
+    if ([copy.remainingText, copy.remainingTextEn].some((t) => t && !t.includes("{count}"))) throw new Error("Le compteur doit utiliser {count}, remplacé par les vraies places restantes.");
+    const banner: Banner = {
+      ...(existing ?? { code: "", linkLabel: "", linkLabelEn: "", tone: "violet" as const }),
+      id: bannerId, enabled: f.get("enabled") === "on", carousel: f.get("carousel") === "on", linkedTo, link, pages,
+      badge: copy.badge, badgeEn: copy.badgeEn, text: copy.text, textEn: copy.textEn, conditions: copy.conditions, conditionsEn: copy.conditionsEn,
+      remainingText: linkedTo === LAUNCH_LINK ? copy.remainingText : "", remainingTextEn: linkedTo === LAUNCH_LINK ? copy.remainingTextEn : "",
+      position: existing?.position ?? Math.max(-1, ...banners.map((b) => b.position ?? -1)) + 1,
+      ...(linkedTo ? { startsAt: "", endsAt: "" } : period(f)),
+    };
+    await store.saveBanner(banner);
+  } catch (e) { finish(e instanceof Error ? e.message : "Enregistrement impossible.", "bandeaux", text(f, "id", 40) || "nouveau"); }
+  finish(undefined, "bandeaux");
+}
+// Ordre du carrousel (glisser-déposer dans le tableau des bandeaux)
+export async function reorderBannersAction(ids: string[]) {
+  await requireAdmin();
+  const store = getStore();
+  const banners = await store.listBanners();
+  for (const banner of banners) {
+    const position = ids.indexOf(banner.id);
+    if (position >= 0 && banner.position !== position) await store.saveBanner({ ...banner, position });
+  }
+  revalidatePath("/", "layout");
 }
 export async function savePromotionAction(f: FormData) {
   await requireAdmin();
@@ -87,8 +101,8 @@ export async function savePromotionAction(f: FormData) {
       value: kind === "fixed" ? Math.round(number * 100) : number,
       packIds: f.getAll("packIds").map(String).filter((p) => catalog.packs.some((x) => x.id === p && x.checkout)), ...period(f) };
     await store.savePromotion(promotion);
-  } catch (e) { finish(e instanceof Error ? e.message : "Enregistrement impossible."); }
-  finish();
+  } catch (e) { finish(e instanceof Error ? e.message : "Enregistrement impossible.", "remises", text(f, "id", 40) || "nouvelle"); }
+  finish(undefined, "remises");
 }
 export async function deleteMarketingAction(f: FormData) {
   await requireAdmin();
@@ -96,6 +110,6 @@ export async function deleteMarketingAction(f: FormData) {
     if (f.get("confirm") !== "on") throw new Error("Confirme la suppression.");
     if (f.get("kind") === "banner") await getStore().deleteBanner(id(f));
     else await getStore().deletePromotion(id(f));
-  } catch (e) { finish(e instanceof Error ? e.message : "Suppression impossible."); }
-  finish();
+  } catch (e) { finish(e instanceof Error ? e.message : "Suppression impossible.", f.get("kind") === "banner" ? "bandeaux" : "remises"); }
+  finish(undefined, f.get("kind") === "banner" ? "bandeaux" : "remises");
 }

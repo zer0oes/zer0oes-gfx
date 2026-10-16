@@ -21,7 +21,6 @@ import type { Deliverable, Invoice, Order, Portfolio, Store, Testimonial } from 
 // Magasin JSON local, pour développer et tester l'admin sans Supabase.
 // Fichier .data/dev-store.json (ignoré par git). Interdit en production.
 type Data = Catalog & Portfolio & {
-  carouselSlides?: import("@/lib/announcement-carousel").AnnouncementSlide[];
   launchSettings?: LaunchSettings;
   launchSlots?: Record<string, "held" | "paid" | "released">;
   banners?: Banner[];
@@ -86,8 +85,6 @@ function upsertAt<T extends { id: string }>(list: T[], item: T, position?: numbe
 }
 
 export const localStore: Store = {
-  getCarouselSlides: async () => (await load()).carouselSlides ?? [],
-  saveCarouselSlides: (slides) => mutate((d) => { d.carouselSlides = slides; }),
   saveLaunchSettings: (settings) => mutate((d) => { d.launchSettings = settings; }),
   getLaunchState: async () => {
     const d = await load();
