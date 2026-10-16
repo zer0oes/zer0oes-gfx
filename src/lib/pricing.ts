@@ -118,10 +118,11 @@ export function orderPrice(price: number, hasLogo: boolean, s: PricingSettings) 
 }
 
 // Identité signature : 765 € avec création du logo, 515 € avec logo fourni.
-export function packPricingSettings(settings: PricingSettings, packId: string, promotionCode?: string): PricingSettings {
+export function packPricingSettings(settings: PricingSettings, packId: string, formula?: { price: number; normalPrice?: number; promotionCode?: string }): PricingSettings {
   const packSettings = packId === "identite-signature" ? { ...settings, logoDiscount: 25000 } : settings;
-  // Pendant le lancement, le logo fourni et le pack sont tous deux réduits de moitié.
-  return hasLaunchOffer(promotionCode) ? { ...packSettings, logoDiscount: Math.round(packSettings.logoDiscount / 2) } : packSettings;
+  // Pendant le lancement, la remise « logo fourni » baisse dans la même proportion que le prix de la formule.
+  return hasLaunchOffer(formula?.promotionCode) && formula?.normalPrice
+    ? { ...packSettings, logoDiscount: Math.round(packSettings.logoDiscount * formula.price / formula.normalPrice) } : packSettings;
 }
 
 export function amountToPay(price: number, payment: PaymentType, s: PricingSettings) {

@@ -1,4 +1,4 @@
-import type { Catalog } from "@/lib/pricing";
+import { optionCategories, optionCategory, type Catalog } from "@/lib/pricing";
 
 export const bannerPages = [
   { path: "/", label: "Accueil" }, { path: "/offres", label: "Offres" },
@@ -22,6 +22,9 @@ export type Banner = {
 };
 export type Promotion = {
   mode?: "code" | "sale";
+  // Prix promotionnels publics : un pourcentage par produit (productRates), ou anciennes formes
+  // (un seul pourcentage pour productKeys, ou des prix figés salePrices)
+  productRates?: Record<string, number>;
   salePrices?: Record<string, number>;
   productKeys?: string[];
   id: string; enabled: boolean; code: string; label: string;
@@ -61,26 +64,42 @@ export function validPromotion(promotion: Promotion, packId: string, now = Date.
   return promotion.mode !== "sale" && activePeriod(promotion, now) && (!promotion.packIds.length || promotion.packIds.includes(packId));
 }
 
-export function promotionProducts(catalog: Catalog) {
+// Produits remisables, avec leur groupe (pack, ou catégorie des créations à la carte) pour les raccourcis de l'admin
+export type PromotionProduct = { key: string; name: string; price: number; group: { id: string; label: string }; kind: "pack" | "option" };
+export function promotionProducts(catalog: Catalog): PromotionProduct[] {
   return [
-    ...catalog.packs.filter((p) => !p.archived).flatMap((p) => p.formulas?.length
+    ...catalog.packs.filter((p) => !p.archived).flatMap((p) => (p.formulas?.length
       ? p.formulas.map((f, i) => ({ key: `formula:${p.id}:${f.id}`, name: i === 0 ? p.name : `${p.name} — ${f.label}`, price: f.price }))
-      : [{ key: `pack:${p.id}`, name: p.name, price: p.price }]),
-    ...catalog.options.map((o) => ({ key: `option:${o.id}`, name: `À la carte · ${o.name}`, price: o.price })),
+      : [{ key: `pack:${p.id}`, name: p.name, price: p.price }]).map((x) => ({ ...x, kind: "pack" as const, group: { id: `pack:${p.id}`, label: p.name } }))),
+    ...catalog.options.map((o) => {
+      const category = optionCategories.find((c) => c.id === optionCategory(o))!;
+      return { key: `option:${o.id}`, name: `À la carte · ${o.name}`, price: o.price, kind: "option" as const, group: { id: `category:${category.id}`, label: category.label } };
+    }),
   ];
 }
-
-export function parseSalePrices(form: FormData, catalog: Catalog, percent: number): Record<string, number> {
-  if (!Number.isFinite(percent) || percent <= 0 || percent > 80) throw new Error("Indique une remise entre 0,01 et 80 %.");
-  const products = promotionProducts(catalog);
+export const MAX_RATE = 80;
+// Un pourcentage par produit coché (champs products et rate:<clé>) ; chaque prix remisé garde au moins 0,50 €.
+export function parseProductRates(form: FormData, products: PromotionProduct[], max = MAX_RATE): Record<string, number> {
   const selected = [...new Set(form.getAll("products").map(String))];
-  if (!selected.length) throw new Error("Sélectionne au moins un produit pour la promotion.");
+  if (!selected.length) throw new Error("Sélectionne au moins un produit.");
   return Object.fromEntries(selected.map((key) => {
     const product = products.find((p) => p.key === key);
     if (!product) throw new Error("Un produit sélectionné n’existe plus.");
-    const cents = discountedPrice(product.price, { kind: "percent", value: percent });
-    if (!Number.isSafeInteger(cents) || cents < 50 || cents >= product.price) throw new Error(`${product.name} : ce pourcentage doit réduire le prix, en laissant au moins 0,50 €.`);
-    return [key, cents];
+    const raw = String(form.get(`rate:${key}`) ?? "").replace(",", ".").trim();
+    const rate = /^\d+(\.\d{1,2})?$/.test(raw) ? Number(raw) : NaN;
+    if (!(rate > 0 && rate <= max)) throw new Error(`${product.name} : indique une remise entre 0,01 et ${max} %.`);
+    const cents = discountedPrice(product.price, { kind: "percent", value: rate });
+    if (cents < 50 || cents >= product.price) throw new Error(`${product.name} : ce pourcentage doit réduire le prix, en laissant au moins 0,50 €.`);
+    return [key, rate];
+  }));
+}
+// Pourcentages d'une remise publique par produit, quelle que soit sa forme d'enregistrement
+export function promotionRates(promotion: Promotion, products: PromotionProduct[]): Record<string, number> {
+  if (promotion.productRates) return promotion.productRates;
+  if (promotion.productKeys) return Object.fromEntries(promotion.productKeys.map((key) => [key, promotion.value]));
+  return Object.fromEntries(Object.entries(promotion.salePrices ?? {}).flatMap(([key, cents]) => {
+    const product = products.find((p) => p.key === key);
+    return product && product.price > 0 ? [[key, Math.round((1 - cents / product.price) * 10000) / 100]] : [];
   }));
 }
 
@@ -91,8 +110,11 @@ export function saleCatalog(catalog: Catalog, promotions: Promotion[], now = Dat
   function apply<T extends { price: number }>(item: T, key: string): T & { normalPrice?: number; promotionCode?: string } {
     let price = item.price, code: string | undefined;
     for (const sale of sales) {
-      const offered = sale.productKeys
-        ? sale.productKeys.includes(key) && sale.kind === "percent" && sale.value > 0 && sale.value <= 80
+      const rate = sale.productRates?.[key];
+      const offered = sale.productRates
+        ? rate !== undefined && rate > 0 && rate <= MAX_RATE ? discountedPrice(item.price, { kind: "percent", value: rate }) : undefined
+        : sale.productKeys
+        ? sale.productKeys.includes(key) && sale.kind === "percent" && sale.value > 0 && sale.value <= MAX_RATE
           ? discountedPrice(item.price, sale) : undefined
         : sale.salePrices?.[key];
       if (offered !== undefined && Number.isSafeInteger(offered) && offered >= 50 && offered < price) {

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { getStore } from "@/lib/store";
-import { activePeriod, LAUNCH_LINK, sortBanners, type Banner, type Promotion } from "@/lib/promotions";
+import { activePeriod, LAUNCH_LINK, promotionProducts, promotionRates, sortBanners, type Banner, type Promotion } from "@/lib/promotions";
 import { formatPrice, type Catalog } from "@/lib/pricing";
-import { launchActive } from "@/lib/launch-offer";
+import { launchActive, launchProductRates, launchQuota } from "@/lib/launch-offer";
 import { MarketingDates } from "@/components/admin/MarketingDates";
 import { saveBannerAction, savePromotionAction, deleteMarketingAction, reorderBannersAction } from "@/app/admin/promotions-actions";
 import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "./Drawer";
@@ -47,7 +47,7 @@ function LinkedBanners({ banners, link }: { banners: Banner[]; link: string }) {
   const linked = banners.filter((b) => b.linkedTo === link);
   return <span className="flex flex-col gap-1">
     {linked.map((b) => <Link key={b.id} href={`/admin/offres?onglet=bandeaux&ouvrir=${b.id}`} className="line-clamp-1 max-w-56 text-accent hover:underline">{b.badge || b.text}</Link>)}
-    {!linked.length && <Link href={`/admin/offres?onglet=bandeaux&ouvrir=nouveau&lien=${link}`} className="text-muted hover:text-accent">+ Ajouter un bandeau</Link>}
+    <Link href={`/admin/offres?onglet=bandeaux&ouvrir=nouveau&lien=${link}`} className="whitespace-nowrap text-muted hover:text-accent">+ Ajouter un bandeau</Link>
   </span>;
 }
 
@@ -64,7 +64,15 @@ function PromotionForm({ promotion, catalog, formId }: { promotion?: Promotion; 
 export async function DiscountsPanel({ feedback }: { feedback: Feedback }) {
   const store = getStore();
   const [promotions, banners, catalog, launch] = await Promise.all([store.listPromotions(), store.listBanners(), store.getCatalog(), store.getLaunchState()]);
-  const value = (p: Promotion) => p.kind === "percent" ? `−${p.value} %` : `−${formatPrice(p.value)}`;
+  const products = promotionProducts(catalog);
+  // Remise publique : fourchette des pourcentages par produit
+  const range = (rates: Record<string, number>) => {
+    const values = Object.values(rates);
+    if (!values.length) return "—";
+    const min = Math.min(...values), max = Math.max(...values);
+    return min === max ? `−${min} %` : `−${min} à −${max} %`;
+  };
+  const value = (p: Promotion) => p.mode === "sale" ? range(promotionRates(p, products)) : p.kind === "percent" ? `−${p.value} %` : `−${formatPrice(p.value)}`;
   return <section className="mt-6">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
       <p className="max-w-2xl text-sm text-muted">Clique sur une ligne pour modifier la remise. Chaque remise peut avoir son bandeau sous le menu.</p>
@@ -75,9 +83,9 @@ export async function DiscountsPanel({ feedback }: { feedback: Feedback }) {
         <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className={th}>Remise</th><th className={th}>Type</th><th className={th}>Valeur</th><th className={th}>Période</th><th className={th}>Bandeau</th><th className={th}>Statut</th></tr></thead>
         <tbody className="divide-y divide-border">
           <DrawerRow drawer="remise-lancement" label="Modifier l’offre de lancement">
-            <td className={td}><span className="font-semibold">Offre de lancement</span><p className="mt-1 text-xs text-muted">{launch.remaining} place{launch.remaining > 1 ? "s" : ""} sur 10</p></td>
+            <td className={td}><span className="font-semibold">Offre de lancement</span><p className="mt-1 text-xs text-muted">{launch.remaining} place{launch.remaining > 1 ? "s" : ""} sur {launchQuota(launch)}</p></td>
             <td className={td}>Prix barrés</td>
-            <td className={`${td} whitespace-nowrap`}>−50 % / −25 %</td>
+            <td className={`${td} whitespace-nowrap`}>{range(launchProductRates(catalog, launch))}</td>
             <td className={`${td} whitespace-nowrap`}>{launch.startsAt ? `Dès le ${day(launch.startsAt)}` : "Non programmée"}</td>
             <td className={td}><LinkedBanners banners={banners} link={LAUNCH_LINK} /></td>
             <td className={td}><Pill label={launchStatus(launch)} /></td>
@@ -93,9 +101,9 @@ export async function DiscountsPanel({ feedback }: { feedback: Feedback }) {
         </tbody>
       </table>
     </div>
-    <Drawer id="remise-lancement" kicker="Remise" title="Offre de lancement" openOnLoad={feedback.open === "lancement"} footer={<><span /><SubmitButton form={"remise-lancement-form"} label="Enregistrer la programmation" className={save} /></>}>
+    <Drawer id="remise-lancement" kicker="Remise" title="Offre de lancement" openOnLoad={feedback.open === "lancement"} footer={<><span /><SubmitButton form={"remise-lancement-form"} label="Enregistrer l’offre" className={save} /></>}>
       <Notice feedback={feedback} id="lancement" />
-      <LaunchOfferForm state={launch} formId="remise-lancement-form" />
+      <LaunchOfferForm state={launch} catalog={catalog} formId="remise-lancement-form" />
     </Drawer>
     {promotions.map((p) => <Drawer key={p.id} id={`remise-${p.id}`} kicker="Remise" title={promoName(p)} openOnLoad={feedback.open === p.id}
       footer={<><ConfirmDelete action={deleteMarketingAction} id={p.id} icon label="Supprimer la remise" fields={{ kind: "promotion" }} question={`Es-tu sûre de vouloir supprimer « ${promoName(p)} » ?${banners.some((b) => b.linkedTo === p.id) ? " Son bandeau ne s’affichera plus." : ""}`} /><SubmitButton form={`remise-form-${p.id}`} label="Enregistrer la remise" className={save} /></>}>

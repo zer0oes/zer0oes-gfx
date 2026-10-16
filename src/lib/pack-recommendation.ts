@@ -32,5 +32,5 @@ export function recommendPack(packs: Pack[], options: Option[], items: Selection
   if (packId === "identite-signature" && quantity("alertes-fixes") > 1) remaining.push(`${quantity("alertes-fixes") - 1} × ${options.find((o) => o.id === "alertes-fixes")?.name ?? "Alertes"}`);
   const hasLogo = Boolean(settings && pack.checkout && !quantity("logo"));
   const price = formula?.price ?? pack.price;
-  return { pack, formula, remaining, price: hasLogo ? orderPrice(price, true, packPricingSettings(settings!, pack.id, formula?.promotionCode)) : price, hasLogo, addsLogo: !hasLogo && !quantity("logo") };
+  return { pack, formula, remaining, price: hasLogo ? orderPrice(price, true, packPricingSettings(settings!, pack.id, formula)) : price, hasLogo, addsLogo: !hasLogo && !quantity("logo") };
 }

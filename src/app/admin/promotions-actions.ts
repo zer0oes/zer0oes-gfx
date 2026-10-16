@@ -4,10 +4,11 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { bannerPages, LAUNCH_LINK, normalizeCode, parseSalePrices, safeBannerLink, type Banner, type Promotion } from "@/lib/promotions";
+import { bannerPages, LAUNCH_LINK, normalizeCode, parseProductRates, promotionProducts, safeBannerLink, type Banner, type Promotion } from "@/lib/promotions";
 import { getStore } from "@/lib/store";
 import { parseParisSchedule } from "@/lib/launch-schedule";
-import { LAUNCH_CODE } from "@/lib/launch-offer";
+import { LAUNCH_CODE, launchQuota } from "@/lib/launch-offer";
+import { INSTALL_OPTION_ID } from "@/lib/brief-delivery";
 
 export async function saveLaunchOfferAction(f: FormData) {
   await requireAdmin();
@@ -16,7 +17,19 @@ export async function saveLaunchOfferAction(f: FormData) {
     const day = text(f, "launchDay", 10);
     const startsAt = day ? parseParisSchedule(day, text(f, "launchTime", 5)) : "";
     if (enabled && !startsAt) throw new Error("Choisis la date de début avant d’activer l’offre.");
-    await getStore().saveLaunchSettings({ enabled, startsAt });
+    const store = getStore();
+    const [state, catalog] = await Promise.all([store.getLaunchState(), store.getCatalog()]);
+    const quota = Number(text(f, "quota", 5));
+    const used = launchQuota(state) - state.remaining;
+    if (!Number.isInteger(quota) || quota < 1 || quota > 1000) throw new Error("Nombre de places : entre 1 et 1 000.");
+    if (quota < used) throw new Error(`${used} place${used > 1 ? "s sont déjà prises" : " est déjà prise"} : le nombre de places ne peut pas être inférieur.`);
+    const quoteRate = (k: string) => {
+      const rate = Number(text(f, k, 3));
+      if (!Number.isInteger(rate) || rate < 1 || rate > 80) throw new Error("Remise sur les devis : un pourcentage entier entre 1 et 80.");
+      return rate;
+    };
+    const products = parseProductRates(f, promotionProducts(catalog).filter((p) => p.key !== `option:${INSTALL_OPTION_ID}`));
+    await store.saveLaunchSettings({ enabled, startsAt, quota, rates: { packs: quoteRate("quotePacks"), options: quoteRate("quoteOptions"), products } });
   } catch (e) { finish(e instanceof Error ? e.message : "Programmation impossible.", "remises", "lancement"); }
   finish(undefined, "remises");
 }
@@ -92,13 +105,14 @@ export async function savePromotionAction(f: FormData) {
     if (!/^[A-Z0-9_-]{4,60}$/.test(code)) throw new Error("Code : 4 à 60 lettres, chiffres, tirets ou underscores.");
     if (code === LAUNCH_CODE) throw new Error("Ce code est réservé à l’offre de lancement.");
     if ((await store.listPromotions()).some((p) => p.id !== promotionId && p.code === code)) throw new Error("Ce code existe déjà.");
+    const catalog = await store.getCatalog();
+    // Remise publique : un pourcentage par produit ; code : un pourcentage ou un montant unique
+    const productRates = mode === "sale" ? parseProductRates(f, promotionProducts(catalog)) : undefined;
     const kind = mode === "sale" ? "percent" : text(f, "kind") === "fixed" ? "fixed" : "percent";
     const raw = text(f, "value").replace(",", ".");
-    const number = /^\d+(\.\d{1,2})?$/.test(raw) ? Number(raw) : NaN;
+    const number = productRates ? Math.max(...Object.values(productRates)) : /^\d+(\.\d{1,2})?$/.test(raw) ? Number(raw) : NaN;
     if (!Number.isFinite(number) || number <= 0 || number > 1_000_000 || (kind === "percent" && number > 80)) throw new Error("Remise invalide : pourcentage entre 0,01 et 80 %, ou montant positif jusqu’à 1 000 000 €.");
-    const catalog = await store.getCatalog();
-    const salePrices = mode === "sale" ? parseSalePrices(f, catalog, number) : undefined;
-    const promotion: Promotion = { id: promotionId, mode, salePrices, productKeys: salePrices ? Object.keys(salePrices) : undefined, enabled: f.get("enabled") === "on", code, label: text(f, "label", 120), kind,
+    const promotion: Promotion = { id: promotionId, mode, productRates, enabled: f.get("enabled") === "on", code, label: text(f, "label", 120), kind,
       value: kind === "fixed" ? Math.round(number * 100) : number,
       packIds: f.getAll("packIds").map(String).filter((p) => catalog.packs.some((x) => x.id === p && x.checkout)), ...period(f) };
     await store.savePromotion(promotion);

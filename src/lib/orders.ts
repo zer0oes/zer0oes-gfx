@@ -123,7 +123,7 @@ export function quote(
   if (!pack || !pack.checkout || pack.archived) return null;
   const formula = getFormula(pack, input.formulaId);
   if (!formula) return null;
-  const s = packPricingSettings(catalog.settings, pack.id, formula.promotionCode);
+  const s = packPricingSettings(catalog.settings, pack.id, formula);
   const payment = parsePaymentType(input.payment);
   const hasLogo = Boolean(input.hasLogo);
   const totalPrice = orderPrice(formula.price, hasLogo, s);

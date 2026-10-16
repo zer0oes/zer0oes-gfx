@@ -1,25 +1,38 @@
 import type { Catalog } from "./pricing";
-import { saleCatalog, type Promotion } from "./promotions";
+import { promotionProducts, saleCatalog, type Promotion } from "./promotions";
 import { INSTALL_OPTION_ID } from "./brief-delivery";
 import type { ProjectQuote } from "./quotes";
 
 export const LAUNCH_CODE = "LANCEMENT-2026";
 export const LAUNCH_LIMIT = 10;
-export type LaunchSettings = { enabled: boolean; startsAt: string };
-export type LaunchState = { enabled: boolean; remaining: number; ordersRemaining?: number; startsAt?: string };
+// Taux de l'offre : un pourcentage par produit (products), et ceux des devis d'un pack ou à la carte / sur mesure.
+// products vide : packs et options reçoivent leur taux par défaut (packs, options).
+export type LaunchRates = { packs: number; options: number; products: Record<string, number> };
+export const defaultLaunchRates: LaunchRates = { packs: 50, options: 25, products: {} };
+export type LaunchSettings = { enabled: boolean; startsAt: string; quota?: number; rates?: LaunchRates };
+export type LaunchState = { enabled: boolean; remaining: number; ordersRemaining?: number; startsAt?: string; quota?: number; rates?: LaunchRates };
+export const launchQuota = (state: Pick<LaunchState, "quota">) => state.quota ?? LAUNCH_LIMIT;
+export function launchRates(state: Pick<LaunchState, "rates">): LaunchRates {
+  const r = state.rates;
+  return { packs: r?.packs ?? defaultLaunchRates.packs, options: r?.options ?? defaultLaunchRates.options, products: r?.products ?? {} };
+}
+// Pourcentage de chaque produit pendant l'offre (l'installation par zer0oes_GFX n'est jamais remisée)
+export function launchProductRates(catalog: Catalog, state: Pick<LaunchState, "rates">): Record<string, number> {
+  const rates = launchRates(state);
+  const products = promotionProducts(catalog).filter((p) => p.key !== `option:${INSTALL_OPTION_ID}`);
+  if (Object.keys(rates.products).length) return Object.fromEntries(products.flatMap((p) => rates.products[p.key] ? [[p.key, rates.products[p.key]]] : []));
+  return Object.fromEntries(products.map((p) => [p.key, p.kind === "pack" ? rates.packs : rates.options]));
+}
 export function launchActive(state: LaunchState, now = Date.now()) {
   return state.enabled && state.remaining > 0 && (!state.startsAt || Date.parse(state.startsAt) <= now);
 }
 export function launchCatalog(catalog: Catalog, state: LaunchState, promotions: Promotion[] = []): Catalog {
   if (!launchActive(state)) return saleCatalog(catalog, promotions);
-  const common = { id: LAUNCH_CODE, code: LAUNCH_CODE, mode: "sale" as const, enabled: true,
-    label: "Offre de lancement", kind: "percent" as const, startsAt: "", endsAt: "", packIds: [] };
-  const sales: Promotion[] = [
-    { ...common, value: 50, productKeys: catalog.packs.filter((p) => !p.archived).flatMap((p) => [
-      `pack:${p.id}`, ...(p.formulas ?? []).map((f) => `formula:${p.id}:${f.id}`),
-    ]) },
-    { ...common, value: 25, productKeys: catalog.options.filter((o) => o.id !== INSTALL_OPTION_ID).map((o) => `option:${o.id}`) },
-  ];
+  // Packs : la clé pack: couvre aussi un pack sans formule ; formules : leurs propres clés
+  const rates = launchProductRates(catalog, state);
+  const sale: Promotion = { id: LAUNCH_CODE, code: LAUNCH_CODE, mode: "sale", enabled: true, label: "Offre de lancement", kind: "percent",
+    value: Math.max(0, ...Object.values(rates)), startsAt: "", endsAt: "", packIds: [], productRates: rates };
+  const sales = [sale];
   return saleCatalog(catalog, [...sales, ...promotions]);
 }
 export function hasLaunchOffer(code?: string) {

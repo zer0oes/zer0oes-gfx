@@ -4,10 +4,12 @@ import { newDeliveryToken } from "@/lib/delivery";
 import { getStore } from "@/lib/store";
 import type { ProjectQuote } from "@/lib/quotes";
 import { trDeep } from "@/lib/translations-en";
+import { launchRates } from "@/lib/launch-offer";
 
 export async function recordQuoteRequest(request: { name: string; email: string; fields: Record<string, string> }, locale: "fr" | "en") {
   const now = new Date().toISOString();
-  const catalog = await getStore().getCatalog();
+  const [catalog, launch] = await Promise.all([getStore().getCatalog(), getStore().getLaunchState()]);
+  const rates = launchRates(launch);
   const offer = (request.fields["Offre envisagée"] ?? "").trim().toLocaleLowerCase("fr");
   const translated = trDeep(locale, catalog);
   const isPack = [...catalog.packs, ...translated.packs].some((p) => p.name.trim().toLocaleLowerCase("fr") === offer);
@@ -20,7 +22,7 @@ export async function recordQuoteRequest(request: { name: string; email: string;
   const q: ProjectQuote = { id: randomUUID(), token: newDeliveryToken(), createdAt: now, updatedAt: now,
     name: request.name, email: request.email, locale, request: request.fields, status: "demande",
     title: "", description: "", deliverables: [], totalPrice: 0, validUntil: "", revisionsIncluded: aLaCarte ? 1 : 2,
-    ...(isPack ? { launchPercent: 50 as const } : isOption || customCreation ? { launchPercent: 25 as const } : {}) };
+    ...(isPack ? { launchPercent: rates.packs } : isOption || customCreation ? { launchPercent: rates.options } : {}) };
   await getStore().createQuote(q);
   return q;
 }

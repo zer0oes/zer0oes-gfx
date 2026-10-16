@@ -47,8 +47,8 @@ function OrderFormFields({
   const [payment, setPayment] = useState<PaymentType>("total");
   const [hasLogo, setHasLogo] = useState(defaultHasLogo);
   const selectedFormula = formulas.find((f) => f.id === formulaId);
-  const site = packPricingSettings(settings, pack.id, selectedFormula?.promotionCode);
-  const publicSale = Boolean(selectedFormula?.promotionCode);
+  const site = packPricingSettings(settings, pack.id, selectedFormula);
+  const publicSale = Boolean(selectedFormula);
   const [code, setCode] = useState("");
   const [promo, setPromo] = useState<{ key: string; code: string; totalPrice: number; discount: number } | null>(null);
   const [promoMessage, setPromoMessage] = useState("");
