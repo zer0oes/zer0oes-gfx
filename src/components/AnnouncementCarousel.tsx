@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
-import { headlineParts, remainingPlacesText, slideHref, type AnnouncementSlide } from "@/lib/announcement-carousel";
+import { headlineParts, remainingPlacesText, slideHref, slideSchedule, type AnnouncementSlide } from "@/lib/announcement-carousel";
 
-type CampaignStatus = { active: boolean; remaining: number | null };
+type CampaignStatus = { active: boolean; started?: boolean; remaining: number | null };
 export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides: AnnouncementSlide[]; locale: Locale; initialStatus: CampaignStatus }) {
   const [status, setStatus] = useState(initialStatus);
   const [index, setIndex] = useState(0);
@@ -17,7 +17,7 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
   const [manualChange, setManualChange] = useState(0);
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const swiped = useRef(false);
-  const activeSlides = slides.filter((s) => s.enabled && (s.id !== "launch" || status.active));
+  const activeSlides = slides.filter((s) => s.enabled && (s.id === "launch" ? status.active : !slideSchedule(s).followLaunch || status.started));
   const count = activeSlides.length;
   const current = count ? index % count : 0;
   const rotating = count > 1 && auto && !hovered && !focused && visible && !reducedMotion;
@@ -47,7 +47,7 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
         const response = await fetch("/api/announcements", { cache: "no-store", signal: controller.signal });
         if (!response.ok) return;
         const next = await response.json();
-        if (typeof next.active === "boolean" && (next.remaining === null || Number.isSafeInteger(next.remaining) && next.remaining >= 0)) setStatus(next);
+        if (typeof next.active === "boolean" && typeof next.started === "boolean" && (next.remaining === null || Number.isSafeInteger(next.remaining) && next.remaining >= 0)) setStatus(next);
       } catch { /* Conserver la dernière valeur réellement lue, sans inventer de compteur. */ }
     };
     const timer = window.setInterval(refresh, 30000);

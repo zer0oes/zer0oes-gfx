@@ -2,7 +2,9 @@
 
 import { useActionState, useRef, useState } from "react";
 import { saveCarouselAction } from "@/app/admin/promotions-actions";
-import type { AnnouncementSlide, SlideCopy } from "@/lib/announcement-carousel";
+import { slideSchedule, type AnnouncementSlide, type SlideCopy, type SlideSchedule } from "@/lib/announcement-carousel";
+import { DatePicker } from "@/components/DatePicker";
+import { dayOf, toIso } from "./MarketingDates";
 import type { Locale } from "@/lib/i18n";
 
 const input = "mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
@@ -23,6 +25,9 @@ export function CarouselEditor({ initialSlides }: { initialSlides: AnnouncementS
       return next;
     });
     setOrderMessage("Ordre modifié. Enregistre pour le publier.");
+  }
+  function schedule(id: string, patch: Partial<SlideSchedule>) {
+    setSlides((current) => current.map((slide) => slide.id === id ? { ...slide, schedule: { ...slideSchedule(slide), ...patch } } : slide));
   }
   function update(id: string, field: keyof SlideCopy, value: string) {
     setSlides((current) => current.map((slide) => slide.id === id ? { ...slide, content: { ...slide.content, [locale]: { ...slide.content[locale], [field]: value } } } : slide));
@@ -56,6 +61,15 @@ export function CarouselEditor({ initialSlides }: { initialSlides: AnnouncementS
             <label className="ml-auto flex items-center gap-2 text-sm"><input type="checkbox" role="switch" aria-label={`Activer la diapo ${slide.id === "launch" ? "Offre de lancement" : "Audit gratuit"}`} checked={slide.enabled} onChange={(event) => setSlides((current) => current.map((s) => s.id === slide.id ? { ...s, enabled: event.target.checked } : s))} className="accent-[var(--accent)]" />{slide.enabled ? "Activée" : "Désactivée"}</label>
             <div className="flex gap-2"><button type="button" disabled={index === 0} onClick={() => move(slide.id, slides[index - 1].id)} aria-label={`Monter la diapo ${index + 1}`} className="rounded-lg border border-border px-2 py-1 text-xs disabled:opacity-30">Monter</button><button type="button" disabled={index === slides.length - 1} onClick={() => move(slide.id, slides[index + 1].id)} aria-label={`Descendre la diapo ${index + 1}`} className="rounded-lg border border-border px-2 py-1 text-xs disabled:opacity-30">Descendre</button></div>
           </div>
+          {slide.id === "launch"
+            ? <p className="mt-3 text-xs text-muted">Affichée selon la programmation et le quota de l’offre de lancement.</p>
+            : <div className="mt-3 space-y-3">
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" role="switch" checked={slideSchedule(slide).followLaunch} onChange={(event) => schedule(slide.id, { followLaunch: event.target.checked })} className="accent-[var(--accent)]" />Suivre la programmation de l’offre de lancement</label>
+              {!slideSchedule(slide).followLaunch && <div className="grid gap-4 sm:grid-cols-2">
+                <DatePicker name={`${slide.id}-start`} label="Début (facultatif)" locale="fr" defaultValue={dayOf(slideSchedule(slide).startsAt)} onChange={(day) => schedule(slide.id, { startsAt: toIso(day, false) })} />
+                <DatePicker name={`${slide.id}-end`} label="Fin (facultative)" locale="fr" defaultValue={dayOf(slideSchedule(slide).endsAt)} onChange={(day) => schedule(slide.id, { endsAt: toIso(day, true) })} />
+              </div>}
+            </div>}
           <p className="mt-3 truncate text-sm text-muted">{slide.content[locale].title}</p>
           <details className="mt-3">
             <summary className="cursor-pointer text-sm font-medium text-accent">Modifier les textes ({locale.toUpperCase()})</summary>

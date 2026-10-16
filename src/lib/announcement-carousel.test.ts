@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { test } from "node:test";
-import { headlineParts, parseCarouselSlides, remainingPlacesText, slideHref } from "./announcement-carousel";
+import { headlineParts, parseCarouselSlides, remainingPlacesText, slideHref, slideInWindow } from "./announcement-carousel";
 const seed = () => JSON.parse(fs.readFileSync("supabase/migrations/20261016000200_announcement_carousel.sql", "utf8").split("$slides$")[1]);
 test("diapos : édition bilingue, ordre et activation conservés, pourcentages mis en valeur", () => {
   const input = seed().reverse();
@@ -30,4 +30,15 @@ test("aucun compteur fabriqué, aucun lien dangereux, aucune mention HT", () => 
   assert.equal(slideHref("en", "/offres"), "/en/offres");
   assert.equal(slideHref("en", "/en/offres"), "/en/offres");
   assert.equal(slideHref("fr", "https://example.com/audit"), "https://example.com/audit");
+});
+
+test("programmation d'une diapo : dates propres vérifiées, suivi de l'offre par défaut", () => {
+  const input = seed();
+  input[1].schedule = { followLaunch: false, startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2026-11-30T22:59:59.999Z" };
+  const [, audit] = parseCarouselSlides(input);
+  assert.equal(slideInWindow(audit, Date.parse("2026-10-20T00:00:00Z")), false);
+  assert.equal(slideInWindow(audit, Date.parse("2026-11-10T00:00:00Z")), true);
+  assert.equal(slideInWindow(parseCarouselSlides(seed())[1], 0), true);
+  input[1].schedule = { followLaunch: false, startsAt: "2026-11-30T00:00:00.000Z", endsAt: "2026-11-01T00:00:00.000Z" };
+  assert.throws(() => parseCarouselSlides(input), /après le début/);
 });

@@ -2,7 +2,18 @@ import { safeBannerLink } from "./promotions";
 import { href, type Locale } from "./i18n";
 
 export type SlideCopy = { badge?: string; title: string; conditions: string; remainingText: string; buttonLabel: string; buttonHref: string };
-export type AnnouncementSlide = { id: "launch" | "audit"; enabled: boolean; content: Record<Locale, SlideCopy> };
+// Programmation d'une diapo autre que l'offre : soit elle suit l'offre de lancement (affichée dès son début),
+// soit elle a ses propres dates. Sans programmation enregistrée, elle suit l'offre.
+export type SlideSchedule = { followLaunch: boolean; startsAt: string; endsAt: string };
+export type AnnouncementSlide = { id: "launch" | "audit"; enabled: boolean; schedule?: SlideSchedule; content: Record<Locale, SlideCopy> };
+export const defaultSchedule: SlideSchedule = { followLaunch: true, startsAt: "", endsAt: "" };
+export function slideSchedule(slide: AnnouncementSlide) { return slide.schedule ?? defaultSchedule; }
+// Visible côté serveur ? L'offre dépend du quota et de sa date (vérifiés au rendu), les dates propres sont vérifiées ici.
+export function slideInWindow(slide: AnnouncementSlide, now = Date.now()) {
+  const s = slideSchedule(slide);
+  if (slide.id === "launch" || s.followLaunch) return true;
+  return (!s.startsAt || Date.parse(s.startsAt) <= now) && (!s.endsAt || Date.parse(s.endsAt) > now);
+}
 export function slideHref(locale: Locale, link: string) {
   return !link.startsWith("/") || /^\/(?:fr|en)(?:\/|\?|$)/.test(link) ? link : href(locale, link);
 }
@@ -26,7 +37,15 @@ export function parseCarouselSlides(input: unknown): AnnouncementSlide[] {
       if (s.id === "launch" && copy.remainingText && !copy.remainingText.includes("{count}")) throw new Error("Le compteur doit utiliser {count}, remplacé par les vraies commandes.");
       content[locale] = copy;
     }
-    return { id: s.id, enabled: s.enabled, content };
+    let schedule: SlideSchedule | undefined;
+    if (s.schedule !== undefined) {
+      const { followLaunch, startsAt = "", endsAt = "" } = s.schedule ?? {};
+      const date = (v: unknown) => v === "" || (typeof v === "string" && !Number.isNaN(Date.parse(v)));
+      if (typeof followLaunch !== "boolean" || !date(startsAt) || !date(endsAt)) throw new Error("Programmation de la diapo invalide.");
+      if (startsAt && endsAt && Date.parse(endsAt) <= Date.parse(startsAt)) throw new Error("La fin doit être après le début.");
+      schedule = { followLaunch, startsAt, endsAt };
+    }
+    return { id: s.id, enabled: s.enabled, ...(schedule ? { schedule } : {}), content };
   });
 }
 export function remainingPlacesText(template: string, count: number | null) {

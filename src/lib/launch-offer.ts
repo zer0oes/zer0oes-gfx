@@ -10,6 +10,10 @@ export type LaunchState = { enabled: boolean; remaining: number; ordersRemaining
 export function launchActive(state: LaunchState, now = Date.now()) {
   return state.enabled && state.remaining > 0 && (!state.startsAt || Date.parse(state.startsAt) <= now);
 }
+// L'offre a commencé (activée et date passée), même si son quota est épuisé.
+export function launchStarted(state: Pick<LaunchState, "enabled" | "startsAt">, now = Date.now()) {
+  return state.enabled && (!state.startsAt || Date.parse(state.startsAt) <= now);
+}
 export function launchCatalog(catalog: Catalog, state: LaunchState, promotions: Promotion[] = []): Catalog {
   if (!launchActive(state)) return saleCatalog(catalog, promotions);
   const common = { id: LAUNCH_CODE, code: LAUNCH_CODE, mode: "sale" as const, enabled: true,
