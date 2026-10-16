@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { bannerPages, LAUNCH_LINK, type Banner } from "@/lib/promotions";
+import { bannerLinks, bannerPages, LAUNCH_LINK, type Banner } from "@/lib/promotions";
 import { MarketingDates } from "./MarketingDates";
 import { Switch } from "./Switch";
 
@@ -11,7 +11,8 @@ type Copy = "badge" | "text" | "conditions" | "remainingText";
 
 // Champs d'un bandeau : textes FR / EN, programmation (ses dates, l'offre de lancement ou une remise), pages.
 export function BannerFields({ banner, promotions, linkedTo: initialLink = "" }: { banner?: Banner; promotions: { id: string; label: string }[]; linkedTo?: string }) {
-  const [linkedTo, setLinkedTo] = useState(banner?.linkedTo ?? initialLink);
+  const [links, setLinks] = useState(banner ? bannerLinks(banner) : initialLink ? [initialLink] : []);
+  const offers = [{ id: LAUNCH_LINK, label: "Offre de lancement" }, ...promotions.map((p) => ({ id: p.id, label: `Remise « ${p.label} »` }))];
   const [locale, setLocale] = useState<"fr" | "en">("fr");
   return <>
     <input type="hidden" name="id" value={banner?.id ?? ""} />
@@ -20,14 +21,13 @@ export function BannerFields({ banner, promotions, linkedTo: initialLink = "" }:
       <Switch name="carousel" label="Dans le carrousel" defaultChecked={banner?.carousel ?? true} />
     </div>
     <p className="-mt-3 text-xs text-muted">Dans le carrousel, il tourne avec les autres bandeaux du carrousel. Sinon, il reste affiché fixe sous le menu.</p>
-    <label className={label}>Quand l’afficher
-      <select name="linkedTo" value={linkedTo} onChange={(event) => setLinkedTo(event.target.value)} className={input}>
-        <option value="">À ses propres dates</option>
-        <option value={LAUNCH_LINK}>Pendant l’offre de lancement</option>
-        {promotions.map((p) => <option key={p.id} value={p.id}>Pendant la remise « {p.label} »</option>)}
-      </select>
-    </label>
-    {linkedTo === "" ? <MarketingDates startsAt={banner?.startsAt} endsAt={banner?.endsAt} /> : <p className="-mt-3 text-xs text-muted">{linkedTo === LAUNCH_LINK ? "Affiché dès la date de début de l’offre, tant qu’il reste des places." : "Affiché pendant la période de la remise, tant qu’elle est activée."}</p>}
+    <fieldset><legend className="mb-2 text-sm font-medium">Offres liées</legend>
+      <div className="flex flex-col gap-2">{offers.map((o) => <label key={o.id} className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="links" value={o.id} checked={links.includes(o.id)} onChange={(e) => setLinks((l) => e.target.checked ? [...l, o.id] : l.filter((x) => x !== o.id))} />{o.label}
+      </label>)}</div>
+      <p className="mt-2 text-xs text-muted">{links.length ? "Affiché pendant l’une des offres cochées (l’offre de lancement : dès sa date de début, tant qu’il reste des places)." : "Aucune offre cochée : le bandeau suit ses propres dates."}</p>
+    </fieldset>
+    {!links.length && <MarketingDates startsAt={banner?.startsAt} endsAt={banner?.endsAt} />}
     <div className="-mx-5 border-y border-border px-5 sm:-mx-6 sm:px-6">
       <div role="tablist" aria-label="Langue des textes" className="flex gap-6">
         {(["fr", "en"] as const).map((lang) => <button key={lang} type="button" role="tab" aria-selected={locale === lang} onClick={() => setLocale(lang)} className={`-mb-px border-b-2 py-3 text-sm ${locale === lang ? "border-accent font-semibold text-accent" : "border-transparent text-muted"}`}>{lang === "fr" ? "Français" : "English"}</button>)}
@@ -42,7 +42,7 @@ export function BannerFields({ banner, promotions, linkedTo: initialLink = "" }:
         {lang === "en" && <p className="text-xs text-muted">Un champ anglais vide reprend le texte français.</p>}
         <label className={label}>Pastille<input name={field("badge")} defaultValue={initial("badge")} maxLength={80} className={input} /></label>
         <label className={label}>Phrase{lang === "fr" && " *"}<textarea name={field("text")} defaultValue={initial("text")} required={lang === "fr"} maxLength={600} rows={2} className={input} /><span className="mt-1 block text-xs font-normal text-muted">Les pourcentages (ex. −50 %) s’affichent en gras et en dégradé.</span></label>
-        {linkedTo === LAUNCH_LINK && <label className={label}>Places restantes<input name={field("remainingText")} defaultValue={initial("remainingText")} maxLength={150} className={input} /><span className="mt-1 block text-xs font-normal text-muted">Utilise {"{count}"}, remplacé par le vrai nombre de places restantes (en violet). Vide : pas de compteur.</span></label>}
+        {links.includes(LAUNCH_LINK) && <label className={label}>Places restantes<input name={field("remainingText")} defaultValue={initial("remainingText")} maxLength={150} className={input} /><span className="mt-1 block text-xs font-normal text-muted">Utilise {"{count}"}, remplacé par le vrai nombre de places restantes (en violet). Vide : pas de compteur.</span></label>}
         <label className={label}>Petite note<input name={field("conditions")} defaultValue={initial("conditions")} maxLength={400} className={input} /><span className="mt-1 block text-xs font-normal text-muted">En petit, sous la phrase. Facultative.</span></label>
       </div>;
     })}

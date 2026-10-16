@@ -214,13 +214,15 @@ async function fetchOrders(filter: (q: OrdersQuery) => OrdersQuery) {
 
 export const supabaseStore: Store = {
   async saveLaunchSettings(settings) {
-    check(await db().from("launch_offer").update({ enabled: settings.enabled, starts_at: settings.startsAt || null, ...(settings.quota ? { quota: settings.quota } : {}), ...(settings.rates ? { rates: settings.rates } : {}) }).eq("id", true));
+    check(await db().from("launch_offer").update({ enabled: settings.enabled, starts_at: settings.startsAt || null, ends_at: settings.endsAt || null, ...(settings.quota !== undefined ? { quota: settings.quota } : {}), ...(settings.rates ? { rates: settings.rates } : {}) }).eq("id", true));
   },
   async getLaunchState() {
     const result = await db().rpc("launch_offer_state");
     // Déploiement progressif : offre inactive tant que sa migration n'est pas appliquée.
     if (result.error?.code === "PGRST202") return { enabled: false, remaining: 0 };
-    return check(result) as import("@/lib/launch-offer").LaunchState;
+    const state = check(result) as Omit<import("@/lib/launch-offer").LaunchState, "remaining"> & { remaining: number | null };
+    // Sans quota, les places sont illimitées
+    return { ...state, startsAt: state.startsAt ?? undefined, endsAt: state.endsAt ?? undefined, remaining: state.remaining ?? Infinity };
   },
   async reserveLaunchSlot(id) {
     return Boolean(check(await db().rpc("reserve_launch_slot", { slot_id: id })));

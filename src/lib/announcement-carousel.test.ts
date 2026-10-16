@@ -27,12 +27,18 @@ test("aucun compteur fabriqué, liens localisés", () => {
 });
 test("programmation : dates propres, remise liée, remise supprimée ; ordre du carrousel", () => {
   const nov = banner({ startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2026-11-30T23:00:00.000Z" });
-  assert.equal(bannerScheduled(nov, [], Date.parse("2026-10-20T00:00:00Z")), false);
-  assert.equal(bannerScheduled(nov, [], Date.parse("2026-11-10T00:00:00Z")), true);
+  assert.equal(bannerScheduled(nov, [], undefined, Date.parse("2026-10-20T00:00:00Z")), false);
+  assert.equal(bannerScheduled(nov, [], undefined, Date.parse("2026-11-10T00:00:00Z")), true);
   assert.equal(bannerScheduled(banner({ enabled: false }), []), false);
   const linked = banner({ linkedTo: "p1" });
   assert.equal(bannerScheduled(linked, [promo()]), true);
   assert.equal(bannerScheduled(linked, [promo({ enabled: false })]), false);
   assert.equal(bannerScheduled(linked, []), false);
+  // Plusieurs offres liées : affiché pendant l'une d'elles ; lancement + remise : il faut l'offre réellement en cours
+  const several = banner({ links: ["launch", "p1"] });
+  assert.equal(bannerScheduled(several, [promo({ enabled: false })], { enabled: true, active: false }), false);
+  assert.equal(bannerScheduled(several, [promo({ enabled: false })], { enabled: true, active: true }), true);
+  assert.equal(bannerScheduled(several, [promo()]), true);
+  assert.equal(bannerScheduled(banner({ links: ["launch"] }), [], { enabled: true, active: false }), true);
   assert.deepEqual(sortBanners([banner({ id: "b", position: 1 }), banner({ id: "a", position: 0 }), banner({ id: "c" })]).map((b) => b.id), ["a", "b", "c"]);
 });

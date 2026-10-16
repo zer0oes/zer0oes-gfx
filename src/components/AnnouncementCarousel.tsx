@@ -84,7 +84,7 @@ export function AnnouncementCarousel({ slides, locale, initialStatus }: { slides
         onClickCapture={(event) => { if (swiped.current) { event.preventDefault(); swiped.current = false; } }}>
         {activeSlides.map((slide, i) => {
           const copy = slide.content[locale];
-          const remaining = slide.launch ? remainingPlacesText(copy.remainingText, status.remaining) : "";
+          const remaining = status.active ? remainingPlacesText(copy.remainingText, status.remaining) : "";
           const selected = i === current;
           const { badge, title } = copy;
           return <div key={slide.id} role="group" aria-roledescription={en ? "slide" : "diapositive"} aria-label={`${i + 1} / ${count}`} aria-hidden={!selected} inert={!selected}

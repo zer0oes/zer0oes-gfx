@@ -9,8 +9,8 @@ export const bannerPages = [
 
 // Bandeau sous le menu. text / textEn : la phrase ; badge : la pastille ; conditions : la note en petit dessous ;
 // remainingText : compteur de places de l'offre de lancement ({count}). Tout le bandeau est le lien.
-// carousel : tourne avec les autres bandeaux du carrousel (sinon affiché fixe). linkedTo : "" = ses propres dates,
-// "launch" = pendant l'offre de lancement, sinon l'id d'une remise (affiché pendant la remise).
+// carousel : tourne avec les autres bandeaux du carrousel (sinon affiché fixe). links : offres liées ("launch" = offre de
+// lancement, sinon l'id d'une remise), affiché pendant l'une d'elles ; aucune : ses propres dates. linkedTo : ancienne forme (une offre).
 // code, linkLabel, linkLabelEn, tone : anciens bandeaux, conservés mais plus affichés.
 export type Banner = {
   id: string; enabled: boolean; text: string; textEn: string; code: string;
@@ -18,7 +18,7 @@ export type Banner = {
   startsAt: string; endsAt: string; tone: "violet" | "pink" | "teal";
   badge?: string; badgeEn?: string; conditions?: string; conditionsEn?: string;
   remainingText?: string; remainingTextEn?: string;
-  carousel?: boolean; linkedTo?: string; position?: number;
+  carousel?: boolean; links?: string[]; linkedTo?: string; position?: number;
 };
 export type Promotion = {
   mode?: "code" | "sale";
@@ -47,13 +47,21 @@ export const LAUNCH_LINK = "launch";
 export function sortBanners(banners: Banner[]) {
   return [...banners].sort((a, b) => (a.position ?? 999) - (b.position ?? 999) || a.text.localeCompare(b.text));
 }
-// Période d'un bandeau hors offre de lancement : celle de la remise liée, ou ses propres dates.
-// Une remise liée supprimée ou désactivée masque le bandeau.
-export function bannerScheduled(banner: Banner, promotions: Promotion[], now = Date.now()) {
+export const bannerLinks = (banner: Pick<Banner, "links" | "linkedTo">) => banner.links ?? (banner.linkedTo ? [banner.linkedTo] : []);
+// Bandeau lié uniquement à l'offre de lancement : le carrousel suit lui-même sa date et ses places
+export const launchOnlyBanner = (banner: Banner) => { const links = bannerLinks(banner); return links.length > 0 && links.every((l) => l === LAUNCH_LINK); };
+// Affiché pendant l'une de ses offres liées (une remise supprimée ou désactivée ne compte plus), sinon à ses propres dates.
+// launch.enabled suffit pour un bandeau lié seulement au lancement ; lié aussi à une remise, il faut l'offre réellement en cours.
+export function bannerScheduled(banner: Banner, promotions: Promotion[], launch: { enabled: boolean; active: boolean } = { enabled: false, active: false }, now = Date.now()) {
   if (!banner.enabled) return false;
-  if (!banner.linkedTo) return activePeriod(banner, now);
-  const promotion = promotions.find((p) => p.id === banner.linkedTo);
-  return !!promotion && activePeriod(promotion, now);
+  const links = bannerLinks(banner);
+  if (!links.length) return activePeriod(banner, now);
+  if (launchOnlyBanner(banner)) return launch.enabled;
+  return links.some((link) => {
+    if (link === LAUNCH_LINK) return launch.active;
+    const promotion = promotions.find((p) => p.id === link);
+    return !!promotion && activePeriod(promotion, now);
+  });
 }
 // Une seule réduction promotionnelle, appliquée après la remise pour logo fourni.
 export function discountedPrice(price: number, promotion: Pick<Promotion, "kind" | "value">) {

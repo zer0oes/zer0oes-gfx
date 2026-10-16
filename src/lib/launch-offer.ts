@@ -9,9 +9,11 @@ export const LAUNCH_LIMIT = 10;
 // products vide : packs et options reçoivent leur taux par défaut (packs, options).
 export type LaunchRates = { packs: number; options: number; products: Record<string, number> };
 export const defaultLaunchRates: LaunchRates = { packs: 50, options: 25, products: {} };
-export type LaunchSettings = { enabled: boolean; startsAt: string; quota?: number; rates?: LaunchRates };
-export type LaunchState = { enabled: boolean; remaining: number; ordersRemaining?: number; startsAt?: string; quota?: number; rates?: LaunchRates };
-export const launchQuota = (state: Pick<LaunchState, "quota">) => state.quota ?? LAUNCH_LIMIT;
+// quota null : places illimitées, l'offre s'arrête alors à sa date de fin (endsAt). Absent : ancien quota de 10.
+// remaining : places restantes (Infinity sans quota) ; ordersRemaining : commandes payées restantes (null sans quota).
+export type LaunchSettings = { enabled: boolean; startsAt: string; endsAt?: string; quota?: number | null; rates?: LaunchRates };
+export type LaunchState = { enabled: boolean; remaining: number; used?: number; ordersRemaining?: number | null; startsAt?: string; endsAt?: string; quota?: number | null; rates?: LaunchRates };
+export const launchQuota = (state: Pick<LaunchState, "quota">) => state.quota === undefined ? LAUNCH_LIMIT : state.quota;
 export function launchRates(state: Pick<LaunchState, "rates">): LaunchRates {
   const r = state.rates;
   return { packs: r?.packs ?? defaultLaunchRates.packs, options: r?.options ?? defaultLaunchRates.options, products: r?.products ?? {} };
@@ -24,7 +26,7 @@ export function launchProductRates(catalog: Catalog, state: Pick<LaunchState, "r
   return Object.fromEntries(products.map((p) => [p.key, p.kind === "pack" ? rates.packs : rates.options]));
 }
 export function launchActive(state: LaunchState, now = Date.now()) {
-  return state.enabled && state.remaining > 0 && (!state.startsAt || Date.parse(state.startsAt) <= now);
+  return state.enabled && state.remaining > 0 && (!state.startsAt || Date.parse(state.startsAt) <= now) && (!state.endsAt || Date.parse(state.endsAt) > now);
 }
 export function launchCatalog(catalog: Catalog, state: LaunchState, promotions: Promotion[] = []): Catalog {
   if (!launchActive(state)) return saleCatalog(catalog, promotions);

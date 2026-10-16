@@ -1,7 +1,7 @@
 import type { Locale } from "@/lib/i18n";
 import { getStore } from "@/lib/store";
 import { launchActive } from "@/lib/launch-offer";
-import { bannerScheduled, LAUNCH_LINK, sortBanners } from "@/lib/promotions";
+import { bannerScheduled, sortBanners } from "@/lib/promotions";
 import { bannerSlide } from "@/lib/announcement-carousel";
 import { AnnouncementCarousel } from "./AnnouncementCarousel";
 
@@ -10,8 +10,8 @@ import { AnnouncementCarousel } from "./AnnouncementCarousel";
 export async function Announcements({ locale }: { locale: Locale }) {
   const store = getStore();
   const [banners, campaign, promotions] = await Promise.all([store.listBanners(), store.getLaunchState(), store.listPromotions()]);
-  const live = sortBanners(banners).filter((b) => b.enabled && (b.linkedTo === LAUNCH_LINK ? campaign.enabled : bannerScheduled(b, promotions)));
   const status = { active: launchActive(campaign), remaining: campaign.ordersRemaining ?? null };
+  const live = sortBanners(banners).filter((b) => bannerScheduled(b, promotions, { enabled: campaign.enabled, active: status.active }));
   const fixed = live.filter((b) => b.carousel === false);
   return <>
     <AnnouncementCarousel slides={live.filter((b) => b.carousel !== false).map(bannerSlide)} locale={locale} initialStatus={status} />

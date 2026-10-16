@@ -4,37 +4,56 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { bannerPages, LAUNCH_LINK, normalizeCode, parseProductRates, promotionProducts, safeBannerLink, type Banner, type Promotion } from "@/lib/promotions";
+import { bannerPages, LAUNCH_LINK, bannerLinks, normalizeCode, parseProductRates, promotionProducts, safeBannerLink, type Banner, type Promotion } from "@/lib/promotions";
 import { getStore } from "@/lib/store";
 import { parseParisSchedule } from "@/lib/launch-schedule";
-import { LAUNCH_CODE, launchQuota } from "@/lib/launch-offer";
+import { LAUNCH_CODE } from "@/lib/launch-offer";
 import { INSTALL_OPTION_ID } from "@/lib/brief-delivery";
 
 export async function saveLaunchOfferAction(f: FormData) {
   await requireAdmin();
   try {
     const enabled = f.get("enabled") === "on";
-    const day = text(f, "launchDay", 10);
+    const day = text(f, "launchDay", 10), endDay = text(f, "launchEndDay", 10);
     const startsAt = day ? parseParisSchedule(day, text(f, "launchTime", 5)) : "";
+    const endsAt = endDay ? parseParisSchedule(endDay, text(f, "launchEndTime", 5) || "23:59") : "";
     if (enabled && !startsAt) throw new Error("Choisis la date de début avant d’activer l’offre.");
+    if (startsAt && endsAt && Date.parse(endsAt) <= Date.parse(startsAt)) throw new Error("La fin doit être après le début.");
     const store = getStore();
     const [state, catalog] = await Promise.all([store.getLaunchState(), store.getCatalog()]);
-    const quota = Number(text(f, "quota", 5));
-    const used = launchQuota(state) - state.remaining;
-    if (!Number.isInteger(quota) || quota < 1 || quota > 1000) throw new Error("Nombre de places : entre 1 et 1 000.");
-    if (quota < used) throw new Error(`${used} place${used > 1 ? "s sont déjà prises" : " est déjà prise"} : le nombre de places ne peut pas être inférieur.`);
+    // Nombre de places facultatif : sans places, l'offre a besoin d'une date de fin
+    const rawQuota = text(f, "quota", 5);
+    const quota = rawQuota ? Number(rawQuota) : null;
+    const used = state.used ?? 0;
+    if (quota === null && !endsAt) throw new Error("Sans nombre de places, choisis une date de fin.");
+    if (quota !== null && (!Number.isInteger(quota) || quota < 1 || quota > 1000)) throw new Error("Nombre de places : entre 1 et 1 000.");
+    if (quota !== null && quota < used) throw new Error(`${used} place${used > 1 ? "s sont déjà prises" : " est déjà prise"} : le nombre de places ne peut pas être inférieur.`);
     const quoteRate = (k: string) => {
       const rate = Number(text(f, k, 3));
       if (!Number.isInteger(rate) || rate < 1 || rate > 80) throw new Error("Remise sur les devis : un pourcentage entier entre 1 et 80.");
       return rate;
     };
     const products = parseProductRates(f, promotionProducts(catalog).filter((p) => p.key !== `option:${INSTALL_OPTION_ID}`));
-    await store.saveLaunchSettings({ enabled, startsAt, quota, rates: { packs: quoteRate("quotePacks"), options: quoteRate("quoteOptions"), products } });
+    await store.saveLaunchSettings({ enabled, startsAt, endsAt, quota, rates: { packs: quoteRate("quotePacks"), options: quoteRate("quoteOptions"), products } });
+    await linkBanners(f, LAUNCH_LINK);
   } catch (e) { finish(e instanceof Error ? e.message : "Programmation impossible.", "remises", "lancement"); }
   finish(undefined, "remises");
 }
 
 const text = (f: FormData, k: string, max = 300) => (f.get(k)?.toString() ?? "").trim().slice(0, max);
+// Bandeaux cochés dans le panneau d'une offre : on lie ceux-là et on délie les autres.
+// Un bandeau qui perd sa dernière offre est désactivé (sinon il s'afficherait sans limite de dates).
+async function linkBanners(f: FormData, offer: string) {
+  if (f.get("bannersShown") !== "1") return;
+  const store = getStore();
+  const chosen = new Set(f.getAll("banners").map(String));
+  await Promise.all((await store.listBanners()).flatMap((banner) => {
+    const links = bannerLinks(banner), has = links.includes(offer);
+    if (has === chosen.has(banner.id)) return [];
+    const next = chosen.has(banner.id) ? [...links, offer] : links.filter((l) => l !== offer);
+    return [store.saveBanner({ ...banner, links: next, linkedTo: undefined, startsAt: "", endsAt: "", enabled: next.length ? banner.enabled : false })];
+  }));
+}
 // Retour à l'onglet, avec le panneau de l'élément rouvert (open) pour afficher le message
 function finish(error: string | undefined, tab: "remises" | "bandeaux", open = ""): never {
   revalidatePath("/", "layout");
@@ -62,9 +81,8 @@ export async function saveBannerAction(f: FormData) {
     const existing = banners.find((b) => b.id === bannerId);
     const pages = f.getAll("pages").map(String).filter((p) => p === "*" || bannerPages.some((x) => x.path === p));
     const link = text(f, "link", 500);
-    const linkedTo = text(f, "linkedTo", 40);
-    // La liste des remises n'est relue que pour un bandeau lié à une remise
-    if (linkedTo && linkedTo !== LAUNCH_LINK && !(await store.listPromotions()).some((p) => p.id === linkedTo)) throw new Error("Remise liée introuvable.");
+    const promotionIds = new Set((await store.listPromotions()).map((p) => p.id));
+    const links = [...new Set(f.getAll("links").map(String))].filter((l) => l === LAUNCH_LINK || promotionIds.has(l));
     const copy = Object.fromEntries(Object.entries(copyFields).flatMap(([field, max]) => [[field, text(f, field, max)], [`${field}En`, text(f, `${field}En`, max)]])) as Record<string, string>;
     if (!copy.text) throw new Error("Écris la phrase du bandeau.");
     if (!pages.length) throw new Error("Choisis au moins une page.");
@@ -73,11 +91,11 @@ export async function saveBannerAction(f: FormData) {
     if ([copy.remainingText, copy.remainingTextEn].some((t) => t && !t.includes("{count}"))) throw new Error("Le compteur doit utiliser {count}, remplacé par les vraies places restantes.");
     const banner: Banner = {
       ...(existing ?? { code: "", linkLabel: "", linkLabelEn: "", tone: "violet" as const }),
-      id: bannerId, enabled: f.get("enabled") === "on", carousel: f.get("carousel") === "on", linkedTo, link, pages,
+      id: bannerId, enabled: f.get("enabled") === "on", carousel: f.get("carousel") === "on", links, linkedTo: undefined, link, pages,
       badge: copy.badge, badgeEn: copy.badgeEn, text: copy.text, textEn: copy.textEn, conditions: copy.conditions, conditionsEn: copy.conditionsEn,
-      remainingText: linkedTo === LAUNCH_LINK ? copy.remainingText : "", remainingTextEn: linkedTo === LAUNCH_LINK ? copy.remainingTextEn : "",
+      remainingText: links.includes(LAUNCH_LINK) ? copy.remainingText : "", remainingTextEn: links.includes(LAUNCH_LINK) ? copy.remainingTextEn : "",
       position: existing?.position ?? Math.max(-1, ...banners.map((b) => b.position ?? -1)) + 1,
-      ...(linkedTo ? { startsAt: "", endsAt: "" } : period(f)),
+      ...(links.length ? { startsAt: "", endsAt: "" } : period(f)),
     };
     await store.saveBanner(banner);
   } catch (e) { finish(e instanceof Error ? e.message : "Enregistrement impossible.", "bandeaux", text(f, "id", 40) || "nouveau"); }
@@ -116,6 +134,7 @@ export async function savePromotionAction(f: FormData) {
       value: kind === "fixed" ? Math.round(number * 100) : number,
       packIds: f.getAll("packIds").map(String).filter((p) => catalog.packs.some((x) => x.id === p && x.checkout)), ...period(f) };
     await store.savePromotion(promotion);
+    await linkBanners(f, promotionId);
   } catch (e) { finish(e instanceof Error ? e.message : "Enregistrement impossible.", "remises", text(f, "id", 40) || "nouvelle"); }
   finish(undefined, "remises");
 }

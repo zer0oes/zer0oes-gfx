@@ -90,13 +90,16 @@ export const localStore: Store = {
     const d = await load();
     const orders = d.orders.filter((o) => !o.demo && o.promoCode?.split(", ").includes(LAUNCH_CODE) && (o.amountPaid > 0 || o.stripeSessionId.startsWith("devis_")));
     const quota = launchQuota(d.launchSettings ?? {});
-    return { ...(d.launchSettings ?? { enabled: false, startsAt: "" }), quota, ordersRemaining: Math.max(0, quota - orders.length), remaining: Math.max(0, quota - Object.values(d.launchSlots ?? {}).filter((s) => s !== "released").length) };
+    const used = Object.values(d.launchSlots ?? {}).filter((s) => s !== "released").length;
+    return { ...(d.launchSettings ?? { enabled: false, startsAt: "" }), quota, used,
+      ordersRemaining: quota === null ? null : Math.max(0, quota - orders.length), remaining: quota === null ? Infinity : Math.max(0, quota - used) };
   },
   reserveLaunchSlot: (id) => mutate((d) => {
     const slots = d.launchSlots ??= {};
     if (slots[id]) return slots[id] === "held";
-    if (!launchActive({ ...(d.launchSettings ?? { enabled: false }), remaining: 10 })) return false;
-    if (Object.values(slots).filter((s) => s !== "released").length >= launchQuota(d.launchSettings ?? {})) return false;
+    if (!launchActive({ ...(d.launchSettings ?? { enabled: false }), remaining: 1 })) return false;
+    const quota = launchQuota(d.launchSettings ?? {});
+    if (quota !== null && Object.values(slots).filter((s) => s !== "released").length >= quota) return false;
     slots[id] = "held";
     return true;
   }),
@@ -146,7 +149,7 @@ export const localStore: Store = {
     if (q?.status === "accepte") return q.orderId ?? null;
     if (!q || q.status !== "propose" || quoteExpired(q)) throw new Error("Devis indisponible ou expiré.");
     if (accept && q.launchPercent) {
-      const remaining = launchQuota(d.launchSettings ?? {}) - Object.values(d.launchSlots ?? {}).filter((s) => s !== "released").length;
+      const remaining = (launchQuota(d.launchSettings ?? {}) ?? Infinity) - Object.values(d.launchSlots ?? {}).filter((s) => s !== "released").length;
       const preview = launchQuote(q, { ...(d.launchSettings ?? { enabled: false }), remaining });
       if (expectedPrice !== preview.totalPrice) throw new Error("Le prix a changé. Actualise la page.");
       Object.assign(q, preview);

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { getStore } from "@/lib/store";
-import { activePeriod, LAUNCH_LINK, promotionProducts, promotionRates, sortBanners, type Banner, type Promotion } from "@/lib/promotions";
+import { activePeriod, bannerLinks, LAUNCH_LINK, promotionProducts, promotionRates, sortBanners, type Banner, type Promotion } from "@/lib/promotions";
 import { formatPrice, type Catalog } from "@/lib/pricing";
-import { launchActive, launchProductRates, launchQuota } from "@/lib/launch-offer";
+import { launchProductRates, launchQuota } from "@/lib/launch-offer";
 import { MarketingDates } from "@/components/admin/MarketingDates";
 import { saveBannerAction, savePromotionAction, deleteMarketingAction, reorderBannersAction } from "@/app/admin/promotions-actions";
 import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "./Drawer";
@@ -44,19 +44,32 @@ function Notice({ feedback, id }: { feedback: Feedback; id: string }) {
 }
 // Bandeaux liés à une remise (ou à l'offre de lancement) : liens vers leur panneau, ou ajout
 function LinkedBanners({ banners, link }: { banners: Banner[]; link: string }) {
-  const linked = banners.filter((b) => b.linkedTo === link);
+  const linked = banners.filter((b) => bannerLinks(b).includes(link));
   return <span className="flex flex-col gap-1">
     {linked.map((b) => <Link key={b.id} href={`/admin/offres?onglet=bandeaux&ouvrir=${b.id}`} className="line-clamp-1 max-w-56 text-accent hover:underline">{b.badge || b.text}</Link>)}
     <Link href={`/admin/offres?onglet=bandeaux&ouvrir=nouveau&lien=${link}`} className="whitespace-nowrap text-muted hover:text-accent">+ Ajouter un bandeau</Link>
   </span>;
 }
 
-function PromotionForm({ promotion, catalog, formId }: { promotion?: Promotion; catalog: Catalog; formId: string }) {
+// Bandeaux de l'offre, choisis dans le panneau de l'offre (offer : "launch" ou id de la remise ; vide pour une nouvelle remise)
+function BannerPicker({ banners, offer }: { banners: Banner[]; offer: string }) {
+  return <fieldset><input type="hidden" name="bannersShown" value="1" />
+    <legend className="mb-2 text-sm font-medium">Bandeaux de l’offre</legend>
+    {banners.length ? <div className="flex flex-col gap-2">{sortBanners(banners).map((b) => <label key={b.id} className="flex items-center gap-2 text-sm">
+      <input type="checkbox" name="banners" value={b.id} defaultChecked={!!offer && bannerLinks(b).includes(offer)} />
+      <span className="line-clamp-1">{b.badge && <span className="mr-2 text-xs font-bold uppercase tracking-wider text-accent">{b.badge}</span>}{b.text}</span>
+    </label>)}</div> : <p className="text-sm text-muted">Aucun bandeau pour l’instant.</p>}
+    <p className="mt-2 text-xs text-muted">{offer ? <Link href={`/admin/offres?onglet=bandeaux&ouvrir=nouveau&lien=${offer}`} className="text-accent hover:underline">+ Créer un bandeau pour cette offre</Link> : "Pour créer un nouveau bandeau, enregistre d’abord la remise."} Un bandeau décoché qui n’a plus d’offre liée est désactivé.</p>
+  </fieldset>;
+}
+
+function PromotionForm({ promotion, catalog, banners, formId }: { promotion?: Promotion; catalog: Catalog; banners: Banner[]; formId: string }) {
   return <form id={formId} action={savePromotionAction} className="space-y-4"><input type="hidden" name="id" value={promotion?.id ?? ""} />
     <Switch name="enabled" label="Activer la remise" defaultChecked={promotion?.enabled ?? false} />
     <label className="grid gap-2 text-sm">Nom de la promotion ou repère privé<input name="label" defaultValue={promotion?.label} maxLength={120} className={input} /></label>
     <PromotionFields promotion={promotion} catalog={catalog} />
     <MarketingDates startsAt={promotion?.startsAt} endsAt={promotion?.endsAt} />
+    <BannerPicker banners={banners} offer={promotion?.id ?? ""} />
   </form>;
 }
 
@@ -83,10 +96,10 @@ export async function DiscountsPanel({ feedback }: { feedback: Feedback }) {
         <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className={th}>Remise</th><th className={th}>Type</th><th className={th}>Valeur</th><th className={th}>Période</th><th className={th}>Bandeau</th><th className={th}>Statut</th></tr></thead>
         <tbody className="divide-y divide-border">
           <DrawerRow drawer="remise-lancement" label="Modifier l’offre de lancement">
-            <td className={td}><span className="font-semibold">Offre de lancement</span><p className="mt-1 text-xs text-muted">{launch.remaining} place{launch.remaining > 1 ? "s" : ""} sur {launchQuota(launch)}</p></td>
+            <td className={td}><span className="font-semibold">Offre de lancement</span><p className="mt-1 text-xs text-muted">{launchQuota(launch) === null ? "Places illimitées" : `${launch.remaining} place${launch.remaining > 1 ? "s" : ""} sur ${launchQuota(launch)}`}</p></td>
             <td className={td}>Prix barrés</td>
             <td className={`${td} whitespace-nowrap`}>{range(launchProductRates(catalog, launch))}</td>
-            <td className={`${td} whitespace-nowrap`}>{launch.startsAt ? `Dès le ${day(launch.startsAt)}` : "Non programmée"}</td>
+            <td className={`${td} whitespace-nowrap`}>{launch.startsAt ? periodLabel({ startsAt: launch.startsAt, endsAt: launch.endsAt ?? "" }) : "Non programmée"}</td>
             <td className={td}><LinkedBanners banners={banners} link={LAUNCH_LINK} /></td>
             <td className={td}><Pill label={launchStatus(launch)} /></td>
           </DrawerRow>
@@ -103,16 +116,16 @@ export async function DiscountsPanel({ feedback }: { feedback: Feedback }) {
     </div>
     <Drawer id="remise-lancement" kicker="Remise" title="Offre de lancement" openOnLoad={feedback.open === "lancement"} footer={<><span /><SubmitButton form={"remise-lancement-form"} label="Enregistrer l’offre" className={save} /></>}>
       <Notice feedback={feedback} id="lancement" />
-      <LaunchOfferForm state={launch} catalog={catalog} formId="remise-lancement-form" />
+      <LaunchOfferForm state={launch} catalog={catalog} formId="remise-lancement-form"><BannerPicker banners={banners} offer={LAUNCH_LINK} /></LaunchOfferForm>
     </Drawer>
     {promotions.map((p) => <Drawer key={p.id} id={`remise-${p.id}`} kicker="Remise" title={promoName(p)} openOnLoad={feedback.open === p.id}
-      footer={<><ConfirmDelete action={deleteMarketingAction} id={p.id} icon label="Supprimer la remise" fields={{ kind: "promotion" }} question={`Es-tu sûre de vouloir supprimer « ${promoName(p)} » ?${banners.some((b) => b.linkedTo === p.id) ? " Son bandeau ne s’affichera plus." : ""}`} /><SubmitButton form={`remise-form-${p.id}`} label="Enregistrer la remise" className={save} /></>}>
+      footer={<><ConfirmDelete action={deleteMarketingAction} id={p.id} icon label="Supprimer la remise" fields={{ kind: "promotion" }} question={`Es-tu sûre de vouloir supprimer « ${promoName(p)} » ?${banners.some((b) => bannerLinks(b).includes(p.id)) ? " Son bandeau ne s’affichera plus." : ""}`} /><SubmitButton form={`remise-form-${p.id}`} label="Enregistrer la remise" className={save} /></>}>
       <Notice feedback={feedback} id={p.id} />
-      <PromotionForm promotion={p} catalog={catalog} formId={`remise-form-${p.id}`} />
+      <PromotionForm promotion={p} catalog={catalog} banners={banners} formId={`remise-form-${p.id}`} />
     </Drawer>)}
     <Drawer id="remise-nouvelle" kicker="Remise" title="Nouvelle remise" openOnLoad={feedback.open === "nouvelle"} footer={<><span /><SubmitButton form={"remise-form-nouvelle"} label="Créer la remise" className={save} /></>}>
       <Notice feedback={feedback} id="nouvelle" />
-      <PromotionForm catalog={catalog} formId="remise-form-nouvelle" />
+      <PromotionForm catalog={catalog} banners={banners} formId="remise-form-nouvelle" />
     </Drawer>
   </section>;
 }
@@ -123,13 +136,18 @@ export async function BannersPanel({ feedback, linkTo }: { feedback: Feedback; l
   const [stored, promotions, launch] = await Promise.all([store.listBanners(), store.listPromotions(), store.getLaunchState()]);
   const banners = sortBanners(stored);
   const choices = promotions.map((p) => ({ id: p.id, label: promoName(p) }));
+  // Offres liées : l'état affiché est le meilleur des offres (actif, sinon programmé…)
+  const offerState = (link: string) => {
+    if (link === LAUNCH_LINK) return { label: "Offre de lancement", state: ({ "Désactivée": "Désactivé", "Quota atteint": "Terminé", Active: "Actif", "Terminée": "Terminé", "Programmée": "Programmé" } as Record<string, string>)[launchStatus(launch)] };
+    const p = promotions.find((x) => x.id === link);
+    return { label: p ? `Remise « ${promoName(p)} »` : "Remise supprimée", state: p ? (activePeriod(p) ? "Actif" : status(p)) : "Terminé" };
+  };
   const schedule = (b: Banner) => {
-    if (b.linkedTo === LAUNCH_LINK) return { label: "Offre de lancement", state: !b.enabled || !launch.enabled ? "Désactivé" : launch.remaining === 0 ? "Terminé" : launchActive(launch) ? "Actif" : "Programmé" };
-    if (b.linkedTo) {
-      const p = promotions.find((x) => x.id === b.linkedTo);
-      return { label: p ? `Remise « ${promoName(p)} »` : "Remise supprimée", state: !b.enabled ? "Désactivé" : p ? (activePeriod(p) ? "Actif" : status(p)) : "Terminé" };
-    }
-    return { label: periodLabel(b), state: status(b) };
+    const links = bannerLinks(b);
+    if (!links.length) return { label: periodLabel(b), state: status(b) };
+    const offers = links.map(offerState);
+    const state = !b.enabled ? "Désactivé" : ["Actif", "Programmé", "Terminé"].find((x) => offers.some((o) => o.state === x)) ?? "Désactivé";
+    return { label: offers.map((o) => o.label).join(", "), state };
   };
   const pages = (b: Banner) => b.pages.includes("*") ? "Toutes" : `${b.pages.length} page${b.pages.length > 1 ? "s" : ""}`;
   return <section className="mt-6">
