@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BASE, compositionFromForm, deliverablesWith, compositionKey, compositionLine, compositionValue, readComposition, savingPercent, writeComposition } from "./pack-composition";
+import { BASE, compositionFromForm, correctionsKey, correctionsLine, deliverablesWith, withoutCorrectionsLines, compositionKey, readCorrections, compositionLine, compositionValue, readComposition, savingPercent, writeComposition } from "./pack-composition";
 import type { Option } from "./pricing";
 
 const options: Option[] = [
@@ -46,4 +46,18 @@ test("livrables : produits du pack de base puis lignes libres, sans doublon", ()
   const items = [{ option: "overlay", qty: 2 }, { option: "logo", qty: 1 }, { option: "supprime", qty: 1 }];
   assert.deepEqual(deliverablesWith(items, (o) => o.name, options, ["Logo", "2 corrections incluses"]), ["2 × Overlay animé", "Logo", "2 corrections incluses"]);
   assert.deepEqual(deliverablesWith(items, (o) => (o.id === "logo" ? "Logo design" : "Animated overlay"), options, []), ["2 × Animated overlay", "Logo design"]);
+});
+
+test("corrections incluses : valeur réglée (0 à 20), sinon valeur par défaut du pack ; ligne avec « {n} »", () => {
+  assert.equal(readCorrections({}, "premier-look"), 2);
+  assert.equal(readCorrections({}, "univers-complet"), 3);
+  assert.equal(readCorrections({ [correctionsKey("premier-look")]: "4" }, "premier-look"), 4);
+  assert.equal(readCorrections({ [correctionsKey("premier-look")]: "0" }, "premier-look"), 0);
+  assert.equal(readCorrections({ [correctionsKey("premier-look")]: "25" }, "premier-look"), 2);
+  assert.equal(correctionsLine("{n} corrections incluses", 3), "3 corrections incluses");
+  assert.equal(correctionsLine("{n} corrections incluses", 0), "");
+  const items = [{ option: "logo", qty: 1 }];
+  assert.deepEqual(deliverablesWith(items, (o) => o.name, options, ["2 corrections incluses", "Intégration"], ["2 corrections incluses"]), ["Logo", "2 corrections incluses", "Intégration"]);
+  assert.deepEqual(withoutCorrectionsLines(["2 corrections incluses par élément du pack", "Intégration"], "{n} corrections incluses par élément du pack"), ["Intégration"]);
+  assert.deepEqual(withoutCorrectionsLines(["2 corrections (x)"], "{n} corrections (x)"), []);
 });

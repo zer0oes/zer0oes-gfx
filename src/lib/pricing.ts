@@ -31,6 +31,8 @@ export type Pack = {
   deliverables: string[];
   // Lignes libres saisies dans l'admin, quand les livrables sont générés par la composition du pack (voir pack-composition)
   ownDeliverables?: string[];
+  // Corrections incluses par élément (page de l'offre dans l'admin)
+  corrections?: number;
   // Options propres à l'offre, affichées sous les livrables
   extras?: string[];
   // Formules commandables (la première est la formule de base)

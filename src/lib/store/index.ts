@@ -2,7 +2,8 @@ import "server-only";
 import { cache } from "react";
 import { withTranslations } from "@/lib/admin-translations";
 import { readCategories, resolveCategory } from "@/lib/product-categories";
-import { BASE, deliverablesWith, readComposition } from "@/lib/pack-composition";
+import { BASE, correctionsLine, deliverablesWith, readComposition, readCorrections, withoutCorrectionsLines } from "@/lib/pack-composition";
+import { resolveHome } from "@/lib/home-content";
 import type { Formula, Option, Pack } from "@/lib/pricing";
 import { tr } from "@/lib/translations-en";
 import { localStoreAllowed, supabaseConfigured } from "@/lib/env";
@@ -51,15 +52,19 @@ function withComposedDeliverables(pack: WithEnglish<Pack>, raw: unknown, options
     const items = i > 0 ? composition[formula.id] : undefined;
     return items?.length ? { ...formula, deliverables: deliverablesWith(items, fr, options, []), __en: { ...formula.__en, deliverables: deliverablesWith(items, en, options, []) } } : formula;
   });
-  const items = composition[BASE];
-  if (!items?.length) return { ...pack, formulas };
+  const items = composition[BASE] ?? [];
+  const corrections = readCorrections(raw, pack.id);
   const freeEn = (pack.__en?.deliverables as string[] | undefined) ?? pack.deliverables.map((line) => tr("en", line));
+  // Ligne des corrections générée à partir du nombre réglé ; une ancienne ligne écrite à la main est retirée
+  const templateFr = resolveHome(raw).text("pricing.correctionsLine");
+  const templateEn = resolveHome(raw, "en").text("pricing.correctionsLine");
   return {
     ...pack,
     formulas,
+    corrections,
     ownDeliverables: pack.deliverables,
-    deliverables: deliverablesWith(items, fr, options, pack.deliverables),
-    __en: { ...pack.__en, deliverables: deliverablesWith(items, en, options, freeEn) },
+    deliverables: deliverablesWith(items, fr, options, withoutCorrectionsLines(pack.deliverables, templateFr), [correctionsLine(templateFr, corrections)]),
+    __en: { ...pack.__en, deliverables: deliverablesWith(items, en, options, withoutCorrectionsLines(freeEn, templateEn), [correctionsLine(templateEn, corrections)]) },
   };
 }
 
@@ -81,8 +86,9 @@ export function getStore(): Store {
     },
     // Les livrables générés par la composition ne sont pas enregistrés avec l'offre : seulement ses lignes libres
     async savePack(pack) {
-      const { ownDeliverables, __en, ...rest } = pack as WithEnglish<Pack>;
+      const { ownDeliverables, corrections, __en, ...rest } = pack as WithEnglish<Pack>;
       void __en;
+      void corrections;
       const formulas = rest.formulas?.map(({ deliverables, __en: english, ...formula }: WithEnglish<Formula>) => (void deliverables, void english, formula));
       await base.savePack({ ...rest, formulas, deliverables: ownDeliverables ?? pack.deliverables });
     },

@@ -92,12 +92,30 @@ export function compositionPriceLabel(option: Option) {
   return formatOfferPrice({ ...option, price: option.normalPrice ?? option.price });
 }
 
-// Livrables générés par le pack de base, puis les lignes libres de l'offre (en français et en anglais).
-// names : nom affiché de chaque produit dans la langue voulue.
-export function deliverablesWith(items: CompositionItem[], names: (option: Option) => string, options: Option[], free: string[]) {
-  const generated = items.flatMap((item) => {
+// Corrections incluses par élément d'une offre (réglées sur sa page dans l'admin) : « page:offres:corrections:<id> »
+export const correctionsKey = (packId: string) => `page:offres:corrections:${packId}`;
+export const MAX_CORRECTIONS = 20;
+export const defaultCorrections = (packId: string) => (packId === "univers-complet" ? 3 : 2);
+export function readCorrections(raw: unknown, packId: string) {
+  const stored = asRecord(raw)[correctionsKey(packId)];
+  const n = typeof stored === "string" && stored.trim() ? Number(stored) : NaN;
+  return Number.isInteger(n) && n >= 0 && n <= MAX_CORRECTIONS ? n : defaultCorrections(packId);
+}
+// Ligne des livrables : texte modifiable dans les textes de la page Offres, « {n} » = nombre de corrections
+export const correctionsLine = (template: string, n: number) => (n > 0 && template.trim() ? template.replaceAll("{n}", String(n)) : "");
+// Lignes libres sans l'ancienne ligne des corrections écrite à la main (même texte, autre nombre)
+export function withoutCorrectionsLines(free: string[], template: string) {
+  if (!template.includes("{n}")) return free;
+  const pattern = new RegExp(`^${template.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replaceAll("\\{n\\}", "\\d+")}$`, "i");
+  return free.filter((line) => !pattern.test(line.trim()));
+}
+
+// Livrables générés par le pack de base (et la ligne des corrections), puis les lignes libres de l'offre
+// (en français et en anglais). names : nom affiché de chaque produit dans la langue voulue.
+export function deliverablesWith(items: CompositionItem[], names: (option: Option) => string, options: Option[], free: string[], extra: string[] = []) {
+  const generated = [...items.flatMap((item) => {
     const option = options.find((o) => o.id === item.option);
     return option ? [compositionLine(item, { name: names(option) })] : [];
-  });
+  }), ...extra.filter(Boolean)];
   return [...generated, ...free.filter((line) => !generated.includes(line))];
 }

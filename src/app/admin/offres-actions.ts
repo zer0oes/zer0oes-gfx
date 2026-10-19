@@ -12,7 +12,7 @@ import { getStore } from "@/lib/store";
 import { optionContentFromForm, withCopiedOptionContent, withGroupName, withGrouping, withoutOptionContent } from "@/lib/option-content";
 import { MAX_CSS, MAX_MARKUP, readVisuals, starterVisual, visualId, writeVisuals } from "@/lib/product-visuals";
 import { defaultCategories, isColor, readCategories, writeCategories } from "@/lib/product-categories";
-import { compositionFromForm, readComposition, writeComposition } from "@/lib/pack-composition";
+import { compositionFromForm, correctionsKey, MAX_CORRECTIONS, readComposition, writeComposition } from "@/lib/pack-composition";
 
 // Conversion « 490 », « 490,50 » ou « 1 990 » (€) → centimes. null si invalide.
 function parseEuros(raw: FormDataEntryValue | null): number | null {
@@ -122,10 +122,18 @@ export async function savePackAction(formData: FormData) {
   }
   await saveTranslationFields(formData, translatedFields);
   // Composition à partir des produits à la carte : pack de base, puis produits ajoutés par chaque autre formule
-  if (formData.has("composition")) {
-    const { options } = await store.getCatalog();
-    const composition = compositionFromForm(text(formData, "composition", 20000), formulas.slice(1).map((f) => f.id), options, newFormulaKeys);
-    await store.saveHomeContent(writeComposition(await store.getHomeContent(), id, composition));
+  // et nombre de corrections incluses par élément (enregistrés ensemble, sur une seule lecture du contenu)
+  if (formData.has("composition") || formData.has("corrections")) {
+    const raw = await store.getHomeContent();
+    let composition = readComposition(raw, id);
+    if (formData.has("composition")) {
+      const { options } = await store.getCatalog();
+      composition = compositionFromForm(text(formData, "composition", 20000), formulas.slice(1).map((f) => f.id), options, newFormulaKeys);
+    }
+    const content = writeComposition(raw, id, composition);
+    const corrections = Math.floor(Number(text(formData, "corrections", 3)));
+    if (formData.has("corrections") && Number.isInteger(corrections) && corrections >= 0 && corrections <= MAX_CORRECTIONS) content[correctionsKey(id)] = String(corrections);
+    await store.saveHomeContent(content);
   }
   done(`/admin/offres/${encodeURIComponent(id)}`);
 }
@@ -245,7 +253,9 @@ export async function duplicatePackAction(formData: FormData) {
   ids.splice(ids.indexOf(pack.id) + 1, 0, id);
   await store.reorderPacks(ids);
   const content = await store.getHomeContent();
-  await store.saveHomeContent(writeComposition(withCopiedTranslations(content, `pack:${pack.id}`, `pack:${id}`), id, readComposition(content, pack.id)));
+  const copied = writeComposition(withCopiedTranslations(content, `pack:${pack.id}`, `pack:${id}`), id, readComposition(content, pack.id));
+  if (copied[correctionsKey(pack.id)]) copied[correctionsKey(id)] = copied[correctionsKey(pack.id)];
+  await store.saveHomeContent(copied);
   done(`/admin/offres/${encodeURIComponent(id)}`);
 }
 
@@ -263,7 +273,9 @@ export async function deletePackAction(formData: FormData) {
     done(TAB.offres, `« ${pack.name} » a des commandes : elle a été archivée (masquée du site) plutôt que supprimée.`);
   }
   await store.deletePack(id);
-  await store.saveHomeContent(writeComposition(await store.getHomeContent(), id, {}));
+  const content = writeComposition(await store.getHomeContent(), id, {});
+  delete content[correctionsKey(id)];
+  await store.saveHomeContent(content);
   done(TAB.offres);
 }
 

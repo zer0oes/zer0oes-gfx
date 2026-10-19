@@ -1,7 +1,7 @@
 import { TranslationInput } from "@/components/admin/TranslationTabs";
 import type { CompositionOption } from "@/components/admin/PackCompositionField";
 import { PackFormulasField } from "@/components/admin/PackFormulasField";
-import { compositionPriceLabel, readComposition } from "@/lib/pack-composition";
+import { compositionPriceLabel, MAX_CORRECTIONS, readComposition, readCorrections } from "@/lib/pack-composition";
 import type { ProductCategory } from "@/lib/product-categories";
 import type { Option, Pack } from "@/lib/pricing";
 import { savePackAction } from "@/app/admin/offres-actions";
@@ -59,7 +59,10 @@ export function PackForm({ pack, formId, options, content }: { pack: Pack; formI
           <Check name="priceFrom" label="Prix « à partir de »" defaultChecked={pack.priceFrom} />
           <Check name="highlight" label="Mise en avant" defaultChecked={pack.highlight} />
         </div>
-        <Field label="Livrables en plus" hint="Un par ligne. Les produits du pack de base (composition) s'affichent automatiquement en tête des livrables ; ajoute ici le reste (corrections, intégration…).">
+        <Field label="Corrections incluses par élément" hint="Affiché dans les livrables du site (texte modifiable dans les textes de la page Offres) et limite les demandes de modification du client pour chaque élément de ses commandes de ce pack.">
+          <input type="number" name="corrections" min={0} max={MAX_CORRECTIONS} step={1} required defaultValue={readCorrections(content, pack.id)} className={`${input} max-w-[7rem]`} />
+        </Field>
+        <Field label="Livrables en plus" hint="Un par ligne. Les produits du pack de base (composition) et la ligne des corrections s'affichent automatiquement en tête des livrables ; ajoute ici le reste (intégration…).">
           <TranslationInput multiline translationKey={`translation:pack:${pack.id}:deliverables`} name="deliverables" rows={4} defaultValue={(pack.ownDeliverables ?? pack.deliverables).join("\n")} className={input} />
         </Field>
         {/* Offre commandable : les options du site viennent des formules et de leur composition */}
