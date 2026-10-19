@@ -1,0 +1,76 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { BASE, compositionFromForm, correctionsKey, correctionsLine, deliverablesWith, optionLines, optionValue, withoutCorrectionsLines, compositionKey, readCorrections, compositionLine, compositionValue, readComposition, savingPercent, writeComposition } from "./pack-composition";
+import type { Option } from "./pricing";
+
+const options: Option[] = [
+  { id: "overlay", name: "Overlay animé (unité)", price: 12000 },
+  { id: "emotes-5", name: "Pack de 5 emotes", price: 15000, normalPrice: 20000 },
+  { id: "logo", name: "Logo", price: 25000, priceFrom: true },
+];
+
+test("composition : relue, nettoyée et supprimée du contenu quand elle est vide", () => {
+  const saved = writeComposition({ autre: "x" }, "premier-look", { base: [{ option: "overlay", qty: 3 }, { option: "", qty: 2 }], vide: [] });
+  assert.deepEqual(JSON.parse(saved[compositionKey("premier-look")]), { base: [{ option: "overlay", qty: 3 }] });
+  assert.deepEqual(readComposition(saved, "premier-look"), { base: [{ option: "overlay", qty: 3 }] });
+  assert.equal(saved.autre, "x");
+  assert.equal(compositionKey("premier-look") in writeComposition(saved, "premier-look", {}), false);
+  assert.deepEqual(readComposition({ [compositionKey("x")]: "pas du json" }, "x"), {});
+});
+
+test("composition du formulaire : seules les formules et produits existants, quantités bornées", () => {
+  const json = JSON.stringify({ [BASE]: [{ option: "overlay", qty: 500 }, { option: "inconnu", qty: 1 }, { option: "logo", qty: 0 }], emotes: [{ option: "emotes-5", qty: 1 }], ancienne: [{ option: "logo", qty: 1 }] });
+  assert.deepEqual(compositionFromForm(json, ["emotes"], options), { [BASE]: [{ option: "overlay", qty: 99 }], emotes: [{ option: "emotes-5", qty: 1 }] });
+  assert.deepEqual(compositionFromForm("{", ["base"], options), {});
+  // Option ajoutée dans l'admin : composition reçue sous sa clé provisoire
+  assert.deepEqual(compositionFromForm(JSON.stringify({ "new-2": [{ option: "logo", qty: 1 }] }), ["avec-logo"], options, { "new-2": "avec-logo" }), { [BASE]: [], "avec-logo": [{ option: "logo", qty: 1 }] });
+});
+
+test("valeur à la carte : prix habituels × quantités, « à partir de » si un produit l'est", () => {
+  assert.deepEqual(compositionValue([{ option: "overlay", qty: 3 }, { option: "emotes-5", qty: 1 }], options), { total: 56000, priceFrom: false, missing: [] });
+  const withLogo = compositionValue([{ option: "logo", qty: 1 }, { option: "supprime", qty: 1 }], options);
+  assert.equal(withLogo.priceFrom, true);
+  assert.deepEqual(withLogo.missing, ["supprime"]);
+  assert.equal(savingPercent(39000, 56000), 30);
+  assert.equal(savingPercent(60000, 56000), -7);
+  assert.equal(savingPercent(1000, 0), 0);
+});
+
+test("ligne de livrable : quantité devant le nom au-delà de 1, sans « (unité) »", () => {
+  assert.equal(compositionLine({ option: "overlay", qty: 3 }, options[0]), "3 × Overlay animé");
+  assert.equal(compositionLine({ option: "x", qty: 1 }, { name: "Widget (barre, tchat)" }), "Widget (barre, tchat)");
+  assert.equal(compositionLine({ option: "logo", qty: 1 }, options[2]), "Logo");
+});
+
+test("livrables : produits du pack de base puis lignes libres, sans doublon", () => {
+  const items = [{ option: "overlay", qty: 2 }, { option: "logo", qty: 1 }, { option: "supprime", qty: 1 }];
+  assert.deepEqual(deliverablesWith(items, (o) => o.name, options, ["Logo", "2 corrections incluses"]), ["2 × Overlay animé", "Logo", "2 corrections incluses"]);
+  assert.deepEqual(deliverablesWith(items, (o) => (o.id === "logo" ? "Logo design" : "Animated overlay"), options, []), ["2 × Animated overlay", "Logo design"]);
+});
+
+test("corrections incluses : valeur réglée (0 à 20), sinon valeur par défaut du pack ; ligne avec « {n} »", () => {
+  assert.equal(readCorrections({}, "premier-look"), 2);
+  assert.equal(readCorrections({}, "univers-complet"), 3);
+  assert.equal(readCorrections({ [correctionsKey("premier-look")]: "4" }, "premier-look"), 4);
+  assert.equal(readCorrections({ [correctionsKey("premier-look")]: "0" }, "premier-look"), 0);
+  assert.equal(readCorrections({ [correctionsKey("premier-look")]: "25" }, "premier-look"), 2);
+  assert.equal(correctionsLine("{n} corrections incluses", 3), "3 corrections incluses");
+  assert.equal(correctionsLine("{n} corrections incluses", 0), "");
+  const items = [{ option: "logo", qty: 1 }];
+  assert.deepEqual(deliverablesWith(items, (o) => o.name, options, ["2 corrections incluses", "Intégration"], ["2 corrections incluses"]), ["Logo", "2 corrections incluses", "Intégration"]);
+  assert.deepEqual(withoutCorrectionsLines(["2 corrections incluses par élément du pack", "Intégration"], "{n} corrections incluses par élément du pack"), ["Intégration"]);
+  assert.deepEqual(withoutCorrectionsLines(["2 corrections (x)"], "{n} corrections (x)"), []);
+});
+
+test("option qui remplace un produit du pack de base : valeur, lignes du site et livrables de la commande", () => {
+  const base = [{ option: "overlay", qty: 5 }, { option: "logo", qty: 1 }];
+  const variant = [{ option: "emotes-5", qty: 1, replaces: "overlay" }];
+  // 5 × 12000 remplacés par 20000 (prix habituel) : 25000 + 20000
+  assert.equal(optionValue(base, variant, options).total, 45000);
+  assert.deepEqual(optionLines(base, variant, (o) => o.name, options, "{produit} au lieu de {remplacé}"),
+    { display: ["Pack de 5 emotes au lieu de 5 × Overlay animé"], adds: ["Pack de 5 emotes"], removes: ["5 × Overlay animé"] });
+  assert.deepEqual(optionLines(base, [{ option: "logo", qty: 2 }], (o) => o.name, options, "{produit} au lieu de {remplacé}").display, ["2 × Logo"]);
+  // Remplacement d'un produit absent du pack de base : ignoré à l'enregistrement
+  const json = JSON.stringify({ [BASE]: base, v: [{ option: "emotes-5", qty: 1, replaces: "overlay" }, { option: "logo", qty: 1, replaces: "inconnu" }] });
+  assert.deepEqual(compositionFromForm(json, ["v"], options).v, [{ option: "emotes-5", qty: 1, replaces: "overlay" }, { option: "logo", qty: 1 }]);
+});

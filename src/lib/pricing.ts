@@ -15,6 +15,10 @@ export type Formula = {
   label: string;
   price: number;
   stripePriceId?: string;
+  // Produits ajoutés au pack de base par cette formule (lignes générées par la composition, voir pack-composition)
+  deliverables?: string[];
+  // Livrables de la commande pour cette formule : lignes du pack de base remplacées, lignes ajoutées
+  delivery?: { removes: string[]; adds: string[] };
 };
 
 export type Pack = {
@@ -27,6 +31,10 @@ export type Pack = {
   priceFrom?: boolean;
   checkout: boolean;
   deliverables: string[];
+  // Lignes libres saisies dans l'admin, quand les livrables sont générés par la composition du pack (voir pack-composition)
+  ownDeliverables?: string[];
+  // Corrections incluses par élément (page de l'offre dans l'admin)
+  corrections?: number;
   // Options propres à l'offre, affichées sous les livrables
   extras?: string[];
   // Formules commandables (la première est la formule de base)
@@ -55,6 +63,19 @@ export type PaymentType = "total" | "acompte";
 
 export function getPack(packs: Pack[], id: string | undefined | null) {
   return packs.find((p) => p.id === id);
+}
+
+// Livrables ajoutés par une formule au pack de base : produits de la composition, sinon les anciennes options de l'offre
+// Livrables d'une commande : ceux du pack, sans les produits remplacés par la formule, puis ses ajouts
+export function orderDeliverables(pack: Pack, formula: Formula | undefined) {
+  if (formula?.delivery && formula.id !== pack.formulas?.[0]?.id) return [...pack.deliverables.filter((line) => !formula.delivery!.removes.includes(line)), ...formula.delivery.adds];
+  return [...pack.deliverables, ...formulaExtras(pack, formula)];
+}
+
+export function formulaExtras(pack: Pack, formula: Formula | undefined) {
+  if (!formula || formula.id === pack.formulas?.[0]?.id) return [];
+  if (formula.deliverables) return formula.deliverables;
+  return (formula.id === "emotes" ? pack.extras?.slice(0, 1) : formula.id === "emotes-animations" ? pack.extras : []) ?? [];
 }
 
 // Offres visibles sur le site

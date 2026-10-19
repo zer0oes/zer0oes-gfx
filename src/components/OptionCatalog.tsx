@@ -5,7 +5,7 @@ import { useId, useState, Fragment, type CSSProperties } from "react";
 import { useFormStatus } from "react-dom";
 import { createCheckout } from "@/app/actions";
 import { href, t, type Locale } from "@/lib/i18n";
-import { formatPrice, type Option, type Pack, type PricingSettings } from "@/lib/pricing";
+import { formatPrice, formulaExtras, type Option, type Pack, type PricingSettings } from "@/lib/pricing";
 import { glossaryIdFor, type GlossaryHint } from "@/lib/glossary";
 import type { OptionContent } from "@/lib/option-content";
 import { optionProducts, optionProductTitle } from "@/lib/option-products";
@@ -142,7 +142,7 @@ export function OptionCatalog({ options, categories, packs, settings, locale, te
             <p className="text-accent">{t(locale, { fr: "Économie : ", en: "Savings: " })}{recommendation.remaining.length ? t(locale, { fr: "à confirmer avec les compléments", en: "to confirm with add-ons" }) : total > recommendation.price ? `${formatPrice(total - recommendation.price, locale)} (${((total - recommendation.price) / total * 100).toLocaleString(locale, { maximumFractionDigits: 1 })} %)` : t(locale, { fr: "aucune sur cette sélection", en: "none for this selection" })}</p>
             <details><summary className="cursor-pointer text-muted">{t(locale, { fr: "Voir les éléments inclus", en: "View included items" })}</summary><div className="mt-2 space-y-2">
             <ul className="list-inside list-disc space-y-1 text-muted">{recommendation.pack.deliverables.map((line) => <li key={line}>{recommendation.hasLogo && /^logo\b/i.test(line) ? t(locale, { fr: "Ton logo existant fourni", en: "Your existing logo supplied" }) : line}</li>)}</ul>
-            {recommendation.formula && recommendation.formula.id !== "base" && <ul className="list-inside list-disc space-y-1 text-muted">{(recommendation.formula.id === "emotes" ? recommendation.pack.extras?.slice(0, 1) : recommendation.pack.extras)?.map((line) => <li key={line}>{line}</li>)}</ul>}
+            {recommendation.formula && recommendation.formula.id !== "base" && <ul className="list-inside list-disc space-y-1 text-muted">{formulaExtras(recommendation.pack, recommendation.formula).map((line) => <li key={line}>{line}</li>)}</ul>}
             {recommendation.addsLogo && <p>{t(locale, { fr: "Le pack comprend aussi la création du logo.", en: "The package also includes a custom logo." })}</p>}
             {recommendation.remaining.length > 0 && <p className="text-muted">{t(locale, { fr: "À prévoir en complément : ", en: "To add separately: " })}{recommendation.remaining.join(" · ")}</p>}
             </div></details>
