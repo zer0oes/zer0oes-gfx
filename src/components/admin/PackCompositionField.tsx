@@ -11,7 +11,6 @@ export type CompositionOption = Option & { priceLabel: string; categoryName: str
 type PriceRef = { price: number; priceField: string };
 type FormulaRef = PriceRef & { id: string; label: string };
 
-const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 const euro = (cents: number) => formatPrice(cents);
 
 // Prix en centimes tapé dans un champ du formulaire de l'offre (« 690 », « 690,50 »), sinon null
@@ -118,7 +117,7 @@ function ItemsBlock({ title, subtitle, price, value, base, items, options, categ
                   {base && base.length > 0 && (
                     <select value={item.replaces ?? ""} title={item.replaces ? `Remplace ${optionName(item.replaces)} du pack de base` : "En plus du pack de base"} aria-label={`Produit du pack de base remplacé par ${name}`}
                       onChange={(e) => onChange(items.map((x, k) => (k === i ? { option: x.option, qty: x.qty, ...(e.target.value ? { replaces: e.target.value } : {}) } : x)))}
-                      className={`min-w-0 max-w-full flex-1 truncate rounded-md border bg-background px-2 py-0.5 text-xs ${item.replaces ? "border-accent/50 text-accent" : "border-border text-muted"}`}>
+                      className={`min-w-0 max-w-full flex-1 truncate h-8 rounded-lg border bg-background px-2 text-xs ${item.replaces ? "border-accent/50 text-accent" : "border-border text-muted"}`}>
                       <option value="">En plus</option>
                       {base.map((b) => <option key={b.option} value={b.option}>⇄ {b.qty > 1 ? `${b.qty} × ` : ""}{optionName(b.option)}</option>)}
                     </select>
@@ -137,7 +136,7 @@ function ItemsBlock({ title, subtitle, price, value, base, items, options, categ
       )}
       {sort.drag && <SortPreview drag={sort.drag} />}
       <div className="border-t border-border px-4 py-2.5">
-        <select defaultValue="" onChange={(e) => { add(e.target.value); e.target.value = ""; }} aria-label={`Ajouter un produit à ${title}`} className={`${input} max-w-xs py-1.5`}>
+        <select defaultValue="" onChange={(e) => { add(e.target.value); e.target.value = ""; }} aria-label={`Ajouter un produit à ${title}`} className="h-8 w-full max-w-xs rounded-lg border border-border bg-background px-3 text-sm">
           <option value="">+ Ajouter un produit…</option>
           {categories.map((category) => (
             <optgroup key={category} label={category}>
@@ -161,6 +160,6 @@ function QuantityInput({ value, label, onChange }: { value: number; label: strin
         if (e.target.value !== "" && n >= 1) onChange(Math.min(n, MAX_QTY));
       }}
       onBlur={() => setDraft(null)}
-      className="w-full rounded-lg border border-border bg-background px-2 py-1 text-right text-sm" />
+      className="h-8 w-full rounded-lg border border-border bg-background px-2 text-right text-sm" />
   );
 }
