@@ -54,3 +54,11 @@ export function categoryUsage(options: Option[], categories: ProductCategory[]):
   for (const o of options) (usage[resolveCategory(o, categories)] ??= []).push(o);
   return usage;
 }
+
+// Couleur d'un type de réalisation du portfolio (logo, overlays, alertes…) : la catégorie de même identifiant ou de même nom,
+// sinon celle où ce type de création serait rangé (ex. logo → identité visuelle, alertes → overlays)
+const plain = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim().replace(/s$/, "");
+export function portfolioCategoryColor(categories: ProductCategory[], id: string, label: string) {
+  const match = categories.find((c) => c.id === id || plain(c.name) === plain(label));
+  return match?.color ?? categoryColor(categories, resolveCategory({ name: label }, categories));
+}

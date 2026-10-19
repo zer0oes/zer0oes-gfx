@@ -11,6 +11,7 @@ import { asLocale, href, t } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
 import { getStore } from "@/lib/store";
 import { featuredProjectId } from "@/lib/portfolio-featured";
+import { portfolioCategoryColor, readCategories } from "@/lib/product-categories";
 import { trDeep } from "@/lib/translations-en";
 
 // Rendu à la demande : éviter de servir une page 404 précompilée sur Heroku.
@@ -46,6 +47,8 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const pair = streamers.length === 2 && !hasFeatured;
   // Textes modifiables dans Admin > Portfolio
   const texts = resolveHome(stored, lang);
+  // Pastilles du contenu de chaque projet aux couleurs des catégories (Admin > Offres et réglages > Catégories)
+  const productCategories = readCategories(stored);
   return (
     <>
       <PageHeader eyebrow={texts.text("portfolio.kicker")} title={texts.text("portfolio.title")}>
@@ -92,7 +95,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
                   </ProtectedMedia>
                 )}
               </div>
-              <div className={`p-6 ${big ? "" : "flex-1"}`}>
+              <div className={`flex flex-col p-6 ${big ? "" : "flex-1"}`}>
                 <div className="flex items-center justify-between gap-4">
                   <h2 className={`font-display font-bold ${big ? "text-2xl lg:text-3xl" : "text-xl"}`}>{s.name}</h2>
                   <span className="text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
@@ -100,12 +103,15 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
                   </span>
                 </div>
                 <p className="mt-2 text-muted">{s.description}</p>
-                <ul className="mt-4 flex flex-wrap gap-2" aria-label={t(lang, { fr: "Contenu du projet", en: "Project contents" })}>
-                  {counts.map((c) => (
-                    <li key={c.id} className="rounded-full border border-border px-3 py-1 text-xs text-muted">
-                      {c.n} {c.label}
-                    </li>
-                  ))}
+                <ul className="mt-auto flex flex-wrap gap-2 pt-4" aria-label={t(lang, { fr: "Contenu du projet", en: "Project contents" })}>
+                  {counts.map((c) => {
+                    const color = portfolioCategoryColor(productCategories, c.id, categories.find((k) => k.id === c.id)?.label ?? c.id);
+                    return (
+                      <li key={c.id} style={{ color, borderColor: `color-mix(in srgb, ${color} 45%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }} className="rounded-full border px-3 py-1 text-xs">
+                        {c.n} {c.label}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             </Link>
