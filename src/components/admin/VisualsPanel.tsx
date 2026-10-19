@@ -7,6 +7,7 @@ import { readVisuals, visualUsage } from "@/lib/product-visuals";
 import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "./Drawer";
 import { VisualEditor } from "./VisualFields";
 
+const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm";
 const save = "rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110";
 
 // Onglet « Visuels » : bibliothèque des dessins en code des créations à la carte.
@@ -14,6 +15,7 @@ const save = "rounded-full bg-accent px-5 py-2 text-sm font-semibold text-backgr
 export function VisualsPanel({ content, options, open, feedback }: { content: unknown; options: Option[]; open?: string; feedback: { saved: boolean; error?: string } }) {
   const visuals = readVisuals(content);
   const usage = visualUsage(options, content);
+  const nameEn = (id: string) => { const value = (content as Record<string, unknown> | null)?.[`translation:visuel:${id}:name`]; return typeof value === "string" ? value : ""; };
   const status = (id: string) => open === id && (
     <>
       {feedback.saved && <p role="status" className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">Enregistré.</p>}
@@ -48,16 +50,16 @@ export function VisualsPanel({ content, options, open, feedback }: { content: un
         <Drawer key={v.id} id={`visuel-${v.id}`} kicker="Visuel" title={v.name} openOnLoad={open === v.id}
           footer={<><span className="flex items-center gap-1"><form action={duplicateVisualAction}><input type="hidden" name="id" value={v.id} /><button title="Dupliquer le visuel" className="inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-accent/10 hover:text-accent"><MaterialIcon name="content_copy" className="size-4" /><span className="sr-only">Dupliquer le visuel</span></button></form><ConfirmDelete icon action={deleteVisualAction} id={v.id} label="Supprimer le visuel" question={usage[v.id]?.length ? "Es-tu sûre de vouloir supprimer ? Les produits qui l'utilisent reprendront le visuel choisi d'après leur nom." : undefined} /></span><span /></>}>
           {status(v.id)}
-          <VisualEditor visual={v} />
+          <VisualEditor visual={v} nameEn={nameEn(v.id)} />
         </Drawer>
       ))}
       <Drawer id="visuel-nouveau" kicker="Visuel" title="Nouveau visuel" openOnLoad={open === "nouveau"} footer={<><span /><button type="submit" form="visuel-creer" className={save}>Créer le visuel</button></>}>
         {status("nouveau")}
         <form id="visuel-creer" action={createVisualAction} className="space-y-5">
-          <label className="block text-sm">
-            <span className="mb-1 block text-muted">Nom</span>
-            <input name="name" required maxLength={80} autoComplete="off" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1.5 text-sm font-medium">Nom<input name="name" required maxLength={80} autoComplete="off" lang="fr" className={input} /></label>
+            <label className="grid gap-1.5 text-sm font-medium">Nom anglais<input name="nameEn" maxLength={80} autoComplete="off" lang="en" className={input} /></label>
+          </div>
           <p className="text-xs text-muted">Le visuel démarre avec un dessin de base, à modifier ensuite dans l&apos;éditeur de code.</p>
         </form>
       </Drawer>

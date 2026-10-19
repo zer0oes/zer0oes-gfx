@@ -3,9 +3,9 @@ import { createCategoryAction, deleteCategoryAction, duplicateCategoryAction, re
 import { MaterialIcon } from "./MaterialIcon";
 import { RowActionsMenu } from "./RowActionsMenu";
 import { SortHandle, SortableRows } from "./SortableRows";
-import { TranslationInput, TranslationTabs } from "./TranslationTabs";
 import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "./Drawer";
 import { translationValues } from "@/lib/admin-translations";
+import { tr } from "@/lib/translations-en";
 import type { Option } from "@/lib/pricing";
 import { categoryUsage, type ProductCategory } from "@/lib/product-categories";
 
@@ -57,35 +57,35 @@ export function CategoriesPanel({ content, categories, options, open, feedback }
         <Drawer key={c.id} id={`categorie-${c.id}`} kicker="Catégorie" title={c.name} openOnLoad={open === c.id}
           footer={<><span className="flex items-center gap-1"><form action={duplicateCategoryAction}><input type="hidden" name="id" value={c.id} /><button title="Dupliquer la catégorie" className="inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-accent/10 hover:text-accent"><MaterialIcon name="content_copy" className="size-4" /><span className="sr-only">Dupliquer la catégorie</span></button></form><ConfirmDelete icon action={deleteCategoryAction} id={c.id} label="Supprimer la catégorie" question={deleteNote(c.id) && `Es-tu sûre de vouloir supprimer ? ${deleteNote(c.id)}`} /></span><button type="submit" form={`categorie-form-${c.id}`} className={save}>Enregistrer la catégorie</button></>}>
           {status(c.id)}
-          <TranslationTabs compact stored={stored}>
-            <form id={`categorie-form-${c.id}`} action={saveCategoryAction} className="space-y-5">
-              <input type="hidden" name="id" value={c.id} />
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium">Nom</span>
-                <TranslationInput translationKey={`translation:categorie:${c.id}:name`} name="name" defaultValue={c.name} required maxLength={60} className={input} />
-                <span className="mt-1 block text-xs text-muted">Texte du filtre sur la page Offres.</span>
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium">Couleur</span>
-                <input type="color" name="color" defaultValue={c.color} className="h-10 w-20 cursor-pointer rounded-lg border border-border bg-background p-1" />
-                <span className="mt-1 block text-xs text-muted">Couleur du filtre, du cadre et du dessin des cartes de cette catégorie.</span>
-              </label>
-              <div>
-                <span className="mb-2 block text-sm font-medium">Produits</span>
-                <p className="text-sm text-muted">{usage[c.id]?.map((o) => o.name).join(", ") || "Aucun produit pour l’instant."}</p>
+          <form id={`categorie-form-${c.id}`} action={saveCategoryAction} className="space-y-5">
+            <input type="hidden" name="id" value={c.id} />
+            <div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-sm font-medium">Nom<input name="name" defaultValue={c.name} required maxLength={60} lang="fr" className={input} /></label>
+                <label className="grid gap-1.5 text-sm font-medium">Nom anglais<input name="en:name" defaultValue={stored[`translation:categorie:${c.id}:name`] ?? tr("en", c.name)} maxLength={60} lang="en" placeholder={c.name} className={input} /></label>
               </div>
-            </form>
-          </TranslationTabs>
+              <span className="mt-1 block text-xs text-muted">Texte du filtre sur la page Offres. Sans nom anglais, le nom français est repris sur /en.</span>
+            </div>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium">Couleur</span>
+              <input type="color" name="color" defaultValue={c.color} className="h-10 w-20 cursor-pointer rounded-lg border border-border bg-background p-1" />
+              <span className="mt-1 block text-xs text-muted">Couleur du filtre, du cadre et du dessin des cartes de cette catégorie.</span>
+            </label>
+            <div>
+              <span className="mb-2 block text-sm font-medium">Produits</span>
+              <p className="text-sm text-muted">{usage[c.id]?.map((o) => o.name).join(", ") || "Aucun produit pour l’instant."}</p>
+            </div>
+          </form>
         </Drawer>
       ))}
       <Drawer id="categorie-nouvelle" kicker="Catégorie" title="Nouvelle catégorie" openOnLoad={open === "nouvelle"} footer={<><span /><button type="submit" form="categorie-creer" className={save}>Créer la catégorie</button></>}>
         {status("nouvelle")}
         <form id="categorie-creer" action={createCategoryAction} className="space-y-5">
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Nom</span>
-            <input name="name" required maxLength={60} autoComplete="off" className={input} />
-          </label>
-          <p className="text-xs text-muted">Tu choisiras ensuite sa couleur, son nom anglais et ses produits.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1.5 text-sm font-medium">Nom<input name="name" required maxLength={60} autoComplete="off" lang="fr" className={input} /></label>
+            <label className="grid gap-1.5 text-sm font-medium">Nom anglais<input name="nameEn" maxLength={60} autoComplete="off" lang="en" className={input} /></label>
+          </div>
+          <p className="text-xs text-muted">Tu choisiras ensuite sa couleur et ses produits.</p>
         </form>
       </Drawer>
     </section>

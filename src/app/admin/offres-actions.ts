@@ -324,6 +324,20 @@ export async function reorderPacksAction(ids: string[]) {
   revalidatePath("/", "layout");
 }
 
+// Nom anglais d'un visuel ou d'une catégorie (vide : le nom français est repris sur /en)
+const nameEnKey = (scope: "visuel" | "categorie", id: string) => `translation:${scope}:${id}:name`;
+function withNameEn(content: Record<string, string>, scope: "visuel" | "categorie", id: string, nameEn: string | undefined) {
+  const key = nameEnKey(scope, id);
+  const next = { ...content };
+  if (nameEn?.trim()) next[key] = nameEn.trim().slice(0, 80);
+  else delete next[key];
+  return next;
+}
+const storedNameEn = (content: unknown, scope: "visuel" | "categorie", id: string) => {
+  const value = content && typeof content === "object" ? (content as Record<string, unknown>)[nameEnKey(scope, id)] : undefined;
+  return typeof value === "string" ? value : "";
+};
+
 // Visuels des créations à la carte (dessins en code) : bibliothèque rangée dans le contenu JSON
 const visualTab = (id?: string) => `${TAB.visuels}${id ? `&visuel=${encodeURIComponent(id)}#visuel-${id}` : ""}`;
 
@@ -335,12 +349,12 @@ export async function createVisualAction(formData: FormData) {
   const content = await store.getHomeContent();
   const visuals = readVisuals(content);
   const id = visualId(name, visuals.map((v) => v.id));
-  await store.saveHomeContent(writeVisuals(content, [...visuals, { id, name, ...starterVisual }]));
+  await store.saveHomeContent(withNameEn(writeVisuals(content, [...visuals, { id, name, ...starterVisual }]), "visuel", id, text(formData, "nameEn", 80)));
   done(visualTab(id));
 }
 
 // Enregistrement automatique depuis l'éditeur du visuel (sans rechargement de page)
-export async function autosaveVisualAction(id: string, draft: { name: string; markup: string; css: string }): Promise<{ ok: true } | { ok: false; message: string }> {
+export async function autosaveVisualAction(id: string, draft: { name: string; nameEn: string; markup: string; css: string }): Promise<{ ok: true } | { ok: false; message: string }> {
   await requireAdmin();
   const store = getStore();
   const name = draft.name.trim().slice(0, 80);
@@ -349,7 +363,7 @@ export async function autosaveVisualAction(id: string, draft: { name: string; ma
   const visuals = readVisuals(content);
   if (!visuals.some((v) => v.id === id)) return { ok: false, message: "Visuel introuvable." };
   const clip = (v: string, max: number) => v.replace(/\r/g, "").trim().slice(0, max);
-  await store.saveHomeContent(writeVisuals(content, visuals.map((v) => (v.id === id ? { id, name, markup: clip(draft.markup, MAX_MARKUP), css: clip(draft.css, MAX_CSS) } : v))));
+  await store.saveHomeContent(withNameEn(writeVisuals(content, visuals.map((v) => (v.id === id ? { id, name, markup: clip(draft.markup, MAX_MARKUP), css: clip(draft.css, MAX_CSS) } : v))), "visuel", id, draft.nameEn));
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -364,7 +378,8 @@ export async function duplicateVisualAction(formData: FormData) {
   if (i < 0) done(TAB.visuels, "Visuel introuvable.");
   const name = `${visuals[i].name} (copie)`.slice(0, 80);
   const copy = { ...visuals[i], id: visualId(name, visuals.map((v) => v.id)), name };
-  await store.saveHomeContent(writeVisuals(content, [...visuals.slice(0, i + 1), copy, ...visuals.slice(i + 1)]));
+  const nameEn = storedNameEn(content, "visuel", visuals[i].id);
+  await store.saveHomeContent(withNameEn(writeVisuals(content, [...visuals.slice(0, i + 1), copy, ...visuals.slice(i + 1)]), "visuel", copy.id, nameEn && `${nameEn} (copy)`));
   done(visualTab(copy.id));
 }
 
@@ -374,7 +389,7 @@ export async function deleteVisualAction(formData: FormData) {
   const store = getStore();
   const id = text(formData, "id", 60);
   const content = await store.getHomeContent();
-  await store.saveHomeContent(writeVisuals(content, readVisuals(content).filter((v) => v.id !== id)));
+  await store.saveHomeContent(withNameEn(writeVisuals(content, readVisuals(content).filter((v) => v.id !== id)), "visuel", id, ""));
   done(TAB.visuels);
 }
 
@@ -391,7 +406,7 @@ export async function createCategoryAction(formData: FormData) {
   const id = visualId(name, categories.map((c) => c.id));
   // Couleur de départ : une des couleurs d'origine pas encore prise
   const color = defaultCategories.map((c) => c.color).find((c) => !categories.some((x) => x.color === c)) ?? defaultCategories[0].color;
-  await store.saveHomeContent(writeCategories(content, [...categories, { id, name, color }]));
+  await store.saveHomeContent(withNameEn(writeCategories(content, [...categories, { id, name, color }]), "categorie", id, text(formData, "nameEn", 60)));
   done(categoryTab(id));
 }
 
@@ -421,7 +436,8 @@ export async function duplicateCategoryAction(formData: FormData) {
   if (i < 0) done(TAB.categories, "Catégorie introuvable.");
   const name = `${categories[i].name} (copie)`.slice(0, 60);
   const copy = { ...categories[i], id: visualId(name, categories.map((c) => c.id)), name };
-  await store.saveHomeContent(writeCategories(content, [...categories.slice(0, i + 1), copy, ...categories.slice(i + 1)]));
+  const nameEn = storedNameEn(content, "categorie", categories[i].id);
+  await store.saveHomeContent(withNameEn(writeCategories(content, [...categories.slice(0, i + 1), copy, ...categories.slice(i + 1)]), "categorie", copy.id, nameEn && `${nameEn} (copy)`));
   done(categoryTab(copy.id));
 }
 
@@ -431,7 +447,7 @@ export async function deleteCategoryAction(formData: FormData) {
   const store = getStore();
   const id = text(formData, "id", 60);
   const content = await store.getHomeContent();
-  await store.saveHomeContent(writeCategories(content, readCategories(content).filter((c) => c.id !== id)));
+  await store.saveHomeContent(withNameEn(writeCategories(content, readCategories(content).filter((c) => c.id !== id)), "categorie", id, ""));
   done(TAB.categories);
 }
 

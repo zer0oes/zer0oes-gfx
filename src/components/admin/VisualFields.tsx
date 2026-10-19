@@ -28,9 +28,9 @@ const files: Record<Tab, { label: string; file: "html" | "css"; name: string }> 
   css: { label: "ANIMATION", file: "css", name: "animation.css" },
 };
 
-export function VisualEditor({ visual }: { visual: ProductVisual }) {
-  const [draft, setDraft] = useState({ name: visual.name, markup: visual.markup, css: visual.css });
-  const [saved, setSaved] = useState(JSON.stringify({ name: visual.name, markup: visual.markup, css: visual.css }));
+export function VisualEditor({ visual, nameEn }: { visual: ProductVisual; nameEn: string }) {
+  const [draft, setDraft] = useState({ name: visual.name, nameEn, markup: visual.markup, css: visual.css });
+  const [saved, setSaved] = useState(JSON.stringify({ name: visual.name, nameEn, markup: visual.markup, css: visual.css }));
   const [tab, setTab] = useState<Tab>("markup");
   const [status, setStatus] = useState("");
   const [pending, startTransition] = useTransition();
@@ -72,7 +72,10 @@ export function VisualEditor({ visual }: { visual: ProductVisual }) {
 
   return (
     <div ref={root} className="space-y-5">
-      <label className="grid gap-1.5 text-sm font-medium">Nom<input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} required maxLength={80} className={input} /></label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="grid gap-1.5 text-sm font-medium">Nom<input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} required maxLength={80} lang="fr" className={input} /></label>
+        <label className="grid gap-1.5 text-sm font-medium">Nom anglais<input value={draft.nameEn} onChange={(e) => setDraft((d) => ({ ...d, nameEn: e.target.value }))} maxLength={80} lang="en" placeholder={draft.name} className={input} /></label>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <VisualFrame label="Statique"><ProductVisualView visual={preview} animated={false} className="h-full w-full max-w-40 text-[var(--product-color)]" /></VisualFrame>
         <VisualFrame label="Animée"><ProductVisualView visual={preview} animated className="h-full w-full max-w-40 text-[var(--product-color)]" /></VisualFrame>
