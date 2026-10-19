@@ -3,7 +3,7 @@ import { cache } from "react";
 import { withTranslations } from "@/lib/admin-translations";
 import { readCategories, resolveCategory } from "@/lib/product-categories";
 import { BASE, deliverablesWith, readComposition } from "@/lib/pack-composition";
-import type { Option, Pack } from "@/lib/pricing";
+import type { Formula, Option, Pack } from "@/lib/pricing";
 import { tr } from "@/lib/translations-en";
 import { localStoreAllowed, supabaseConfigured } from "@/lib/env";
 import { mediaBaseUrl, mediaUrl } from "@/lib/media";
@@ -39,16 +39,27 @@ function withMediaUrls(p: Portfolio): Portfolio {
   };
 }
 
-// Livrables d'une offre composée de produits à la carte : ceux du pack de base, puis ses lignes libres
-function withComposedDeliverables(pack: Pack & { __en?: Record<string, unknown> }, raw: unknown, options: (Option & { __en?: Record<string, unknown> })[]) {
-  const items = readComposition(raw, pack.id)[BASE];
-  if (!items?.length) return pack;
+type WithEnglish<T> = T & { __en?: Record<string, unknown> };
+
+// Livrables d'une offre composée de produits à la carte : ceux du pack de base, puis ses lignes libres ;
+// chaque autre formule reçoit les produits qu'elle ajoute au pack de base (affichés en option sur le site)
+function withComposedDeliverables(pack: WithEnglish<Pack>, raw: unknown, options: WithEnglish<Option>[]) {
+  const composition = readComposition(raw, pack.id);
+  const fr = (o: Option) => o.name;
+  const en = (o: Option) => ((o as WithEnglish<Option>).__en?.name as string | undefined) ?? tr("en", o.name);
+  const formulas = pack.formulas?.map((formula: WithEnglish<Formula>, i) => {
+    const items = i > 0 ? composition[formula.id] : undefined;
+    return items?.length ? { ...formula, deliverables: deliverablesWith(items, fr, options, []), __en: { ...formula.__en, deliverables: deliverablesWith(items, en, options, []) } } : formula;
+  });
+  const items = composition[BASE];
+  if (!items?.length) return { ...pack, formulas };
   const freeEn = (pack.__en?.deliverables as string[] | undefined) ?? pack.deliverables.map((line) => tr("en", line));
   return {
     ...pack,
+    formulas,
     ownDeliverables: pack.deliverables,
-    deliverables: deliverablesWith(items, (o) => o.name, options, pack.deliverables),
-    __en: { ...pack.__en, deliverables: deliverablesWith(items, (o) => ((o as typeof options[number]).__en?.name as string | undefined) ?? tr("en", o.name), options, freeEn) },
+    deliverables: deliverablesWith(items, fr, options, pack.deliverables),
+    __en: { ...pack.__en, deliverables: deliverablesWith(items, en, options, freeEn) },
   };
 }
 
@@ -70,9 +81,10 @@ export function getStore(): Store {
     },
     // Les livrables générés par la composition ne sont pas enregistrés avec l'offre : seulement ses lignes libres
     async savePack(pack) {
-      const { ownDeliverables, __en, ...rest } = pack as Pack & { __en?: unknown };
+      const { ownDeliverables, __en, ...rest } = pack as WithEnglish<Pack>;
       void __en;
-      await base.savePack({ ...rest, deliverables: ownDeliverables ?? pack.deliverables });
+      const formulas = rest.formulas?.map(({ deliverables, __en: english, ...formula }: WithEnglish<Formula>) => (void deliverables, void english, formula));
+      await base.savePack({ ...rest, formulas, deliverables: ownDeliverables ?? pack.deliverables });
     },
     async getPortfolio() {
       const [portfolio, raw] = await Promise.all([base.getPortfolio(), getHomeContentForRender()]);

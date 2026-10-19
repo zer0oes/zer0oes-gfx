@@ -15,6 +15,8 @@ export type Formula = {
   label: string;
   price: number;
   stripePriceId?: string;
+  // Produits ajoutés au pack de base par cette formule (lignes générées par la composition, voir pack-composition)
+  deliverables?: string[];
 };
 
 export type Pack = {
@@ -57,6 +59,13 @@ export type PaymentType = "total" | "acompte";
 
 export function getPack(packs: Pack[], id: string | undefined | null) {
   return packs.find((p) => p.id === id);
+}
+
+// Livrables ajoutés par une formule au pack de base : produits de la composition, sinon les anciennes options de l'offre
+export function formulaExtras(pack: Pack, formula: Formula | undefined) {
+  if (!formula || formula.id === pack.formulas?.[0]?.id) return [];
+  if (formula.deliverables) return formula.deliverables;
+  return (formula.id === "emotes" ? pack.extras?.slice(0, 1) : formula.id === "emotes-animations" ? pack.extras : []) ?? [];
 }
 
 // Offres visibles sur le site

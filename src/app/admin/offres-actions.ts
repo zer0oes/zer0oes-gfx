@@ -104,13 +104,14 @@ export async function savePackAction(formData: FormData) {
     checkout,
     highlight: formData.get("highlight") === "on" || undefined,
     deliverables: lines(formData, "deliverables"),
-    extras: lines(formData, "extras").length ? lines(formData, "extras") : undefined,
-    note: text(formData, "note", 1000) || undefined,
+    // Offre commandable : options générées par les formules (le champ n'est affiché que pour une offre sur devis)
+    extras: formData.has("extras") ? (lines(formData, "extras").length ? lines(formData, "extras") : undefined) : current.extras,
+    note: current.note,
     formulas: formulas.length ? formulas : undefined,
     archived: current.archived,
   };
   await store.savePack(pack);
-  const translatedFields = Object.fromEntries(["name", "tagline", "deliverables", "extras", "note"].map((field) => [field, `translation:pack:${id}:${field}`]));
+  const translatedFields = Object.fromEntries(["name", "tagline", "deliverables", ...(formData.has("extras") ? ["extras"] : [])].map((field) => [field, `translation:pack:${id}:${field}`]));
   let formulaIndex = 0;
   for (let i = 0; i < 10; i++) {
     if (!text(formData, `formula_label_${i}`, 120)) continue;
