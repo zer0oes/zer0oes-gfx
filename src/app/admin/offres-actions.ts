@@ -346,6 +346,20 @@ export async function saveVisualAction(formData: FormData) {
   done(visualTab(id));
 }
 
+// Copie placée juste après l'original, puis ouverte
+export async function duplicateVisualAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const content = await store.getHomeContent();
+  const visuals = readVisuals(content);
+  const i = visuals.findIndex((v) => v.id === text(formData, "id", 60));
+  if (i < 0) done(TAB.visuels, "Visuel introuvable.");
+  const name = `${visuals[i].name} (copie)`.slice(0, 80);
+  const copy = { ...visuals[i], id: visualId(name, visuals.map((v) => v.id)), name };
+  await store.saveHomeContent(writeVisuals(content, [...visuals.slice(0, i + 1), copy, ...visuals.slice(i + 1)]));
+  done(visualTab(copy.id));
+}
+
 // Les produits qui l'utilisaient reprennent le visuel choisi d'après leur nom
 export async function deleteVisualAction(formData: FormData) {
   await requireAdmin();

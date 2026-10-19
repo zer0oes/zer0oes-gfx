@@ -1,4 +1,5 @@
-import { createVisualAction, deleteVisualAction, saveVisualAction } from "@/app/admin/offres-actions";
+import { createVisualAction, deleteVisualAction, duplicateVisualAction, saveVisualAction } from "@/app/admin/offres-actions";
+import { MaterialIcon } from "./MaterialIcon";
 import { ProductVisualView } from "@/components/ProductVisualView";
 import type { Option } from "@/lib/pricing";
 import { readVisuals, visualUsage } from "@/lib/product-visuals";
@@ -43,7 +44,7 @@ export function VisualsPanel({ content, options, open, feedback }: { content: un
       </div>
       {visuals.map((v) => (
         <Drawer key={v.id} id={`visuel-${v.id}`} kicker="Visuel" title={v.name} openOnLoad={open === v.id}
-          footer={<><ConfirmDelete icon action={deleteVisualAction} id={v.id} label="Supprimer le visuel" question={usage[v.id]?.length ? "Es-tu sûre de vouloir supprimer ? Les produits qui l'utilisent reprendront le visuel choisi d'après leur nom." : undefined} /><button type="submit" form={`visuel-form-${v.id}`} className={save}>Enregistrer le visuel</button></>}>
+          footer={<><span className="flex items-center gap-1"><form action={duplicateVisualAction}><input type="hidden" name="id" value={v.id} /><button title="Dupliquer le visuel" className="inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-accent/10 hover:text-accent"><MaterialIcon name="content_copy" className="size-4" /><span className="sr-only">Dupliquer le visuel</span></button></form><ConfirmDelete icon action={deleteVisualAction} id={v.id} label="Supprimer le visuel" question={usage[v.id]?.length ? "Es-tu sûre de vouloir supprimer ? Les produits qui l'utilisent reprendront le visuel choisi d'après leur nom." : undefined} /></span><button type="submit" form={`visuel-form-${v.id}`} className={save}>Enregistrer le visuel</button></>}>
           {status(v.id)}
           <form id={`visuel-form-${v.id}`} action={saveVisualAction} className="space-y-5">
             <input type="hidden" name="id" value={v.id} />
