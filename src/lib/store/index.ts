@@ -2,7 +2,8 @@ import "server-only";
 import { cache } from "react";
 import { withTranslations } from "@/lib/admin-translations";
 import { readCategories, resolveCategory } from "@/lib/product-categories";
-import { BASE, correctionsLine, deliverablesWith, optionLines, readComposition, readCorrections, withoutCorrectionsLines } from "@/lib/pack-composition";
+import { optionPlural } from "@/lib/option-content";
+import { BASE, correctionsLine, deliverablesWith, optionLines, pluralize, readComposition, readCorrections, withoutCorrectionsLines, type ProductName } from "@/lib/pack-composition";
 import { resolveHome } from "@/lib/home-content";
 import type { Formula, Option, Pack } from "@/lib/pricing";
 import { tr } from "@/lib/translations-en";
@@ -46,8 +47,10 @@ type WithEnglish<T> = T & { __en?: Record<string, unknown> };
 // chaque autre formule reçoit les produits qu'elle ajoute au pack de base (affichés en option sur le site)
 function withComposedDeliverables(pack: WithEnglish<Pack>, raw: unknown, options: WithEnglish<Option>[]) {
   const composition = readComposition(raw, pack.id);
-  const fr = (o: Option) => o.name;
-  const en = (o: Option) => ((o as WithEnglish<Option>).__en?.name as string | undefined) ?? tr("en", o.name);
+  const enName = (o: Option) => ((o as WithEnglish<Option>).__en?.name as string | undefined) ?? tr("en", o.name);
+  // Noms des produits dans les livrables, avec le pluriel saisi dans l'admin (sinon accord automatique)
+  const fr = (o: Option): ProductName => ({ name: o.name, plural: optionPlural(raw, o.id, "fr") });
+  const en = (o: Option): ProductName => ({ name: enName(o), plural: optionPlural(raw, o.id, "en") ?? pluralize(enName(o), "en") });
   const items = composition[BASE] ?? [];
   // Options : produits ajoutés (ou remplaçant un produit du pack de base), affichés en option sur le site
   const replacesFr = resolveHome(raw).text("pricing.replacesLine");

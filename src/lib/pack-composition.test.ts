@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BASE, compositionFromForm, correctionsKey, correctionsLine, deliverablesWith, optionLines, optionValue, withoutCorrectionsLines, compositionKey, readCorrections, compositionLine, compositionValue, readComposition, savingPercent, writeComposition } from "./pack-composition";
+import { BASE, compositionFromForm, correctionsKey, correctionsLine, deliverablesWith, optionLines, optionValue, withoutCorrectionsLines, compositionKey, readCorrections, compositionLine, compositionValue, readComposition, savingPercent, writeComposition, pluralize } from "./pack-composition";
 import type { Option } from "./pricing";
 
 const options: Option[] = [
@@ -37,15 +37,16 @@ test("valeur à la carte : prix habituels × quantités, « à partir de » si u
 });
 
 test("ligne de livrable : quantité devant le nom au-delà de 1, sans « (unité) »", () => {
-  assert.equal(compositionLine({ option: "overlay", qty: 3 }, options[0]), "3 × Overlay animé");
+  assert.equal(compositionLine({ option: "overlay", qty: 3 }, options[0]), "3 overlays animés");
+  assert.equal(compositionLine({ option: "overlay", qty: 3 }, { name: "Overlay animé (unité)", plural: "overlays animés au choix" }), "3 overlays animés au choix");
   assert.equal(compositionLine({ option: "x", qty: 1 }, { name: "Widget (barre, tchat)" }), "Widget (barre, tchat)");
   assert.equal(compositionLine({ option: "logo", qty: 1 }, options[2]), "Logo");
 });
 
 test("livrables : produits du pack de base puis lignes libres, sans doublon", () => {
   const items = [{ option: "overlay", qty: 2 }, { option: "logo", qty: 1 }, { option: "supprime", qty: 1 }];
-  assert.deepEqual(deliverablesWith(items, (o) => o.name, options, ["Logo", "2 corrections incluses"]), ["2 × Overlay animé", "Logo", "2 corrections incluses"]);
-  assert.deepEqual(deliverablesWith(items, (o) => (o.id === "logo" ? "Logo design" : "Animated overlay"), options, []), ["2 × Animated overlay", "Logo design"]);
+  assert.deepEqual(deliverablesWith(items, (o) => ({ name: o.name }), options, ["Logo", "2 corrections incluses"]), ["2 overlays animés", "Logo", "2 corrections incluses"]);
+  assert.deepEqual(deliverablesWith(items, (o) => (o.id === "logo" ? { name: "Logo design" } : { name: "Animated overlay", plural: pluralize("Animated overlay", "en") }), options, []), ["2 animated overlays", "Logo design"]);
 });
 
 test("corrections incluses : valeur réglée (0 à 20), sinon valeur par défaut du pack ; ligne avec « {n} »", () => {
@@ -57,9 +58,9 @@ test("corrections incluses : valeur réglée (0 à 20), sinon valeur par défaut
   assert.equal(correctionsLine("{n} corrections incluses", 3), "3 corrections incluses");
   assert.equal(correctionsLine("{n} corrections incluses", 0), "");
   const items = [{ option: "logo", qty: 1 }];
-  assert.deepEqual(deliverablesWith(items, (o) => o.name, options, ["2 corrections incluses", "Intégration"], ["2 corrections incluses"]), ["Logo", "2 corrections incluses", "Intégration"]);
+  assert.deepEqual(deliverablesWith(items, (o) => ({ name: o.name }), options, ["2 corrections incluses", "Intégration"], ["2 corrections incluses"]), ["Logo", "2 corrections incluses", "Intégration"]);
   // Offre sans composition : la ligne des corrections reste après les lignes libres
-  assert.deepEqual(deliverablesWith([], (o) => o.name, options, ["Logo et ses déclinaisons", "5 overlays animés"], ["3 corrections incluses"]), ["Logo et ses déclinaisons", "5 overlays animés", "3 corrections incluses"]);
+  assert.deepEqual(deliverablesWith([], (o) => ({ name: o.name }), options, ["Logo et ses déclinaisons", "5 overlays animés"], ["3 corrections incluses"]), ["Logo et ses déclinaisons", "5 overlays animés", "3 corrections incluses"]);
   assert.deepEqual(withoutCorrectionsLines(["2 corrections incluses par élément du pack", "Intégration"], "{n} corrections incluses par élément du pack"), ["Intégration"]);
   assert.deepEqual(withoutCorrectionsLines(["2 corrections (x)"], "{n} corrections (x)"), []);
 });
@@ -69,10 +70,21 @@ test("option qui remplace un produit du pack de base : valeur, lignes du site et
   const variant = [{ option: "emotes-5", qty: 1, replaces: "overlay" }];
   // 5 × 12000 remplacés par 20000 (prix habituel) : 25000 + 20000
   assert.equal(optionValue(base, variant, options).total, 45000);
-  assert.deepEqual(optionLines(base, variant, (o) => o.name, options, "{produit} au lieu de {remplacé}"),
-    { display: ["Pack de 5 emotes au lieu de 5 × Overlay animé"], adds: ["Pack de 5 emotes"], removes: ["5 × Overlay animé"] });
-  assert.deepEqual(optionLines(base, [{ option: "logo", qty: 2 }], (o) => o.name, options, "{produit} au lieu de {remplacé}").display, ["2 × Logo"]);
+  assert.deepEqual(optionLines(base, variant, (o) => ({ name: o.name }), options, "{produit} au lieu de {remplacé}"),
+    { display: ["Pack de 5 emotes au lieu de 5 overlays animés"], adds: ["Pack de 5 emotes"], removes: ["5 overlays animés"] });
+  assert.deepEqual(optionLines(base, [{ option: "logo", qty: 2 }], (o) => ({ name: o.name }), options, "{produit} au lieu de {remplacé}").display, ["2 logos"]);
   // Remplacement d'un produit absent du pack de base : ignoré à l'enregistrement
   const json = JSON.stringify({ [BASE]: base, v: [{ option: "emotes-5", qty: 1, replaces: "overlay" }, { option: "logo", qty: 1, replaces: "inconnu" }] });
   assert.deepEqual(compositionFromForm(json, ["v"], options).v, [{ option: "emotes-5", qty: 1, replaces: "overlay" }, { option: "logo", qty: 1 }]);
+});
+
+test("pluriel automatique des noms de produits (français et anglais)", () => {
+  assert.equal(pluralize("Overlay fixe (unité)"), "overlays fixes");
+  assert.equal(pluralize("Pack d’alertes animées"), "packs d’alertes animées");
+  assert.equal(pluralize("Bannière pour YouTube / Twitch"), "bannières pour YouTube / Twitch");
+  assert.equal(pluralize("Emote statique (unité)"), "emotes statiques");
+  assert.equal(pluralize("Pack de 5 emotes statiques"), "packs de 5 emotes statiques");
+  assert.equal(pluralize("Animated overlay (each)", "en"), "animated overlays");
+  assert.equal(pluralize("Pack of 5 static emotes", "en"), "packs of 5 static emotes");
+  assert.equal(pluralize("Twitch panel", "en"), "Twitch panels");
 });
