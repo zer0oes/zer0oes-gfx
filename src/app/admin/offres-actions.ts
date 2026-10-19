@@ -12,6 +12,7 @@ import { getStore } from "@/lib/store";
 import { optionContentFromForm, withCopiedOptionContent, withGroupName, withGrouping, withoutOptionContent } from "@/lib/option-content";
 import { MAX_CSS, MAX_MARKUP, readVisuals, starterVisual, visualId, writeVisuals } from "@/lib/product-visuals";
 import { defaultCategories, isColor, readCategories, writeCategories } from "@/lib/product-categories";
+import { compositionFromForm, correctionsKey, MAX_CORRECTIONS, readComposition, writeComposition } from "@/lib/pack-composition";
 
 // Conversion « 490 », « 490,50 » ou « 1 990 » (€) → centimes. null si invalide.
 function parseEuros(raw: FormDataEntryValue | null): number | null {
@@ -71,27 +72,30 @@ export async function savePackAction(formData: FormData) {
   const store = getStore();
   const id = text(formData, "id", 60);
   const current = (await store.getCatalog()).packs.find((p) => p.id === id);
-  if (!current) done(`/admin/offres?offre=${encodeURIComponent(id)}`, "Offre introuvable.");
+  if (!current) done(`/admin/offres/${encodeURIComponent(id)}`, "Offre introuvable.");
 
   const price = parseEuros(formData.get("price"));
   const name = text(formData, "name", 120);
-  if (price === null || !name) done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${current.name} » : nom et prix obligatoires.`);
+  if (price === null || !name) done(`/admin/offres/${encodeURIComponent(id)}`, `« ${current.name} » : nom et prix obligatoires.`);
 
   // Formules : lignes formula_label_N / formula_price_N / formula_id_N / formula_stripe_N
   const formulas: Formula[] = [];
+  // Option ajoutée dans l'admin : sa composition arrive sous « new-<ligne> »
+  const newFormulaKeys: Record<string, string> = {};
   for (let i = 0; i < 10; i++) {
     const label = text(formData, `formula_label_${i}`, 120);
     if (!label) continue;
     const fPrice = parseEuros(formData.get(`formula_price_${i}`));
-    if (fPrice === null) done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${name} » : prix de formule invalide (${label}).`);
+    if (fPrice === null) done(`/admin/offres/${encodeURIComponent(id)}`, `« ${name} » : prix de formule invalide (${label}).`);
     const fid = slug(text(formData, `formula_id_${i}`, 60) || (formulas.length === 0 ? "base" : label));
-    if (formulas.some((f) => f.id === fid)) done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${name} » : deux formules ont le même identifiant (${fid}).`);
+    if (formulas.some((f) => f.id === fid)) done(`/admin/offres/${encodeURIComponent(id)}`, `« ${name} » : deux formules ont le même identifiant (${fid}).`);
     const stripePriceId = text(formData, `formula_stripe_${i}`, 100) || undefined;
     formulas.push({ id: fid, label, price: fPrice, stripePriceId });
+    if (!text(formData, `formula_id_${i}`, 60)) newFormulaKeys[`new-${i}`] = fid;
   }
   const checkout = formData.get("checkout") === "on";
   if (checkout && formulas.length === 0) {
-    done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${name} » : une offre commandable en ligne doit avoir au moins une formule.`);
+    done(`/admin/offres/${encodeURIComponent(id)}`, `« ${name} » : une offre commandable en ligne doit avoir au moins une formule.`);
   }
 
   const pack: Pack = {
@@ -103,20 +107,35 @@ export async function savePackAction(formData: FormData) {
     checkout,
     highlight: formData.get("highlight") === "on" || undefined,
     deliverables: lines(formData, "deliverables"),
-    extras: lines(formData, "extras").length ? lines(formData, "extras") : undefined,
-    note: text(formData, "note", 1000) || undefined,
+    // Offre commandable : options générées par les formules (le champ n'est affiché que pour une offre sur devis)
+    extras: formData.has("extras") ? (lines(formData, "extras").length ? lines(formData, "extras") : undefined) : current.extras,
+    note: current.note,
     formulas: formulas.length ? formulas : undefined,
     archived: current.archived,
   };
   await store.savePack(pack);
-  const translatedFields = Object.fromEntries(["name", "tagline", "deliverables", "extras", "note"].map((field) => [field, `translation:pack:${id}:${field}`]));
+  const translatedFields = Object.fromEntries(["name", "tagline", "deliverables", ...(formData.has("extras") ? ["extras"] : [])].map((field) => [field, `translation:pack:${id}:${field}`]));
   let formulaIndex = 0;
   for (let i = 0; i < 10; i++) {
     if (!text(formData, `formula_label_${i}`, 120)) continue;
     translatedFields[`formula_label_${i}`] = `translation:pack:${id}:formula:${formulas[formulaIndex++].id}:label`;
   }
   await saveTranslationFields(formData, translatedFields);
-  done(`/admin/offres?offre=${encodeURIComponent(id)}`);
+  // Composition à partir des produits à la carte : pack de base, puis produits ajoutés par chaque autre formule
+  // et nombre de corrections incluses par élément (enregistrés ensemble, sur une seule lecture du contenu)
+  if (formData.has("composition") || formData.has("corrections")) {
+    const raw = await store.getHomeContent();
+    let composition = readComposition(raw, id);
+    if (formData.has("composition")) {
+      const { options } = await store.getCatalog();
+      composition = compositionFromForm(text(formData, "composition", 20000), formulas.slice(1).map((f) => f.id), options, newFormulaKeys);
+    }
+    const content = writeComposition(raw, id, composition);
+    const corrections = Math.floor(Number(text(formData, "corrections", 3)));
+    if (formData.has("corrections") && Number.isInteger(corrections) && corrections >= 0 && corrections <= MAX_CORRECTIONS) content[correctionsKey(id)] = String(corrections);
+    await store.saveHomeContent(content);
+  }
+  done(`/admin/offres/${encodeURIComponent(id)}`);
 }
 
 
@@ -184,7 +203,7 @@ export async function createPackAction(formData: FormData) {
     formulas: checkout ? [{ id: "base", label: name, price }] : undefined,
   });
   await saveAdminTranslations(formData, `pack:${id}`, ["name"]);
-  done(`/admin/offres?offre=${encodeURIComponent(id)}`);
+  done(`/admin/offres/${encodeURIComponent(id)}`);
 }
 
 export async function movePackAction(formData: FormData) {
@@ -196,7 +215,7 @@ export async function movePackAction(formData: FormData) {
   if (i < 0 || j < 0 || j >= ids.length) done(TAB.offres);
   [ids[i], ids[j]] = [ids[j], ids[i]];
   await store.reorderPacks(ids);
-  done(`/admin/offres?offre=${encodeURIComponent(ids[j])}`);
+  done(TAB.offres);
 }
 
 export async function archivePackAction(formData: FormData) {
@@ -205,7 +224,7 @@ export async function archivePackAction(formData: FormData) {
   const pack = (await store.getCatalog()).packs.find((p) => p.id === text(formData, "id", 60));
   if (!pack) done(TAB.offres, "Offre introuvable.");
   await store.savePack({ ...pack, archived: formData.get("restore") === "1" ? undefined : true });
-  done(`/admin/offres?offre=${encodeURIComponent(pack.id)}`);
+  done(`/admin/offres/${encodeURIComponent(pack.id)}`);
 }
 
 // Copie de traductions (« translation:<scope>:… ») d'un élément vers sa copie ; le nom anglais prend « (copy) »
@@ -233,8 +252,11 @@ export async function duplicatePackAction(formData: FormData) {
   const ids = packs.map((p) => p.id);
   ids.splice(ids.indexOf(pack.id) + 1, 0, id);
   await store.reorderPacks(ids);
-  await store.saveHomeContent(withCopiedTranslations(await store.getHomeContent(), `pack:${pack.id}`, `pack:${id}`));
-  done(`/admin/offres?offre=${encodeURIComponent(id)}`);
+  const content = await store.getHomeContent();
+  const copied = writeComposition(withCopiedTranslations(content, `pack:${pack.id}`, `pack:${id}`), id, readComposition(content, pack.id));
+  if (copied[correctionsKey(pack.id)]) copied[correctionsKey(id)] = copied[correctionsKey(pack.id)];
+  await store.saveHomeContent(copied);
+  done(`/admin/offres/${encodeURIComponent(id)}`);
 }
 
 // Suppression définitive, sauf si des commandes existent : l'offre est alors archivée.
@@ -251,6 +273,9 @@ export async function deletePackAction(formData: FormData) {
     done(TAB.offres, `« ${pack.name} » a des commandes : elle a été archivée (masquée du site) plutôt que supprimée.`);
   }
   await store.deletePack(id);
+  const content = writeComposition(await store.getHomeContent(), id, {});
+  delete content[correctionsKey(id)];
+  await store.saveHomeContent(content);
   done(TAB.offres);
 }
 

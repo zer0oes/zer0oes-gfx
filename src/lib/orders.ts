@@ -10,6 +10,7 @@ import { siteUrl } from "@/lib/site-url";
 import {
   amountToPay,
   formatPrice,
+  orderDeliverables,
   formulaName,
   getFormula,
   getPack,
@@ -130,7 +131,7 @@ export function quote(
   if (amountToPay(totalPrice, payment, s) < 50) return null;
   return {
     packId: pack.id,
-    deliveryTemplate: [...pack.deliverables, ...((formula.id === "emotes" ? pack.extras?.slice(0, 1) : formula.id === "emotes-animations" ? pack.extras : []) ?? [])],
+    deliveryTemplate: orderDeliverables(pack, formula),
     formulaId: formula.id,
     offerName: formulaName(pack, formula),
     payment,

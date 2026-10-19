@@ -40,6 +40,7 @@ import { filesExpired, filesExpireAt, orderSteps, statusMessage, type Step } fro
 import { formatPrice } from "@/lib/pricing";
 import { requestLocale } from "@/lib/request-locale";
 import { balanceDue, getStore, type Deliverable, type Order } from "@/lib/store";
+import { readCorrections } from "@/lib/pack-composition";
 import { trOfferName } from "@/lib/translations-en";
 import { addClientNoteAction, payBalanceAction, setClientApprovalAction } from "../actions";
 
@@ -255,12 +256,14 @@ function Item({
   notice,
   tx,
   locale,
+  revisionLimit,
 }: {
   d: Deliverable;
   order: Order;
   token: string;
   expired: boolean;
   notice?: Notice;
+  revisionLimit: number;
   tx: Texts;
   locale: Locale;
 }) {
@@ -273,14 +276,14 @@ function Item({
   const cancellable = canCancelApproval(order) && !hasFinalAccess(d);
   const versions = previewHistory(d);
   const currentNotes = versions.length ? versions.at(-1)!.notes : d.clientNotes ?? [];
-  const revisionsLeft = Math.max(0, itemRevisionLimit(order) - (d.clientNotes?.length ?? 0));
+  const revisionsLeft = Math.max(0, revisionLimit - (d.clientNotes?.length ?? 0));
   const hidden = (name: string, value: string) => <input type="hidden" name={name} value={value} />;
   const dateFmt = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "long", timeZone: "Europe/Paris" });
   const dateTimeFmt = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" });
 
   if (!published) return (
     <li id={`f-${d.id}`} className="flex scroll-mt-24 items-center justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3 text-sm">
-      <span className="font-medium">{d.label}<span className="mt-1 block text-xs font-normal text-muted">{d.clientNotes?.length ?? 0}/{itemRevisionLimit(order)} {locale === "en" ? "corrections used" : "corrections utilisées"}</span>{finalCount > 0 && <span className="mt-1 block text-xs font-normal text-muted">{locale === "en" ? `${finalCount} final file(s) / link(s) prepared · locked` : `${finalCount} fichier(s) / lien(s) final(aux) préparé(s) · verrouillés`}</span>}</span>
+      <span className="font-medium">{d.label}<span className="mt-1 block text-xs font-normal text-muted">{d.clientNotes?.length ?? 0}/{revisionLimit} {locale === "en" ? "corrections used" : "corrections utilisées"}</span>{finalCount > 0 && <span className="mt-1 block text-xs font-normal text-muted">{locale === "en" ? `${finalCount} final file(s) / link(s) prepared · locked` : `${finalCount} fichier(s) / lien(s) final(aux) préparé(s) · verrouillés`}</span>}</span>
       <span className={`shrink-0 text-xs ${d.previewPath ? "text-accent" : "text-muted"}`}>{d.previewPath ? (locale === "en" ? "Preview awaiting publication" : "Aperçu en attente de publication") : (locale === "en" ? "Preparing" : "À préparer")}</span>
     </li>
   );
@@ -301,7 +304,7 @@ function Item({
         </span>
       </div>
       )}>
-      <p className="mt-3 text-sm text-muted">{d.clientNotes?.length ?? 0}/{itemRevisionLimit(order)} {locale === "en" ? "corrections used" : "corrections utilisées"}</p>
+      <p className="mt-3 text-sm text-muted">{d.clientNotes?.length ?? 0}/{revisionLimit} {locale === "en" ? "corrections used" : "corrections utilisées"}</p>
       <div className="mt-4">
         <Preview d={d} token={token} tx={tx} />
       </div>
@@ -445,6 +448,7 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
   const store = getStore();
   let order = await store.getOrderByDeliveryToken(token);
   if (!order) notFound();
+  const revisionLimit = itemRevisionLimit(order, readCorrections(await store.getHomeContent(), order.packId));
   if (cancellationStarted(order)) {
     const en = locale === "en";
     const cancelled = order.status === "annulee";
@@ -631,7 +635,7 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
               {(expired || expiresAt || (!finalFilesAvailable && !progress.complete)) && <p className="mt-3 text-sm text-muted">{expired ? tx.expired : expiresAt ? tx.expiresAt(dateFmt.format(expiresAt)) : due <= 0 ? (locale === "en" ? "Your payment is settled: HD files will be available after approval." : "Ton paiement est réglé : les fichiers HD seront accessibles après validation.") : tx.protectedHint}</p>}
               <ul className="mt-4 space-y-4">
                 {items.map((d) => (
-                  <Item key={d.id} d={d} order={order} token={token} expired={expired} notice={f === d.id ? notice : undefined} tx={tx} locale={locale} />
+                  <Item key={d.id} d={d} order={order} token={token} expired={expired} notice={f === d.id ? notice : undefined} tx={tx} locale={locale} revisionLimit={revisionLimit} />
                 ))}
               </ul>
             </>

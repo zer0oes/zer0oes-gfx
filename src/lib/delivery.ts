@@ -94,10 +94,12 @@ export function deliveryEmail({ offerName, url, links, files }: { offerName: str
 
 // Remarques du client sur un fichier livré (page /livraison/<jeton>)
 export const MAX_NOTES = 30;
-export function itemRevisionLimit(order: { packId: string; revisionsIncluded?: number }): number {
+// corrections : nombre réglé sur la page de l'offre dans l'admin (readCorrections), pour les commandes de packs
+export function itemRevisionLimit(order: { packId: string; revisionsIncluded?: number }, corrections?: number): number {
   if (order.packId === "sur-mesure" && order.revisionsIncluded === 1) return 1;
   if (order.packId === "options" || order.packId.startsWith("option:")) return 1;
-  return order.packId === "univers-complet" ? 3 : 2;
+  if (order.packId === "sur-mesure") return 2;
+  return corrections ?? (order.packId === "univers-complet" ? 3 : 2);
 }
 export const NOTE_MAX_CHARS = 2000;
 
