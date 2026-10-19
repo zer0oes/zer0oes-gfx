@@ -1,4 +1,6 @@
 export type ProjectQuote = {
+  launchPercent?: number;
+  launchBasePrice?: number;
   id: string; token: string; createdAt: string; updatedAt: string;
   name: string; email: string; locale: "fr" | "en"; request: Record<string, string>;
   status: "demande" | "propose" | "accepte" | "refuse";

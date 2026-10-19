@@ -1,9 +1,9 @@
 import "server-only";
 import { getStore } from "@/lib/store";
-import { saleCatalog } from "@/lib/promotions";
+import { launchCatalog } from "@/lib/launch-offer";
 export async function getPublicCatalog() {
   const store = getStore();
-  const [catalog, promotions] = await Promise.all([store.getCatalog(), store.listPromotions()]);
-  const publicCatalog = saleCatalog(catalog, promotions);
+  const [catalog, promotions, launch] = await Promise.all([store.getCatalog(), store.listPromotions(), store.getLaunchState()]);
+  const publicCatalog = launchCatalog(catalog, launch, promotions);
   return { ...publicCatalog, packs: publicCatalog.packs.map((pack) => ({ ...pack, deliverables: pack.deliverables.map((line) => line.replace(/overlays fixes/gi, "overlays").replace(/static overlays/gi, "overlays")) })) };
 }

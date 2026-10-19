@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { OfferGuide } from "@/components/OfferGuide";
+import { categoryDiscount } from "@/lib/category-discount";
 import { OfferTabs } from "@/components/OfferTabs";
 import { OptionCatalog, type CatalogTexts } from "@/components/OptionCatalog";
 import { glossaryHints } from "@/lib/glossary";
@@ -11,6 +12,7 @@ import {
   activePacks,
   formatPrice,
   type PricingSettings,
+
 } from "@/lib/pricing";
 import { pageMetadata } from "@/lib/seo";
 import { getStore } from "@/lib/store";
@@ -147,10 +149,10 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
             })}
           </p>
         )}
-        <OfferTabs locale={lang} packs={<>
+        <OfferTabs locale={lang} labels={[texts.text("pricing.packsTab"), texts.text("pricing.optionsTab")]} upToLabel={texts.text("pricing.discountUpTo")} discounts={[categoryDiscount(packs.flatMap<{ price: number; normalPrice?: number; promotionCode?: string }>((pack) => pack.formulas?.length ? pack.formulas : [pack])), categoryDiscount(catalog.options.filter((option) => option.id !== INSTALL_OPTION_ID))]} packs={<>
         <div className="grid gap-6 pt-3 md:grid-cols-3">
           {packs.map((p) => (
-            <PackCard key={p.id} pack={p} settings={site} order locale={lang} openOptions={details === p.id} texts={texts} />
+            <PackCard key={p.id} pack={p} settings={site} showSaleBadge={false} order locale={lang} openOptions={details === p.id} texts={texts} />
           ))}
         </div>
         <section className="mt-8 text-center text-sm leading-relaxed text-muted" aria-labelledby="pack-value">

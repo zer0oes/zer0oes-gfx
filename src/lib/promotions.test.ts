@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { defaultSettings, options, packs } from "@/data/packs";
-import { activePeriod, bannerMatches, normalizeCode, parseSalePrices, saleCatalog, safeBannerLink, validPromotion, type Banner, type Promotion } from "./promotions";
+import { activePeriod, bannerMatches, normalizeCode, parseProductRates, promotionProducts, promotionRates, saleCatalog, safeBannerLink, validPromotion, type Banner, type Promotion } from "./promotions";
 import { quote, discountQuote, quoteMetadata, newOrderFrom } from "./orders";
 const promotion: Promotion = { id: "test", enabled: true, code: "FIDELITE-TEST", label: "Client privé", kind: "percent", value: 10, startsAt: "", endsAt: "", packIds: [] };
 const catalog = { settings: defaultSettings, packs, options };
@@ -74,18 +74,24 @@ test("promotions multiples : meilleur prix, sans additionner les remises", () =>
   const result = saleCatalog(catalog, [sale, { ...sale, code: "SECOND", salePrices: { "formula:premier-look:base": 28000 } }]);
   assert.equal(result.packs.find((p) => p.id === "premier-look")!.price, 28000);
 });
-test("prix calculés côté serveur depuis le pourcentage : sélection et taux validés", () => {
+test("un pourcentage par produit, validé côté serveur ; le meilleur prix l'emporte", () => {
+  const products = promotionProducts(catalog);
   const f = new FormData();
-  assert.throws(() => parseSalePrices(f, catalog, 20), /au moins un produit/);
+  assert.throws(() => parseProductRates(f, products), /au moins un produit/);
   f.append("products", "formula:premier-look:base");
+  f.set("rate:formula:premier-look:base", "20");
   f.set("sale:formula:premier-look:base", "1"); // Un prix envoyé par le navigateur est ignoré.
-  assert.deepEqual(parseSalePrices(f, catalog, 20), { "formula:premier-look:base": 31200 });
-  assert.deepEqual(parseSalePrices(f, catalog, 12.5), { "formula:premier-look:base": 34125 });
-  for (const invalid of [0, -5, 81, NaN, Infinity]) {
-    assert.throws(() => parseSalePrices(f, catalog, invalid), /remise entre/);
+  assert.deepEqual(parseProductRates(f, products), { "formula:premier-look:base": 20 });
+  for (const invalid of ["0", "-5", "81", "abc", ""]) {
+    f.set("rate:formula:premier-look:base", invalid);
+    assert.throws(() => parseProductRates(f, products), /remise entre/);
   }
   f.set("products", "option:inexistant");
-  assert.throws(() => parseSalePrices(f, catalog, 20), /n’existe plus/);
+  assert.throws(() => parseProductRates(f, products), /n’existe plus/);
+  const rated: Promotion = { ...sale, salePrices: undefined, productRates: { "formula:premier-look:base": 20 } };
+  assert.equal(saleCatalog(catalog, [rated]).packs.find((p) => p.id === "premier-look")!.price, 31200);
+  assert.deepEqual(promotionRates({ ...sale, salePrices: { "formula:premier-look:base": 31200 } }, products), { "formula:premier-look:base": 20 });
+  assert.ok(products.every((p) => p.group.label));
 });
 
 test("pourcentage public : prix barré, acompte et changements du catalogue suivent le taux enregistré", () => {

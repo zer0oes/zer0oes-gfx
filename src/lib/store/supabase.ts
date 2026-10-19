@@ -213,6 +213,23 @@ async function fetchOrders(filter: (q: OrdersQuery) => OrdersQuery) {
 }
 
 export const supabaseStore: Store = {
+  async saveLaunchSettings(settings) {
+    check(await db().from("launch_offer").update({ enabled: settings.enabled, starts_at: settings.startsAt || null, ends_at: settings.endsAt || null, ...(settings.quota !== undefined ? { quota: settings.quota } : {}), ...(settings.rates ? { rates: settings.rates } : {}) }).eq("id", true));
+  },
+  async getLaunchState() {
+    const result = await db().rpc("launch_offer_state");
+    // Déploiement progressif : offre inactive tant que sa migration n'est pas appliquée.
+    if (result.error?.code === "PGRST202") return { enabled: false, remaining: 0 };
+    const state = check(result) as Omit<import("@/lib/launch-offer").LaunchState, "remaining"> & { remaining: number | null };
+    // Sans quota, les places sont illimitées
+    return { ...state, startsAt: state.startsAt ?? undefined, endsAt: state.endsAt ?? undefined, remaining: state.remaining ?? Infinity };
+  },
+  async reserveLaunchSlot(id) {
+    return Boolean(check(await db().rpc("reserve_launch_slot", { slot_id: id })));
+  },
+  async settleLaunchSlot(id, paid) {
+    check(await db().rpc("settle_launch_slot", { slot_id: id, paid }));
+  },
   async reopenQuote(token) {
     return Boolean(check(await db().rpc("reopen_project_quote", { quote_token: token })));
   },
@@ -248,8 +265,8 @@ export const supabaseStore: Store = {
       .eq("content->>updatedAt", expected).select("id"));
     return rows?.length === 1;
   },
-  async respondQuote(token, accept, declineReason = "", brief = {}, payment) {
-    return check(await db().rpc("respond_project_quote", { quote_token: token, accepting: accept, decline_reason: declineReason.trim().slice(0, 2000), client_brief: brief, chosen_payment: payment ?? null })) as string | null;
+  async respondQuote(token, accept, declineReason = "", brief = {}, payment, expectedPrice) {
+    return check(await db().rpc("respond_project_quote", { quote_token: token, accepting: accept, decline_reason: declineReason.trim().slice(0, 2000), client_brief: brief, chosen_payment: payment ?? null, ...(expectedPrice === undefined ? {} : { expected_price: expectedPrice }) })) as string | null;
   },
   async listAffiliateLinks() {
     const result = await db().from("marketing_affiliate_links").select("content").order("id");

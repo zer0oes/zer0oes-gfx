@@ -81,7 +81,7 @@ export default async function ContactPage({ params, searchParams }: PageProps<"/
           </div>
         </aside>
         <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
-          <ContactForm selectedOptionId={selectedOption?.id} selectedOffer={selectedPack?.name ?? selectedOption?.name} defaultType={selectedOption ? "Demande de devis" : sujet === "offre" ? "Question sur une offre" : quote ? "Devis Univers complet" : undefined} offerChoices={activePacks(catalog.packs).map((pack) => pack.name)} optionChoices={optionChoices(originalCatalog.options.filter((o) => o.id !== INSTALL_OPTION_ID), lang)} />
+          <ContactForm selectedOptionId={selectedOption?.id} selectedOffer={selectedPack?.name ?? selectedOption?.name} defaultType={sujet === "audit" ? "Audit gratuit de ma chaîne" : selectedOption ? "Demande de devis" : sujet === "offre" ? "Question sur une offre" : quote ? "Devis Univers complet" : undefined} offerChoices={activePacks(catalog.packs).map((pack) => pack.name)} optionChoices={optionChoices(originalCatalog.options.filter((o) => o.id !== INSTALL_OPTION_ID), lang)} />
         </div>
       </div>
     </>

@@ -1,11 +1,13 @@
 import type Stripe from "stripe";
 import { handleAsyncPaymentFailed, handleChargeRefunded, handleCheckoutCompleted } from "@/lib/orders";
 import { getStripe } from "@/lib/stripe";
+import { getStore } from "@/lib/store";
+import { revalidatePath } from "next/cache";
 
 // Webhook Stripe : enregistre la commande (ou le paiement du solde) et prévient Aurore.
 // À déclarer dans le Dashboard Stripe : https://<domaine>/api/stripe/webhook
 // (événements checkout.session.completed, checkout.session.async_payment_succeeded,
-// checkout.session.async_payment_failed et charge.refunded), puis renseigner STRIPE_WEBHOOK_SECRET.
+// checkout.session.async_payment_failed, checkout.session.expired et charge.refunded), puis renseigner STRIPE_WEBHOOK_SECRET.
 // Les moyens de paiement (carte, PayPal…) sont gérés par Stripe : aucun n'est imposé ici.
 export async function POST(request: Request) {
   const stripe = getStripe();
@@ -29,9 +31,18 @@ export async function POST(request: Request) {
     event.type === "checkout.session.completed" ||
     event.type === "checkout.session.async_payment_succeeded" ||
     event.type === "checkout.session.async_payment_failed" ||
+    event.type === "checkout.session.expired" ||
     event.type === "charge.refunded"
   ) {
     try {
+      if (event.type === "checkout.session.expired" || event.type === "checkout.session.async_payment_failed") {
+        const session = event.data.object;
+        if (session.metadata?.launchSlot && session.metadata.kind === "commande") {
+          await getStore().settleLaunchSlot(session.metadata.launchSlot, false);
+          revalidatePath("/", "layout");
+        }
+        if (event.type === "checkout.session.expired") return Response.json({ received: true });
+      }
       if (event.type === "charge.refunded") await handleChargeRefunded(event.data.object);
       else if (event.type === "checkout.session.async_payment_failed") await handleAsyncPaymentFailed(event.data.object);
       else await handleCheckoutCompleted(event.data.object);

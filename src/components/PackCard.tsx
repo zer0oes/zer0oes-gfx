@@ -23,6 +23,7 @@ export function PackCard({
   settings,
   order = false,
   compact = false,
+  showSaleBadge = true,
   openOptions = false,
   locale = "fr",
   texts,
@@ -33,6 +34,7 @@ export function PackCard({
   openOptions?: boolean;
   // Version courte (accueil) : prix, bénéfice, trois livrables et bouton
   compact?: boolean;
+  showSaleBadge?: boolean;
   locale?: Locale;
   // Textes de la page (bulles « ? » des termes techniques) ; absents sur l'accueil
   texts?: HomeContent;
@@ -67,8 +69,8 @@ export function PackCard({
             : "border-border bg-surface"
       }`}
     >
-      <SaleBadge item={pack} locale={locale} className="absolute right-4 top-4" />
-      <div className={`flex flex-wrap items-center gap-2 ${discountPercent(pack) ? "pr-20" : ""}`}>
+      {showSaleBadge && <SaleBadge item={pack} locale={locale} className="absolute right-4 top-4" />}
+      <div className={`flex flex-wrap items-center gap-2 ${showSaleBadge && discountPercent(pack) ? "pr-20" : ""}`}>
         <h3 className="font-display text-xl font-bold">{pack.name}</h3>
         {quote && (
           <span className="rounded-full border border-accent-3/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-accent-3">
@@ -150,7 +152,7 @@ export function PackCard({
           </Link>
         </div>
       ) : pack.checkout ? (
-        <OrderForm key={`${pack.id}-${openOptions}`} pack={pack} settings={settings} buttonClass={buttonClass} defaultOpen={openOptions} />
+        <OrderForm showSaleBadge={showSaleBadge} key={`${pack.id}-${openOptions}`} pack={pack} settings={settings} buttonClass={buttonClass} defaultOpen={openOptions} />
       ) : (
         <div className="mt-8 space-y-3">
           <p className="text-center text-xs leading-relaxed text-muted">{t(locale, { fr: `Généralement ${settings.deliveryDays} jours ouvrés après réception du brief complet, selon le projet.`, en: `Usually ${settings.deliveryDays.replace(" à ", " to ")} business days after receiving the complete brief, depending on the project.` })}</p>
