@@ -23,7 +23,7 @@ export function VisualsPanel({ content, options, open, feedback }: { content: un
   return (
     <section className="mt-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted">Dessins des cartes « à la carte » de la page Offres, en version statique et animée. Clique sur une ligne pour modifier un visuel, puis associe-le à un produit dans sa fiche (onglet Options à la carte).</p>
+        <p className="max-w-5xl text-sm text-muted">Dessins des cartes « à la carte » de la page Offres, en version statique et animée. Clique sur une ligne pour modifier un visuel, puis associe-le à un produit dans sa fiche (onglet Options à la carte).</p>
         <DrawerButton drawer="visuel-nouveau" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouveau visuel</DrawerButton>
       </div>
       <div className="overflow-x-auto rounded-2xl border border-border">

@@ -88,7 +88,7 @@ export async function DiscountsPanel({ feedback }: { feedback: Feedback }) {
   const value = (p: Promotion) => p.mode === "sale" ? range(promotionRates(p, products)) : p.kind === "percent" ? `−${p.value} %` : `−${formatPrice(p.value)}`;
   return <section className="mt-6">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <p className="max-w-2xl text-sm text-muted">Clique sur une ligne pour modifier la remise. Chaque remise peut avoir son bandeau sous le menu.</p>
+      <p className="max-w-5xl text-sm text-muted">Clique sur une ligne pour modifier la remise. Chaque remise peut avoir son bandeau sous le menu.</p>
       <DrawerButton drawer="remise-nouvelle" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouvelle remise</DrawerButton>
     </div>
     <div className="overflow-x-auto rounded-2xl border border-border">
@@ -152,7 +152,7 @@ export async function BannersPanel({ feedback, linkTo }: { feedback: Feedback; l
   const pages = (b: Banner) => b.pages.includes("*") ? "Toutes" : `${b.pages.length} page${b.pages.length > 1 ? "s" : ""}`;
   return <section className="mt-6">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <p className="max-w-2xl text-sm text-muted">Les bandeaux s’affichent sous le menu. Ceux « Dans le carrousel » tournent ensemble, dans l’ordre du tableau : tire une ligne par sa poignée pour le changer.</p>
+      <p className="max-w-5xl text-sm text-muted">Les bandeaux s’affichent sous le menu. Ceux « Dans le carrousel » tournent ensemble, dans l’ordre du tableau : tire une ligne par sa poignée pour le changer.</p>
       <DrawerButton drawer="bandeau-nouveau" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouveau bandeau</DrawerButton>
     </div>
     {banners.length ? <div className="overflow-x-auto rounded-2xl border border-border">
