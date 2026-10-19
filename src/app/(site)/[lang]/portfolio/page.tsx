@@ -39,7 +39,8 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const store = getStore();
   const [portfolio, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
   const { streamers: ordered, works } = trDeep(lang, withoutDrafts(portfolio));
-  // Projet mis en avant (Admin > Portfolio) : en premier, sur deux colonnes ; images en 16:9 à la même hauteur partout, cartes d'une même ligne à la même hauteur
+  // Projet mis en avant (Admin > Portfolio) : en premier, sur deux colonnes ; images en 16:9 à la même hauteur partout ;
+  // sur ordinateur, sa carte met l'image à gauche et le texte à droite
   const featured = featuredProjectId(stored);
   const streamers = [...ordered.filter((s) => s.id === featured), ...ordered.filter((s) => s.id !== featured)];
   // Deux projets sans mise en avant : chacun prend la moitié de la largeur
@@ -73,45 +74,40 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
             })
             .filter((c) => c.n > 0);
           const big = hasFeatured && s.id === featured;
-          // Projet en avant : une deuxième réalisation à côté de la couverture (deux images 16:9 à la hauteur des autres cartes)
-          const others = own.filter((w) => w.image && w.id !== cover?.id && w.video !== coverVideo);
-          const second = big ? others.find((w) => w.featured) ?? others.find((w) => w.category === "overlays") ?? others[0] : undefined;
-          // Petite carte : pastilles sur une seule ligne (les suivantes résumées par « +N », toutes visibles sur mobile)
-          const tight = !big && !pair && counts.length > tagLimit + 1;
+          // Petite carte et carte en avant : pastilles sur une seule ligne (les suivantes résumées par « +N », toutes visibles sur mobile)
+          const tight = !pair && counts.length > tagLimit + 1;
           return (
             <Link
               key={s.id}
               href={href(lang, projectHref(s.id))}
               data-hover-root
               data-reveal
-              className={`group flex flex-col overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2" : ""}`}
+              className={`group flex flex-col overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2 lg:flex-row lg:self-start" : ""}`}
             >
-              <div className={big ? "grid gap-6 lg:grid-cols-2" : ""}>
-                {[cover, second].map((work, index) => work?.image && (
-                  <div key={work.id} className={`relative aspect-video overflow-hidden bg-background ${index ? "hidden lg:block" : ""}`}>
-                    <ProtectedMedia className="absolute inset-0">
-                      <Image
-                        src={work.image}
-                        alt=""
-                        fill
-                        draggable={false}
-                        sizes={big ? "(min-width: 1024px) 370px, 100vw" : pair ? "(min-width: 1024px) 560px, (min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 370px, (min-width: 768px) 50vw, 100vw"}
-                        className={`object-cover transition duration-500 ${(index ? work.video : coverVideo) ? "" : "group-hover:scale-105"}`}
-                      />
-                      {(index ? work.video : coverVideo) && <HoverVideo src={(index ? work.video : coverVideo)!} />}
-                    </ProtectedMedia>
-                  </div>
-                ))}
+              <div className={`relative aspect-video shrink-0 overflow-hidden bg-background ${big ? "lg:w-[calc(50%-12px)] lg:self-start" : ""}`}>
+                {cover?.image && (
+                  <ProtectedMedia className="absolute inset-0">
+                    <Image
+                      src={cover.image}
+                      alt=""
+                      fill
+                      draggable={false}
+                      sizes={pair ? "(min-width: 1024px) 560px, (min-width: 768px) 50vw, 100vw" : big ? "(min-width: 1024px) 370px, 100vw" : "(min-width: 1024px) 370px, (min-width: 768px) 50vw, 100vw"}
+                      className={`object-cover transition duration-500 ${coverVideo ? "" : "group-hover:scale-105"}`}
+                    />
+                    {coverVideo && <HoverVideo src={coverVideo} />}
+                  </ProtectedMedia>
+                )}
               </div>
-              <div className="flex flex-1 flex-col p-6">
+              <div className={`flex flex-1 flex-col p-6 ${big ? "lg:justify-center" : ""}`}>
                 <div className="flex items-center justify-between gap-4">
-                  <h2 className={`font-display font-bold ${big ? "text-2xl lg:text-3xl" : "text-xl"}`}>{s.name}</h2>
+                  <h2 className={`font-display font-bold ${big ? "text-2xl" : "text-xl"}`}>{s.name}</h2>
                   <span className="text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
                     {texts.text("portfolio.link")}
                   </span>
                 </div>
                 <p className="mt-2 text-muted">{s.description}</p>
-                <ul className="mt-auto flex flex-wrap gap-2 pt-4" aria-label={t(lang, { fr: "Contenu du projet", en: "Project contents" })}>
+                <ul className={`mt-auto flex flex-wrap gap-2 pt-4 ${big ? "lg:mt-0" : ""}`} aria-label={t(lang, { fr: "Contenu du projet", en: "Project contents" })}>
                   {counts.map((c, index) => {
                     const color = portfolioCategoryColor(productCategories, c.id, categories.find((k) => k.id === c.id)?.label ?? c.id);
                     return (
