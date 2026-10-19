@@ -1,8 +1,6 @@
 import { optionCategory, splitOptionName, type Option } from "./pricing";
 import type { Locale } from "./i18n";
 
-export const optionThemeColors = { overlays: "#A78BFA", emotes: "#E879C6", branding: "#818CF8", motion: "#67D4E8" };
-
 // Regroupements d'origine (une carte par famille) ; modifiables dans la fiche de chaque option (admin).
 const families = [
   ["overlay-fixe-unite", "overlay-anime-unite"],
