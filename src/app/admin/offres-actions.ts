@@ -12,6 +12,7 @@ import { getStore } from "@/lib/store";
 import { optionContentFromForm, withCopiedOptionContent, withGroupName, withGrouping, withoutOptionContent } from "@/lib/option-content";
 import { MAX_CSS, MAX_MARKUP, readVisuals, starterVisual, visualId, writeVisuals } from "@/lib/product-visuals";
 import { defaultCategories, isColor, readCategories, writeCategories } from "@/lib/product-categories";
+import { compositionFromForm, readComposition, writeComposition } from "@/lib/pack-composition";
 
 // Conversion « 490 », « 490,50 » ou « 1 990 » (€) → centimes. null si invalide.
 function parseEuros(raw: FormDataEntryValue | null): number | null {
@@ -116,6 +117,12 @@ export async function savePackAction(formData: FormData) {
     translatedFields[`formula_label_${i}`] = `translation:pack:${id}:formula:${formulas[formulaIndex++].id}:label`;
   }
   await saveTranslationFields(formData, translatedFields);
+  // Composition à partir des produits à la carte (formule de base « base » quand l'offre n'a pas de formule)
+  if (formData.has("composition")) {
+    const { options } = await store.getCatalog();
+    const composition = compositionFromForm(text(formData, "composition", 20000), formulas.length ? formulas.map((f) => f.id) : ["base"], options);
+    await store.saveHomeContent(writeComposition(await store.getHomeContent(), id, composition));
+  }
   done(`/admin/offres?offre=${encodeURIComponent(id)}`);
 }
 
@@ -233,7 +240,8 @@ export async function duplicatePackAction(formData: FormData) {
   const ids = packs.map((p) => p.id);
   ids.splice(ids.indexOf(pack.id) + 1, 0, id);
   await store.reorderPacks(ids);
-  await store.saveHomeContent(withCopiedTranslations(await store.getHomeContent(), `pack:${pack.id}`, `pack:${id}`));
+  const content = await store.getHomeContent();
+  await store.saveHomeContent(writeComposition(withCopiedTranslations(content, `pack:${pack.id}`, `pack:${id}`), id, readComposition(content, pack.id)));
   done(`/admin/offres?offre=${encodeURIComponent(id)}`);
 }
 
@@ -251,6 +259,7 @@ export async function deletePackAction(formData: FormData) {
     done(TAB.offres, `« ${pack.name} » a des commandes : elle a été archivée (masquée du site) plutôt que supprimée.`);
   }
   await store.deletePack(id);
+  await store.saveHomeContent(writeComposition(await store.getHomeContent(), id, {}));
   done(TAB.offres);
 }
 

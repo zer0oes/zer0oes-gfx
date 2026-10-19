@@ -5,6 +5,9 @@ import { CategoriesPanel } from "@/components/admin/CategoriesPanel";
 import { categoryColor } from "@/lib/product-categories";
 import { VisualPicker } from "@/components/admin/VisualFields";
 import { readVisuals } from "@/lib/product-visuals";
+import { PackCompositionField, type CompositionOption } from "@/components/admin/PackCompositionField";
+import { compositionPriceLabel, readComposition } from "@/lib/pack-composition";
+import { tr } from "@/lib/translations-en";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
 import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@/lib/home-content";
@@ -87,7 +90,7 @@ function Intro({ children }: { children: React.ReactNode }) {
   return <p className="mb-4 text-sm text-muted">{children}</p>;
 }
 
-function PackForm({ pack, formId }: { pack: Pack; formId: string }) {
+function PackForm({ pack, formId, options, content }: { pack: Pack; formId: string; options: CompositionOption[]; content: unknown }) {
   // Formules existantes + 2 lignes vides pour en ajouter
   const rows = [...(pack.formulas ?? []), undefined, undefined];
   return (
@@ -138,6 +141,8 @@ function PackForm({ pack, formId }: { pack: Pack; formId: string }) {
           ))}
         </div>
       </fieldset>
+      <PackCompositionField formId={formId} options={options} initial={readComposition(content, pack.id)}
+        formulas={pack.formulas?.length ? pack.formulas.map((f, i) => ({ id: f.id, label: f.label, price: f.price, priceField: `formula_price_${i}` })) : [{ id: "base", label: pack.name, price: pack.price, priceField: "price" }]} />
     </form>
   );
 }
@@ -198,6 +203,14 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const sim = simulate(active, qty, finance);
 
   const translationContent = await getStore().getHomeContent();
+  const stored = translationValues(translationContent);
+  // Produits à la carte proposés dans la composition des offres (nom anglais pour l'ajout aux livrables)
+  const compositionOptions: CompositionOption[] = options.map((o) => ({
+    ...o,
+    nameEn: stored[`translation:option:${o.id}:name`] || tr("en", o.name),
+    priceLabel: compositionPriceLabel(o),
+    categoryName: categories.find((c) => c.id === o.category)?.name ?? "Autres",
+  }));
   // Options affichées sur la même carte que o (même regroupement)
   const groupOf = (o: (typeof options)[number]) => optionContentFor(o, translationContent, "fr").group;
   const cardMates = (o: (typeof options)[number]) => (groupOf(o) ? options.filter((x) => x.id !== o.id && groupOf(x) === groupOf(o)) : []);
@@ -318,7 +331,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
               {openPack === p.id && typeof erreur === "string" && <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{erreur}</p>}
               <p className="text-xs text-muted">{packSummary(p, settings).join(" • ")}</p>
               <TranslationTabs compact stored={translationValues(translationContent)}>
-                <PackForm pack={p} formId={`offre-form-${p.id}`} />
+                <PackForm pack={p} formId={`offre-form-${p.id}`} options={compositionOptions} content={translationContent} />
               </TranslationTabs>
             </Drawer>
           ))}
