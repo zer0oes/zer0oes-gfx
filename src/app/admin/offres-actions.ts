@@ -11,7 +11,7 @@ import { optionCategories, type OptionCategory } from "@/lib/pricing";
 import { isWatermarkLevel } from "@/lib/protection";
 import { getStore } from "@/lib/store";
 import { optionContentFromForm, withGroupName, withGrouping, withoutOptionContent } from "@/lib/option-content";
-import { MAX_CSS, MAX_MARKUP, readVisuals, visualId, writeVisuals } from "@/lib/product-visuals";
+import { MAX_CSS, MAX_MARKUP, readVisuals, starterVisual, visualId, writeVisuals } from "@/lib/product-visuals";
 
 // Conversion « 490 », « 490,50 » ou « 1 990 » (€) → centimes. null si invalide.
 function parseEuros(raw: FormDataEntryValue | null): number | null {
@@ -319,7 +319,6 @@ export async function reorderPacksAction(ids: string[]) {
 
 // Visuels des créations à la carte (dessins en code) : bibliothèque rangée dans le contenu JSON
 const visualTab = (id?: string) => `${TAB.visuels}${id ? `&visuel=${encodeURIComponent(id)}#visuel-${id}` : ""}`;
-const code = (f: FormData, k: string, max: number) => (f.get(k)?.toString() ?? "").replace(/\r/g, "").trim().slice(0, max);
 
 export async function createVisualAction(formData: FormData) {
   await requireAdmin();
@@ -329,21 +328,23 @@ export async function createVisualAction(formData: FormData) {
   const content = await store.getHomeContent();
   const visuals = readVisuals(content);
   const id = visualId(name, visuals.map((v) => v.id));
-  await store.saveHomeContent(writeVisuals(content, [...visuals, { id, name, markup: code(formData, "markup", MAX_MARKUP), css: code(formData, "css", MAX_CSS) }]));
+  await store.saveHomeContent(writeVisuals(content, [...visuals, { id, name, ...starterVisual }]));
   done(visualTab(id));
 }
 
-export async function saveVisualAction(formData: FormData) {
+// Enregistrement automatique depuis l'éditeur du visuel (sans rechargement de page)
+export async function autosaveVisualAction(id: string, draft: { name: string; markup: string; css: string }): Promise<{ ok: true } | { ok: false; message: string }> {
   await requireAdmin();
   const store = getStore();
-  const id = text(formData, "id", 60);
-  const name = text(formData, "name", 80);
+  const name = draft.name.trim().slice(0, 80);
+  if (!name) return { ok: false, message: "Le nom du visuel est obligatoire." };
   const content = await store.getHomeContent();
   const visuals = readVisuals(content);
-  if (!visuals.some((v) => v.id === id)) done(TAB.visuels, "Visuel introuvable.");
-  if (!name) done(visualTab(id), "Le nom du visuel est obligatoire.");
-  await store.saveHomeContent(writeVisuals(content, visuals.map((v) => (v.id === id ? { id, name, markup: code(formData, "markup", MAX_MARKUP), css: code(formData, "css", MAX_CSS) } : v))));
-  done(visualTab(id));
+  if (!visuals.some((v) => v.id === id)) return { ok: false, message: "Visuel introuvable." };
+  const clip = (v: string, max: number) => v.replace(/\r/g, "").trim().slice(0, max);
+  await store.saveHomeContent(writeVisuals(content, visuals.map((v) => (v.id === id ? { id, name, markup: clip(draft.markup, MAX_MARKUP), css: clip(draft.css, MAX_CSS) } : v))));
+  revalidatePath("/", "layout");
+  return { ok: true };
 }
 
 // Copie placée juste après l'original, puis ouverte
