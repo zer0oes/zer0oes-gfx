@@ -122,7 +122,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
             >
               {media}
               {/* Texte visible au survol (toujours visible sur mobile, sans survol) */}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/95 via-background/70 to-transparent px-6 pb-5 pt-16 transition duration-300 md:translate-y-3 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 md:group-focus-visible:translate-y-0 md:group-focus-visible:opacity-100">
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-15% via-background/85 via-55% to-transparent px-6 pb-5 pt-28 transition duration-300 md:translate-y-3 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 md:group-focus-visible:translate-y-0 md:group-focus-visible:opacity-100">
                 {heading}
                 <p className="mt-1 line-clamp-2 text-sm text-muted">{s.description}</p>
                 {tags}
