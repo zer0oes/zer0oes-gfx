@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { compositionFromForm, compositionKey, compositionLine, compositionValue, readComposition, savingPercent, writeComposition } from "./pack-composition";
+import { BASE, compositionFromForm, deliverablesWith, compositionKey, compositionLine, compositionValue, readComposition, savingPercent, writeComposition } from "./pack-composition";
 import type { Option } from "./pricing";
 
 const options: Option[] = [
@@ -19,8 +19,8 @@ test("composition : relue, nettoyée et supprimée du contenu quand elle est vid
 });
 
 test("composition du formulaire : seules les formules et produits existants, quantités bornées", () => {
-  const json = JSON.stringify({ base: [{ option: "overlay", qty: 500 }, { option: "inconnu", qty: 1 }, { option: "logo", qty: 0 }], ancienne: [{ option: "logo", qty: 1 }] });
-  assert.deepEqual(compositionFromForm(json, ["base"], options), { base: [{ option: "overlay", qty: 99 }] });
+  const json = JSON.stringify({ [BASE]: [{ option: "overlay", qty: 500 }, { option: "inconnu", qty: 1 }, { option: "logo", qty: 0 }], emotes: [{ option: "emotes-5", qty: 1 }], ancienne: [{ option: "logo", qty: 1 }] });
+  assert.deepEqual(compositionFromForm(json, ["emotes"], options), { [BASE]: [{ option: "overlay", qty: 99 }], emotes: [{ option: "emotes-5", qty: 1 }] });
   assert.deepEqual(compositionFromForm("{", ["base"], options), {});
 });
 
@@ -38,4 +38,10 @@ test("ligne de livrable : quantité devant le nom au-delà de 1, sans « (unité
   assert.equal(compositionLine({ option: "overlay", qty: 3 }, options[0]), "3 × Overlay animé");
   assert.equal(compositionLine({ option: "x", qty: 1 }, { name: "Widget (barre, tchat)" }), "Widget (barre, tchat)");
   assert.equal(compositionLine({ option: "logo", qty: 1 }, options[2]), "Logo");
+});
+
+test("livrables : produits du pack de base puis lignes libres, sans doublon", () => {
+  const items = [{ option: "overlay", qty: 2 }, { option: "logo", qty: 1 }, { option: "supprime", qty: 1 }];
+  assert.deepEqual(deliverablesWith(items, (o) => o.name, options, ["Logo", "2 corrections incluses"]), ["2 × Overlay animé", "Logo", "2 corrections incluses"]);
+  assert.deepEqual(deliverablesWith(items, (o) => (o.id === "logo" ? "Logo design" : "Animated overlay"), options, []), ["2 × Animated overlay", "Logo design"]);
 });

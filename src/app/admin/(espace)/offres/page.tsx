@@ -7,7 +7,6 @@ import { VisualPicker } from "@/components/admin/VisualFields";
 import { readVisuals } from "@/lib/product-visuals";
 import { PackCompositionField, type CompositionOption } from "@/components/admin/PackCompositionField";
 import { compositionPriceLabel, readComposition } from "@/lib/pack-composition";
-import { tr } from "@/lib/translations-en";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
 import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@/lib/home-content";
@@ -113,8 +112,8 @@ function PackForm({ pack, formId, options, content }: { pack: Pack; formId: stri
         <Check name="highlight" label="Mise en avant" defaultChecked={pack.highlight} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Livrables" hint="Un par ligne.">
-          <TranslationInput multiline translationKey={`translation:pack:${pack.id}:deliverables`} name="deliverables" rows={5} defaultValue={pack.deliverables.join("\n")} className={input} />
+        <Field label="Livrables en plus" hint="Un par ligne. Les produits du pack de base (Composition, plus bas) s'affichent automatiquement en tête des livrables ; ajoute ici le reste (corrections, intégration…).">
+          <TranslationInput multiline translationKey={`translation:pack:${pack.id}:deliverables`} name="deliverables" rows={5} defaultValue={(pack.ownDeliverables ?? pack.deliverables).join("\n")} className={input} />
         </Field>
         <Field label="Options de l'offre" hint="Une par ligne, affichées sous les livrables. Offre sur devis : exemples de créations (« Par exemple »).">
           <TranslationInput multiline translationKey={`translation:pack:${pack.id}:extras`} name="extras" rows={5} defaultValue={(pack.extras ?? []).join("\n")} className={input} />
@@ -142,7 +141,8 @@ function PackForm({ pack, formId, options, content }: { pack: Pack; formId: stri
         </div>
       </fieldset>
       <PackCompositionField formId={formId} options={options} initial={readComposition(content, pack.id)}
-        formulas={pack.formulas?.length ? pack.formulas.map((f, i) => ({ id: f.id, label: f.label, price: f.price, priceField: `formula_price_${i}` })) : [{ id: "base", label: pack.name, price: pack.price, priceField: "price" }]} />
+        base={{ price: pack.formulas?.[0]?.price ?? pack.price, priceField: pack.formulas?.length ? "formula_price_0" : "price" }}
+        formulas={(pack.formulas ?? []).slice(1).map((f, i) => ({ id: f.id, label: f.label, price: f.price, priceField: `formula_price_${i + 1}` }))} />
     </form>
   );
 }
@@ -203,11 +203,9 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const sim = simulate(active, qty, finance);
 
   const translationContent = await getStore().getHomeContent();
-  const stored = translationValues(translationContent);
-  // Produits à la carte proposés dans la composition des offres (nom anglais pour l'ajout aux livrables)
+  // Produits à la carte proposés dans la composition des offres
   const compositionOptions: CompositionOption[] = options.map((o) => ({
     ...o,
-    nameEn: stored[`translation:option:${o.id}:name`] || tr("en", o.name),
     priceLabel: compositionPriceLabel(o),
     categoryName: categories.find((c) => c.id === o.category)?.name ?? "Autres",
   }));

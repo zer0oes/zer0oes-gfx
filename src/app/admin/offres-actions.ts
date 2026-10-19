@@ -117,10 +117,10 @@ export async function savePackAction(formData: FormData) {
     translatedFields[`formula_label_${i}`] = `translation:pack:${id}:formula:${formulas[formulaIndex++].id}:label`;
   }
   await saveTranslationFields(formData, translatedFields);
-  // Composition à partir des produits à la carte (formule de base « base » quand l'offre n'a pas de formule)
+  // Composition à partir des produits à la carte : pack de base, puis produits ajoutés par chaque autre formule
   if (formData.has("composition")) {
     const { options } = await store.getCatalog();
-    const composition = compositionFromForm(text(formData, "composition", 20000), formulas.length ? formulas.map((f) => f.id) : ["base"], options);
+    const composition = compositionFromForm(text(formData, "composition", 20000), formulas.slice(1).map((f) => f.id), options);
     await store.saveHomeContent(writeComposition(await store.getHomeContent(), id, composition));
   }
   done(`/admin/offres?offre=${encodeURIComponent(id)}`);

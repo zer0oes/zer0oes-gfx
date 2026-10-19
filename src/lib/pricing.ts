@@ -27,6 +27,8 @@ export type Pack = {
   priceFrom?: boolean;
   checkout: boolean;
   deliverables: string[];
+  // Lignes libres saisies dans l'admin, quand les livrables sont générés par la composition du pack (voir pack-composition)
+  ownDeliverables?: string[];
   // Options propres à l'offre, affichées sous les livrables
   extras?: string[];
   // Formules commandables (la première est la formule de base)

@@ -2,6 +2,9 @@ import "server-only";
 import { cache } from "react";
 import { withTranslations } from "@/lib/admin-translations";
 import { readCategories, resolveCategory } from "@/lib/product-categories";
+import { BASE, deliverablesWith, readComposition } from "@/lib/pack-composition";
+import type { Option, Pack } from "@/lib/pricing";
+import { tr } from "@/lib/translations-en";
 import { localStoreAllowed, supabaseConfigured } from "@/lib/env";
 import { mediaBaseUrl, mediaUrl } from "@/lib/media";
 import { s3Configured, s3DeliverableRead, s3DeliverableUrl, s3DeliverableWrite, s3Download, s3Upload } from "@/lib/s3";
@@ -36,6 +39,19 @@ function withMediaUrls(p: Portfolio): Portfolio {
   };
 }
 
+// Livrables d'une offre composée de produits à la carte : ceux du pack de base, puis ses lignes libres
+function withComposedDeliverables(pack: Pack & { __en?: Record<string, unknown> }, raw: unknown, options: (Option & { __en?: Record<string, unknown> })[]) {
+  const items = readComposition(raw, pack.id)[BASE];
+  if (!items?.length) return pack;
+  const freeEn = (pack.__en?.deliverables as string[] | undefined) ?? pack.deliverables.map((line) => tr("en", line));
+  return {
+    ...pack,
+    ownDeliverables: pack.deliverables,
+    deliverables: deliverablesWith(items, (o) => o.name, options, pack.deliverables),
+    __en: { ...pack.__en, deliverables: deliverablesWith(items, (o) => ((o as typeof options[number]).__en?.name as string | undefined) ?? tr("en", o.name), options, freeEn) },
+  };
+}
+
 export function getStore(): Store {
   const base = baseStore();
   const store: Store = {
@@ -44,12 +60,19 @@ export function getStore(): Store {
     async getCatalog() {
       const [catalog, raw] = await Promise.all([base.getCatalog(), getHomeContentForRender()]);
       const categories = readCategories(raw);
+      const options = catalog.options.map((option) => withTranslations({ ...option, category: resolveCategory(option, categories) }, raw, `option:${option.id}`, ["name", "unit"]));
       return {
         settings: withTranslations(catalog.settings, raw, "settings", ["deliveryDays"]),
-        packs: catalog.packs.map((pack) => withTranslations({ ...pack, formulas: pack.formulas?.map((formula) => withTranslations(formula, raw, `pack:${pack.id}:formula:${formula.id}`, ["label"])) }, raw, `pack:${pack.id}`, ["name", "tagline", "deliverables", "extras", "note"], ["deliverables", "extras"])),
-        options: catalog.options.map((option) => withTranslations({ ...option, category: resolveCategory(option, categories) }, raw, `option:${option.id}`, ["name", "unit"])),
+        packs: catalog.packs.map((pack) => withComposedDeliverables(withTranslations({ ...pack, formulas: pack.formulas?.map((formula) => withTranslations(formula, raw, `pack:${pack.id}:formula:${formula.id}`, ["label"])) }, raw, `pack:${pack.id}`, ["name", "tagline", "deliverables", "extras", "note"], ["deliverables", "extras"]), raw, options)),
+        options,
         categories: categories.map((category) => withTranslations(category, raw, `categorie:${category.id}`, ["name"])),
       };
+    },
+    // Les livrables générés par la composition ne sont pas enregistrés avec l'offre : seulement ses lignes libres
+    async savePack(pack) {
+      const { ownDeliverables, __en, ...rest } = pack as Pack & { __en?: unknown };
+      void __en;
+      await base.savePack({ ...rest, deliverables: ownDeliverables ?? pack.deliverables });
     },
     async getPortfolio() {
       const [portfolio, raw] = await Promise.all([base.getPortfolio(), getHomeContentForRender()]);
