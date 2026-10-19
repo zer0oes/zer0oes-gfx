@@ -31,8 +31,8 @@ export function CategoriesPanel({ content, categories, options, open, feedback }
   const deleteNote = (id: string) => (usage[id]?.length ? "Ses produits reprendront la catégorie devinée d’après leur nom." : undefined);
   return (
     <section className="mt-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-5xl text-sm text-muted">Filtres des créations à la carte sur la page Offres et couleur de leurs cartes. Clique sur une ligne pour modifier une catégorie, tire-la par sa poignée pour changer l&apos;ordre des filtres. Chaque produit choisit sa catégorie dans sa fiche (onglet Options à la carte). Une catégorie sans produit n&apos;apparaît pas sur le site.</p>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <p className="min-w-0 flex-1 basis-80 text-sm text-muted">Filtres des créations à la carte sur la page Offres et couleur de leurs cartes. Clique sur une ligne pour modifier une catégorie, tire-la par sa poignée pour changer l&apos;ordre des filtres. Chaque produit choisit sa catégorie dans sa fiche (onglet Options à la carte). Une catégorie sans produit n&apos;apparaît pas sur le site.</p>
         <DrawerButton drawer="categorie-nouvelle" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouvelle catégorie</DrawerButton>
       </div>
       <div className="overflow-x-auto rounded-2xl border border-border">

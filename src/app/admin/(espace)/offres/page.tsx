@@ -81,7 +81,7 @@ function Check({ name, label, defaultChecked }: { name: string; label: string; d
 }
 
 function Intro({ children }: { children: React.ReactNode }) {
-  return <p className="mb-4 max-w-5xl text-sm text-muted">{children}</p>;
+  return <p className="mb-4 text-sm text-muted">{children}</p>;
 }
 
 function PackForm({ pack, formId }: { pack: Pack; formId: string }) {
@@ -270,8 +270,8 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           </form>
           </TranslationTabs></div>
           </details>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="max-w-5xl text-sm text-muted">Clique sur une ligne pour modifier l&apos;offre. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <p className="min-w-0 flex-1 basis-80 text-sm text-muted">Clique sur une ligne pour modifier l&apos;offre. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
             <DrawerButton drawer="offre-nouvelle" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouvelle offre</DrawerButton>
           </div>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
@@ -337,8 +337,8 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
 
       {tab === "options" && (
         <section className="mt-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="max-w-5xl text-sm text-muted">Créations à la carte de la page Offres. Clique sur une ligne pour modifier tout ce qui s&apos;affiche sur sa carte. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <p className="min-w-0 flex-1 basis-80 text-sm text-muted">Créations à la carte de la page Offres. Clique sur une ligne pour modifier tout ce qui s&apos;affiche sur sa carte. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
             <DrawerButton drawer="option-nouvelle" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouvelle option</DrawerButton>
           </div>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
