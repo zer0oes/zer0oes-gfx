@@ -39,8 +39,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const store = getStore();
   const [portfolio, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
   const { streamers: ordered, works } = trDeep(lang, withoutDrafts(portfolio));
-  // Projet mis en avant (Admin > Portfolio) : en premier, sur deux colonnes.
-  // Sur une même ligne, images et textes sont alignés d'une carte à l'autre (sous-grille) : même hauteur, titres et pastilles au même niveau
+  // Projet mis en avant (Admin > Portfolio) : en premier, sur deux colonnes ; toutes les cartes ont la même hauteur
   const featured = featuredProjectId(stored);
   const streamers = [...ordered.filter((s) => s.id === featured), ...ordered.filter((s) => s.id !== featured)];
   // Deux projets sans mise en avant : chacun prend la moitié de la largeur
@@ -56,7 +55,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
       <PageHeader eyebrow={texts.text("portfolio.kicker")} title={texts.text("portfolio.title")}>
         {texts.text("portfolio.intro")}
       </PageHeader>
-      <div className={`mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 md:grid-cols-2 ${pair ? "" : "lg:grid-cols-3"}`}>
+      <div className={`mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 md:auto-rows-fr md:grid-cols-2 ${pair ? "" : "lg:grid-cols-3"}`}>
         {streamers.map((s) => {
           const own = works.filter((w) => w.streamer === s.id);
           // Couverture lisible en miniature (logo du projet), scène animée au survol
@@ -82,9 +81,9 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
               href={href(lang, projectHref(s.id))}
               data-hover-root
               data-reveal
-              className={`group row-span-2 grid grid-rows-subgrid gap-0 overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2" : ""}`}
+              className={`group flex flex-col overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2" : ""}`}
             >
-              <div className={`relative aspect-video overflow-hidden bg-background ${big ? "lg:aspect-auto lg:h-full" : ""}`}>
+              <div className={`relative aspect-video overflow-hidden bg-background ${big ? "md:aspect-auto md:min-h-0 md:flex-1" : ""}`}>
                 {cover?.image && (
                   <ProtectedMedia className="absolute inset-0">
                     <Image
@@ -99,9 +98,9 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
                   </ProtectedMedia>
                 )}
               </div>
-              <div className="flex flex-col p-6">
+              <div className={`flex flex-col p-6 ${big ? "" : "flex-1"}`}>
                 <div className="flex items-center justify-between gap-4">
-                  <h2 className={`font-display font-bold ${big ? "text-2xl lg:text-xl" : "text-xl"}`}>{s.name}</h2>
+                  <h2 className={`font-display font-bold ${big ? "text-2xl lg:text-3xl" : "text-xl"}`}>{s.name}</h2>
                   <span className="text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
                     {texts.text("portfolio.link")}
                   </span>
