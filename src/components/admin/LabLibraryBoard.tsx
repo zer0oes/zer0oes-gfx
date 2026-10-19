@@ -159,7 +159,7 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
   };
 
   return (
-    <div className="mt-8 space-y-10">
+    <div className="mt-8 space-y-5">
       <p role="status" aria-live="polite" className="sr-only">{message}</p>
       {sections.map((section) => {
         const rows = drag ? section.rows.filter((r) => r.id !== drag.row.id) : section.rows;
@@ -167,9 +167,10 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
         // Replié : le tableau est masqué (et ne reçoit plus de création glissée)
         const folded = collapsed.includes(section.name);
         return (
-          <section key={section.name} aria-label={`Projet ${section.name}`}>
+          // Un projet = un seul bloc (en-tête + créations) ; survoler son en-tête met tout le bloc en surbrillance
+          <section key={section.name} aria-label={`Projet ${section.name}`} className="overflow-hidden rounded-2xl border border-border bg-surface/40 transition-colors has-[[data-lab-head]:hover]:border-accent/40 has-[[data-lab-head]:hover]:bg-accent/5">
             {/* Toute la ligne replie ou déplie le projet, sauf ses propres boutons (paramètres, enregistrer) */}
-            <div className="-mx-2 flex cursor-pointer items-start gap-1 rounded-xl px-2 py-1 hover:bg-accent/5"
+            <div data-lab-head className="flex cursor-pointer items-start gap-1 px-3 py-3"
               onClick={(event) => { if (!(event.target as HTMLElement).closest("button, a, form, input")) toggleCollapsed(section.name); }}>
               <button type="button" onClick={() => toggleCollapsed(section.name)} aria-expanded={!folded} aria-label={`${folded ? "Déplier" : "Replier"} le projet ${section.name}`} title={folded ? "Déplier" : "Replier"}
                 className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent">
@@ -177,7 +178,7 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
               </button>
               <div className="min-w-0 flex-1">{section.header}</div>
             </div>
-            {!folded && <div className="mt-3 overflow-x-auto rounded-2xl border border-border">
+            {!folded && <div className="overflow-x-auto border-t border-border">
               <table className="w-full min-w-[1040px] table-fixed text-left text-sm">
                 {/* Mêmes largeurs de colonnes pour tous les projets */}
                 <colgroup>
@@ -190,7 +191,7 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
                   <col className="w-48" />
                   <col className="w-12" />
                 </colgroup>
-                <thead className="bg-surface text-xs uppercase tracking-wider text-muted">
+                <thead className="bg-background/60 text-xs uppercase tracking-wider text-muted">
                   <tr>
                     <th scope="col"><span className="sr-only">Ordre</span></th>
                     <th scope="col" className="px-4 py-3 font-medium">Création</th>
