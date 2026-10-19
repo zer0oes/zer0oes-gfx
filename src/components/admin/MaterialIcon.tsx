@@ -35,6 +35,7 @@ export type MaterialIconName =
   | "favorite_border"
   | "filter_center_focus"
   | "folder"
+  | "inventory_2"
   | "fullscreen"
   | "gavel"
   | "grid_on"
