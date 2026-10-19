@@ -104,7 +104,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
             </ul>
           );
           const heading = (
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-baseline justify-between gap-4">
               <h2 className={`font-display font-bold ${big ? "text-2xl" : "text-xl"}`}>{s.name}</h2>
               <span className="whitespace-nowrap text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
                 {texts.text("portfolio.link")}
