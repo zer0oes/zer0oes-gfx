@@ -12,6 +12,7 @@ import { optionContentFor, platforms } from "@/lib/option-content";
 import { optionProductTitle } from "@/lib/option-products";
 import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "@/components/admin/Drawer";
 import { SortHandle, SortableRows } from "@/components/admin/SortableRows";
+import { RowActionsMenu } from "@/components/admin/RowActionsMenu";
 import { Segmented } from "@/components/admin/Segmented";
 import { saveOffersPageAction } from "../../portfolio-actions";
 import type { Metadata } from "next";
@@ -30,6 +31,8 @@ import {
   saveProtectionAction,
   createOptionAction,
   deleteOptionAction,
+  duplicateOptionAction,
+  duplicatePackAction,
   reorderOptionsAction,
   saveOptionAction,
   savePackAction,
@@ -276,7 +279,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           </div>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Offre</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th></tr></thead>
+              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Offre</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th><th className="w-12"><span className="sr-only">Actions</span></th></tr></thead>
               <SortableRows onReorder={reorderPacksAction}>
                 {packs.map((p) => (
                   <DrawerRow key={p.id} sortId={p.id} drawer={`offre-${p.id}`} label={`Modifier ${p.name}`} className={`${openPack === p.id ? "bg-accent/10" : ""} ${p.archived ? "opacity-60" : ""}`}>
@@ -284,6 +287,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                     <td className="px-4 py-3"><span className="font-semibold">{p.name}</span><p className="mt-1 line-clamp-1 max-w-xl text-xs text-muted">{p.tagline}</p></td>
                     <td className="whitespace-nowrap px-4 py-3">{p.priceFrom ? "À partir de " : ""}{euro(p.price)}</td>
                     <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${p.archived ? "border-border text-muted" : p.checkout ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300" : "border-violet-400/40 bg-violet-400/10 text-violet-300"}`}>{p.archived ? "Archivée" : p.checkout ? "En ligne" : "Sur devis"}</span></td>
+                    <td className="pr-2 text-right"><RowActionsMenu id={p.id} name={p.name} duplicateAction={duplicatePackAction} items={[p.archived ? { label: "Réafficher sur le site", icon: "visibility", action: archivePackAction, fields: { restore: "1" } } : { label: "Archiver", icon: "inventory_2", action: archivePackAction }]} deleteAction={deletePackAction} deleteNote="Si elle a déjà des commandes, elle est archivée (masquée du site) au lieu d’être supprimée." /></td>
                   </DrawerRow>
                 ))}
               </SortableRows>
@@ -343,7 +347,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           </div>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Option</th><th className="px-4 py-3">Carte</th><th className="px-4 py-3">Catégorie</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th></tr></thead>
+              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Option</th><th className="px-4 py-3">Carte</th><th className="px-4 py-3">Catégorie</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th><th className="w-12"><span className="sr-only">Actions</span></th></tr></thead>
               <SortableRows onReorder={reorderOptionsAction}>
                 {options.map((o) => {
                   const color = categoryColor(categories, o.category);
@@ -355,6 +359,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                       <td className="px-4 py-3"><span style={{ color, borderColor: `color-mix(in srgb, ${color} 45%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }} className="inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium">{categories.find((c) => c.id === o.category)?.name ?? "—"}</span></td>
                       <td className="whitespace-nowrap px-4 py-3">{o.priceFrom ? "À partir de " : ""}{euro(o.price)}</td>
                       <td className="px-4 py-3 text-muted">{o.priceFrom ? "Sur devis" : "En ligne"}</td>
+                      <td className="pr-2 text-right"><RowActionsMenu id={o.id} name={o.name} duplicateAction={duplicateOptionAction} deleteAction={deleteOptionAction} deleteNote="La suppression est définitive." /></td>
                     </DrawerRow>
                   );
                 })}

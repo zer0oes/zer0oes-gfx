@@ -2,6 +2,7 @@ import { TranslationTabs, TranslationInput } from "@/components/admin/Translatio
 import { translationValues } from "@/lib/admin-translations";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ConfirmDelete } from "@/components/admin/Drawer";
 import { notFound } from "next/navigation";
 import { MediaInput } from "@/components/admin/MediaInput";
 import { categories, emoteGroups, type Work } from "@/data/portfolio";
@@ -38,7 +39,7 @@ export default async function WorkEditPage({ params, searchParams }: PageProps<"
   const translationContent = await getStore().getHomeContent();
 
   return (
-    <TranslationTabs stored={translationValues(translationContent)}>
+    <>
       <Link href={`/admin/portfolio/projet/${work.streamer}`} className="text-sm text-muted hover:text-foreground">
         ← {streamers.find((s) => s.id === work.streamer)?.name ?? "Portfolio"}
       </Link>
@@ -57,7 +58,9 @@ export default async function WorkEditPage({ params, searchParams }: PageProps<"
         </p>
       )}
 
-      <form action={saveWorkAction} className={`${card} mt-6 space-y-5`}>
+      <form action={saveWorkAction} className={`${card} mt-6`}>
+        <TranslationTabs compact stored={translationValues(translationContent)}>
+        <div className="space-y-5">
         <input type="hidden" name="isNew" value={isNew ? "1" : ""} />
         <input type="hidden" name="id" value={work.id} />
         <div className="grid gap-4 sm:grid-cols-3">
@@ -133,19 +136,15 @@ export default async function WorkEditPage({ params, searchParams }: PageProps<"
         <button type="submit" className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110">
           {isNew ? "Créer la réalisation" : "Enregistrer"}
         </button>
+        </div>
+        </TranslationTabs>
       </form>
 
       {!isNew && (
-        <form action={deleteWorkAction} className="mt-6 flex items-center gap-3 text-sm text-muted">
-          <input type="hidden" name="id" value={work.id} />
-          <label className="flex items-center gap-1">
-            <input type="checkbox" name="confirm" /> confirmer
-          </label>
-          <button type="submit" className="rounded-full border border-red-500/40 px-4 py-1.5 text-red-300 hover:bg-red-500/10">
-            Supprimer cette réalisation
-          </button>
-        </form>
+        <div className="mt-6 flex justify-end">
+          <ConfirmDelete action={deleteWorkAction} id={work.id} label="Supprimer cette réalisation" />
+        </div>
       )}
-    </TranslationTabs>
+    </>
   );
 }

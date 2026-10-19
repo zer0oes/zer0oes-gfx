@@ -10,6 +10,7 @@ import { resolveHome } from "@/lib/home-content";
 import { asLocale, href, t } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
 import { getStore } from "@/lib/store";
+import { featuredProjectId } from "@/lib/portfolio-featured";
 import { trDeep } from "@/lib/translations-en";
 
 // Rendu à la demande : éviter de servir une page 404 précompilée sur Heroku.
@@ -36,7 +37,10 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const lang = asLocale((await params).lang);
   const store = getStore();
   const [portfolio, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
-  const { streamers, works } = trDeep(lang, withoutDrafts(portfolio));
+  const { streamers: ordered, works } = trDeep(lang, withoutDrafts(portfolio));
+  // Projet mis en avant (Admin > Portfolio) : en premier, sur deux colonnes
+  const featured = featuredProjectId(stored);
+  const streamers = [...ordered.filter((s) => s.id === featured), ...ordered.filter((s) => s.id !== featured)];
   // Textes modifiables dans Admin > Portfolio
   const texts = resolveHome(stored, lang);
   return (
@@ -44,7 +48,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
       <PageHeader eyebrow={texts.text("portfolio.kicker")} title={texts.text("portfolio.title")}>
         {texts.text("portfolio.intro")}
       </PageHeader>
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-2">
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 md:grid-cols-2 lg:grid-cols-3">
         {streamers.map((s) => {
           const own = works.filter((w) => w.streamer === s.id);
           // Couverture lisible en miniature (logo du projet), scène animée au survol
@@ -61,15 +65,16 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
               return { ...c, n, label: lang === "en" && en ? en[n > 1 ? 1 : 0] : n > 1 ? label : label.replace(/s$/, "") };
             })
             .filter((c) => c.n > 0);
+          const big = s.id === featured;
           return (
             <Link
               key={s.id}
               href={href(lang, projectHref(s.id))}
               data-hover-root
               data-reveal
-              className="group overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none"
+              className={`group flex flex-col overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2 lg:row-span-2" : ""}`}
             >
-              <div className="relative aspect-video overflow-hidden bg-background">
+              <div className={`relative aspect-video overflow-hidden bg-background ${big ? "lg:aspect-auto lg:min-h-0 lg:flex-1" : ""}`}>
                 {cover?.image && (
                   <ProtectedMedia className="absolute inset-0">
                     <Image
@@ -77,7 +82,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
                       alt=""
                       fill
                       draggable={false}
-                      sizes="(min-width: 1024px) 560px, 100vw"
+                      sizes={big ? "(min-width: 1024px) 760px, 100vw" : "(min-width: 1024px) 370px, (min-width: 768px) 50vw, 100vw"}
                       className={`object-cover transition duration-500 ${coverVideo ? "" : "group-hover:scale-105"}`}
                     />
                     {coverVideo && <HoverVideo src={coverVideo} />}
@@ -86,7 +91,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
               </div>
               <div className="p-6">
                 <div className="flex items-center justify-between gap-4">
-                  <h2 className="font-display text-2xl font-bold">{s.name}</h2>
+                  <h2 className={`font-display font-bold ${big ? "text-2xl lg:text-3xl" : "text-xl"}`}>{s.name}</h2>
                   <span className="text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
                     {texts.text("portfolio.link")}
                   </span>

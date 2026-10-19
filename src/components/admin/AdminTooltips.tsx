@@ -89,7 +89,7 @@ export function AdminTooltips() {
   if (!tip) return null;
   return createPortal(
     <div ref={box} role="tooltip" style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, visibility: pos ? "visible" : "hidden" }}
-      className="pointer-events-none fixed z-[80] max-w-64 rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 font-sans text-xs font-normal normal-case leading-snug tracking-normal text-foreground shadow-xl">
+      className="pointer-events-none fixed z-[80] max-w-64 rounded-xl border border-border bg-surface-2 px-3 py-2 font-sans text-xs font-normal normal-case leading-snug tracking-normal text-foreground shadow-xl shadow-black/40">
       {tip.text}
     </div>,
     document.body,

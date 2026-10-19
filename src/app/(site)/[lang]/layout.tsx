@@ -6,6 +6,7 @@ import { Announcements } from "@/components/Announcements";
 import { I18nProvider } from "@/components/I18nProvider";
 import { ProtectionProvider } from "@/components/protection";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { SiteRefresh } from "@/components/SiteRefresh";
 import { isLocale, locales } from "@/lib/i18n";
 import { getStore } from "@/lib/store";
 
@@ -35,6 +36,7 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
         <Footer locale={lang} />
         <ScrollReveal />
         <Analytics />
+        <SiteRefresh />
       </ProtectionProvider>
     </I18nProvider>
   );

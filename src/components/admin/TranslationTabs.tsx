@@ -6,8 +6,8 @@ import { tr } from "@/lib/translations-en";
 const LanguageContext = createContext<"fr" | "en">("fr");
 const ContentContext = createContext<Record<string, string>>({});
 
-// compact : dans un panneau latéral, onglets collés au haut du panneau
-export function TranslationTabs({ stored, children, compact = false }: { stored: Record<string, string>; children: ReactNode; compact?: boolean }) {
+// compact : dans un panneau latéral ou un bloc, onglets collés au haut du panneau ; hint : rappel sous les onglets
+export function TranslationTabs({ stored, children, compact = false, hint = true }: { stored: Record<string, string>; children: ReactNode; compact?: boolean; hint?: boolean }) {
   const [language, setLanguage] = useState<"fr" | "en">("fr");
   const id = useId();
   return (
@@ -29,7 +29,7 @@ export function TranslationTabs({ stored, children, compact = false }: { stored:
             </button>
           ))}
         </div>
-        <p className="mb-4 text-xs text-muted">Les deux langues sont enregistrées ensemble. Les prix, médias et réglages sont communs. Un texte anglais vide reprend la traduction d’origine, ou le français.</p>
+        {hint && <p className="mb-4 text-xs text-muted">Les deux langues sont enregistrées ensemble. Les prix, médias et réglages sont communs. Un texte anglais vide reprend la traduction d’origine, ou le français.</p>}
         <div id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-${language}`}>{children}</div>
       </LanguageContext.Provider>
     </ContentContext.Provider>

@@ -2,6 +2,7 @@ import { TranslationTabs, TranslationInput } from "@/components/admin/Translatio
 import { translationValues } from "@/lib/admin-translations";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ConfirmDelete } from "@/components/admin/Drawer";
 import { notFound } from "next/navigation";
 import { categories } from "@/data/portfolio";
 import { getStore } from "@/lib/store";
@@ -18,15 +19,16 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
   const { enregistre, erreur } = await searchParams;
   const store = getStore();
   const [{ streamers, works }, testimonials] = await Promise.all([store.getPortfolio(), store.listTestimonials()]);
+  const translationContent = await getStore().getHomeContent();
+  const translations = translationValues(translationContent);
+  if (id === "nouveau") return <NewProject error={typeof erreur === "string" ? erreur : undefined} translations={translations} />;
   const s = streamers.find((x) => x.id === decodeURIComponent(id));
   if (!s) notFound();
   const own = works.filter((w) => w.streamer === s.id);
   const review = testimonials.find((x) => x.streamerId === s.id);
 
-  const translationContent = await getStore().getHomeContent();
-
   return (
-    <TranslationTabs stored={translationValues(translationContent)}>
+    <>
       <Link href="/admin/portfolio" className="text-sm text-muted hover:text-foreground">
         ← Tous les projets
       </Link>
@@ -62,8 +64,9 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
 
       <div className="mt-8 space-y-6">
         <section className={card}>
-          <h2 className="font-semibold">Informations</h2>
-          <form action={saveStreamerAction} className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_1.4fr_auto] sm:items-end">
+          <h2 className="mb-2 font-semibold">Informations</h2>
+          <TranslationTabs compact hint={false} stored={translations}>
+          <form action={saveStreamerAction} className="grid gap-3 sm:grid-cols-[1fr_2fr_1.4fr_auto] sm:items-end">
             <input type="hidden" name="id" value={s.id} />
             <label className="block">
               <span className="mb-1 block text-xs text-muted">Nom</span>
@@ -81,6 +84,7 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
               Enregistrer
             </button>
           </form>
+          </TranslationTabs>
         </section>
 
         <section className={`${card} flex flex-wrap items-center justify-between gap-3`}>
@@ -101,7 +105,9 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
             Une courte citation du client, affichée sur la page du projet, et sur l&apos;accueil si tu le coches. Elle n&apos;est
             publiée qu&apos;avec son accord.
           </p>
-          <form action={saveTestimonialAction} className="mt-4 space-y-3">
+          <div className="mt-4">
+          <TranslationTabs compact hint={false} stored={translations}>
+          <form action={saveTestimonialAction} className="space-y-3">
             <input type="hidden" name="streamerId" value={s.id} />
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
@@ -144,6 +150,8 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
               )}
             </div>
           </form>
+          </TranslationTabs>
+          </div>
         </section>
 
         <section className={card}>
@@ -194,16 +202,50 @@ export default async function AdminProjectPage({ params, searchParams }: PagePro
           </div>
         </section>
 
-        <form action={deleteStreamerAction} className="flex flex-wrap items-center justify-end gap-2 text-xs text-muted">
-          <input type="hidden" name="id" value={s.id} />
-          <label className="flex items-center gap-1">
-            <input type="checkbox" name="confirm" /> confirmer
-          </label>
-          <button type="submit" className="rounded-full border border-red-500/40 px-3 py-1.5 text-red-300 hover:bg-red-500/10">
-            Supprimer {s.name} et ses réalisations
-          </button>
-        </form>
+        <div className="flex justify-end">
+          <ConfirmDelete action={deleteStreamerAction} id={s.id} label={`Supprimer ${s.name} et ses réalisations`} question={`Es-tu sûre de vouloir supprimer « ${s.name} » et toutes ses réalisations ?`} />
+        </div>
       </div>
-    </TranslationTabs>
+    </>
+  );
+}
+
+// Nouveau projet : mêmes informations que la fiche d'un projet ; la fiche complète s'ouvre après la création
+function NewProject({ error, translations }: { error?: string; translations: Record<string, string> }) {
+  return (
+    <>
+      <Link href="/admin/portfolio" className="text-sm text-muted hover:text-foreground">
+        ← Tous les projets
+      </Link>
+      <h1 className="mt-3 font-display text-3xl font-bold">Nouveau projet</h1>
+      <p className="mt-2 text-sm text-muted">Commence par ses informations. Tu ajouteras ensuite ses réalisations, l&apos;avis du client et la mise en page. Il reste en brouillon (masqué du site) jusqu&apos;à ce que tu le publies depuis sa fiche.</p>
+      {error && (
+        <p role="alert" className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">
+          {error}
+        </p>
+      )}
+      <section className={`${card} mt-8`}>
+        <h2 className="mb-2 font-semibold">Informations</h2>
+        <TranslationTabs compact hint={false} stored={translations}>
+          <form action={saveStreamerAction} className="grid gap-3 sm:grid-cols-[1fr_2fr_1.4fr_auto] sm:items-end">
+            <label className="block">
+              <span className="mb-1 block text-xs text-muted">Nom</span>
+              <TranslationInput translationKey="translation:streamer:new:name" name="name" required className={`${input} font-semibold`} />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs text-muted">Description</span>
+              <TranslationInput translationKey="translation:streamer:new:description" name="description" className={input} />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs text-muted">Lien de la chaîne</span>
+              <input name="url" placeholder="https://… (optionnel)" className={input} />
+            </label>
+            <button type="submit" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-background hover:brightness-110">
+              Créer le projet
+            </button>
+          </form>
+        </TranslationTabs>
+      </section>
+    </>
   );
 }

@@ -7,7 +7,9 @@ const option = (id: string, name: string, category?: "emotes") => ({ id, name, c
 test("sans association, le dessin est choisi d'après le nom du produit", () => {
   assert.equal(defaultVisualId(option("emotes-3", "3 emotes")), "emotes");
   assert.equal(defaultVisualId(option("x", "Bannière Twitch")), "banniere");
-  assert.equal(defaultVisualId(option("stinger", "Stinger")), "overlay");
+  assert.equal(defaultVisualId(option("stinger", "Stinger")), "transition");
+  assert.equal(defaultVisualId(option("x", "Synthé / lower third")), "synthe");
+  assert.equal(defaultVisualId(option("x", "Overlay animé")), "overlay");
   assert.equal(visualFor(option("x", "Logo"), {}).id, "logo");
 });
 
@@ -20,8 +22,14 @@ test("le visuel associé dans l'admin l'emporte, et un visuel supprimé retombe 
 
 test("la bibliothèque enregistrée remplace les dessins d'origine, même vide", () => {
   assert.equal(readVisuals({}).length, defaultVisuals.length);
-  assert.deepEqual(readVisuals({ [visualsKey]: "[]" }), []);
-  assert.equal(visualFor(option("x", "Logo"), { [visualsKey]: "[]" }).id, defaultVisuals[0].id);
+  assert.deepEqual(readVisuals(writeVisuals({}, [])), []);
+  assert.equal(visualFor(option("x", "Logo"), writeVisuals({}, [])).id, defaultVisuals[0].id);
+});
+
+test("les dessins ajoutés plus tard (transition, synthé) rejoignent une fois une bibliothèque déjà enregistrée", () => {
+  assert.deepEqual(readVisuals({ [visualsKey]: "[]" }).map((v) => v.id), ["transition", "synthe"]);
+  const saved = writeVisuals({}, readVisuals({ [visualsKey]: "[]" }).filter((v) => v.id !== "synthe"));
+  assert.deepEqual(readVisuals(saved).map((v) => v.id), ["transition"]);
 });
 
 test("le CSS ne vise que son visuel animé ; :scope désigne le visuel", () => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { MaterialIcon } from "./MaterialIcon";
+import { notifySiteChanged } from "@/lib/site-refresh";
 import { createContext, useContext, useEffect, useRef, useTransition } from "react";
 import { moveItem, usePointerSort, type SortDrag } from "./usePointerSort";
 
@@ -36,7 +38,7 @@ export function SortableRows({ onReorder, children }: { onReorder: (ids: string[
   const list = useRef<HTMLTableSectionElement>(null);
   const last = useRef<SortDrag | null>(null);
   const sort = usePointerSort((from, to, ids) => {
-    start(() => onReorder(moveItem(ids, from, to)));
+    start(async () => { await onReorder(moveItem(ids, from, to)); notifySiteChanged(); });
   });
   const drag = sort.drag;
 
@@ -79,7 +81,7 @@ export function SortPreview({ drag }: { drag: SortDrag }) {
         style={{ top: drag.y - drag.offset, left: drag.left, width: drag.width, height: drag.height }}
         className="pointer-events-none fixed z-50 flex items-center gap-3 rounded-xl border border-accent bg-surface px-3 text-sm font-semibold shadow-2xl"
       >
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 text-accent" fill="currentColor"><path d="M9 5h2v2H9V5zm4 0h2v2h-2V5zM9 11h2v2H9v-2zm4 0h2v2h-2v-2zM9 17h2v2H9v-2zm4 0h2v2h-2v-2z" /></svg>
+        <MaterialIcon name="drag_indicator" className="size-5 text-accent" />
         {drag.label.replace(/^Modifier\s+/, "")}
       </div>
     </>
@@ -101,7 +103,7 @@ export function SortHandle({ id, label }: { id: string; label: string }) {
       title="Glisser pour déplacer · ↑/↓ au clavier"
       className="inline-flex size-8 cursor-grab items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent active:cursor-grabbing"
     >
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="currentColor"><path d="M9 5h2v2H9V5zm4 0h2v2h-2V5zM9 11h2v2H9v-2zm4 0h2v2h-2v-2zM9 17h2v2H9v-2zm4 0h2v2h-2v-2z" /></svg>
+      <MaterialIcon name="drag_indicator" className="size-5" />
     </span>
   );
 }

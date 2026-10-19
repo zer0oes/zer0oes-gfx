@@ -120,6 +120,19 @@ export function withoutOptionContent(raw: unknown, id: string): Record<string, s
   return Object.fromEntries(Object.entries(asRecord(raw)).filter(([k, v]) => typeof v === "string" && !keys.has(k))) as Record<string, string>;
 }
 
+// Copie du contenu de la carte d'une option vers une autre (dupliquer) ; la copie a sa propre carte (pas de regroupement)
+export function withCopiedOptionContent(raw: unknown, from: string, to: string): Record<string, string> {
+  const content = Object.fromEntries(Object.entries(asRecord(raw)).filter(([, v]) => typeof v === "string")) as Record<string, string>;
+  const pairs: [string, string][] = [
+    ...(["description", "fichiers", "compat", "variante", "nombre"] as const).map((f) => [contentKey(f, from), contentKey(f, to)] as [string, string]),
+    ...(["description", "files"] as const).map((f) => [contentTranslationKey(f, from), contentTranslationKey(f, to)] as [string, string]),
+    [optionVisualKey(from), optionVisualKey(to)],
+  ];
+  for (const [a, b] of pairs) if (a in content) content[b] = content[a];
+  content[contentKey("groupe", to)] = "";
+  return content;
+}
+
 // « Regrouper avec » : l'option rejoint la carte de l'option choisie (qui reçoit un regroupement si elle n'en avait pas) ;
 // "" : carte seule. Les autres options de l'ancien regroupement restent ensemble.
 export function withGrouping(raw: unknown, options: Option[], id: string, groupWith: string): Record<string, string> {
