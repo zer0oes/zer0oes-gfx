@@ -7,6 +7,7 @@ import { normalizeAlertboxConfig } from "@/lib/custom-lab/alertbox";
 import { buildWidgetSrcdoc } from "@/lib/custom-lab/widgetSrcdoc";
 import { slugifyWidgetName } from "@/lib/custom-lab/widgetExport";
 import { buildStreamlabsLoadDetail, type Platform } from "@/lib/custom-lab/platformEvents";
+import { demoSession } from "@/lib/custom-lab/eventSimulatorData";
 import { DEFAULT_LAB_SIZE, fieldValues, jsonObject, parseFields, parseLabContent, newLabContent } from "@/lib/custom-lab/model";
 import type { CodeFile, LabContent, LabDocument } from "@/lib/custom-lab/types";
 import { CustomLabCodePanel, CustomLabPlatformSwitch } from "./CustomLabCodePanel";
@@ -95,8 +96,9 @@ export function CustomLabEditor({ initial, projects = [], labTexts = LAB_TEXT_DE
     frame.current?.contentWindow?.postMessage({ source: "se-lab", kind: "dispatch", eventType: type, eventTarget: platform === "streamlabs" ? "document" : "window", detail }, "*");
   }
   function loadPreview() {
-    const session = { data: {}, count: 0 };
-    const detail = platform === "streamlabs" ? buildStreamlabsLoadDetail(rendered.fields, rendered.values, session) : { fieldData: rendered.values, session, recents: [], currency: { code: "EUR", symbol: "€" }, channel: { username: "zer0oes-demo" } };
+    // Faux pseudos et montants de démo : les widgets « dernier abonné », « dernier don »… ont de quoi s'afficher
+    const { session, recents } = demoSession();
+    const detail = platform === "streamlabs" ? buildStreamlabsLoadDetail(rendered.fields, rendered.values, session) : { fieldData: rendered.values, session, recents, currency: { code: "EUR", symbol: "€" }, channel: { username: "zer0oes-demo" } };
     dispatch(detail, platform === "streamlabs" ? "onLoad" : "onWidgetLoad");
   }
   useEffect(() => {
