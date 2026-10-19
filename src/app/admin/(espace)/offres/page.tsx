@@ -10,7 +10,8 @@ import { redirect } from "next/navigation";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
 import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@/lib/home-content";
-import { optionContentFor, platforms } from "@/lib/option-content";
+import { contentTranslationKey, optionContentFor, optionPlural, platforms } from "@/lib/option-content";
+import { pluralize } from "@/lib/pack-composition";
 import { optionProductTitle } from "@/lib/option-products";
 import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "@/components/admin/Drawer";
 import { SortHandle, SortableRows } from "@/components/admin/SortableRows";
@@ -285,6 +286,10 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                   <form id={`save-${o.id}`} action={saveOptionAction} className="space-y-5">
                     <input type="hidden" name="id" value={o.id} />
                     <Field label="Nom"><TranslationInput translationKey={`translation:option:${o.id}:name`} name="name" defaultValue={o.name} required className={input} /></Field>
+                    <Field label="Nom au pluriel" hint="Utilisé dans les livrables des packs quand la quantité dépasse 1 (« 5 overlays animés »). Vide : accord automatique.">
+                      <TranslationInput translationKey={contentTranslationKey("plural", o.id)} englishDefault="" name="plural" defaultValue={optionPlural(translationContent, o.id, "fr") ?? ""}
+                        placeholder={`Automatique : ${pluralize(o.name)}`} maxLength={200} className={input} />
+                    </Field>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field label="Catégorie"><select name="category" defaultValue={o.category} className={input}>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
                       <Field label="Prix (€)"><input name="price" defaultValue={euros(o.price)} inputMode="decimal" required className={input} /></Field>

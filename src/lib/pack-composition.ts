@@ -96,11 +96,44 @@ export function savingPercent(packPrice: number, value: number) {
   return value > 0 ? Math.round((1 - packPrice / value) * 100) : 0;
 }
 
-// Ligne de livrable d'un produit : « Pack de 5 emotes animées » ou « 3 × Overlay animé » (sans « (unité) »)
-export function compositionLine(item: CompositionItem, option: Pick<Option, "name">) {
-  const { main, detail } = splitOptionName(option.name);
-  const name = detail && /^(unité|unit|each)$/i.test(detail.trim()) ? main : option.name;
-  return item.qty > 1 ? `${item.qty} × ${name}` : name;
+// Nom d'un produit sans « (unité) »
+export function singularName(name: string) {
+  const { main, detail } = splitOptionName(name);
+  return detail && /^(unité|unit|each)$/i.test(detail.trim()) ? main : name;
+}
+
+// Pluriel automatique d'un nom de produit, quand aucun pluriel n'est saisi dans l'admin :
+// « Overlay animé » → « overlays animés », « Pack d’alertes fixes » → « packs d’alertes fixes »,
+// « Animated overlay » → « animated overlays ». Seuls les mots avant « de », « pour », « ( »… sont accordés.
+const STOP = { fr: /^(de|du|des|d[’']|pour|avec|à|au|aux|en|sur|et|ou|\(|\/|-|–)/i, en: /^(of|for|with|to|in|on|and|or|\(|\/|-|–)/i };
+const BRANDS = /^(twitch|youtube|tiktok|kick|discord|streamelements|streamlabs|instagram)$/i;
+function pluralWord(word: string, locale: "fr" | "en") {
+  if (locale === "fr") return /[sxz]$/i.test(word) ? word : /(eau|au|eu)$/i.test(word) ? `${word}x` : `${word}s`;
+  if (/(s|x|z|ch|sh)$/i.test(word)) return `${word}es`;
+  if (/[^aeiou]y$/i.test(word)) return `${word.slice(0, -1)}ies`;
+  return `${word}s`;
+}
+export function pluralize(name: string, locale: "fr" | "en" = "fr") {
+  const words = singularName(name).trim().split(/\s+/);
+  let head = words.findIndex((w) => STOP[locale].test(w));
+  if (head < 0) head = words.length;
+  const out = words.map((w, i) => {
+    if (i >= head) return w;
+    // Français : tous les mots du groupe (nom et adjectifs) ; anglais : le dernier seulement (le nom)
+    return locale === "fr" || i === head - 1 ? pluralWord(w, locale) : w;
+  });
+  // Minuscule après le nombre, sauf sigle ou nom de plateforme (« 3 overlays », mais « 2 Twitch panels »)
+  if (out[0] && /^\p{Lu}\p{Ll}/u.test(out[0]) && !BRANDS.test(words[0])) out[0] = out[0][0].toLowerCase() + out[0].slice(1);
+  return out.join(" ");
+}
+
+// Nom d'un produit dans une langue : singulier, et pluriel (saisi dans l'admin ou automatique)
+export type ProductName = { name: string; plural?: string };
+
+// Ligne de livrable d'un produit : « Overlay animé » ou « 3 overlays animés » (sans « (unité) »)
+export function compositionLine(item: CompositionItem, option: ProductName) {
+  if (item.qty <= 1) return singularName(option.name);
+  return `${item.qty} ${option.plural?.trim() || pluralize(option.name)}`;
 }
 
 export function compositionPriceLabel(option: Option) {
@@ -125,22 +158,23 @@ export function withoutCorrectionsLines(free: string[], template: string) {
   return free.filter((line) => !pattern.test(line.trim()));
 }
 
-// Livrables générés par le pack de base (et la ligne des corrections), puis les lignes libres de l'offre
+// Livrables générés par le pack de base, puis les lignes libres de l'offre, et la ligne des corrections en dernier
 // (en français et en anglais). names : nom affiché de chaque produit dans la langue voulue.
-export function deliverablesWith(items: CompositionItem[], names: (option: Option) => string, options: Option[], free: string[], extra: string[] = []) {
-  const generated = [...items.flatMap((item) => {
+export function deliverablesWith(items: CompositionItem[], names: (option: Option) => ProductName, options: Option[], free: string[], extra: string[] = []) {
+  const products = items.flatMap((item) => {
     const option = options.find((o) => o.id === item.option);
-    return option ? [compositionLine(item, { name: names(option) })] : [];
-  }), ...extra.filter(Boolean)];
-  return [...generated, ...free.filter((line) => !generated.includes(line))];
+    return option ? [compositionLine(item, names(option))] : [];
+  });
+  const lines = [...products, ...free.filter((line) => !products.includes(line))];
+  return [...lines, ...extra.filter((line) => line && !lines.includes(line))];
 }
 
 // Lignes d'une option : affichage sur le site (« Overlay animé au lieu de Overlay statique » pour un remplacement,
 // texte modifiable « {produit} » / « {remplacé} ») et livrables de la commande (pack de base moins les lignes remplacées, plus les ajouts)
-export function optionLines(base: CompositionItem[], items: CompositionItem[], names: (option: Option) => string, options: Option[], replacesTemplate: string) {
+export function optionLines(base: CompositionItem[], items: CompositionItem[], names: (option: Option) => ProductName, options: Option[], replacesTemplate: string) {
   const line = (item: CompositionItem) => {
     const option = options.find((o) => o.id === item.option);
-    return option ? compositionLine(item, { name: names(option) }) : "";
+    return option ? compositionLine(item, names(option)) : "";
   };
   const display: string[] = [];
   const adds: string[] = [];

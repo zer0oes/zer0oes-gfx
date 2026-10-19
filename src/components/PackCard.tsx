@@ -90,7 +90,8 @@ export function PackCard({
 
       {compact ? (
         <ul className="mt-4 space-y-1.5 text-sm">
-          {pack.deliverables.slice(0, 3).map((item) => (
+          {/* Carte de l'accueil : tous les produits du pack de base, sinon les trois premiers livrables */}
+          {pack.deliverables.slice(0, Math.max(3, pack.composedCount ?? 0)).map((item) => (
             <li key={item} className="flex gap-2">
               <span className="text-accent-2" aria-hidden>✓</span>
               <span>{item}</span>

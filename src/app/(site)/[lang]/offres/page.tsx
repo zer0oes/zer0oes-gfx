@@ -5,6 +5,7 @@ import { OfferTabs } from "@/components/OfferTabs";
 import { OptionCatalog, type CatalogTexts } from "@/components/OptionCatalog";
 import { glossaryHints } from "@/lib/glossary";
 import { resolveOptionContent } from "@/lib/option-content";
+import { PackSwiper } from "@/components/PackSwiper";
 import { PackCard } from "@/components/PackCard";
 import { resolveHome } from "@/lib/home-content";
 import { asLocale, t, type Locale } from "@/lib/i18n";
@@ -150,11 +151,11 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
           </p>
         )}
         <OfferTabs locale={lang} labels={[texts.text("pricing.packsTab"), texts.text("pricing.optionsTab")]} upToLabel={texts.text("pricing.discountUpTo")} discounts={[categoryDiscount(packs.flatMap<{ price: number; normalPrice?: number; promotionCode?: string }>((pack) => pack.formulas?.length ? pack.formulas : [pack])), categoryDiscount(catalog.options.filter((option) => option.id !== INSTALL_OPTION_ID))]} packs={<>
-        <div className="grid gap-6 pt-3 md:grid-cols-3">
+        <PackSwiper className="pt-3" start={Math.max(0, packs.findIndex((p) => p.highlight))} labels={packs.map((p) => p.name)}>
           {packs.map((p) => (
             <PackCard key={p.id} pack={p} settings={site} showSaleBadge={false} order locale={lang} openOptions={details === p.id} texts={texts} />
           ))}
-        </div>
+        </PackSwiper>
         <section className="mt-8 text-center text-sm leading-relaxed text-muted" aria-labelledby="pack-value">
           <h2 id="pack-value" className="font-semibold text-foreground">{texts.text("pricing.explanationTitle")}</h2>
           <p className="mt-3 whitespace-pre-line">{texts.text("pricing.summary")}</p>
