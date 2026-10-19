@@ -39,8 +39,8 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const store = getStore();
   const [portfolio, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
   const { streamers: ordered, works } = trDeep(lang, withoutDrafts(portfolio));
-  // Cartes images 4:5, texte posé sur l'image (toutes à la même hauteur). Projet mis en avant (Admin > Portfolio) :
-  // en premier, sur deux colonnes à la même hauteur que les autres (image recadrée)
+  // Cartes projet : image 16:9 et texte dessous. Projet mis en avant (Admin > Portfolio) : en premier, sur deux colonnes,
+  // en grande image à la hauteur des cartes voisines, avec le texte posé dessus au survol
   const featured = featuredProjectId(stored);
   const streamers = [...ordered.filter((s) => s.id === featured), ...ordered.filter((s) => s.id !== featured)];
   const hasFeatured = streamers.length > 1 && streamers[0].id === featured;
@@ -50,7 +50,6 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const texts = resolveHome(stored, lang);
   // Pastilles du contenu de chaque projet aux couleurs des catégories (Admin > Offres et réglages > Catégories)
   const productCategories = readCategories(stored);
-  // Petites cartes : 3 pastilles, les suivantes résumées par « +N »
   const tagLimit = 3;
   return (
     <>
@@ -75,48 +74,75 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
             })
             .filter((c) => c.n > 0);
           const big = hasFeatured && s.id === featured;
+          const media = cover?.image && (
+            <ProtectedMedia className="absolute inset-0">
+              <Image
+                src={cover.image}
+                alt=""
+                fill
+                draggable={false}
+                sizes={big ? "(min-width: 768px) 760px, 100vw" : pair ? "(min-width: 1024px) 560px, (min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 370px, (min-width: 768px) 50vw, 100vw"}
+                className={`object-cover transition duration-500 ${coverVideo ? "" : "group-hover:scale-105"}`}
+              />
+              {coverVideo && <HoverVideo src={coverVideo} />}
+            </ProtectedMedia>
+          );
+          // Pastilles : toutes sur la carte en avant et les cartes à 50 %, sinon 3 puis « +N » (toutes sur mobile)
+          const tight = !big && !pair && counts.length > tagLimit + 1;
+          const tags = (
+            <ul className={`flex flex-wrap gap-2 ${big ? "mt-2" : "mt-auto pt-4"}`} aria-label={t(lang, { fr: "Contenu du projet", en: "Project contents" })}>
+              {counts.map((c, index) => (
+                <li key={c.id} style={{ color: c.color, borderColor: `color-mix(in srgb, ${c.color} 45%, transparent)`, background: `color-mix(in srgb, ${c.color} ${big ? "15%, rgb(0 0 0 / 0.4)" : "10%, transparent"})` }} className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs ${tight && index >= tagLimit ? "md:hidden" : ""}`}>
+                  {c.n} {c.label}
+                </li>
+              ))}
+              {tight && (
+                <li aria-hidden title={counts.slice(tagLimit).map((c) => `${c.n} ${c.label}`).join(", ")} className="hidden whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted md:block">
+                  +{counts.length - tagLimit}
+                </li>
+              )}
+            </ul>
+          );
+          const heading = (
+            <div className="flex items-center justify-between gap-4">
+              <h2 className={`font-display font-bold ${big ? "text-2xl" : "text-xl"}`}>{s.name}</h2>
+              <span className="whitespace-nowrap text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
+                {texts.text("portfolio.link")}
+              </span>
+            </div>
+          );
+          // Projet en avant : grande image sur deux colonnes, à la hauteur des cartes voisines, texte posé dessus au survol
+          if (big) return (
+            <Link
+              key={s.id}
+              href={href(lang, projectHref(s.id))}
+              data-hover-root
+              data-reveal
+              className="group relative block aspect-video overflow-hidden rounded-3xl border border-border bg-background transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none md:col-span-2 lg:aspect-auto"
+            >
+              {media}
+              {/* Texte visible au survol (toujours visible sur mobile, sans survol) */}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/95 via-background/70 to-transparent px-6 pb-5 pt-16 transition duration-300 md:translate-y-3 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 md:group-focus-visible:translate-y-0 md:group-focus-visible:opacity-100">
+                {heading}
+                <p className="mt-1 line-clamp-2 text-sm text-muted">{s.description}</p>
+                {tags}
+              </div>
+            </Link>
+          );
+          // Autres projets : image 16:9, texte en dessous
           return (
             <Link
               key={s.id}
               href={href(lang, projectHref(s.id))}
               data-hover-root
               data-reveal
-              className={`group relative block aspect-[4/5] overflow-hidden rounded-3xl border border-border bg-background transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2 md:aspect-[8/5] lg:aspect-auto" : ""}`}
+              className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none"
             >
-              {cover?.image && (
-                <ProtectedMedia className="absolute inset-0">
-                  <Image
-                    src={cover.image}
-                    alt=""
-                    fill
-                    draggable={false}
-                    sizes={big ? "(min-width: 768px) 760px, 100vw" : pair ? "(min-width: 1024px) 560px, (min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 370px, (min-width: 768px) 50vw, 100vw"}
-                    className={`object-cover transition duration-500 ${coverVideo ? "" : "group-hover:scale-105"}`}
-                  />
-                  {coverVideo && <HoverVideo src={coverVideo} />}
-                </ProtectedMedia>
-              )}
-              {/* Texte posé sur l'image, visible seulement au survol (toujours visible sur mobile, sans survol) */}
-              <div className="absolute inset-x-0 bottom-0 translate-y-0 bg-gradient-to-t from-background/95 via-background/70 to-transparent px-5 pb-4 pt-16 transition duration-300 md:translate-y-3 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 md:group-focus-visible:translate-y-0 md:group-focus-visible:opacity-100">
-                <div className="flex items-end justify-between gap-4">
-                  <h2 className={`font-display font-bold ${big ? "text-2xl" : "text-xl"}`}>{s.name}</h2>
-                  <span className="whitespace-nowrap text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
-                    {texts.text("portfolio.link")}
-                  </span>
-                </div>
-                <p className="line-clamp-2 pt-1 text-sm text-muted">{s.description}</p>
-                <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={t(lang, { fr: "Contenu du projet", en: "Project contents" })}>
-                  {(big ? counts : counts.slice(0, tagLimit)).map((c) => (
-                    <li key={c.id} style={{ color: c.color, borderColor: `color-mix(in srgb, ${c.color} 45%, transparent)`, background: `color-mix(in srgb, ${c.color} 15%, rgb(0 0 0 / 0.4))` }} className="whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs">
-                      {c.n} {c.label}
-                    </li>
-                  ))}
-                  {!big && counts.length > tagLimit && (
-                    <li title={counts.slice(tagLimit).map((c) => `${c.n} ${c.label}`).join(", ")} className="whitespace-nowrap rounded-full border border-border bg-black/40 px-2.5 py-0.5 text-xs text-muted">
-                      +{counts.length - tagLimit}
-                    </li>
-                  )}
-                </ul>
+              <div className="relative aspect-video shrink-0 overflow-hidden bg-background">{media}</div>
+              <div className="flex flex-1 flex-col p-6">
+                {heading}
+                <p className="mt-2 text-muted">{s.description}</p>
+                {tags}
               </div>
             </Link>
           );
