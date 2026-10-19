@@ -87,18 +87,19 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
               {coverVideo && <HoverVideo src={coverVideo} />}
             </ProtectedMedia>
           );
-          // Pastilles : toutes sur la carte en avant et les cartes à 50 %, sinon 3 puis « +N » (toutes sur mobile)
-          const tight = !big && !pair && counts.length > tagLimit + 1;
+          // Pastilles sur une seule ligne : les premières selon la largeur de la carte, puis « +N » (toutes sur mobile)
+          const limit = big ? tagLimit + 2 : pair ? tagLimit + 1 : tagLimit;
+          const tight = counts.length > limit + 1;
           const tags = (
             <ul className={`flex flex-wrap gap-2 ${big ? "mt-2" : "mt-auto pt-4"}`} aria-label={t(lang, { fr: "Contenu du projet", en: "Project contents" })}>
               {counts.map((c, index) => (
-                <li key={c.id} style={{ color: c.color, borderColor: `color-mix(in srgb, ${c.color} 45%, transparent)`, background: `color-mix(in srgb, ${c.color} ${big ? "15%, rgb(0 0 0 / 0.4)" : "10%, transparent"})` }} className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs ${tight && index >= tagLimit ? "md:hidden" : ""}`}>
+                <li key={c.id} style={{ color: c.color, borderColor: `color-mix(in srgb, ${c.color} 45%, transparent)`, background: `color-mix(in srgb, ${c.color} ${big ? "15%, rgb(0 0 0 / 0.4)" : "10%, transparent"})` }} className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs ${tight && index >= limit ? "md:hidden" : ""}`}>
                   {c.n} {c.label}
                 </li>
               ))}
               {tight && (
-                <li aria-hidden title={counts.slice(tagLimit).map((c) => `${c.n} ${c.label}`).join(", ")} className="hidden whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted md:block">
-                  +{counts.length - tagLimit}
+                <li aria-hidden title={counts.slice(limit).map((c) => `${c.n} ${c.label}`).join(", ")} className="hidden whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted md:block">
+                  +{counts.length - limit}
                 </li>
               )}
             </ul>
