@@ -1,4 +1,5 @@
-import { optionCategories, optionCategory, type Catalog } from "@/lib/pricing";
+import { optionCategory, type Catalog } from "@/lib/pricing";
+import { defaultCategories } from "@/lib/product-categories";
 
 export const bannerPages = [
   { path: "/", label: "Accueil" }, { path: "/offres", label: "Offres" },
@@ -80,8 +81,9 @@ export function promotionProducts(catalog: Catalog): PromotionProduct[] {
       ? p.formulas.map((f, i) => ({ key: `formula:${p.id}:${f.id}`, name: i === 0 ? p.name : `${p.name} — ${f.label}`, price: f.price }))
       : [{ key: `pack:${p.id}`, name: p.name, price: p.price }]).map((x) => ({ ...x, kind: "pack" as const, group: { id: `pack:${p.id}`, label: p.name } }))),
     ...catalog.options.map((o) => {
-      const category = optionCategories.find((c) => c.id === optionCategory(o))!;
-      return { key: `option:${o.id}`, name: `À la carte · ${o.name}`, price: o.price, kind: "option" as const, group: { id: `category:${category.id}`, label: category.label } };
+      const id = optionCategory(o);
+      const label = (catalog.categories ?? defaultCategories).find((c) => c.id === id)?.name ?? "À la carte";
+      return { key: `option:${o.id}`, name: `À la carte · ${o.name}`, price: o.price, kind: "option" as const, group: { id: `category:${id}`, label } };
     }),
   ];
 }

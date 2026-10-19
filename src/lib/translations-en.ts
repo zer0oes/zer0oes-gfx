@@ -152,6 +152,9 @@ const en: Record<string, string> = {
   Overlays: "Overlays",
   Widgets: "Widgets",
   Emotes: "Emotes",
+  // Catégories d'origine des créations à la carte (modifiables dans l'admin)
+  "Identité visuelle": "Visual identity",
+  Animation: "Animation",
   "La signature": "The signature",
   "Un trait.": "One line.",
   "Un éclair.": "A lightning bolt.",

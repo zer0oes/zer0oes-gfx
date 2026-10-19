@@ -47,7 +47,7 @@ export function DrawerRow({ drawer, label, className = "", sortId, children }: {
       aria-label={label}
       data-sort-id={sortId}
       onClick={(event) => {
-        if (!(event.target as HTMLElement).closest("button, a, input, select, form, [data-sort-handle]")) openDrawer(drawer);
+        if (!(event.target as HTMLElement).closest("button, a, input, select, textarea, form, dialog, [data-sort-handle]")) openDrawer(drawer);
       }}
       onKeyDown={(event) => {
         if ((event.key === "Enter" || event.key === " ") && event.target === event.currentTarget) {

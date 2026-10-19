@@ -7,10 +7,11 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { isUrssafPeriodicity } from "@/lib/finance";
 import type { Formula, Option, Pack } from "@/lib/pricing";
-import { optionCategories, type OptionCategory } from "@/lib/pricing";
 import { isWatermarkLevel } from "@/lib/protection";
 import { getStore } from "@/lib/store";
 import { optionContentFromForm, withGroupName, withGrouping, withoutOptionContent } from "@/lib/option-content";
+import { MAX_CSS, MAX_MARKUP, readVisuals, starterVisual, visualId, writeVisuals } from "@/lib/product-visuals";
+import { defaultCategories, isColor, readCategories, writeCategories } from "@/lib/product-categories";
 
 // Conversion « 490 », « 490,50 » ou « 1 990 » (€) → centimes. null si invalide.
 function parseEuros(raw: FormDataEntryValue | null): number | null {
@@ -38,6 +39,8 @@ const slug = (s: string) =>
 const TAB = {
   offres: "/admin/offres",
   options: "/admin/offres?onglet=options",
+  categories: "/admin/offres?onglet=categories",
+  visuels: "/admin/offres?onglet=visuels",
   reglages: "/admin/offres?onglet=reglages",
   cotisations: "/admin/offres?onglet=cotisations",
 } as const;
@@ -225,6 +228,12 @@ export async function deletePackAction(formData: FormData) {
 
 // --- Options à la carte : une fiche par option -------------------------------------
 
+// Catégorie choisie dans la fiche, si elle existe dans la liste de l'onglet Catégories
+async function categoryFrom(formData: FormData) {
+  const id = text(formData, "category", 60);
+  return readCategories(await getStore().getHomeContent()).find((c) => c.id === id)?.id;
+}
+
 const optionTab = (id?: string) => `${TAB.options}${id ? `&option=${encodeURIComponent(id)}#option-${id}` : ""}`;
 
 // Fiche d'une option : réglages (catalogue), textes FR/EN, contenu de la carte (description, « Tu reçois », compatibilité)
@@ -245,7 +254,7 @@ export async function saveOptionAction(formData: FormData) {
     price,
     priceFrom: formData.get("priceFrom") === "on" || undefined,
     unit: undefined, // champ retiré de l'admin : plus d'unité après le prix
-    category: optionCategories.find((c) => c.id === formData.get("category"))?.id as OptionCategory | undefined,
+    category: await categoryFrom(formData),
   };
   await store.saveOptions(options.map((o) => (o.id === id ? next : o)));
   await saveAdminTranslations(formData, `option:${id}`, ["name"]);
@@ -263,7 +272,7 @@ export async function createOptionAction(formData: FormData) {
   const { options } = await store.getCatalog();
   let id = slug(name) || "option";
   while (options.some((o) => o.id === id)) id = `${id}-2`;
-  const category = optionCategories.find((c) => c.id === formData.get("category"))?.id as OptionCategory | undefined;
+  const category = await categoryFrom(formData);
   await store.saveOptions([...options, { id, name, price, priceFrom: formData.get("priceFrom") === "on" || undefined, category }]);
   done(optionTab(id));
 }
@@ -312,5 +321,143 @@ export async function reorderPacksAction(ids: string[]) {
   // Seulement des offres existantes, toutes présentes
   if (ids.length !== current.length || !ids.every((id) => current.includes(id))) return;
   await store.reorderPacks(ids);
+  revalidatePath("/", "layout");
+}
+
+// Nom anglais d'un visuel ou d'une catégorie (vide : le nom français est repris sur /en)
+const nameEnKey = (scope: "visuel" | "categorie", id: string) => `translation:${scope}:${id}:name`;
+function withNameEn(content: Record<string, string>, scope: "visuel" | "categorie", id: string, nameEn: string | undefined) {
+  const key = nameEnKey(scope, id);
+  const next = { ...content };
+  if (nameEn?.trim()) next[key] = nameEn.trim().slice(0, 80);
+  else delete next[key];
+  return next;
+}
+const storedNameEn = (content: unknown, scope: "visuel" | "categorie", id: string) => {
+  const value = content && typeof content === "object" ? (content as Record<string, unknown>)[nameEnKey(scope, id)] : undefined;
+  return typeof value === "string" ? value : "";
+};
+
+// Visuels des créations à la carte (dessins en code) : bibliothèque rangée dans le contenu JSON
+const visualTab = (id?: string) => `${TAB.visuels}${id ? `&visuel=${encodeURIComponent(id)}#visuel-${id}` : ""}`;
+
+export async function createVisualAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const name = text(formData, "name", 80);
+  if (!name) done(`${TAB.visuels}&visuel=nouveau`, "Le nom du visuel est obligatoire.");
+  const content = await store.getHomeContent();
+  const visuals = readVisuals(content);
+  const id = visualId(name, visuals.map((v) => v.id));
+  await store.saveHomeContent(withNameEn(writeVisuals(content, [...visuals, { id, name, ...starterVisual }]), "visuel", id, text(formData, "nameEn", 80)));
+  done(visualTab(id));
+}
+
+// Enregistrement automatique depuis l'éditeur du visuel (sans rechargement de page)
+export async function autosaveVisualAction(id: string, draft: { name: string; nameEn: string; markup: string; css: string }): Promise<{ ok: true } | { ok: false; message: string }> {
+  await requireAdmin();
+  const store = getStore();
+  const name = draft.name.trim().slice(0, 80);
+  if (!name) return { ok: false, message: "Le nom du visuel est obligatoire." };
+  const content = await store.getHomeContent();
+  const visuals = readVisuals(content);
+  if (!visuals.some((v) => v.id === id)) return { ok: false, message: "Visuel introuvable." };
+  const clip = (v: string, max: number) => v.replace(/\r/g, "").trim().slice(0, max);
+  await store.saveHomeContent(withNameEn(writeVisuals(content, visuals.map((v) => (v.id === id ? { id, name, markup: clip(draft.markup, MAX_MARKUP), css: clip(draft.css, MAX_CSS) } : v))), "visuel", id, draft.nameEn));
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+// Copie placée juste après l'original, puis ouverte
+export async function duplicateVisualAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const content = await store.getHomeContent();
+  const visuals = readVisuals(content);
+  const i = visuals.findIndex((v) => v.id === text(formData, "id", 60));
+  if (i < 0) done(TAB.visuels, "Visuel introuvable.");
+  const name = `${visuals[i].name} (copie)`.slice(0, 80);
+  const copy = { ...visuals[i], id: visualId(name, visuals.map((v) => v.id)), name };
+  const nameEn = storedNameEn(content, "visuel", visuals[i].id);
+  await store.saveHomeContent(withNameEn(writeVisuals(content, [...visuals.slice(0, i + 1), copy, ...visuals.slice(i + 1)]), "visuel", copy.id, nameEn && `${nameEn} (copy)`));
+  done(visualTab(copy.id));
+}
+
+// Les produits qui l'utilisaient reprennent le visuel choisi d'après leur nom
+export async function deleteVisualAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const id = text(formData, "id", 60);
+  const content = await store.getHomeContent();
+  await store.saveHomeContent(withNameEn(writeVisuals(content, readVisuals(content).filter((v) => v.id !== id)), "visuel", id, ""));
+  done(TAB.visuels);
+}
+
+// Catégories des créations à la carte (filtres de la page Offres) : liste rangée dans le contenu JSON
+const categoryTab = (id?: string) => `${TAB.categories}${id ? `&categorie=${encodeURIComponent(id)}#categorie-${id}` : ""}`;
+
+export async function createCategoryAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const name = text(formData, "name", 60);
+  if (!name) done(`${TAB.categories}&categorie=nouvelle`, "Le nom de la catégorie est obligatoire.");
+  const content = await store.getHomeContent();
+  const categories = readCategories(content);
+  const id = visualId(name, categories.map((c) => c.id));
+  // Couleur de départ : une des couleurs d'origine pas encore prise
+  const color = defaultCategories.map((c) => c.color).find((c) => !categories.some((x) => x.color === c)) ?? defaultCategories[0].color;
+  await store.saveHomeContent(withNameEn(writeCategories(content, [...categories, { id, name, color }]), "categorie", id, text(formData, "nameEn", 60)));
+  done(categoryTab(id));
+}
+
+export async function saveCategoryAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const id = text(formData, "id", 60);
+  const name = text(formData, "name", 60);
+  const color = text(formData, "color", 7);
+  if (!name) done(categoryTab(id), "Le nom de la catégorie est obligatoire.");
+  if (!isColor(color)) done(categoryTab(id), "Couleur invalide (format #RRGGBB).");
+  const content = await store.getHomeContent();
+  const categories = readCategories(content);
+  if (!categories.some((c) => c.id === id)) done(TAB.categories, "Catégorie introuvable.");
+  await store.saveHomeContent(writeCategories(content, categories.map((c) => (c.id === id ? { id, name, color } : c))));
+  await saveAdminTranslations(formData, `categorie:${id}`, ["name"]);
+  done(categoryTab(id));
+}
+
+// Copie placée juste après l'original, puis ouverte (sans produits : ils restent dans l'original)
+export async function duplicateCategoryAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const content = await store.getHomeContent();
+  const categories = readCategories(content);
+  const i = categories.findIndex((c) => c.id === text(formData, "id", 60));
+  if (i < 0) done(TAB.categories, "Catégorie introuvable.");
+  const name = `${categories[i].name} (copie)`.slice(0, 60);
+  const copy = { ...categories[i], id: visualId(name, categories.map((c) => c.id)), name };
+  const nameEn = storedNameEn(content, "categorie", categories[i].id);
+  await store.saveHomeContent(withNameEn(writeCategories(content, [...categories.slice(0, i + 1), copy, ...categories.slice(i + 1)]), "categorie", copy.id, nameEn && `${nameEn} (copy)`));
+  done(categoryTab(copy.id));
+}
+
+// Les produits de la catégorie supprimée reprennent celle devinée d'après leur nom (ou la première)
+export async function deleteCategoryAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const id = text(formData, "id", 60);
+  const content = await store.getHomeContent();
+  await store.saveHomeContent(withNameEn(writeCategories(content, readCategories(content).filter((c) => c.id !== id)), "categorie", id, ""));
+  done(TAB.categories);
+}
+
+// Nouvel ordre des catégories (ordre des filtres sur la page Offres)
+export async function reorderCategoriesAction(ids: string[]) {
+  await requireAdmin();
+  const store = getStore();
+  const content = await store.getHomeContent();
+  const categories = readCategories(content);
+  if (ids.length !== categories.length || !categories.every((c) => ids.includes(c.id))) return;
+  await store.saveHomeContent(writeCategories(content, ids.map((id) => categories.find((c) => c.id === id)!)));
   revalidatePath("/", "layout");
 }

@@ -6,6 +6,7 @@
 import { intlLocale, type Locale } from "@/lib/i18n";
 import { trDeep } from "@/lib/translations-en";
 import { hasLaunchOffer } from "@/lib/launch-offer";
+import type { ProductCategory } from "./product-categories";
 
 export type Formula = {
   normalPrice?: number;
@@ -47,7 +48,8 @@ export type PricingSettings = {
   deliveryDays: string;
 };
 
-export type Catalog = { settings: PricingSettings; packs: Pack[]; options: Option[] };
+// categories : liste gérée dans l'admin (ajoutée par getStore().getCatalog())
+export type Catalog = { settings: PricingSettings; packs: Pack[]; options: Option[]; categories?: ProductCategory[] };
 
 export type PaymentType = "total" | "acompte";
 
@@ -146,17 +148,12 @@ export function parsePaymentType(value: unknown): PaymentType {
 // Types d'overlays proposés au choix dans le brief.
 export const overlayTypes = ["Démarrage", "Pause", "Fin", "Discussion", "Gameplay"];
 
-// Catégories des options à la carte (page Offres), déduites du nom de l'option
-export const optionCategories = [
-  { id: "overlays", label: "Overlays", hint: "Scènes et habillage du live" },
-  { id: "emotes", label: "Emotes", hint: "Pour ton tchat et tes abonnés" },
-  { id: "branding", label: "Identité visuelle", hint: "Ta chaîne sur toutes les plateformes" },
-  { id: "motion", label: "Animation", hint: "Pour donner vie à ton univers" },
-] as const;
-export type OptionCategory = (typeof optionCategories)[number]["id"];
+// Catégorie d'une option à la carte : celle enregistrée, sinon devinée d'après son nom.
+// La liste des catégories (nom, couleur, ordre) se gère dans l'admin : voir product-categories.ts.
+export type OptionCategory = string;
 
 export function optionCategory(o: Pick<Option, "name" | "category">): OptionCategory {
-  if (o.category && optionCategories.some((c) => c.id === o.category)) return o.category;
+  if (o.category) return o.category;
   const n = o.name.toLowerCase();
   if (n.includes("emote")) return "emotes";
   // Overlays, alertes et widgets (même animés) : habillage du live
