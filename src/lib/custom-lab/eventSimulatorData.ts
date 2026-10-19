@@ -100,3 +100,36 @@ export function randomEventAmount(listener: string): number {
   if (listener === "cheer-latest") return cheerBitAmounts[Math.floor(Math.random() * cheerBitAmounts.length)];
   return Math.floor(Math.random() * 50) + 1;
 }
+
+// Session de démo envoyée au chargement (onWidgetLoad / onLoad) : derniers
+// abonnés, dons, bits, raids… avec de faux pseudos, comme les données de
+// session StreamElements. Aucune donnée réelle de chaîne n'est lue.
+export function demoSession() {
+  const latest = (listener: string, extra: Record<string, unknown> = {}) => ({ name: randomEventName(), amount: randomEventAmount(listener), ...extra });
+  const count = (max: number) => ({ count: Math.floor(Math.random() * max) + 1 });
+  const total = (max: number) => ({ amount: Math.floor(Math.random() * max) + 1 });
+  const data: Record<string, unknown> = {
+    "follower-latest": { name: randomEventName() },
+    "follower-session": count(20), "follower-week": count(80), "follower-month": count(300), "follower-goal": count(500), "follower-total": count(5000),
+    "subscriber-latest": latest("subscriber-latest", { tier: "1000", message: randomChatMessage() }),
+    "subscriber-new-latest": { name: randomEventName(), amount: 1 },
+    "subscriber-resub-latest": latest("subscriber-latest", { message: randomChatMessage() }),
+    "subscriber-gifted-latest": { name: randomEventName(), amount: 1, tier: "1000", sender: randomEventName() },
+    "subscriber-session": count(10), "subscriber-week": count(30), "subscriber-month": count(100), "subscriber-goal": count(200), "subscriber-total": count(800), "subscriber-points": count(1000),
+    "cheer-latest": latest("cheer-latest", { message: randomChatMessage() }),
+    "cheer-session": total(5000), "cheer-week": total(20000), "cheer-month": total(80000), "cheer-goal": total(100000), "cheer-total": total(500000),
+    "cheer-session-top-donation": latest("cheer-latest"), "cheer-alltime-top-donation": latest("cheer-latest"),
+    "tip-latest": latest("tip-latest", { message: randomChatMessage() }),
+    "tip-session": total(100), "tip-week": total(300), "tip-month": total(1000), "tip-goal": total(2000), "tip-total": total(10000),
+    "tip-session-top-donation": latest("tip-latest"), "tip-alltime-top-donation": latest("tip-latest"),
+    "raid-latest": latest("raid-latest"),
+  };
+  const recents = [
+    { type: "follower", name: randomEventName() },
+    { type: "subscriber", name: randomEventName(), amount: 1, tier: "1000" },
+    { type: "cheer", name: randomEventName(), amount: randomEventAmount("cheer-latest") },
+    { type: "tip", name: randomEventName(), amount: randomEventAmount("tip-latest") },
+    { type: "raid", name: randomEventName(), amount: randomEventAmount("raid-latest") },
+  ].map((event, i) => ({ ...event, createdAt: new Date(Date.now() - i * 600_000).toISOString() }));
+  return { session: { data, settings: {}, count: Object.keys(data).length }, recents };
+}
