@@ -514,7 +514,7 @@ export default async function OrderPortalPage({ params, searchParams }: PageProp
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-accent [&::-webkit-details-marker]:hidden">
             {downloadsLockedByBalance ? (locale === "en" ? "Payment breakdown" : "Détail des paiements") : tx.payment}
             {due > 0 && !downloadsLockedByBalance && <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold normal-case tracking-normal text-amber-300">{locale === "en" ? "Balance due" : "Solde restant"} : {price(due)}</span>}
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="ml-auto size-5 shrink-0 transition-transform group-open/payment:rotate-180"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" /></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="ml-auto size-5 shrink-0 transition-transform duration-[260ms] ease-out motion-reduce:transition-none group-open/payment:rotate-180"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" /></svg>
           </summary>
           <dl className="mt-3 grid gap-3 sm:grid-cols-3">
             <div>

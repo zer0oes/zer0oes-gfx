@@ -138,7 +138,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/ad
           <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
             <span className="flex flex-wrap items-center justify-between gap-3">
               <span className="font-semibold">Paiement et facturation</span>
-              <span className="text-sm"><span className="text-emerald-300">{money(order.amountPaid)} {due > 0 ? "encaissés" : "réglés"}</span> · Net : {money(net.net)} <span className="ml-3 text-accent">Détails <svg aria-hidden="true" data-icon="expand_more" viewBox="0 0 24 24" className="inline-block size-5 transition-transform group-open:rotate-180" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" /></svg></span></span>
+              <span className="text-sm"><span className="text-emerald-300">{money(order.amountPaid)} {due > 0 ? "encaissés" : "réglés"}</span> · Net : {money(net.net)} <span className="ml-3 text-accent">Détails <svg aria-hidden="true" data-icon="expand_more" viewBox="0 0 24 24" className="inline-block size-5 transition-transform duration-[260ms] ease-out motion-reduce:transition-none group-open:rotate-180" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" /></svg></span></span>
             </span>
             {due > 0 && <span className="mt-2 block text-sm text-amber-300">Solde restant : {money(due)}</span>}
           </summary>

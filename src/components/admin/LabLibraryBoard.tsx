@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useOptimistic, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useOptimistic, useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
 import { deleteLabAction, duplicateLabAction, moveLabAction } from "@/app/admin/custom-lab-actions";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
 import { ClickableRow } from "./ClickableRow";
+import { Collapse } from "@/components/Collapse";
 import { MaterialIcon } from "./MaterialIcon";
 
 export type LabRow = { id: string; name: string; description: string; kindLabel: string; kindTone: string; platforms: Platform[]; size: string; updated: string };
-export type LabSection = { name: string; header: ReactNode; rows: LabRow[] };
+export type LabSection = { name: string; header: ReactNode; rows: LabRow[]; archived?: boolean };
 
 const platformIcons: Record<Platform, { src: string; label: string }> = {
   streamelements: { src: "/streamerlab/platforms/streamelements-icon.svg", label: "StreamElements" },
@@ -87,7 +88,28 @@ function applyMove(sections: LabSection[], move: Move): LabSection[] {
 
 // Bibliothèque : un tableau par projet ; poignée en début de ligne pour changer l'ordre ou déplacer vers un autre projet,
 // menu « ⋮ » en fin de ligne (dupliquer, supprimer)
+// Projets repliés ou dépliés à la main, mémorisés dans ce navigateur (simple confort d'affichage) ; les archivés sont repliés par défaut
+const COLLAPSED_KEY = "laboratoire-projets-replies";
+const COLLAPSED_EVENT = "laboratoire-projets-replies";
+function readCollapsed() {
+  try { return localStorage.getItem(COLLAPSED_KEY) ?? "[]"; } catch { return "[]"; }
+}
+function subscribeCollapsed(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(COLLAPSED_EVENT, onChange);
+  return () => { window.removeEventListener("storage", onChange); window.removeEventListener(COLLAPSED_EVENT, onChange); };
+}
+function toggleCollapsed(name: string) {
+  let names: string[] = [];
+  try { names = JSON.parse(readCollapsed()); } catch {}
+  const next = names.includes(name) ? names.filter((n) => n !== name) : [...names, name];
+  try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next)); } catch {}
+  window.dispatchEvent(new Event(COLLAPSED_EVENT));
+}
+
 export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] }) {
+  const collapsedRaw = useSyncExternalStore(subscribeCollapsed, readCollapsed, () => "[]");
+  const collapsed = (() => { try { const v = JSON.parse(collapsedRaw); return Array.isArray(v) ? v as string[] : []; } catch { return []; } })();
   const [sections, addMove] = useOptimistic(initial, applyMove);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [message, setMessage] = useState("");
@@ -138,15 +160,27 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
   };
 
   return (
-    <div className="mt-8 space-y-10">
+    <div className="mt-8 space-y-5">
       <p role="status" aria-live="polite" className="sr-only">{message}</p>
       {sections.map((section) => {
         const rows = drag ? section.rows.filter((r) => r.id !== drag.row.id) : section.rows;
         const slotAt = drag && drag.over === section.name ? drag.index : -1;
+        // Replié : le tableau est masqué (et ne reçoit plus de création glissée)
+        // La liste mémorise les projets dont l'état diffère du défaut : déplié, ou replié pour un projet archivé
+        const folded = section.archived ? !collapsed.includes(section.name) : collapsed.includes(section.name);
         return (
-          <section key={section.name} aria-label={`Projet ${section.name}`}>
-            {section.header}
-            <div className="mt-3 overflow-x-auto rounded-2xl border border-border">
+          // Un projet = un seul bloc (en-tête + créations) ; survoler son en-tête met tout le bloc en surbrillance. Archivé : bloc atténué (pointillés), net au survol
+          <section key={section.name} aria-label={`Projet ${section.name}`} className={`overflow-hidden rounded-2xl border border-border bg-surface/40 transition-[color,background-color,border-color,opacity] has-[[data-lab-head]:hover]:border-accent/40 has-[[data-lab-head]:hover]:bg-accent/5 ${section.archived ? "border-dashed opacity-55 hover:opacity-100 focus-within:opacity-100" : ""}`}>
+            {/* Toute la ligne replie ou déplie le projet, sauf ses propres boutons (paramètres, enregistrer) */}
+            <div data-lab-head className="flex cursor-pointer items-start gap-1 px-3 py-3"
+              onClick={(event) => { if (!(event.target as HTMLElement).closest("button, a, form, input")) toggleCollapsed(section.name); }}>
+              <button type="button" onClick={() => toggleCollapsed(section.name)} aria-expanded={!folded} aria-label={`${folded ? "Déplier" : "Replier"} le projet ${section.name}`} title={folded ? "Déplier" : "Replier"}
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent">
+                <MaterialIcon name="expand_more" className={`size-5 transition-transform duration-[260ms] ease-out motion-reduce:transition-none ${folded ? "-rotate-90" : ""}`} />
+              </button>
+              <div className="min-w-0 flex-1">{section.header}</div>
+            </div>
+            <Collapse open={!folded}><div className="overflow-x-auto border-t border-border">
               <table className="w-full min-w-[1040px] table-fixed text-left text-sm">
                 {/* Mêmes largeurs de colonnes pour tous les projets */}
                 <colgroup>
@@ -159,8 +193,8 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
                   <col className="w-48" />
                   <col className="w-12" />
                 </colgroup>
-                <thead className="bg-surface text-xs uppercase tracking-wider text-muted">
-                  <tr>
+                <thead className="bg-background/60 text-xs uppercase tracking-wider text-muted">
+                  <tr className="border-b border-border/50">
                     <th scope="col"><span className="sr-only">Ordre</span></th>
                     <th scope="col" className="px-4 py-3 font-medium">Création</th>
                     <th scope="col" className="px-4 py-3 font-medium">Description</th>
@@ -171,7 +205,7 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
                     <th scope="col"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
-                <tbody data-lab-section={section.name} className="divide-y divide-border">
+                <tbody data-lab-section={folded ? undefined : section.name} className="divide-y divide-border">
                   {rows.flatMap((row, i) => [
                     ...(i === slotAt ? [<Slot key="slot" height={drag!.height} />] : []),
                     <ClickableRow key={row.id} href={`/admin/laboratoire/${row.id}`} data-lab-row>
@@ -180,8 +214,9 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
                           <MaterialIcon name="drag_indicator" className="size-5" />
                         </button>
                       </td>
-                      <td className="truncate px-4 py-3 font-medium" title={row.name}>{row.name}</td>
-                      <td className="whitespace-pre-line break-words px-4 py-3 text-muted">{row.description || "—"}</td>
+                      <td className="truncate px-4 py-3 font-medium" title={row.name} data-tip-if-truncated>{row.name}</td>
+                      {/* Même hauteur pour toutes les lignes : texte coupé avec « … », en entier dans l'infobulle */}
+                      <td className="truncate px-4 py-3 text-muted" title={row.description || undefined} data-tip-if-truncated>{row.description || "—"}</td>
                       <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${row.kindTone}`}>{row.kindLabel}</span></td>
                       <td className="px-4 py-3"><Compatibility platforms={row.platforms} /></td>
                       <td className="whitespace-nowrap px-4 py-3 tabular-nums text-muted">{row.size}</td>
@@ -193,7 +228,7 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
                   {!rows.length && slotAt < 0 && <tr><td colSpan={8} className="px-4 py-4 text-center text-sm text-muted">Aucune création dans ce projet.</td></tr>}
                 </tbody>
               </table>
-            </div>
+            </div></Collapse>
           </section>
         );
       })}

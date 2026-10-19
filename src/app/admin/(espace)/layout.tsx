@@ -1,5 +1,6 @@
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminLiveRefresh } from "@/components/admin/AdminLiveRefresh";
+import { AdminTooltips } from "@/components/admin/AdminTooltips";
 import { requireAdmin } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { countPendingOrders, countPendingQuotes } from "@/lib/pending-orders";
@@ -13,6 +14,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
       <AdminLiveRefresh />
+      <AdminTooltips />
       <AdminSidebar email={admin.email} storeKind={store.kind} pendingOrders={pendingOrders} pendingQuotes={pendingQuotes} />
       <main className="min-w-0 flex-1 p-4 sm:p-8">{children}</main>
     </div>

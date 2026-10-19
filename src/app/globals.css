@@ -320,3 +320,22 @@ html,
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* Déplier / replier : même animation partout que <Collapse> (hauteur + fondu, 260 ms, ease-out),
+   appliquée aussi aux blocs <details>. Les menus déroulants (<details data-menu>) s'ouvrent sans animation. */
+:root {
+  interpolate-size: allow-keywords;
+}
+details:not([data-menu])::details-content {
+  block-size: 0;
+  opacity: 0;
+  overflow: clip;
+  transition: block-size 260ms ease-out, opacity 260ms ease-out, content-visibility 260ms allow-discrete;
+}
+details:not([data-menu])[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  details::details-content { transition: none; }
+}
