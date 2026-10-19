@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition, type CSSProperties } from "react";
 import { autosaveVisualAction } from "@/app/admin/offres-actions";
+import { notifySiteChanged } from "@/lib/site-refresh";
 import { highlightSource } from "@/lib/custom-lab/syntaxHighlight";
 import { MaterialIcon } from "./MaterialIcon";
 import "./custom-lab.css";
@@ -49,6 +50,7 @@ export function VisualEditor({ visual, nameEn }: { visual: ProductVisual; nameEn
         const result = await autosaveVisualAction(visual.id, snapshot);
         if (!result.ok) { setStatus(result.message); return; }
         setSaved(JSON.stringify(snapshot));
+        notifySiteChanged();
         setStatus(`Enregistré à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}.`);
       } catch { setStatus("Connexion interrompue. Tes modifications restent dans l’éditeur."); }
     });
@@ -71,7 +73,7 @@ export function VisualEditor({ visual, nameEn }: { visual: ProductVisual; nameEn
   const edit = (next: string) => setDraft((d) => ({ ...d, [tab]: next }));
 
   return (
-    <div ref={root} className="space-y-5">
+    <div ref={root} data-own-save className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-1.5 text-sm font-medium">Nom<input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} required maxLength={80} lang="fr" className={input} /></label>
         <label className="grid gap-1.5 text-sm font-medium">Nom anglais<input value={draft.nameEn} onChange={(e) => setDraft((d) => ({ ...d, nameEn: e.target.value }))} maxLength={80} lang="en" placeholder={draft.name} className={input} /></label>

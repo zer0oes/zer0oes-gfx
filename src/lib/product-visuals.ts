@@ -50,7 +50,33 @@ export const defaultVisuals: ProductVisual[] = [
   <circle class="piece" cx="80" cy="34" r="10" />
   <path class="piece" d="M56 60h48" stroke-width="5" opacity=".4" />
   <path class="piece" d="M56 74h32" stroke-width="3" opacity=".2" />`) },
+  { id: "transition", name: "Transition / stinger", css: `:scope { animation: preview-float 3s ease-in-out infinite; }
+.wipe { animation: visuel-stinger-wipe 2.6s cubic-bezier(.7, 0, .3, 1) infinite; }
+@keyframes visuel-stinger-wipe { 0% { transform: translateX(-150px); } 45%, 55% { transform: translateX(0); } 100% { transform: translateX(150px); } }`, markup: svg(`  <defs><clipPath id="visuel-stinger-ecran"><rect x="8" y="10" width="144" height="81" rx="8" /></clipPath></defs>
+  <rect x="8" y="10" width="144" height="81" rx="8" stroke-dasharray="6 5" />
+  <g clip-path="url(#visuel-stinger-ecran)">
+    <g class="wipe">
+      <path d="M58 6h46L84 96H38Z" fill="currentColor" fill-opacity=".18" />
+      <path d="M96 6h14L90 96H76Z" fill="currentColor" fill-opacity=".45" stroke="none" />
+      <path d="M48 6h6L34 96h-6Z" fill="currentColor" fill-opacity=".3" stroke="none" />
+    </g>
+  </g>`) },
+  { id: "synthe", name: "Synthé / lower third", css: `:scope { animation: preview-float 3s ease-in-out infinite; }
+.bandeau { animation: visuel-lower-third 3.2s ease-in-out infinite; }
+.bandeau .piece { animation: preview-icon 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes visuel-lower-third { 0%, 100% { transform: translateX(-24px); opacity: 0; } 18%, 82% { transform: none; opacity: 1; } }`, markup: svg(`  <rect x="8" y="10" width="144" height="81" rx="8" stroke-dasharray="6 5" />
+  <g class="bandeau">
+    <rect x="18" y="58" width="9" height="22" rx="2" fill="currentColor" fill-opacity=".45" />
+    <rect x="31" y="58" width="78" height="22" rx="3" />
+    <path class="piece" d="M38 66h46" stroke-width="3.5" opacity=".6" />
+    <path d="M38 74h28" stroke-width="2" opacity=".3" />
+  </g>`) },
 ];
+
+// Dessins ajoutés après la première version : ajoutés une fois à une bibliothèque déjà enregistrée
+// (« page:offres:visuels:ajouts » retient ceux déjà proposés, pour qu'un visuel supprimé ne revienne pas)
+const addedVisuals = ["transition", "synthe"];
+const addedKey = "page:offres:visuels:ajouts";
 
 // Point de départ d'un nouveau visuel
 export const starterVisual = { markup: svg(`  <rect x="20" y="10" width="120" height="80" rx="10" stroke-dasharray="6 5" />
@@ -65,6 +91,8 @@ export function defaultVisualId(option: Pick<Option, "id" | "name" | "category">
   if (/logo/i.test(name)) return "logo";
   if (/banni|banner/i.test(name)) return "banniere";
   if (/widget|alerte|alert/i.test(name)) return "widget";
+  if (/transition|stinger/i.test(name)) return "transition";
+  if (/synth|lower|bandeau.?nom/i.test(name)) return "synthe";
   return "overlay";
 }
 
@@ -76,7 +104,10 @@ export function readVisuals(raw: unknown): ProductVisual[] {
   try {
     const list = JSON.parse(stored);
     if (!Array.isArray(list)) return defaultVisuals;
-    return list.filter((v): v is ProductVisual => v && typeof v.id === "string" && typeof v.name === "string" && typeof v.markup === "string" && typeof v.css === "string");
+    const visuals = list.filter((v): v is ProductVisual => v && typeof v.id === "string" && typeof v.name === "string" && typeof v.markup === "string" && typeof v.css === "string");
+    const offered = String(asRecord(raw)[addedKey] ?? "").split(",");
+    const missing = defaultVisuals.filter((v) => addedVisuals.includes(v.id) && !offered.includes(v.id) && !visuals.some((x) => x.id === v.id));
+    return [...visuals, ...missing];
   } catch {
     return defaultVisuals;
   }
@@ -85,6 +116,7 @@ export function readVisuals(raw: unknown): ProductVisual[] {
 export function writeVisuals(raw: unknown, visuals: ProductVisual[]): Record<string, string> {
   const content = Object.fromEntries(Object.entries(asRecord(raw)).filter(([, v]) => typeof v === "string")) as Record<string, string>;
   content[visualsKey] = JSON.stringify(visuals);
+  content[addedKey] = addedVisuals.join(",");
   return content;
 }
 

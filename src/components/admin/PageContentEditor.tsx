@@ -17,20 +17,23 @@ export function PageContentEditor({ page, defaults, stored, action, formatted = 
   const english = Object.fromEntries(defaults.en.map((field) => [field.key, field.value]));
   const fields = [...defaults.fr, ...defaults.en.filter((field) => !defaults.fr.some((f) => f.key === field.key)).map((field) => ({ ...field, value: "" }))];
   const groups = Map.groupBy(fields, (field) => field.section);
+  const translations = translationValues(stored);
   const customized = Object.keys(values).some((key) => key.startsWith(`page:${page}:`));
   return (
-    <TranslationTabs stored={translationValues(stored)}>
+    <>
       <div className="mb-5 flex flex-wrap gap-4 text-sm">
         <Link href={`/${page}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Voir la page en français ↗</Link>
         <Link href={`/en/${page}`} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Voir la page en anglais ↗</Link>
       </div>
+      <p className="mb-6 text-xs text-muted">Chaque bloc a ses onglets Français / English ; les deux langues sont enregistrées ensemble. Un texte anglais vide reprend la traduction d’origine, ou le français.</p>
       {formatted && <p className="mb-6 max-w-3xl text-xs text-muted">Mise en forme : **texte en gras**, [texte du lien](adresse), et retours à la ligne. Les éléments entre doubles accolades restent liés aux informations du site et aux réglages.</p>}
       <form action={action} className="space-y-6">
         <input type="hidden" name="page" value={page} />
         {[...groups].map(([section, sectionFields]) => (
           <section key={section} className="rounded-2xl border border-border bg-surface p-5 sm:p-6">
-            <h2 className="font-semibold">{section}</h2>
-            <div className="mt-4 space-y-4">
+            <h2 className="mb-2 font-semibold">{section}</h2>
+            <TranslationTabs compact hint={false} stored={translations}>
+            <div className="space-y-4">
               {sectionFields.map((field) => (
                 <div key={field.key} className="block">
                   <span className="mb-1 block text-xs text-muted">{field.label}</span>
@@ -41,6 +44,7 @@ export function PageContentEditor({ page, defaults, stored, action, formatted = 
                 </div>
               ))}
             </div>
+            </TranslationTabs>
           </section>
         ))}
         <div className="sticky bottom-4 rounded-2xl border border-border bg-surface/95 p-4 backdrop-blur">
@@ -52,6 +56,6 @@ export function PageContentEditor({ page, defaults, stored, action, formatted = 
         <label className="flex items-center gap-1"><input type="checkbox" name="confirm" required /> confirmer</label>
         <button type="submit" className="rounded-full border border-border px-3 py-1.5 hover:text-foreground">Revenir aux textes d’origine dans les deux langues</button>
       </form>}
-    </TranslationTabs>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { MaterialIcon } from "./MaterialIcon";
 
 // Panneau latéral droit (comme les livrables d'une commande). openOnLoad : rouvert après un enregistrement.
 // footer : boutons d'action, sous un séparateur en bas du panneau
@@ -26,7 +27,7 @@ export function Drawer({ id, kicker, title, openOnLoad = false, footer, children
             <h3 id={`${id}-title`} className="font-display text-xl font-bold">{title}</h3>
           </div>
           <button type="button" onClick={() => dialog.current?.close()} className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted transition hover:bg-accent/10 hover:text-foreground" aria-label="Fermer le panneau" title="Fermer">
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
+            <MaterialIcon name="close" className="size-5" />
           </button>
         </div>
         <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-5 pt-3 sm:px-6 sm:pb-6">{children}</div>
@@ -79,7 +80,7 @@ export function ConfirmDelete({ action, id, label = "Supprimer", question = "Es-
     <>
       {icon ? (
         <button type="button" onClick={() => dialog.current?.showModal()} aria-label={label || question} title={label || "Retirer"} className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-red-500/10 hover:text-red-300">
-          <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" /></svg>
+          <MaterialIcon name="delete" className="size-4" />
         </button>
       ) : (
         <button type="button" onClick={() => dialog.current?.showModal()} className="rounded-full border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10">

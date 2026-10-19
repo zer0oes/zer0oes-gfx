@@ -12,6 +12,7 @@ import { storedPage, toStored } from "@/lib/page-builder";
 import { homeFromForm, resetGroup } from "@/lib/home-content";
 import { s3Configured, s3Delete, s3SignedUpload } from "@/lib/s3";
 import { getStore } from "@/lib/store";
+import { featuredProjectKey } from "@/lib/portfolio-featured";
 import { checkUpload, sniffType, storagePath, type MediaKind } from "@/lib/uploads";
 import { watermarkImage } from "@/lib/watermark";
 import { projectCategory, projectName, projectSource, projectUrl } from "@/lib/order-to-project";
@@ -55,15 +56,17 @@ export async function saveStreamerAction(formData: FormData) {
   await requireAdmin();
   const name = text(formData, "name", 80);
   const existing = text(formData, "id", 60);
-  const back = existing ? projectAdmin(existing) : "/admin/portfolio";
+  const back = existing ? projectAdmin(existing) : projectAdmin("nouveau");
   if (!name) done(back, "Le nom du projet est obligatoire.");
-  const id = existing || slug(name);
+  let id = existing || slug(name) || "projet";
+  // Nouveau projet : identifiant libre (jamais celui d'un projet existant)
+  if (!existing) { const taken = ["nouveau", ...(await getStore().getPortfolio()).streamers.map((s) => s.id)]; for (let n = 2; taken.includes(id); n++) id = `${slug(name) || "projet"}-${n}`; }
   const url = text(formData, "url", 300);
   if (url && !mediaUrl(url)) done(back, "Le lien de la chaîne doit commencer par https://.");
   const store = getStore();
-  // Brouillon et commande d'origine conservés : ce formulaire ne modifie que les informations
+  // Brouillon et commande d'origine conservés : ce formulaire ne modifie que les informations. Nouveau projet : en brouillon.
   const current = existing ? (await store.getPortfolio()).streamers.find((s) => s.id === existing) : undefined;
-  await store.saveStreamer({ id, name, description: text(formData, "description", 300), url: url || undefined, draft: current?.draft, orderId: current?.orderId });
+  await store.saveStreamer({ id, name, description: text(formData, "description", 300), url: url || undefined, draft: existing ? current?.draft : true, orderId: current?.orderId });
   await saveAdminTranslations(formData, `streamer:${id}`, ["name", "description"]);
   // Nouveau projet : on ouvre directement sa fiche
   done(projectAdmin(id));
@@ -77,7 +80,7 @@ export async function setStreamerDraftAction(formData: FormData) {
   const streamer = (await store.getPortfolio()).streamers.find((s) => s.id === id);
   if (!streamer) done("/admin/portfolio", "Projet introuvable.");
   await store.saveStreamer({ ...streamer, draft: formData.get("draft") === "1" || undefined });
-  done(projectAdmin(id));
+  done(formData.get("back") === "liste" ? "/admin/portfolio" : projectAdmin(id));
 }
 
 // Commande terminée → projet du portfolio en brouillon : nom et lien de la chaîne repris du brief,
@@ -254,6 +257,28 @@ export async function deleteWorkAction(formData: FormData) {
   const work = (await getStore().getPortfolio()).works.find((w) => w.id === id);
   await getStore().deleteWork(id);
   done(work ? projectAdmin(work.streamer) : "/admin/portfolio");
+}
+
+// Nouvel ordre des projets (glisser-déposer dans la liste de l'admin)
+export async function reorderStreamersAction(ids: string[]) {
+  await requireAdmin();
+  const store = getStore();
+  const current = (await store.getPortfolio()).streamers.map((s) => s.id);
+  if (ids.length !== current.length || !current.every((id) => ids.includes(id))) return;
+  await store.reorderStreamers(ids);
+  revalidatePath("/", "layout");
+}
+
+// Projet mis en avant sur la page Portfolio (deux colonnes) : un seul à la fois, re-cliquer le retire
+export async function setFeaturedProjectAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const id = text(formData, "id", 60);
+  const content = await store.getHomeContent();
+  const record = Object.fromEntries(Object.entries(content && typeof content === "object" ? content : {}).filter(([, v]) => typeof v === "string")) as Record<string, string>;
+  record[featuredProjectKey] = formData.get("off") === "1" ? "" : id;
+  await store.saveHomeContent(record);
+  done("/admin/portfolio");
 }
 
 // Ordre des projets sur la page Portfolio (du plus récent au plus ancien, par exemple)

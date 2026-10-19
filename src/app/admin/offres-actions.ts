@@ -9,7 +9,7 @@ import { isUrssafPeriodicity } from "@/lib/finance";
 import type { Formula, Option, Pack } from "@/lib/pricing";
 import { isWatermarkLevel } from "@/lib/protection";
 import { getStore } from "@/lib/store";
-import { optionContentFromForm, withGroupName, withGrouping, withoutOptionContent } from "@/lib/option-content";
+import { optionContentFromForm, withCopiedOptionContent, withGroupName, withGrouping, withoutOptionContent } from "@/lib/option-content";
 import { MAX_CSS, MAX_MARKUP, readVisuals, starterVisual, visualId, writeVisuals } from "@/lib/product-visuals";
 import { defaultCategories, isColor, readCategories, writeCategories } from "@/lib/product-categories";
 
@@ -208,6 +208,35 @@ export async function archivePackAction(formData: FormData) {
   done(`/admin/offres?offre=${encodeURIComponent(pack.id)}`);
 }
 
+// Copie de traductions (« translation:<scope>:… ») d'un élément vers sa copie ; le nom anglais prend « (copy) »
+function withCopiedTranslations(raw: unknown, from: string, to: string): Record<string, string> {
+  const content = Object.fromEntries(Object.entries(raw && typeof raw === "object" ? raw : {}).filter(([, v]) => typeof v === "string")) as Record<string, string>;
+  for (const [key, value] of Object.entries(content)) {
+    if (!key.startsWith(`translation:${from}:`)) continue;
+    const field = key.slice(`translation:${from}:`.length);
+    content[`translation:${to}:${field}`] = field === "name" ? `${value} (copy)` : value;
+  }
+  return content;
+}
+
+// Copie placée juste après l'original et masquée du site (archivée) le temps de la modifier, puis ouverte
+export async function duplicatePackAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const { packs } = await store.getCatalog();
+  const pack = packs.find((p) => p.id === text(formData, "id", 60));
+  if (!pack) done(TAB.offres, "Offre introuvable.");
+  const name = `${pack.name} (copie)`;
+  let id = slug(name) || "offre";
+  while (packs.some((p) => p.id === id)) id = `${id}-2`;
+  await store.savePack({ ...pack, id, name, archived: true, highlight: undefined });
+  const ids = packs.map((p) => p.id);
+  ids.splice(ids.indexOf(pack.id) + 1, 0, id);
+  await store.reorderPacks(ids);
+  await store.saveHomeContent(withCopiedTranslations(await store.getHomeContent(), `pack:${pack.id}`, `pack:${id}`));
+  done(`/admin/offres?offre=${encodeURIComponent(id)}`);
+}
+
 // Suppression définitive, sauf si des commandes existent : l'offre est alors archivée.
 export async function deletePackAction(formData: FormData) {
   await requireAdmin();
@@ -300,6 +329,22 @@ export async function deleteOptionAction(formData: FormData) {
   await store.saveOptions(options.filter((o) => o.id !== id));
   await store.saveHomeContent(withoutOptionContent(await store.getHomeContent(), id));
   done(TAB.options);
+}
+
+// Copie placée juste après l'original (avec le contenu de sa carte, sur une carte à part), puis ouverte
+export async function duplicateOptionAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const { options } = await store.getCatalog();
+  const i = options.findIndex((o) => o.id === text(formData, "id", 60));
+  if (i < 0) done(TAB.options, "Option introuvable.");
+  const name = `${options[i].name} (copie)`;
+  let id = slug(name) || "option";
+  while (options.some((o) => o.id === id)) id = `${id}-2`;
+  await store.saveOptions([...options.slice(0, i + 1), { ...options[i], id, name }, ...options.slice(i + 1)]);
+  const content = withCopiedOptionContent(await store.getHomeContent(), options[i].id, id);
+  await store.saveHomeContent(withCopiedTranslations(content, `option:${options[i].id}`, `option:${id}`));
+  done(optionTab(id));
 }
 
 // Nouvel ordre des options (glisser-déposer dans le tableau de l'admin)

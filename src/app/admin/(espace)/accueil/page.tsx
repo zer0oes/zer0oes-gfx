@@ -77,8 +77,9 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
     );
   };
 
+  const translations = translationValues(stored);
   return (
-    <TranslationTabs stored={translationValues(stored)}>
+    <>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-display text-3xl font-bold">Page d&apos;accueil</h1>
         <Link href="/" target="_blank" className="text-sm text-accent hover:underline">
@@ -89,7 +90,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
         Textes et visuels de l&apos;accueil. Le portrait « Derrière l&apos;écran » peut être envoyé directement ici.
         Les autres visuels se choisissent parmi les réalisations du portfolio : pour une
         nouvelle image, ajoute-la d&apos;abord comme réalisation dans <Link href="/admin/portfolio" className="text-accent hover:underline">Portfolio</Link>.
-        Un texte vidé reprend sa version d&apos;origine.
+        Un texte vidé reprend sa version d&apos;origine. Chaque bloc a ses onglets Français / English, enregistrés ensemble.
         {customContent ? " Contenu personnalisé en place." : " Contenu d'origine en place."}
       </p>
       {enregistre && (
@@ -106,11 +107,12 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
       <form action={saveHomeAction} className="mt-8 space-y-6">
         {homeSections.map((s, i) => (
           <section key={s.id} className={card}>
-            <h2 className="font-semibold">
+            <h2 className="mb-2 font-semibold">
               <span className="mr-2 text-muted">{String(i + 1).padStart(2, "0")}</span>
               {s.title}
             </h2>
-            <div className="mt-4 space-y-4">
+            <TranslationTabs compact hint={false} stored={translations}>
+            <div className="space-y-4">
               {s.fields.map((f) => (
                 <div key={f.key} className="block">
                   <span className="mb-1 block text-xs text-muted">{f.label}</span>
@@ -119,6 +121,7 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
                 </div>
               ))}
             </div>
+            </TranslationTabs>
           </section>
         ))}
         <div className="sticky bottom-4 rounded-2xl border border-border bg-surface/95 p-4 backdrop-blur">
@@ -138,6 +141,6 @@ export default async function AdminHomePage({ searchParams }: PageProps<"/admin/
           </button>
         </form>
       ) : null}
-    </TranslationTabs>
+    </>
   );
 }

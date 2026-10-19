@@ -147,3 +147,27 @@ export async function deleteMarketingAction(f: FormData) {
   } catch (e) { finish(e instanceof Error ? e.message : "Suppression impossible.", f.get("kind") === "banner" ? "bandeaux" : "remises"); }
   finish(undefined, f.get("kind") === "banner" ? "bandeaux" : "remises");
 }
+// Copie d'une remise ou d'un bandeau, désactivée le temps de la modifier, puis ouverte
+export async function duplicateMarketingAction(f: FormData) {
+  await requireAdmin();
+  const banner = f.get("kind") === "banner";
+  const copyId = randomUUID();
+  try {
+    const store = getStore();
+    if (banner) {
+      const banners = await store.listBanners();
+      const source = banners.find((b) => b.id === id(f));
+      if (!source) throw new Error("Bandeau introuvable.");
+      // Placé juste après l'original dans le carrousel
+      const after = source.position ?? 0;
+      await Promise.all(banners.filter((b) => (b.position ?? 0) > after).map((b) => store.saveBanner({ ...b, position: (b.position ?? 0) + 1 })));
+      await store.saveBanner({ ...source, id: copyId, enabled: false, position: after + 1, badge: source.badge ? `${source.badge} (copie)`.slice(0, 80) : source.badge });
+    } else {
+      const source = (await store.listPromotions()).find((p) => p.id === id(f));
+      if (!source) throw new Error("Remise introuvable.");
+      const code = `${source.mode === "sale" ? "PROMO" : "FIDELITE"}-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+      await store.savePromotion({ ...source, id: copyId, enabled: false, code, label: source.label ? `${source.label} (copie)`.slice(0, 120) : source.label });
+    }
+  } catch (e) { finish(e instanceof Error ? e.message : "Copie impossible.", banner ? "bandeaux" : "remises"); }
+  finish(undefined, banner ? "bandeaux" : "remises", copyId);
+}

@@ -10,6 +10,8 @@ import { resolveHome } from "@/lib/home-content";
 import { asLocale, href, t } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
 import { getStore } from "@/lib/store";
+import { featuredProjectId } from "@/lib/portfolio-featured";
+import { portfolioCategoryColor, readCategories } from "@/lib/product-categories";
 import { trDeep } from "@/lib/translations-en";
 
 // Rendu à la demande : éviter de servir une page 404 précompilée sur Heroku.
@@ -36,15 +38,25 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const lang = asLocale((await params).lang);
   const store = getStore();
   const [portfolio, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
-  const { streamers, works } = trDeep(lang, withoutDrafts(portfolio));
+  const { streamers: ordered, works } = trDeep(lang, withoutDrafts(portfolio));
+  // Cartes projet : image 16:9 et texte dessous. Projet mis en avant (Admin > Portfolio) : en premier, sur deux colonnes,
+  // en grande image à la hauteur des cartes voisines, avec le texte posé dessus au survol
+  const featured = featuredProjectId(stored);
+  const streamers = [...ordered.filter((s) => s.id === featured), ...ordered.filter((s) => s.id !== featured)];
+  const hasFeatured = streamers.length > 1 && streamers[0].id === featured;
+  // Deux projets sans mise en avant : chacun prend la moitié de la largeur
+  const pair = streamers.length === 2 && !hasFeatured;
   // Textes modifiables dans Admin > Portfolio
   const texts = resolveHome(stored, lang);
+  // Pastilles du contenu de chaque projet aux couleurs des catégories (Admin > Offres et réglages > Catégories)
+  const productCategories = readCategories(stored);
+  const tagLimit = 3;
   return (
     <>
       <PageHeader eyebrow={texts.text("portfolio.kicker")} title={texts.text("portfolio.title")}>
         {texts.text("portfolio.intro")}
       </PageHeader>
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-2">
+      <div className={`mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 md:grid-cols-2 ${pair ? "" : "lg:grid-cols-3"}`}>
         {streamers.map((s) => {
           const own = works.filter((w) => w.streamer === s.id);
           // Couverture lisible en miniature (logo du projet), scène animée au survol
@@ -58,47 +70,80 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
               const n = c.id === "emotes" ? items.reduce((sum, w) => sum + (w.emotes?.length ?? 1), 0) : items.length;
               const label = c.label.toLowerCase();
               const en = countLabelsEn[c.id];
-              return { ...c, n, label: lang === "en" && en ? en[n > 1 ? 1 : 0] : n > 1 ? label : label.replace(/s$/, "") };
+              return { ...c, n, color: portfolioCategoryColor(productCategories, c.id, c.label), label: lang === "en" && en ? en[n > 1 ? 1 : 0] : n > 1 ? label : label.replace("réseaux sociaux", "réseau social").replace(/s$/, "") };
             })
             .filter((c) => c.n > 0);
+          const big = hasFeatured && s.id === featured;
+          const media = cover?.image && (
+            <ProtectedMedia className="absolute inset-0">
+              <Image
+                src={cover.image}
+                alt=""
+                fill
+                draggable={false}
+                sizes={big ? "(min-width: 768px) 760px, 100vw" : pair ? "(min-width: 1024px) 560px, (min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 370px, (min-width: 768px) 50vw, 100vw"}
+                className={`object-cover transition duration-500 ${coverVideo ? "" : "group-hover:scale-105"}`}
+              />
+              {coverVideo && <HoverVideo src={coverVideo} />}
+            </ProtectedMedia>
+          );
+          // Pastilles sur une seule ligne : les premières selon la largeur de la carte, puis « +N » (toutes sur mobile)
+          const limit = big ? tagLimit + 2 : pair ? tagLimit + 1 : tagLimit;
+          const tight = counts.length > limit + 1;
+          const tags = (
+            <ul className={`flex flex-wrap gap-2 ${big ? "mt-2" : "mt-auto pt-4"}`} aria-label={t(lang, { fr: "Contenu du projet", en: "Project contents" })}>
+              {counts.map((c, index) => (
+                <li key={c.id} style={{ color: c.color, borderColor: `color-mix(in srgb, ${c.color} 45%, transparent)`, background: `color-mix(in srgb, ${c.color} ${big ? "15%, rgb(0 0 0 / 0.4)" : "10%, transparent"})` }} className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs ${tight && index >= limit ? "md:hidden" : ""}`}>
+                  {c.n} {c.label}
+                </li>
+              ))}
+              {tight && (
+                <li aria-hidden title={counts.slice(limit).map((c) => `${c.n} ${c.label}`).join(", ")} className="hidden whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted md:block">
+                  +{counts.length - limit}
+                </li>
+              )}
+            </ul>
+          );
+          const heading = (
+            <div className="flex items-baseline justify-between gap-4">
+              <h2 className={`font-display font-bold ${big ? "text-2xl" : "text-xl"}`}>{s.name}</h2>
+              <span className="whitespace-nowrap text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
+                {texts.text("portfolio.link")}
+              </span>
+            </div>
+          );
+          // Projet en avant : grande image sur deux colonnes, à la hauteur des cartes voisines, texte posé dessus au survol
+          if (big) return (
+            <Link
+              key={s.id}
+              href={href(lang, projectHref(s.id))}
+              data-hover-root
+              data-reveal
+              className="group relative block aspect-video overflow-hidden rounded-3xl border border-border bg-background transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none md:col-span-2 lg:aspect-auto"
+            >
+              {media}
+              {/* Texte visible au survol (toujours visible sur mobile, sans survol) */}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-15% via-background/85 via-55% to-transparent px-6 pb-5 pt-28 transition duration-300 md:translate-y-3 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 md:group-focus-visible:translate-y-0 md:group-focus-visible:opacity-100">
+                {heading}
+                <p className="mt-1 line-clamp-2 text-sm text-muted">{s.description}</p>
+                {tags}
+              </div>
+            </Link>
+          );
+          // Autres projets : image 16:9, texte en dessous
           return (
             <Link
               key={s.id}
               href={href(lang, projectHref(s.id))}
               data-hover-root
               data-reveal
-              className="group overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none"
+              className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none"
             >
-              <div className="relative aspect-video overflow-hidden bg-background">
-                {cover?.image && (
-                  <ProtectedMedia className="absolute inset-0">
-                    <Image
-                      src={cover.image}
-                      alt=""
-                      fill
-                      draggable={false}
-                      sizes="(min-width: 1024px) 560px, 100vw"
-                      className={`object-cover transition duration-500 ${coverVideo ? "" : "group-hover:scale-105"}`}
-                    />
-                    {coverVideo && <HoverVideo src={coverVideo} />}
-                  </ProtectedMedia>
-                )}
-              </div>
-              <div className="p-6">
-                <div className="flex items-center justify-between gap-4">
-                  <h2 className="font-display text-2xl font-bold">{s.name}</h2>
-                  <span className="text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
-                    {texts.text("portfolio.link")}
-                  </span>
-                </div>
+              <div className="relative aspect-video shrink-0 overflow-hidden bg-background">{media}</div>
+              <div className="flex flex-1 flex-col p-6">
+                {heading}
                 <p className="mt-2 text-muted">{s.description}</p>
-                <ul className="mt-4 flex flex-wrap gap-2" aria-label={t(lang, { fr: "Contenu du projet", en: "Project contents" })}>
-                  {counts.map((c) => (
-                    <li key={c.id} className="rounded-full border border-border px-3 py-1 text-xs text-muted">
-                      {c.n} {c.label}
-                    </li>
-                  ))}
-                </ul>
+                {tags}
               </div>
             </Link>
           );
