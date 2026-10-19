@@ -1,4 +1,4 @@
-import { MarketingPanel } from "@/components/admin/MarketingPanel";
+import { BannersPanel, DiscountsPanel } from "@/components/admin/MarketingPanel";
 import { AffiliatePanel } from "@/components/admin/AffiliatePanel";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
@@ -45,17 +45,16 @@ const input = "w-full rounded-lg border border-border bg-background px-3 py-2 te
 const card = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
 const save = "rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110";
 
-// La page est découpée en onglets : on n'affiche qu'une partie à la fois.
-const tabs = [
-  { id: "offres", label: "Offres" },
-  { id: "options", label: "Options à la carte" },
-  { id: "promotions", label: "Promotions et fidélité" },
-  { id: "affiliation", label: "Affiliation" },
-  { id: "reglages", label: "Réglages" },
-  { id: "cotisations", label: "Frais et cotisations" },
-  { id: "simulateur", label: "Simulateur de revenus" },
+// La page est découpée en trois parties (Catalogue, Promotions, Finances), chacune en onglets :
+// on n'affiche qu'un onglet à la fois.
+const groups = [
+  { label: "Catalogue", tabs: [{ id: "offres", label: "Offres" }, { id: "options", label: "Options à la carte" }, { id: "reglages", label: "Réglages" }] },
+  { label: "Promotions", tabs: [{ id: "remises", label: "Remises et codes" }, { id: "bandeaux", label: "Bandeaux" }, { id: "affiliation", label: "Affiliation" }] },
+  { label: "Finances", tabs: [{ id: "cotisations", label: "Frais et cotisations" }, { id: "simulateur", label: "Simulateur de revenus" }] },
 ] as const;
-type Tab = (typeof tabs)[number]["id"];
+type Tab = (typeof groups)[number]["tabs"][number]["id"];
+const tabs: readonly { id: Tab; label: string }[] = groups.flatMap((g) => g.tabs as readonly { id: Tab; label: string }[]);
+const tabHref = (id: Tab) => (id === "offres" ? "/admin/offres" : `/admin/offres?onglet=${id}`);
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -168,7 +167,13 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const { enregistre, erreur } = sp;
   const openPack = one(sp.offre);
   const openOption = one(sp.option);
-  const tab: Tab = tabs.some((t) => t.id === one(sp.onglet)) ? (one(sp.onglet) as Tab) : "offres";
+  // « promotions » : ancienne adresse de l'onglet des remises
+  const asked = one(sp.onglet) === "promotions" ? "remises" : one(sp.onglet);
+  const tab: Tab = tabs.some((t) => t.id === asked) ? (asked as Tab) : "offres";
+  const group = groups.find((g) => (g.tabs as readonly { id: Tab }[]).some((t) => t.id === tab))!;
+  // Panneau rouvert après un enregistrement (remises, bandeaux), avec son message d'erreur
+  const reopen = one(sp.ouvrir);
+  const feedback = { open: reopen, saved: !!enregistre, error: typeof erreur === "string" ? erreur : undefined };
 
   const store = getStore();
   const [{ settings, packs, options }, finance, protection] = await Promise.all([
@@ -194,15 +199,27 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
       <h1 className="font-display text-3xl font-bold">Offres et réglages</h1>
       <p className="mt-2 text-sm text-muted">Les modifications sont visibles sur le site dès l&apos;enregistrement.</p>
 
-      <nav aria-label="Parties de la page" className="mt-6 flex flex-wrap gap-2 border-b border-border pb-4">
-        {tabs.map((t) => (
+      <nav aria-label="Parties de la page" className="mt-6 flex flex-wrap gap-2">
+        {groups.map((g) => (
+          <Link
+            key={g.label}
+            href={tabHref(g.tabs[0].id)}
+            aria-current={g === group ? "true" : undefined}
+            className={`whitespace-nowrap rounded-full border px-4 py-1.5 text-sm transition ${
+              g === group ? "border-accent bg-accent font-semibold text-background" : "border-border text-muted hover:text-foreground"
+            }`}
+          >
+            {g.label}
+          </Link>
+        ))}
+      </nav>
+      <nav aria-label={group.label} className="mt-4 flex flex-wrap gap-x-6 border-b border-border">
+        {group.tabs.map((t) => (
           <Link
             key={t.id}
-            href={t.id === "offres" ? "/admin/offres" : `/admin/offres?onglet=${t.id}`}
+            href={tabHref(t.id)}
             aria-current={tab === t.id ? "page" : undefined}
-            className={`whitespace-nowrap rounded-full border px-4 py-1.5 text-sm transition ${
-              tab === t.id ? "border-accent bg-accent font-semibold text-background" : "border-border text-muted hover:text-foreground"
-            }`}
+            className={`-mb-px whitespace-nowrap border-b-2 pb-3 text-sm transition ${tab === t.id ? "border-accent font-semibold text-accent" : "border-transparent text-muted hover:text-foreground"}`}
           >
             {t.label}
           </Link>
@@ -214,13 +231,14 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           Enregistré.
         </p>
       )}
-      {typeof erreur === "string" && (
+      {typeof erreur === "string" && !reopen && (
         <p role="alert" className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">
           {erreur}
         </p>
       )}
 
-      {tab === "promotions" && <MarketingPanel />}
+      {tab === "remises" && <DiscountsPanel feedback={feedback} />}
+      {tab === "bandeaux" && <BannersPanel feedback={feedback} linkTo={one(sp.lien)} />}
       {tab === "affiliation" && <AffiliatePanel />}
       {tab === "offres" && (
         <section className="mt-6">

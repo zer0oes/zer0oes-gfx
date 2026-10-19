@@ -214,11 +214,16 @@ export function ContactForm({
   const [selectedOptions, setSelectedOptions] = useState<string[]>(() => optionChoices.filter((o) => o.id === selectedOptionId).map((o) => o.label));
   const [offer, setOffer] = useState(selectedOffer ?? "");
   const isOfferQuestion = subject === "Question sur une offre";
+  const isAudit = subject === "Audit gratuit de ma chaîne";
   const isProject = subject === "Projet sur mesure" || subject === "Devis Univers complet";
   const locale = useLocale();
   const tx = texts[locale];
 
   const subjectCopy: Record<string, { fr: [string, string]; en: [string, string] }> = {
+    "Audit gratuit de ma chaîne": {
+      fr: ["Qu’aimerais-tu améliorer ? *", "Parle-moi de ta chaîne et de ce qui te pose question dans son identité visuelle : logo, bannière, overlays, cohérence d’ensemble…"],
+      en: ["What would you like to improve? *", "Tell me about your channel and your questions about its visual identity: logo, banner, overlays, overall consistency…"],
+    },
     "Question sur une offre": {
       fr: ["Ta question *", "Indique l'offre qui t'intéresse et ce que tu aimerais savoir. Si tu hésites entre plusieurs packs, dis-moi ce dont tu as besoin."],
       en: ["Your question *", "Tell me which package interests you and what you would like to know. If you are choosing between packages, describe what you need."],
@@ -269,6 +274,12 @@ export function ContactForm({
         </Field>
       )}
       <Section step={isProject ? "01" : undefined} title={isProject ? tx.project : undefined}>
+        {isAudit && <>
+          <p className="rounded-xl border border-accent/40 bg-accent/10 p-4 text-sm">{locale === "fr" ? "Un regard de graphiste sur l’identité visuelle de ta chaîne, avec des pistes d’amélioration. Gratuit et sans engagement." : "A designer’s review of your channel’s visual identity, with suggestions for improvement. Free, with no obligation."}</p>
+          <Field label={`${tx.channel} *`}>
+            <input name="channel" type="url" required maxLength={300} placeholder="https://twitch.tv/…" className={inputClass} />
+          </Field>
+        </>}
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label={tx.name}>
             <input name="name" required autoComplete="nickname" className={inputClass} />
@@ -359,6 +370,7 @@ export function ContactForm({
 
         </div>
       </details>}
+      {isAudit && <Chips legend={tx.referral} name="referral" choices={referralSources} type="radio" />}
       <Consent purpose={isProject ? tx.consentProject : tx.consentMessage} />
       <FormStatus state={state} />
       <Submit pending={pending} note={isProject ? tx.noteProject : tx.noteMessage} />

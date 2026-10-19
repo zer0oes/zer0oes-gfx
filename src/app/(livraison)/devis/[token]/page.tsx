@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { getStore } from "@/lib/store";
 import { isDeliveryToken, itemRevisionLimit } from "@/lib/delivery";
 import { quoteExpired } from "@/lib/quotes";
+import { launchQuote } from "@/lib/launch-offer";
 import { formatPrice } from "@/lib/pricing";
 import { requestLocale } from "@/lib/request-locale";
 import { reopenProjectQuote } from "../actions";
@@ -15,7 +16,8 @@ export const metadata = { title: "Devis · zer0oes gfx", robots: { index: false,
 export default async function QuotePortal({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { token } = await params;
   if (!isDeliveryToken(token)) notFound();
-  const q = await getStore().getQuoteByToken(token);
+  const originalQuote = await getStore().getQuoteByToken(token);
+  const q = originalQuote ? launchQuote(originalQuote, await getStore().getLaunchState()) : null;
   if (!q || q.status === "demande") notFound();
   if (q.status === "accepte") redirect(`/commande/${token}`);
   const sp = await searchParams;
@@ -57,6 +59,7 @@ export default async function QuotePortal({ params, searchParams }: { params: Pr
       </details>
       <section aria-labelledby="montant" className={`mt-4 ${block}`}>
         <h2 id="montant" className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">{en ? "Quote summary and payment" : "Récapitulatif et paiement"}</h2>
+        {q.launchBasePrice && <p className="mt-3 text-sm text-accent">{en ? `Launch offer: ${q.launchPercent}% off, subject to availability when accepting the quote.` : `Offre de lancement : −${q.launchPercent} %, sous réserve de disponibilité à l’acceptation du devis.`} <del className="text-muted">{formatPrice(q.launchBasePrice, locale)}</del></p>}
         <dl className="mt-3 grid gap-3 sm:grid-cols-3">
           <div><dt className="text-xs text-muted">{en ? "Total project price" : "Prix total du projet"}</dt><dd className="font-display text-lg font-bold">{formatPrice(q.totalPrice, locale)}</dd></div>
           <div><dt className="text-xs text-muted">{en ? "Valid until" : "Valable jusqu’au"}</dt><dd className="mt-1 text-sm font-semibold">{dateFmt.format(new Date(`${q.validUntil}T12:00:00Z`))}</dd></div>

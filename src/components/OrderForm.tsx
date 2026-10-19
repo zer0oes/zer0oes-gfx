@@ -26,6 +26,7 @@ function OrderFormFields({
   settings,
   buttonClass,
   defaultOpen = false,
+  showSaleBadge = true,
   defaultFormulaId,
   defaultHasLogo = false,
 }: {
@@ -35,10 +36,10 @@ function OrderFormFields({
   settings: PricingSettings;
   buttonClass: string;
   defaultOpen?: boolean;
+  showSaleBadge?: boolean;
 }) {
   const [formulaOpen, setFormulaOpen] = useState(defaultOpen);
   const [paymentOpen, setPaymentOpen] = useState(defaultOpen);
-  const site = packPricingSettings(settings, pack.id);
   const locale = useLocale();
   const amount = (cents: number) => formatPrice(cents, locale);
   const formulas = pack.formulas ?? [];
@@ -46,7 +47,8 @@ function OrderFormFields({
   const [payment, setPayment] = useState<PaymentType>("total");
   const [hasLogo, setHasLogo] = useState(defaultHasLogo);
   const selectedFormula = formulas.find((f) => f.id === formulaId);
-  const publicSale = Boolean(selectedFormula?.promotionCode);
+  const site = packPricingSettings(settings, pack.id, selectedFormula);
+  const publicSale = Boolean(selectedFormula);
   const [code, setCode] = useState("");
   const [promo, setPromo] = useState<{ key: string; code: string; totalPrice: number; discount: number } | null>(null);
   const [promoMessage, setPromoMessage] = useState("");
@@ -94,8 +96,8 @@ function OrderFormFields({
                   onChange={() => setFormulaId(f.id)}
                   className="peer sr-only"
                 />
-                <SaleBadge item={f} locale={locale} compact className="absolute right-10 top-3" />
-                <span className={`block text-sm font-medium ${discountPercent(f) ? "min-h-10 pr-20" : "pr-7"}`}>{f.label}</span>
+                {showSaleBadge && <SaleBadge item={f} locale={locale} compact className="absolute right-10 top-3" />}
+                <span className={`block text-sm font-medium ${showSaleBadge && discountPercent(f) ? "min-h-10 pr-20" : "pr-7"}`}>{f.label}</span>
                 <span className="mt-0.5 flex items-baseline justify-between gap-3">
                   <span className="font-display text-2xl font-bold">
                     <OfferPrice item={f} locale={locale} />

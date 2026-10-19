@@ -120,6 +120,9 @@ export const portfolioPageFields: HomeField[] = [
 ];
 
 export const offersPageFields: HomeField[] = [
+  { key: "pricing.packsTab", label: "Onglet Packs complets", kind: "text", max: 60 },
+  { key: "pricing.optionsTab", label: "Onglet Créations à la carte", kind: "text", max: 60 },
+  { key: "pricing.discountUpTo", label: "Préfixe si plusieurs remises coexistent", kind: "text", max: 30 },
   { key: "pricing.kicker", label: "Surtitre", kind: "text", max: 60 },
   { key: "pricing.title", label: "Titre — début", kind: "text", max: 80 },
   { key: "pricing.titleAccent", label: "Titre — partie en dégradé", kind: "text", max: 80 },
@@ -164,6 +167,9 @@ function glossaryFields(): HomeField[] {
 }
 
 export const homeDefaults: Record<string, string> = {
+  "pricing.packsTab": "Packs complets",
+  "pricing.optionsTab": "Créations à la carte",
+  "pricing.discountUpTo": "Jusqu’à",
   "pricing.kicker": "Packs & à la carte",
   "pricing.title": "Un univers",
   "pricing.titleAccent": "à ton image.",
@@ -250,6 +256,9 @@ export const homeDefaults: Record<string, string> = {
 // Version anglaise des textes (/en). Les visuels et les noms d'emotes sont communs aux deux langues.
 // Une traduction saisie dans l'admin est enregistrée sous la clé « en:<clé> ».
 export const homeDefaultsEn: Record<string, string> = {
+  "pricing.packsTab": "Complete packages",
+  "pricing.optionsTab": "À la carte creations",
+  "pricing.discountUpTo": "Up to",
   "pricing.kicker": "Packages & à la carte",
   "pricing.title": "A universe",
   "pricing.titleAccent": "that reflects you.",
