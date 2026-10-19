@@ -8,7 +8,7 @@ import { Collapse } from "@/components/Collapse";
 import { MaterialIcon } from "./MaterialIcon";
 
 export type LabRow = { id: string; name: string; description: string; kindLabel: string; kindTone: string; platforms: Platform[]; size: string; updated: string };
-export type LabSection = { name: string; header: ReactNode; rows: LabRow[] };
+export type LabSection = { name: string; header: ReactNode; rows: LabRow[]; archived?: boolean };
 
 const platformIcons: Record<Platform, { src: string; label: string }> = {
   streamelements: { src: "/streamerlab/platforms/streamelements-icon.svg", label: "StreamElements" },
@@ -168,8 +168,8 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
         // Replié : le tableau est masqué (et ne reçoit plus de création glissée)
         const folded = collapsed.includes(section.name);
         return (
-          // Un projet = un seul bloc (en-tête + créations) ; survoler son en-tête met tout le bloc en surbrillance
-          <section key={section.name} aria-label={`Projet ${section.name}`} className="overflow-hidden rounded-2xl border border-border bg-surface/40 transition-colors has-[[data-lab-head]:hover]:border-accent/40 has-[[data-lab-head]:hover]:bg-accent/5">
+          // Un projet = un seul bloc (en-tête + créations) ; survoler son en-tête met tout le bloc en surbrillance. Archivé : bloc atténué (pointillés), net au survol
+          <section key={section.name} aria-label={`Projet ${section.name}`} className={`overflow-hidden rounded-2xl border border-border bg-surface/40 transition-[color,background-color,border-color,opacity] has-[[data-lab-head]:hover]:border-accent/40 has-[[data-lab-head]:hover]:bg-accent/5 ${section.archived ? "border-dashed opacity-55 hover:opacity-100 focus-within:opacity-100" : ""}`}>
             {/* Toute la ligne replie ou déplie le projet, sauf ses propres boutons (paramètres, enregistrer) */}
             <div data-lab-head className="flex cursor-pointer items-start gap-1 px-3 py-3"
               onClick={(event) => { if (!(event.target as HTMLElement).closest("button, a, form, input")) toggleCollapsed(section.name); }}>

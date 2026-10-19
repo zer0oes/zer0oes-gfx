@@ -56,12 +56,13 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
   const { documents, projects, message } = await Promise.all([listLabDocuments(), listLabProjects().catch(() => [] as LabProject[])])
     .then(([documents, projects]) => ({ documents, projects, message: "" }))
     .catch((error: unknown) => ({ documents: [], projects: [] as LabProject[], message: error instanceof LabStorageError ? error.message : "La bibliothèque est indisponible. Réessaie dans un instant." }));
-  // Groupes : projets enregistrés (archivés en dernier), puis noms de projet utilisés par des créations mais non enregistrés
+  // Groupes : projets enregistrés, puis noms de projet utilisés par des créations mais non enregistrés, et les projets archivés tout en bas
   const known = new Set(projects.map((p) => p.name));
   const loose = [...new Set(documents.map((d) => d.project).filter((name) => !known.has(name)))].sort((a, b) => a.localeCompare(b, "fr"));
   const groups = [
-    ...[...projects].sort((a, b) => Number(a.archived) - Number(b.archived)).map((p) => ({ name: p.name, project: p })),
+    ...projects.filter((p) => !p.archived).map((p) => ({ name: p.name, project: p as LabProject | undefined })),
     ...loose.map((name) => ({ name, project: undefined as LabProject | undefined })),
+    ...projects.filter((p) => p.archived).map((p) => ({ name: p.name, project: p as LabProject | undefined })),
   ];
   const platformsById = new Map(documents.map((d) => [d.id, d.platforms]));
   const small = "rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-50";
@@ -87,6 +88,7 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
         const docs = documents.filter((d) => d.project === name);
         return {
           name,
+          archived: Boolean(project?.archived),
           header: (
             <>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
