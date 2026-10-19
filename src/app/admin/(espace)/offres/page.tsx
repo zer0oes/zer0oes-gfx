@@ -5,9 +5,8 @@ import { CategoriesPanel } from "@/components/admin/CategoriesPanel";
 import { categoryColor } from "@/lib/product-categories";
 import { VisualPicker } from "@/components/admin/VisualFields";
 import { readVisuals } from "@/lib/product-visuals";
-import type { CompositionOption } from "@/components/admin/PackCompositionField";
-import { PackFormulasField } from "@/components/admin/PackFormulasField";
-import { compositionPriceLabel, readComposition } from "@/lib/pack-composition";
+import { ClickableRow } from "@/components/admin/ClickableRow";
+import { redirect } from "next/navigation";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
 import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@/lib/home-content";
@@ -22,7 +21,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { NetTable, priceCases } from "@/components/admin/NetTable";
 import { chargesRate, formatRate, netBreakdown, type FinanceSettings } from "@/lib/finance";
-import { formatPrice, type Pack, type PricingSettings } from "@/lib/pricing";
+import { formatPrice, type Pack } from "@/lib/pricing";
 import { watermarkLevels } from "@/lib/protection";
 import { getStore } from "@/lib/store";
 import {
@@ -38,7 +37,6 @@ import {
   duplicatePackAction,
   reorderOptionsAction,
   saveOptionAction,
-  savePackAction,
   saveSettingsAction,
 } from "../../offres-actions";
 
@@ -90,54 +88,6 @@ function Intro({ children }: { children: React.ReactNode }) {
   return <p className="mb-4 text-sm text-muted">{children}</p>;
 }
 
-function PackForm({ pack, formId, options, content }: { pack: Pack; formId: string; options: CompositionOption[]; content: unknown }) {
-  return (
-    <form id={formId} action={savePackAction} className="space-y-4">
-      <input type="hidden" name="id" value={pack.id} />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Nom">
-          <TranslationInput translationKey={`translation:pack:${pack.id}:name`} name="name" defaultValue={pack.name} required className={input} />
-        </Field>
-        <Field label="Prix affiché (€)" hint="Prix de la formule de base, ou prix « à partir de ».">
-          <input name="price" defaultValue={euros(pack.price)} inputMode="decimal" required className={input} />
-        </Field>
-      </div>
-      <Field label="Accroche">
-        <TranslationInput translationKey={`translation:pack:${pack.id}:tagline`} name="tagline" defaultValue={pack.tagline} className={input} />
-      </Field>
-      <div className="flex flex-wrap gap-x-6 gap-y-2">
-        <Check name="checkout" label="Commandable en ligne (sinon : sur devis)" defaultChecked={pack.checkout} />
-        <Check name="priceFrom" label="Prix « à partir de »" defaultChecked={pack.priceFrom} />
-        <Check name="highlight" label="Mise en avant" defaultChecked={pack.highlight} />
-      </div>
-      <div className={`grid gap-4 ${pack.checkout ? "" : "sm:grid-cols-2"}`}>
-        <Field label="Livrables en plus" hint="Un par ligne. Les produits du pack de base (Composition, plus bas) s'affichent automatiquement en tête des livrables ; ajoute ici le reste (corrections, intégration…).">
-          <TranslationInput multiline translationKey={`translation:pack:${pack.id}:deliverables`} name="deliverables" rows={pack.checkout ? 3 : 5} defaultValue={(pack.ownDeliverables ?? pack.deliverables).join("\n")} className={input} />
-        </Field>
-        {/* Offre commandable : les options du site viennent des formules et de leur composition */}
-        {!pack.checkout && (
-          <Field label="Exemples d'ajouts sur devis" hint="Un par ligne, affichés sous les livrables.">
-            <TranslationInput multiline translationKey={`translation:pack:${pack.id}:extras`} name="extras" rows={5} defaultValue={(pack.extras ?? []).join("\n")} className={input} />
-          </Field>
-        )}
-      </div>
-
-      <PackFormulasField formId={formId} packId={pack.id} packPrice={pack.price} formulas={pack.formulas ?? []} options={options} initial={readComposition(content, pack.id)} />
-    </form>
-  );
-}
-
-// Résumé d'une offre fermée : « Actif • 4 formules • acompte activé »
-function packSummary(p: Pack, s: PricingSettings) {
-  const n = p.formulas?.length ?? 0;
-  return [
-    p.archived ? "Archivée" : "Active",
-    p.checkout ? `${n} formule${n > 1 ? "s" : ""}` : "Sur devis",
-    p.checkout && s.depositPercent > 0 ? `acompte ${s.depositPercent} %` : null,
-    p.highlight ? "mise en avant" : null,
-  ].filter(Boolean);
-}
-
 // Ventes simulées : prix de base, payé en une fois
 function simulate(packs: Pack[], qty: (id: string) => number, finance: FinanceSettings) {
   let gross = 0;
@@ -158,7 +108,9 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const sp = await searchParams;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const { enregistre, erreur } = sp;
+  // Ancienne adresse d'une offre (panneau latéral) : sa page
   const openPack = one(sp.offre);
+  if (openPack) redirect(`/admin/offres/${encodeURIComponent(openPack)}${enregistre ? "?enregistre=1" : typeof erreur === "string" ? `?erreur=${encodeURIComponent(erreur)}` : ""}`);
   const openOption = one(sp.option);
   // « promotions » : ancienne adresse de l'onglet des remises
   const asked = one(sp.onglet) === "promotions" ? "remises" : one(sp.onglet);
@@ -183,12 +135,6 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const sim = simulate(active, qty, finance);
 
   const translationContent = await getStore().getHomeContent();
-  // Produits à la carte proposés dans la composition des offres
-  const compositionOptions: CompositionOption[] = options.map((o) => ({
-    ...o,
-    priceLabel: compositionPriceLabel(o),
-    categoryName: categories.find((c) => c.id === o.category)?.name ?? "Autres",
-  }));
   // Options affichées sur la même carte que o (même regroupement)
   const groupOf = (o: (typeof options)[number]) => optionContentFor(o, translationContent, "fr").group;
   const cardMates = (o: (typeof options)[number]) => (groupOf(o) ? options.filter((x) => x.id !== o.id && groupOf(x) === groupOf(o)) : []);
@@ -265,7 +211,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           </TranslationTabs></div>
           </details>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-            <p className="min-w-0 flex-1 basis-80 text-sm text-muted">Clique sur une ligne pour modifier l&apos;offre. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
+            <p className="min-w-0 flex-1 basis-80 text-sm text-muted">Clique sur une ligne pour ouvrir la page de l&apos;offre. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
             <DrawerButton drawer="offre-nouvelle" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouvelle offre</DrawerButton>
           </div>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
@@ -273,46 +219,17 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
               <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Offre</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th><th className="w-12"><span className="sr-only">Actions</span></th></tr></thead>
               <SortableRows onReorder={reorderPacksAction}>
                 {packs.map((p) => (
-                  <DrawerRow key={p.id} sortId={p.id} drawer={`offre-${p.id}`} label={`Modifier ${p.name}`} className={`${openPack === p.id ? "bg-accent/10" : ""} ${p.archived ? "opacity-60" : ""}`}>
+                  <ClickableRow key={p.id} href={`/admin/offres/${encodeURIComponent(p.id)}`} data-sort-id={p.id} aria-label={`Modifier ${p.name}`}>
                     <td className="px-2 py-3"><SortHandle id={p.id} label={p.name} /></td>
-                    <td className="px-4 py-3"><span className="font-semibold">{p.name}</span><p className="mt-1 line-clamp-1 max-w-xl text-xs text-muted">{p.tagline}</p></td>
+                    <td className={`px-4 py-3 ${p.archived ? "opacity-60" : ""}`}><span className="font-semibold">{p.name}</span><p className="mt-1 line-clamp-1 max-w-xl text-xs text-muted">{p.tagline}</p></td>
                     <td className="whitespace-nowrap px-4 py-3">{p.priceFrom ? "À partir de " : ""}{euro(p.price)}</td>
                     <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${p.archived ? "border-border text-muted" : p.checkout ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300" : "border-violet-400/40 bg-violet-400/10 text-violet-300"}`}>{p.archived ? "Archivée" : p.checkout ? "En ligne" : "Sur devis"}</span></td>
                     <td className="pr-2 text-right"><RowActionsMenu id={p.id} name={p.name} duplicateAction={duplicatePackAction} items={[p.archived ? { label: "Réafficher sur le site", icon: "visibility", action: archivePackAction, fields: { restore: "1" } } : { label: "Archiver", icon: "inventory_2", action: archivePackAction }]} deleteAction={deletePackAction} deleteNote="Si elle a déjà des commandes, elle est archivée (masquée du site) au lieu d’être supprimée." /></td>
-                  </DrawerRow>
+                  </ClickableRow>
                 ))}
               </SortableRows>
             </table>
           </div>
-          {packs.map((p) => (
-            <Drawer
-              key={p.id}
-              id={`offre-${p.id}`}
-              kicker="Offre"
-              title={p.name}
-              openOnLoad={openPack === p.id}
-              footer={
-                <>
-                  <span className="flex flex-wrap items-center gap-2">
-                    <ConfirmDelete action={deletePackAction} id={p.id} label="Supprimer l'offre" question={`Es-tu sûre de vouloir supprimer « ${p.name} » ? (si elle a des commandes, elle sera archivée)`} />
-                    <form action={archivePackAction}>
-                      <input type="hidden" name="id" value={p.id} />
-                      {p.archived && <input type="hidden" name="restore" value="1" />}
-                      <button type="submit" className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">{p.archived ? "Remettre en ligne" : "Archiver"}</button>
-                    </form>
-                  </span>
-                  <button type="submit" form={`offre-form-${p.id}`} className={save}>Enregistrer l&apos;offre</button>
-                </>
-              }
-            >
-              {openPack === p.id && enregistre && <p role="status" className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">Enregistré.</p>}
-              {openPack === p.id && typeof erreur === "string" && <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{erreur}</p>}
-              <p className="text-xs text-muted">{packSummary(p, settings).join(" • ")}</p>
-              <TranslationTabs compact stored={translationValues(translationContent)}>
-                <PackForm pack={p} formId={`offre-form-${p.id}`} options={compositionOptions} content={translationContent} />
-              </TranslationTabs>
-            </Drawer>
-          ))}
           <Drawer id="offre-nouvelle" kicker="Offre" title="Nouvelle offre" footer={<><span /><button type="submit" form="offre-creer" className={save}>Créer l&apos;offre</button></>}>
             <form id="offre-creer" action={createPackAction} className="space-y-4">
               <Field label="Nom">
@@ -324,7 +241,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="checkout" defaultChecked className="accent-[var(--accent)]" /> Commandable en ligne (sinon : sur devis)
               </label>
-              <p className="text-xs text-muted">Sa fiche s&apos;ouvre ensuite pour compléter l&apos;accroche, les livrables, les formules et la traduction.</p>
+              <p className="text-xs text-muted">Sa page s&apos;ouvre ensuite pour compléter l&apos;accroche, les livrables, les formules et la traduction.</p>
             </form>
           </Drawer>
         </section>
@@ -407,7 +324,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                 <Field label="Prix (€)"><input name="price" required inputMode="decimal" className={input} /></Field>
               </div>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="priceFrom" className="accent-[var(--accent)]" /> Sur devis (« à partir de »)</label>
-              <p className="text-xs text-muted">Sa fiche s&apos;ouvre ensuite pour compléter sa description, ce que le client reçoit et la traduction.</p>
+              <p className="text-xs text-muted">Sa page s&apos;ouvre ensuite pour compléter sa description, ce que le client reçoit et la traduction.</p>
             </form>
           </Drawer>
         </section>

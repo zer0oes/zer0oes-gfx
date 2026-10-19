@@ -72,11 +72,11 @@ export async function savePackAction(formData: FormData) {
   const store = getStore();
   const id = text(formData, "id", 60);
   const current = (await store.getCatalog()).packs.find((p) => p.id === id);
-  if (!current) done(`/admin/offres?offre=${encodeURIComponent(id)}`, "Offre introuvable.");
+  if (!current) done(`/admin/offres/${encodeURIComponent(id)}`, "Offre introuvable.");
 
   const price = parseEuros(formData.get("price"));
   const name = text(formData, "name", 120);
-  if (price === null || !name) done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${current.name} » : nom et prix obligatoires.`);
+  if (price === null || !name) done(`/admin/offres/${encodeURIComponent(id)}`, `« ${current.name} » : nom et prix obligatoires.`);
 
   // Formules : lignes formula_label_N / formula_price_N / formula_id_N / formula_stripe_N
   const formulas: Formula[] = [];
@@ -86,16 +86,16 @@ export async function savePackAction(formData: FormData) {
     const label = text(formData, `formula_label_${i}`, 120);
     if (!label) continue;
     const fPrice = parseEuros(formData.get(`formula_price_${i}`));
-    if (fPrice === null) done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${name} » : prix de formule invalide (${label}).`);
+    if (fPrice === null) done(`/admin/offres/${encodeURIComponent(id)}`, `« ${name} » : prix de formule invalide (${label}).`);
     const fid = slug(text(formData, `formula_id_${i}`, 60) || (formulas.length === 0 ? "base" : label));
-    if (formulas.some((f) => f.id === fid)) done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${name} » : deux formules ont le même identifiant (${fid}).`);
+    if (formulas.some((f) => f.id === fid)) done(`/admin/offres/${encodeURIComponent(id)}`, `« ${name} » : deux formules ont le même identifiant (${fid}).`);
     const stripePriceId = text(formData, `formula_stripe_${i}`, 100) || undefined;
     formulas.push({ id: fid, label, price: fPrice, stripePriceId });
     if (!text(formData, `formula_id_${i}`, 60)) newFormulaKeys[`new-${i}`] = fid;
   }
   const checkout = formData.get("checkout") === "on";
   if (checkout && formulas.length === 0) {
-    done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${name} » : une offre commandable en ligne doit avoir au moins une formule.`);
+    done(`/admin/offres/${encodeURIComponent(id)}`, `« ${name} » : une offre commandable en ligne doit avoir au moins une formule.`);
   }
 
   const pack: Pack = {
@@ -127,7 +127,7 @@ export async function savePackAction(formData: FormData) {
     const composition = compositionFromForm(text(formData, "composition", 20000), formulas.slice(1).map((f) => f.id), options, newFormulaKeys);
     await store.saveHomeContent(writeComposition(await store.getHomeContent(), id, composition));
   }
-  done(`/admin/offres?offre=${encodeURIComponent(id)}`);
+  done(`/admin/offres/${encodeURIComponent(id)}`);
 }
 
 
@@ -195,7 +195,7 @@ export async function createPackAction(formData: FormData) {
     formulas: checkout ? [{ id: "base", label: name, price }] : undefined,
   });
   await saveAdminTranslations(formData, `pack:${id}`, ["name"]);
-  done(`/admin/offres?offre=${encodeURIComponent(id)}`);
+  done(`/admin/offres/${encodeURIComponent(id)}`);
 }
 
 export async function movePackAction(formData: FormData) {
@@ -207,7 +207,7 @@ export async function movePackAction(formData: FormData) {
   if (i < 0 || j < 0 || j >= ids.length) done(TAB.offres);
   [ids[i], ids[j]] = [ids[j], ids[i]];
   await store.reorderPacks(ids);
-  done(`/admin/offres?offre=${encodeURIComponent(ids[j])}`);
+  done(TAB.offres);
 }
 
 export async function archivePackAction(formData: FormData) {
@@ -216,7 +216,7 @@ export async function archivePackAction(formData: FormData) {
   const pack = (await store.getCatalog()).packs.find((p) => p.id === text(formData, "id", 60));
   if (!pack) done(TAB.offres, "Offre introuvable.");
   await store.savePack({ ...pack, archived: formData.get("restore") === "1" ? undefined : true });
-  done(`/admin/offres?offre=${encodeURIComponent(pack.id)}`);
+  done(`/admin/offres/${encodeURIComponent(pack.id)}`);
 }
 
 // Copie de traductions (« translation:<scope>:… ») d'un élément vers sa copie ; le nom anglais prend « (copy) »
@@ -246,7 +246,7 @@ export async function duplicatePackAction(formData: FormData) {
   await store.reorderPacks(ids);
   const content = await store.getHomeContent();
   await store.saveHomeContent(writeComposition(withCopiedTranslations(content, `pack:${pack.id}`, `pack:${id}`), id, readComposition(content, pack.id)));
-  done(`/admin/offres?offre=${encodeURIComponent(id)}`);
+  done(`/admin/offres/${encodeURIComponent(id)}`);
 }
 
 // Suppression définitive, sauf si des commandes existent : l'offre est alors archivée.
