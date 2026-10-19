@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useOptimistic, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useOptimistic, useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
 import { deleteLabAction, duplicateLabAction, moveLabAction } from "@/app/admin/custom-lab-actions";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
 import { ClickableRow } from "./ClickableRow";
@@ -87,7 +87,28 @@ function applyMove(sections: LabSection[], move: Move): LabSection[] {
 
 // Bibliothèque : un tableau par projet ; poignée en début de ligne pour changer l'ordre ou déplacer vers un autre projet,
 // menu « ⋮ » en fin de ligne (dupliquer, supprimer)
+// Projets repliés, mémorisés dans ce navigateur (simple confort d'affichage)
+const COLLAPSED_KEY = "laboratoire-projets-replies";
+const COLLAPSED_EVENT = "laboratoire-projets-replies";
+function readCollapsed() {
+  try { return localStorage.getItem(COLLAPSED_KEY) ?? "[]"; } catch { return "[]"; }
+}
+function subscribeCollapsed(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(COLLAPSED_EVENT, onChange);
+  return () => { window.removeEventListener("storage", onChange); window.removeEventListener(COLLAPSED_EVENT, onChange); };
+}
+function toggleCollapsed(name: string) {
+  let names: string[] = [];
+  try { names = JSON.parse(readCollapsed()); } catch {}
+  const next = names.includes(name) ? names.filter((n) => n !== name) : [...names, name];
+  try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next)); } catch {}
+  window.dispatchEvent(new Event(COLLAPSED_EVENT));
+}
+
 export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] }) {
+  const collapsedRaw = useSyncExternalStore(subscribeCollapsed, readCollapsed, () => "[]");
+  const collapsed = (() => { try { const v = JSON.parse(collapsedRaw); return Array.isArray(v) ? v as string[] : []; } catch { return []; } })();
   const [sections, addMove] = useOptimistic(initial, applyMove);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [message, setMessage] = useState("");
@@ -143,10 +164,18 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
       {sections.map((section) => {
         const rows = drag ? section.rows.filter((r) => r.id !== drag.row.id) : section.rows;
         const slotAt = drag && drag.over === section.name ? drag.index : -1;
+        // Replié : le tableau est masqué (et ne reçoit plus de création glissée)
+        const folded = collapsed.includes(section.name);
         return (
           <section key={section.name} aria-label={`Projet ${section.name}`}>
-            {section.header}
-            <div className="mt-3 overflow-x-auto rounded-2xl border border-border">
+            <div className="flex items-start gap-1">
+              <button type="button" onClick={() => toggleCollapsed(section.name)} aria-expanded={!folded} aria-label={`${folded ? "Déplier" : "Replier"} le projet ${section.name}`} title={folded ? "Déplier" : "Replier"}
+                className="-ml-2 mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent">
+                <MaterialIcon name="expand_more" className={`size-5 transition-transform motion-reduce:transition-none ${folded ? "-rotate-90" : ""}`} />
+              </button>
+              <div className="min-w-0 flex-1">{section.header}</div>
+            </div>
+            {!folded && <div className="mt-3 overflow-x-auto rounded-2xl border border-border">
               <table className="w-full min-w-[1040px] table-fixed text-left text-sm">
                 {/* Mêmes largeurs de colonnes pour tous les projets */}
                 <colgroup>
@@ -193,7 +222,7 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
                   {!rows.length && slotAt < 0 && <tr><td colSpan={8} className="px-4 py-4 text-center text-sm text-muted">Aucune création dans ce projet.</td></tr>}
                 </tbody>
               </table>
-            </div>
+            </div>}
           </section>
         );
       })}
