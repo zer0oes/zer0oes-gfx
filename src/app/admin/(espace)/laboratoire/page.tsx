@@ -91,15 +91,15 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
           archived: Boolean(project?.archived),
           header: (
             <>
-              <div className="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1">
-                <MaterialIcon name={project?.archived ? "inventory_2" : "folder"} className="size-5 text-accent" />
+              <div className="flex min-h-7 flex-wrap items-baseline gap-x-3 gap-y-1">
+                <MaterialIcon name={project?.archived ? "inventory_2" : "folder"} className="size-5 self-center text-accent" />
                 <h2 className="font-display text-xl font-bold">{name}</h2>
                 <span className="text-sm text-muted">{docs.length} création{docs.length > 1 ? "s" : ""}</span>
                 {project?.archived && <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted">Archivé</span>}
                 {project ? (
-                  <span title="Paramètres du projet" className="ml-auto"><DrawerButton drawer={`laboratoire-projet-${project.id}`} className="inline-flex size-8 items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent"><MaterialIcon name="settings" className="size-5" /><span className="sr-only">Paramètres du projet {name}</span></DrawerButton></span>
+                  <span title="Paramètres du projet" className="-my-1 ml-auto self-center"><DrawerButton drawer={`laboratoire-projet-${project.id}`} className="inline-flex size-8 items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent"><MaterialIcon name="settings" className="size-5" /><span className="sr-only">Paramètres du projet {name}</span></DrawerButton></span>
                 ) : (
-                  <form action={saveLabProjectAction} className="ml-auto"><input type="hidden" name="name" value={name} /><button className="text-sm text-accent hover:underline">Enregistrer comme projet</button></form>
+                  <form action={saveLabProjectAction} className="ml-auto self-center"><input type="hidden" name="name" value={name} /><button className="text-sm text-accent hover:underline">Enregistrer comme projet</button></form>
                 )}
               </div>
               {project?.description && <p className="mt-1 text-sm text-muted">{project.description}</p>}
