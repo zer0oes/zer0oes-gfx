@@ -22,6 +22,8 @@ test("composition du formulaire : seules les formules et produits existants, qua
   const json = JSON.stringify({ [BASE]: [{ option: "overlay", qty: 500 }, { option: "inconnu", qty: 1 }, { option: "logo", qty: 0 }], emotes: [{ option: "emotes-5", qty: 1 }], ancienne: [{ option: "logo", qty: 1 }] });
   assert.deepEqual(compositionFromForm(json, ["emotes"], options), { [BASE]: [{ option: "overlay", qty: 99 }], emotes: [{ option: "emotes-5", qty: 1 }] });
   assert.deepEqual(compositionFromForm("{", ["base"], options), {});
+  // Option ajoutée dans l'admin : composition reçue sous sa clé provisoire
+  assert.deepEqual(compositionFromForm(JSON.stringify({ "new-2": [{ option: "logo", qty: 1 }] }), ["avec-logo"], options, { "new-2": "avec-logo" }), { [BASE]: [], "avec-logo": [{ option: "logo", qty: 1 }] });
 });
 
 test("valeur à la carte : prix habituels × quantités, « à partir de » si un produit l'est", () => {

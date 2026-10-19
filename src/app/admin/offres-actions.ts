@@ -80,6 +80,8 @@ export async function savePackAction(formData: FormData) {
 
   // Formules : lignes formula_label_N / formula_price_N / formula_id_N / formula_stripe_N
   const formulas: Formula[] = [];
+  // Option ajoutée dans l'admin : sa composition arrive sous « new-<ligne> »
+  const newFormulaKeys: Record<string, string> = {};
   for (let i = 0; i < 10; i++) {
     const label = text(formData, `formula_label_${i}`, 120);
     if (!label) continue;
@@ -89,6 +91,7 @@ export async function savePackAction(formData: FormData) {
     if (formulas.some((f) => f.id === fid)) done(`/admin/offres?offre=${encodeURIComponent(id)}`, `« ${name} » : deux formules ont le même identifiant (${fid}).`);
     const stripePriceId = text(formData, `formula_stripe_${i}`, 100) || undefined;
     formulas.push({ id: fid, label, price: fPrice, stripePriceId });
+    if (!text(formData, `formula_id_${i}`, 60)) newFormulaKeys[`new-${i}`] = fid;
   }
   const checkout = formData.get("checkout") === "on";
   if (checkout && formulas.length === 0) {
@@ -121,7 +124,7 @@ export async function savePackAction(formData: FormData) {
   // Composition à partir des produits à la carte : pack de base, puis produits ajoutés par chaque autre formule
   if (formData.has("composition")) {
     const { options } = await store.getCatalog();
-    const composition = compositionFromForm(text(formData, "composition", 20000), formulas.slice(1).map((f) => f.id), options);
+    const composition = compositionFromForm(text(formData, "composition", 20000), formulas.slice(1).map((f) => f.id), options, newFormulaKeys);
     await store.saveHomeContent(writeComposition(await store.getHomeContent(), id, composition));
   }
   done(`/admin/offres?offre=${encodeURIComponent(id)}`);

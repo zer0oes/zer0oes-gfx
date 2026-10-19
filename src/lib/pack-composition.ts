@@ -46,13 +46,15 @@ export function writeComposition(raw: unknown, packId: string, composition: Pack
 
 // Composition reçue du formulaire (champ caché JSON) : pack de base et formules en plus de la formule de base,
 // seuls les produits existants sont gardés
-export function compositionFromForm(json: string, optionFormulaIds: string[], options: Option[]): PackComposition {
+// aliases : clé provisoire d'une option pas encore enregistrée (« new-3 ») → son identifiant
+export function compositionFromForm(json: string, optionFormulaIds: string[], options: Option[], aliases: Record<string, string> = {}): PackComposition {
   let parsed: Record<string, unknown> = {};
   try {
     parsed = asRecord(JSON.parse(json || "{}"));
   } catch {
     return {};
   }
+  for (const [from, to] of Object.entries(aliases)) if (from in parsed) parsed[to] = parsed[from];
   return Object.fromEntries([BASE, ...optionFormulaIds].map((id) => [id, cleanItems(parsed[id]).filter((item) => options.some((o) => o.id === item.option))]));
 }
 

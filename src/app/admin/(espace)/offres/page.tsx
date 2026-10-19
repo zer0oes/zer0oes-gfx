@@ -5,7 +5,8 @@ import { CategoriesPanel } from "@/components/admin/CategoriesPanel";
 import { categoryColor } from "@/lib/product-categories";
 import { VisualPicker } from "@/components/admin/VisualFields";
 import { readVisuals } from "@/lib/product-visuals";
-import { PackCompositionField, type CompositionOption } from "@/components/admin/PackCompositionField";
+import type { CompositionOption } from "@/components/admin/PackCompositionField";
+import { PackFormulasField } from "@/components/admin/PackFormulasField";
 import { compositionPriceLabel, readComposition } from "@/lib/pack-composition";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
@@ -90,8 +91,6 @@ function Intro({ children }: { children: React.ReactNode }) {
 }
 
 function PackForm({ pack, formId, options, content }: { pack: Pack; formId: string; options: CompositionOption[]; content: unknown }) {
-  // Formules existantes + 2 lignes vides pour ajouter des options
-  const rows = [...(pack.formulas ?? []), undefined, undefined];
   return (
     <form id={formId} action={savePackAction} className="space-y-4">
       <input type="hidden" name="id" value={pack.id} />
@@ -123,45 +122,7 @@ function PackForm({ pack, formId, options, content }: { pack: Pack; formId: stri
         )}
       </div>
 
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium">Formules commandables</legend>
-        <p className="mb-3 text-xs text-muted">
-          Ce que le client peut commander en ligne. La première ligne est le pack de base ; les suivantes sont ses options
-          (pack de base + produits en plus, à choisir dans la composition juste en dessous) et s&apos;affichent sur le site avec
-          leur supplément. Pour retirer une option, vide son nom.
-        </p>
-        <div className="space-y-2">
-          <div className="grid grid-cols-[8.5rem_1fr_7rem] gap-2 text-xs uppercase tracking-wider text-muted"><span /><span>Nom affiché</span><span>Prix (€)</span></div>
-          {rows.map((f, i) => (
-            <div key={i} className="grid grid-cols-[8.5rem_1fr_7rem] items-center gap-2">
-              <span className={`justify-self-start whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${i === 0 ? "border-accent/50 text-accent" : f ? "border-border text-foreground" : "border-dashed border-border text-muted"}`}>
-                {i === 0 ? "Pack de base" : f ? "Option" : "Nouvelle option"}
-              </span>
-              <TranslationInput translationKey={`translation:pack:${pack.id}:formula:${f?.id ?? `new-${i}`}:label`} name={`formula_label_${i}`} defaultValue={f?.label} placeholder={i === 0 ? "Nom du pack de base" : "Nom de l'option"} aria-label={i === 0 ? "Nom du pack de base" : "Nom de l'option"} className={input} />
-              <input name={`formula_price_${i}`} defaultValue={f ? euros(f.price) : ""} placeholder="Prix" inputMode="decimal" aria-label="Prix" className={input} />
-            </div>
-          ))}
-        </div>
-        <details className="mt-3 rounded-xl border border-border">
-          <summary className="cursor-pointer px-4 py-2.5 text-xs text-muted hover:text-foreground">Réglages techniques : identifiants et prix Stripe</summary>
-          <div className="space-y-2 border-t border-border p-4">
-            <p className="text-xs text-muted">
-              Identifiant : repris par les commandes, à ne pas changer une fois l&apos;option en vente (laissé vide, il est créé à partir du nom).
-              Prix Stripe : facultatif, seulement si ce prix a été créé dans Stripe.
-            </p>
-            {rows.map((f, i) => (
-              <div key={i} className="grid grid-cols-[8.5rem_1fr_1fr] items-center gap-2">
-                <span className="truncate text-xs text-muted">{f?.label ?? (i === 0 ? "Pack de base" : "Nouvelle option")}</span>
-                <input name={`formula_id_${i}`} defaultValue={f?.id} placeholder="identifiant" aria-label="Identifiant" className={input} />
-                <input name={`formula_stripe_${i}`} defaultValue={f?.stripePriceId} placeholder="price_…" aria-label="Prix Stripe" className={input} />
-              </div>
-            ))}
-          </div>
-        </details>
-      </fieldset>
-      <PackCompositionField formId={formId} options={options} initial={readComposition(content, pack.id)}
-        base={{ price: pack.formulas?.[0]?.price ?? pack.price, priceField: pack.formulas?.length ? "formula_price_0" : "price" }}
-        formulas={(pack.formulas ?? []).slice(1).map((f, i) => ({ id: f.id, label: f.label, price: f.price, priceField: `formula_price_${i + 1}` }))} />
+      <PackFormulasField formId={formId} packId={pack.id} packPrice={pack.price} formulas={pack.formulas ?? []} options={options} initial={readComposition(content, pack.id)} />
     </form>
   );
 }
