@@ -12,6 +12,8 @@ type PriceRef = { price: number; priceField: string };
 type FormulaRef = PriceRef & { id: string; label: string };
 
 const euro = (cents: number) => formatPrice(cents);
+// Menus déroulants : même largeur et même hauteur que les autres champs
+const field = "h-[38px] w-64 max-w-full rounded-lg border bg-background px-3 text-sm";
 
 // Prix en centimes tapé dans un champ du formulaire de l'offre (« 690 », « 690,50 »), sinon null
 function fieldPrice(form: HTMLFormElement | null, name: string) {
@@ -83,6 +85,9 @@ function ItemsBlock({ title, subtitle, price, value, base, items, options, categ
   useEffect(() => shift(list.current, sort.drag), [sort.drag]);
   const saving = price === null ? null : savingPercent(price, value.total);
   const optionName = (id: string) => options.find((o) => o.id === id)?.name ?? id;
+  // Colonnes alignées d'un bloc à l'autre : nom, menu « remplace » (options), quantité, prix unitaire, total
+  const replaceable = Boolean(base?.length);
+  const columns = "grid-cols-[auto_minmax(6rem,14rem)_16rem_minmax(0,1fr)_4rem_8rem_4.5rem_auto]";
 
   const add = (id: string) => {
     if (!id) return;
@@ -94,7 +99,7 @@ function ItemsBlock({ title, subtitle, price, value, base, items, options, categ
     <div className="overflow-hidden rounded-xl border border-border">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border bg-surface px-4 py-2.5">
         <span className="text-sm font-semibold">{subtitle && <span className="mr-1.5 font-normal text-muted">{subtitle}</span>}{title}</span>
-        <span className="text-xs text-muted">
+        <span className="text-sm text-muted">
           {value.total > 0 ? <>Valeur à la carte : <strong className="text-foreground">{value.priceFrom ? "à partir de " : ""}{euro(value.total)}</strong></> : "Aucun produit"}
           {value.total > 0 && price !== null && <> · Prix : <strong className="text-foreground">{euro(price)}</strong>
             {saving !== null && <span className={`ml-2 rounded-full px-2 py-0.5 font-medium ${saving > 0 ? "bg-emerald-400/10 text-emerald-300" : "bg-amber-400/10 text-amber-300"}`}>
@@ -109,22 +114,22 @@ function ItemsBlock({ title, subtitle, price, value, base, items, options, categ
             const option = options.find((o) => o.id === item.option);
             const name = option?.name ?? `Produit supprimé (${item.option})`;
             return (
-              <li key={item.option} data-sort-id={item.option} aria-label={name} className="grid grid-cols-[auto_1fr_3.5rem_auto_auto] items-center gap-2 bg-background px-2 py-1.5 text-sm">
+              <li key={item.option} data-sort-id={item.option} aria-label={name} className={`grid ${columns} items-center gap-3 bg-background px-2 py-1.5 text-sm`}>
                 <span {...sort.handle(i, item.option)} role="button" tabIndex={0} aria-label={`Déplacer ${name} (flèches haut et bas)`} title="Glisser pour changer l’ordre · ↑/↓ au clavier"
                   className="inline-flex size-7 cursor-grab items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent active:cursor-grabbing"><MaterialIcon name="drag_indicator" className="size-5" /></span>
-                <span className={`flex min-w-0 items-center gap-3 ${option ? "" : "text-amber-300"}`}>
-                  <span className="shrink-0 whitespace-nowrap">{name}{option && <span className="ml-2 text-xs text-muted">{option.priceLabel}</span>}</span>
-                  {base && base.length > 0 && (
-                    <select value={item.replaces ?? ""} title={item.replaces ? `Remplace ${optionName(item.replaces)} du pack de base` : "En plus du pack de base"} aria-label={`Produit du pack de base remplacé par ${name}`}
-                      onChange={(e) => onChange(items.map((x, k) => (k === i ? { option: x.option, qty: x.qty, ...(e.target.value ? { replaces: e.target.value } : {}) } : x)))}
-                      className={`min-w-0 max-w-full flex-1 truncate h-[38px] rounded-lg border bg-background px-2 text-xs ${item.replaces ? "border-accent/50 text-accent" : "border-border text-muted"}`}>
-                      <option value="">En plus</option>
-                      {base.map((b) => <option key={b.option} value={b.option}>⇄ {b.qty > 1 ? `${b.qty} × ` : ""}{optionName(b.option)}</option>)}
-                    </select>
-                  )}
-                </span>
+                <span className={`truncate ${option ? "" : "text-amber-300"}`} title={name}>{name}</span>
+                {replaceable ? (
+                  <select value={item.replaces ?? ""} title={item.replaces ? `Remplace ${optionName(item.replaces)} du pack de base` : "En plus du pack de base"} aria-label={`Produit du pack de base remplacé par ${name}`}
+                    onChange={(e) => onChange(items.map((x, k) => (k === i ? { option: x.option, qty: x.qty, ...(e.target.value ? { replaces: e.target.value } : {}) } : x)))}
+                    className={`${field} truncate ${item.replaces ? "border-accent/50 text-accent" : "border-border text-muted"}`}>
+                    <option value="">En plus du pack de base</option>
+                    {base!.map((b) => <option key={b.option} value={b.option}>⇄ {b.qty > 1 ? `${b.qty} × ` : ""}{optionName(b.option)}</option>)}
+                  </select>
+                ) : <span />}
+                <span />
                 <QuantityInput value={item.qty} label={`Quantité de ${name}`} onChange={(qty) => onChange(items.map((x, k) => (k === i ? { ...x, qty } : x)))} />
-                <span className="w-16 text-right text-xs text-muted">{option ? euro((option.normalPrice ?? option.price) * item.qty) : "—"}</span>
+                <span className="text-right text-muted" title="Prix unitaire à la carte">{option ? option.priceLabel : "—"}</span>
+                <span className="text-right">{option ? euro((option.normalPrice ?? option.price) * item.qty) : "—"}</span>
                 <button type="button" onClick={() => window.confirm("Es-tu sûre de vouloir supprimer ?") && onChange(items.filter((_, k) => k !== i))}
                   aria-label={`Retirer ${name}`} title="Retirer" className="inline-flex size-7 items-center justify-center rounded text-muted hover:bg-red-400/10 hover:text-red-300">
                   <MaterialIcon name="delete" className="size-4" />
@@ -136,7 +141,7 @@ function ItemsBlock({ title, subtitle, price, value, base, items, options, categ
       )}
       {sort.drag && <SortPreview drag={sort.drag} />}
       <div className="border-t border-border px-4 py-2.5">
-        <select defaultValue="" onChange={(e) => { add(e.target.value); e.target.value = ""; }} aria-label={`Ajouter un produit à ${title}`} className="h-[38px] w-full max-w-xs rounded-lg border border-border bg-background px-3 text-sm">
+        <select defaultValue="" onChange={(e) => { add(e.target.value); e.target.value = ""; }} aria-label={`Ajouter un produit à ${title}`} className={`${field} border-border`}>
           <option value="">+ Ajouter un produit…</option>
           {categories.map((category) => (
             <optgroup key={category} label={category}>

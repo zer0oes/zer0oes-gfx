@@ -41,7 +41,7 @@ export function compositionOptions(options: Option[], categories: ProductCategor
 // Fiche d'une offre (page Offres > une offre) : textes du site à gauche, formules et composition à droite
 export function PackForm({ pack, formId, options, content }: { pack: Pack; formId: string; options: CompositionOption[]; content: unknown }) {
   return (
-    <form id={formId} action={savePackAction} className="grid items-start gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+    <form id={formId} action={savePackAction} className="grid items-start gap-6 2xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       <input type="hidden" name="id" value={pack.id} />
       <div className={`${card} space-y-4`}>
         <h2 className="font-display text-lg font-bold">Textes du site</h2>
