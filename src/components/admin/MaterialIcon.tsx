@@ -60,6 +60,7 @@ export type MaterialIconName =
   | "schedule"
   | "science"
   | "select_all"
+  | "settings"
   | "shopping_bag"
   | "shopping_cart"
   | "star"

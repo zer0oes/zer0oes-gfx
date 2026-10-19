@@ -95,7 +95,7 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
                 <span className="text-sm text-muted">{docs.length} création{docs.length > 1 ? "s" : ""}</span>
                 {project?.archived && <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted">Archivé</span>}
                 {project ? (
-                  <DrawerButton drawer={`laboratoire-projet-${project.id}`} className="ml-auto text-sm text-accent hover:underline">Modifier le projet</DrawerButton>
+                  <span title="Paramètres du projet" className="ml-auto"><DrawerButton drawer={`laboratoire-projet-${project.id}`} className="inline-flex size-8 items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent"><MaterialIcon name="settings" className="size-5" /><span className="sr-only">Paramètres du projet {name}</span></DrawerButton></span>
                 ) : (
                   <form action={saveLabProjectAction} className="ml-auto"><input type="hidden" name="name" value={name} /><button className="text-sm text-accent hover:underline">Enregistrer comme projet</button></form>
                 )}

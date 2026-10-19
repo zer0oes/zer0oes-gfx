@@ -168,9 +168,11 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
         const folded = collapsed.includes(section.name);
         return (
           <section key={section.name} aria-label={`Projet ${section.name}`}>
-            <div className="flex items-start gap-1">
+            {/* Toute la ligne replie ou déplie le projet, sauf ses propres boutons (paramètres, enregistrer) */}
+            <div className="-mx-2 flex cursor-pointer items-start gap-1 rounded-xl px-2 py-1 hover:bg-accent/5"
+              onClick={(event) => { if (!(event.target as HTMLElement).closest("button, a, form, input")) toggleCollapsed(section.name); }}>
               <button type="button" onClick={() => toggleCollapsed(section.name)} aria-expanded={!folded} aria-label={`${folded ? "Déplier" : "Replier"} le projet ${section.name}`} title={folded ? "Déplier" : "Replier"}
-                className="-ml-2 mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent">
+                className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent">
                 <MaterialIcon name="expand_more" className={`size-5 transition-transform motion-reduce:transition-none ${folded ? "-rotate-90" : ""}`} />
               </button>
               <div className="min-w-0 flex-1">{section.header}</div>
