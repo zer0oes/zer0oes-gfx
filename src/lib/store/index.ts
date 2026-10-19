@@ -68,6 +68,7 @@ function withComposedDeliverables(pack: WithEnglish<Pack>, raw: unknown, options
     formulas,
     corrections,
     ownDeliverables: pack.deliverables,
+    composedCount: items.filter((item) => options.some((o) => o.id === item.option)).length,
     deliverables: deliverablesWith(items, fr, options, withoutCorrectionsLines(pack.deliverables, templateFr), [correctionsLine(templateFr, corrections)]),
     __en: { ...pack.__en, deliverables: deliverablesWith(items, en, options, withoutCorrectionsLines(freeEn, templateEn), [correctionsLine(templateEn, corrections)]) },
   };
@@ -91,7 +92,8 @@ export function getStore(): Store {
     },
     // Les livrables générés par la composition ne sont pas enregistrés avec l'offre : seulement ses lignes libres
     async savePack(pack) {
-      const { ownDeliverables, corrections, __en, ...rest } = pack as WithEnglish<Pack>;
+      const { ownDeliverables, corrections, composedCount, __en, ...rest } = pack as WithEnglish<Pack>;
+      void composedCount;
       void __en;
       void corrections;
       const formulas = rest.formulas?.map(({ deliverables, delivery, __en: english, ...formula }: WithEnglish<Formula>) => (void deliverables, void delivery, void english, formula));
