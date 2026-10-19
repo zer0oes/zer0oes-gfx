@@ -39,7 +39,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const store = getStore();
   const [portfolio, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
   const { streamers: ordered, works } = trDeep(lang, withoutDrafts(portfolio));
-  // Cartes images 4:3, texte posé sur l'image (toutes à la même hauteur). Projet mis en avant (Admin > Portfolio) :
+  // Cartes images 4:5, texte posé sur l'image (toutes à la même hauteur). Projet mis en avant (Admin > Portfolio) :
   // en premier, sur deux colonnes à la même hauteur que les autres (image recadrée)
   const featured = featuredProjectId(stored);
   const streamers = [...ordered.filter((s) => s.id === featured), ...ordered.filter((s) => s.id !== featured)];
@@ -81,7 +81,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
               href={href(lang, projectHref(s.id))}
               data-hover-root
               data-reveal
-              className={`group relative block aspect-[4/3] overflow-hidden rounded-3xl border border-border bg-background transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2 md:aspect-[8/3] lg:aspect-auto" : ""}`}
+              className={`group relative block aspect-[4/5] overflow-hidden rounded-3xl border border-border bg-background transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2 md:aspect-[8/5] lg:aspect-auto" : ""}`}
             >
               {cover?.image && (
                 <ProtectedMedia className="absolute inset-0">
