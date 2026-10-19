@@ -24,7 +24,7 @@ export function PackSwiper({ children, start = 0, labels, className = "" }: { ch
   return (
     <div className={className}>
       <div ref={list} onScroll={onScroll}
-        className="-mx-4 -my-6 flex items-start snap-x snap-mandatory overflow-x-auto py-6 overscroll-x-contain [scrollbar-width:none] md:mx-0 md:my-0 md:grid md:items-stretch md:py-0 md:snap-none md:grid-cols-3 md:gap-6 md:overflow-visible [&::-webkit-scrollbar]:hidden">
+        className="-mx-4 -my-6 flex items-start snap-x snap-mandatory overflow-x-auto py-6 overscroll-x-contain no-scrollbar md:mx-0 md:my-0 md:grid md:items-stretch md:py-0 md:snap-none md:grid-cols-3 md:gap-6 md:overflow-visible">
         {Children.map(children, (child) => <div className="flex w-full shrink-0 snap-center px-4 md:px-0 [&>*]:w-full">{child}</div>)}
       </div>
       {count > 1 && (

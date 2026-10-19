@@ -298,6 +298,13 @@ html,
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover) padding-box;
 }
+/* Défilement sans barre visible (offres à faire glisser sur mobile) */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
