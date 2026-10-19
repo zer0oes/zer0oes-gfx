@@ -38,9 +38,12 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const store = getStore();
   const [portfolio, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
   const { streamers: ordered, works } = trDeep(lang, withoutDrafts(portfolio));
-  // Projet mis en avant (Admin > Portfolio) : en premier, sur deux colonnes
+  // Projet mis en avant (Admin > Portfolio) : en premier, sur deux colonnes ; toutes les cartes ont la même hauteur
   const featured = featuredProjectId(stored);
   const streamers = [...ordered.filter((s) => s.id === featured), ...ordered.filter((s) => s.id !== featured)];
+  // Deux projets sans mise en avant : chacun prend la moitié de la largeur
+  const hasFeatured = streamers.length > 1 && streamers[0].id === featured;
+  const pair = streamers.length === 2 && !hasFeatured;
   // Textes modifiables dans Admin > Portfolio
   const texts = resolveHome(stored, lang);
   return (
@@ -48,7 +51,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
       <PageHeader eyebrow={texts.text("portfolio.kicker")} title={texts.text("portfolio.title")}>
         {texts.text("portfolio.intro")}
       </PageHeader>
-      <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className={`mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 md:auto-rows-fr md:grid-cols-2 ${pair ? "" : "lg:grid-cols-3"}`}>
         {streamers.map((s) => {
           const own = works.filter((w) => w.streamer === s.id);
           // Couverture lisible en miniature (logo du projet), scène animée au survol
@@ -65,16 +68,16 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
               return { ...c, n, label: lang === "en" && en ? en[n > 1 ? 1 : 0] : n > 1 ? label : label.replace(/s$/, "") };
             })
             .filter((c) => c.n > 0);
-          const big = s.id === featured;
+          const big = hasFeatured && s.id === featured;
           return (
             <Link
               key={s.id}
               href={href(lang, projectHref(s.id))}
               data-hover-root
               data-reveal
-              className={`group flex flex-col overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2 lg:row-span-2" : ""}`}
+              className={`group flex flex-col overflow-hidden rounded-3xl border border-border bg-surface transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2" : ""}`}
             >
-              <div className={`relative aspect-video overflow-hidden bg-background ${big ? "lg:aspect-auto lg:min-h-0 lg:flex-1" : ""}`}>
+              <div className={`relative aspect-video overflow-hidden bg-background ${big ? "md:aspect-auto md:min-h-0 md:flex-1" : ""}`}>
                 {cover?.image && (
                   <ProtectedMedia className="absolute inset-0">
                     <Image
@@ -82,14 +85,14 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
                       alt=""
                       fill
                       draggable={false}
-                      sizes={big ? "(min-width: 1024px) 760px, 100vw" : "(min-width: 1024px) 370px, (min-width: 768px) 50vw, 100vw"}
+                      sizes={big ? "(min-width: 1024px) 760px, 100vw" : pair ? "(min-width: 1024px) 560px, (min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 370px, (min-width: 768px) 50vw, 100vw"}
                       className={`object-cover transition duration-500 ${coverVideo ? "" : "group-hover:scale-105"}`}
                     />
                     {coverVideo && <HoverVideo src={coverVideo} />}
                   </ProtectedMedia>
                 )}
               </div>
-              <div className="p-6">
+              <div className={`p-6 ${big ? "" : "flex-1"}`}>
                 <div className="flex items-center justify-between gap-4">
                   <h2 className={`font-display font-bold ${big ? "text-2xl lg:text-3xl" : "text-xl"}`}>{s.name}</h2>
                   <span className="text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
