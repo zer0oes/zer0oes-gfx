@@ -4,6 +4,7 @@ import { useEffect, useOptimistic, useRef, useState, useSyncExternalStore, useTr
 import { deleteLabAction, duplicateLabAction, moveLabAction } from "@/app/admin/custom-lab-actions";
 import type { Platform } from "@/lib/custom-lab/platformEvents";
 import { ClickableRow } from "./ClickableRow";
+import { Collapse } from "@/components/Collapse";
 import { MaterialIcon } from "./MaterialIcon";
 
 export type LabRow = { id: string; name: string; description: string; kindLabel: string; kindTone: string; platforms: Platform[]; size: string; updated: string };
@@ -174,11 +175,11 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
               onClick={(event) => { if (!(event.target as HTMLElement).closest("button, a, form, input")) toggleCollapsed(section.name); }}>
               <button type="button" onClick={() => toggleCollapsed(section.name)} aria-expanded={!folded} aria-label={`${folded ? "Déplier" : "Replier"} le projet ${section.name}`} title={folded ? "Déplier" : "Replier"}
                 className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent">
-                <MaterialIcon name="expand_more" className={`size-5 transition-transform motion-reduce:transition-none ${folded ? "-rotate-90" : ""}`} />
+                <MaterialIcon name="expand_more" className={`size-5 transition-transform duration-[260ms] ease-out motion-reduce:transition-none ${folded ? "-rotate-90" : ""}`} />
               </button>
               <div className="min-w-0 flex-1">{section.header}</div>
             </div>
-            {!folded && <div className="overflow-x-auto border-t border-border">
+            <Collapse open={!folded}><div className="overflow-x-auto border-t border-border">
               <table className="w-full min-w-[1040px] table-fixed text-left text-sm">
                 {/* Mêmes largeurs de colonnes pour tous les projets */}
                 <colgroup>
@@ -192,7 +193,7 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
                   <col className="w-12" />
                 </colgroup>
                 <thead className="bg-background/60 text-xs uppercase tracking-wider text-muted">
-                  <tr>
+                  <tr className="border-b border-border/50">
                     <th scope="col"><span className="sr-only">Ordre</span></th>
                     <th scope="col" className="px-4 py-3 font-medium">Création</th>
                     <th scope="col" className="px-4 py-3 font-medium">Description</th>
@@ -203,7 +204,7 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
                     <th scope="col"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
-                <tbody data-lab-section={section.name} className="divide-y divide-border">
+                <tbody data-lab-section={folded ? undefined : section.name} className="divide-y divide-border">
                   {rows.flatMap((row, i) => [
                     ...(i === slotAt ? [<Slot key="slot" height={drag!.height} />] : []),
                     <ClickableRow key={row.id} href={`/admin/laboratoire/${row.id}`} data-lab-row>
@@ -212,8 +213,9 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
                           <MaterialIcon name="drag_indicator" className="size-5" />
                         </button>
                       </td>
-                      <td className="truncate px-4 py-3 font-medium" title={row.name}>{row.name}</td>
-                      <td className="whitespace-pre-line break-words px-4 py-3 text-muted">{row.description || "—"}</td>
+                      <td className="truncate px-4 py-3 font-medium" title={row.name} data-tip-if-truncated>{row.name}</td>
+                      {/* Même hauteur pour toutes les lignes : texte coupé avec « … », en entier dans l'infobulle */}
+                      <td className="truncate px-4 py-3 text-muted" title={row.description || undefined} data-tip-if-truncated>{row.description || "—"}</td>
                       <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${row.kindTone}`}>{row.kindLabel}</span></td>
                       <td className="px-4 py-3"><Compatibility platforms={row.platforms} /></td>
                       <td className="whitespace-nowrap px-4 py-3 tabular-nums text-muted">{row.size}</td>
@@ -225,7 +227,7 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
                   {!rows.length && slotAt < 0 && <tr><td colSpan={8} className="px-4 py-4 text-center text-sm text-muted">Aucune création dans ce projet.</td></tr>}
                 </tbody>
               </table>
-            </div>}
+            </div></Collapse>
           </section>
         );
       })}

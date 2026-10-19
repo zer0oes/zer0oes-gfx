@@ -22,7 +22,7 @@ export function ClientTestimonialForm({ token, testimonial, en }: { token: strin
     <details id="avis" open className="group/review mt-4 rounded-2xl border border-border bg-background p-4 sm:p-5">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold [&::-webkit-details-marker]:hidden">
         {en ? "Leave a review" : "Donner mon avis"}
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 text-accent transition-transform group-open/review:rotate-180" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" /></svg>
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 text-accent transition-transform duration-[260ms] ease-out motion-reduce:transition-none group-open/review:rotate-180" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" /></svg>
       </summary>
       <div className="mt-4">
       <h2 id="avis-title" className="font-display text-xl font-bold text-foreground">{en ? <>Share your <span className="text-gradient">experience</span></> : <>Partage ton <span className="text-gradient">expérience</span></>}</h2>

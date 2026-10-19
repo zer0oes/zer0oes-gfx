@@ -4,7 +4,7 @@ import { saveQuoteBriefRequirements } from "@/app/admin/devis-actions";
 
 export function QuoteBriefRequirements({ quote }: { quote: ProjectQuote }) {
   return <details className="group/requirements mt-4 rounded-xl border border-border bg-background/40 p-4">
-    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden"><span className="text-sm font-semibold">Champs obligatoires du brief</span><span className="flex items-center gap-2 text-xs font-semibold text-accent">Configurer<svg aria-hidden viewBox="0 0 24 24" fill="currentColor" className="size-5 transition-transform group-open/requirements:rotate-180"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" /></svg></span></summary>
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden"><span className="text-sm font-semibold">Champs obligatoires du brief</span><span className="flex items-center gap-2 text-xs font-semibold text-accent">Configurer<svg aria-hidden viewBox="0 0 24 24" fill="currentColor" className="size-5 transition-transform duration-[260ms] ease-out motion-reduce:transition-none group-open/requirements:rotate-180"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" /></svg></span></summary>
     <form action={saveQuoteBriefRequirements} className="mt-4 space-y-5 border-t border-border pt-4">
       <input type="hidden" name="id" value={quote.id} /><input type="hidden" name="updatedAt" value={quote.updatedAt} /><input type="hidden" name="backToOrder" value="1" />
       <p className="text-sm text-muted">Coche les champs à rendre obligatoires. Les autres sont facultatifs pour le client.</p>
