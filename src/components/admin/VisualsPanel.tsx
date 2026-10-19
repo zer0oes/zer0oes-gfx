@@ -1,0 +1,60 @@
+import { createVisualAction, deleteVisualAction, saveVisualAction } from "@/app/admin/offres-actions";
+import { ProductVisualView } from "@/components/ProductVisualView";
+import type { Option } from "@/lib/pricing";
+import { readVisuals, visualUsage } from "@/lib/product-visuals";
+import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "./Drawer";
+import { VisualFields } from "./VisualFields";
+
+const save = "rounded-full bg-accent px-5 py-2 text-sm font-semibold text-background hover:brightness-110";
+
+// Onglet « Visuels » : bibliothèque des dessins en code des créations à la carte.
+// Un clic sur une ligne ouvre le visuel ; chaque produit choisit le sien dans sa fiche (onglet Options à la carte).
+export function VisualsPanel({ content, options, open, feedback }: { content: unknown; options: Option[]; open?: string; feedback: { saved: boolean; error?: string } }) {
+  const visuals = readVisuals(content);
+  const usage = visualUsage(options, content);
+  const status = (id: string) => open === id && (
+    <>
+      {feedback.saved && <p role="status" className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">Enregistré.</p>}
+      {feedback.error && <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">{feedback.error}</p>}
+    </>
+  );
+  return (
+    <section className="mt-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-sm text-muted">Dessins des cartes « à la carte » de la page Offres, en version statique et animée. Clique sur une ligne pour modifier un visuel, puis associe-le à un produit dans sa fiche (onglet Options à la carte).</p>
+        <DrawerButton drawer="visuel-nouveau" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouveau visuel</DrawerButton>
+      </div>
+      <div className="overflow-x-auto rounded-2xl border border-border">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-surface text-xs uppercase tracking-wider text-muted">
+            <tr className="border-b border-border/50"><th className="w-28 px-4 py-3">Aperçu</th><th className="px-4 py-3">Visuel</th><th className="px-4 py-3">Utilisé par</th></tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {visuals.map((v) => (
+              <DrawerRow key={v.id} drawer={`visuel-${v.id}`} label={`Modifier ${v.name}`} className={open === v.id ? "bg-accent/10" : ""}>
+                <td className="px-4 py-2"><div className="h-12 w-20 text-accent"><ProductVisualView visual={v} animated={false} className="h-full w-full" /></div></td>
+                <td className="px-4 py-3 font-semibold">{v.name}</td>
+                <td className="px-4 py-3 text-muted">{usage[v.id]?.map((o) => o.name).join(", ") || "—"}</td>
+              </DrawerRow>
+            ))}
+            {!visuals.length && <tr><td colSpan={3} className="px-4 py-6 text-center text-muted">Aucun visuel : les cartes utilisent le dessin « scène » d&apos;origine.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {visuals.map((v) => (
+        <Drawer key={v.id} id={`visuel-${v.id}`} kicker="Visuel" title={v.name} openOnLoad={open === v.id}
+          footer={<><ConfirmDelete icon action={deleteVisualAction} id={v.id} label="Supprimer le visuel" question={usage[v.id]?.length ? "Es-tu sûre de vouloir supprimer ? Les produits qui l'utilisent reprendront le visuel choisi d'après leur nom." : undefined} /><button type="submit" form={`visuel-form-${v.id}`} className={save}>Enregistrer le visuel</button></>}>
+          {status(v.id)}
+          <form id={`visuel-form-${v.id}`} action={saveVisualAction} className="space-y-5">
+            <input type="hidden" name="id" value={v.id} />
+            <VisualFields visual={v} />
+          </form>
+        </Drawer>
+      ))}
+      <Drawer id="visuel-nouveau" kicker="Visuel" title="Nouveau visuel" openOnLoad={open === "nouveau"} footer={<><span /><button type="submit" form="visuel-creer" className={save}>Créer le visuel</button></>}>
+        {status("nouveau")}
+        <form id="visuel-creer" action={createVisualAction} className="space-y-5"><VisualFields /></form>
+      </Drawer>
+    </section>
+  );
+}

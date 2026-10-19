@@ -11,6 +11,7 @@ import { optionCategories, type OptionCategory } from "@/lib/pricing";
 import { isWatermarkLevel } from "@/lib/protection";
 import { getStore } from "@/lib/store";
 import { optionContentFromForm, withGroupName, withGrouping, withoutOptionContent } from "@/lib/option-content";
+import { MAX_CSS, MAX_MARKUP, readVisuals, visualId, writeVisuals } from "@/lib/product-visuals";
 
 // Conversion « 490 », « 490,50 » ou « 1 990 » (€) → centimes. null si invalide.
 function parseEuros(raw: FormDataEntryValue | null): number | null {
@@ -38,6 +39,7 @@ const slug = (s: string) =>
 const TAB = {
   offres: "/admin/offres",
   options: "/admin/offres?onglet=options",
+  visuels: "/admin/offres?onglet=visuels",
   reglages: "/admin/offres?onglet=reglages",
   cotisations: "/admin/offres?onglet=cotisations",
 } as const;
@@ -313,4 +315,43 @@ export async function reorderPacksAction(ids: string[]) {
   if (ids.length !== current.length || !ids.every((id) => current.includes(id))) return;
   await store.reorderPacks(ids);
   revalidatePath("/", "layout");
+}
+
+// Visuels des créations à la carte (dessins en code) : bibliothèque rangée dans le contenu JSON
+const visualTab = (id?: string) => `${TAB.visuels}${id ? `&visuel=${encodeURIComponent(id)}#visuel-${id}` : ""}`;
+const code = (f: FormData, k: string, max: number) => (f.get(k)?.toString() ?? "").replace(/\r/g, "").trim().slice(0, max);
+
+export async function createVisualAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const name = text(formData, "name", 80);
+  if (!name) done(`${TAB.visuels}&visuel=nouveau`, "Le nom du visuel est obligatoire.");
+  const content = await store.getHomeContent();
+  const visuals = readVisuals(content);
+  const id = visualId(name, visuals.map((v) => v.id));
+  await store.saveHomeContent(writeVisuals(content, [...visuals, { id, name, markup: code(formData, "markup", MAX_MARKUP), css: code(formData, "css", MAX_CSS) }]));
+  done(visualTab(id));
+}
+
+export async function saveVisualAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const id = text(formData, "id", 60);
+  const name = text(formData, "name", 80);
+  const content = await store.getHomeContent();
+  const visuals = readVisuals(content);
+  if (!visuals.some((v) => v.id === id)) done(TAB.visuels, "Visuel introuvable.");
+  if (!name) done(visualTab(id), "Le nom du visuel est obligatoire.");
+  await store.saveHomeContent(writeVisuals(content, visuals.map((v) => (v.id === id ? { id, name, markup: code(formData, "markup", MAX_MARKUP), css: code(formData, "css", MAX_CSS) } : v))));
+  done(visualTab(id));
+}
+
+// Les produits qui l'utilisaient reprennent le visuel choisi d'après leur nom
+export async function deleteVisualAction(formData: FormData) {
+  await requireAdmin();
+  const store = getStore();
+  const id = text(formData, "id", 60);
+  const content = await store.getHomeContent();
+  await store.saveHomeContent(writeVisuals(content, readVisuals(content).filter((v) => v.id !== id)));
+  done(TAB.visuels);
 }

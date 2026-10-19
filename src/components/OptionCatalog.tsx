@@ -55,7 +55,7 @@ function ProductCard({ product, locale, add, texts }: { product: ReturnType<type
   const toggle = new Set(product.variants.map(animatedOf)).size > 1;
   return <article style={{ "--product-color": optionThemeColors[product.category] } as CSSProperties} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--product-color)_35%,var(--border))] bg-surface">
     <div className="relative">
-      <ProductPreview option={option} animated={animatedOf(option)} locale={locale} />
+      <ProductPreview option={option} visual={content.visual} animated={animatedOf(option)} locale={locale} />
 
     </div>
     <div className="flex flex-col gap-2.5 p-4">

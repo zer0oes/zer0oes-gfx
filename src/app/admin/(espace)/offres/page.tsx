@@ -1,5 +1,8 @@
 import { BannersPanel, DiscountsPanel } from "@/components/admin/MarketingPanel";
 import { AffiliatePanel } from "@/components/admin/AffiliatePanel";
+import { VisualsPanel } from "@/components/admin/VisualsPanel";
+import { VisualPicker } from "@/components/admin/VisualFields";
+import { readVisuals } from "@/lib/product-visuals";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
 import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@/lib/home-content";
@@ -48,7 +51,7 @@ const save = "rounded-full bg-accent px-5 py-2 text-sm font-semibold text-backgr
 // La page est découpée en trois parties (Catalogue, Promotions, Finances), chacune en onglets :
 // on n'affiche qu'un onglet à la fois.
 const groups = [
-  { label: "Catalogue", tabs: [{ id: "offres", label: "Offres" }, { id: "options", label: "Options à la carte" }, { id: "reglages", label: "Réglages" }] },
+  { label: "Catalogue", tabs: [{ id: "offres", label: "Offres" }, { id: "options", label: "Options à la carte" }, { id: "visuels", label: "Visuels" }, { id: "reglages", label: "Réglages" }] },
   { label: "Promotions", tabs: [{ id: "remises", label: "Remises et codes" }, { id: "bandeaux", label: "Bandeaux" }, { id: "affiliation", label: "Affiliation" }] },
   { label: "Finances", tabs: [{ id: "cotisations", label: "Frais et cotisations" }, { id: "simulateur", label: "Simulateur de revenus" }] },
 ] as const;
@@ -195,7 +198,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const cardMates = (o: (typeof options)[number]) => (groupOf(o) ? options.filter((x) => x.id !== o.id && groupOf(x) === groupOf(o)) : []);
 
   return (
-    <TranslationTabs stored={translationValues(translationContent)}>
+    <>
       <h1 className="font-display text-3xl font-bold">Offres et réglages</h1>
       <p className="mt-2 text-sm text-muted">Les modifications sont visibles sur le site dès l&apos;enregistrement.</p>
 
@@ -240,11 +243,13 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
       {tab === "remises" && <DiscountsPanel feedback={feedback} />}
       {tab === "bandeaux" && <BannersPanel feedback={feedback} linkTo={one(sp.lien)} />}
       {tab === "affiliation" && <AffiliatePanel />}
+      {tab === "visuels" && <VisualsPanel content={translationContent} options={options} open={one(sp.visuel)} feedback={feedback} />}
       {tab === "offres" && (
         <section className="mt-6">
           <details className={`${card} mb-6`}>
           <summary className="cursor-pointer font-semibold">Textes de la page Offres</summary>
-          <form action={saveOffersPageAction} className="mt-4 space-y-4">
+          <div className="mt-4"><TranslationTabs compact stored={translationValues(translationContent)}>
+          <form action={saveOffersPageAction} className="space-y-4">
             <h2 className="font-semibold">Textes de la page Offres</h2>
             <p className="text-xs text-muted">Tous les textes de la page, en français et en anglais. Un texte vidé reprend la version d’origine.</p>
             {offerTextGroups.map((group) => (
@@ -260,6 +265,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
             ))}
             <button type="submit" className={save}>Enregistrer les textes</button>
           </form>
+          </TranslationTabs></div>
           </details>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <p className="max-w-2xl text-sm text-muted">Clique sur une ligne pour modifier l&apos;offre. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
@@ -383,6 +389,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                         <Segmented name="variant" legend="Variante" options={[["statique", "Statique"], ["anime", "Animée"]]} defaultValue={content.animated ? "anime" : "statique"} />
                         <Field label="Nombre" hint="Ex. 5 pour un pack de 5 emotes."><input name="count" type="number" min={1} max={999} defaultValue={content.count} className={input} /></Field>
                       </div>
+                      <VisualPicker visuals={readVisuals(translationContent)} defaultValue={content.visual.id} color={optionThemeColors[optionCategory(o)]} animated={content.animated} />
                     </fieldset>
                     <fieldset>
                       <legend className="mb-2 text-sm font-medium">Compatible avec <span className="font-normal text-muted">(logos affichés sur la carte)</span></legend>
@@ -411,6 +418,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
         <div className="mt-6 space-y-8">
           <section>
             <h2 className="mb-4 font-display text-xl font-bold">Commande</h2>
+            <TranslationTabs compact stored={translationValues(translationContent)}>
             <form action={saveSettingsAction} className={`${card} grid gap-4 sm:grid-cols-3`}>
               <Field label="Acompte (%)" hint="Proposé à la commande en ligne.">
                 <input name="depositPercent" type="number" min={0} max={100} defaultValue={settings.depositPercent} required className={input} />
@@ -427,6 +435,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                 </button>
               </div>
             </form>
+            </TranslationTabs>
           </section>
 
           <section>
@@ -608,6 +617,6 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           </div>
         </section>
       )}
-    </TranslationTabs>
+    </>
   );
 }
