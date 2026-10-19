@@ -88,7 +88,7 @@ function applyMove(sections: LabSection[], move: Move): LabSection[] {
 
 // Bibliothèque : un tableau par projet ; poignée en début de ligne pour changer l'ordre ou déplacer vers un autre projet,
 // menu « ⋮ » en fin de ligne (dupliquer, supprimer)
-// Projets repliés, mémorisés dans ce navigateur (simple confort d'affichage)
+// Projets repliés ou dépliés à la main, mémorisés dans ce navigateur (simple confort d'affichage) ; les archivés sont repliés par défaut
 const COLLAPSED_KEY = "laboratoire-projets-replies";
 const COLLAPSED_EVENT = "laboratoire-projets-replies";
 function readCollapsed() {
@@ -166,7 +166,8 @@ export function LabLibraryBoard({ sections: initial }: { sections: LabSection[] 
         const rows = drag ? section.rows.filter((r) => r.id !== drag.row.id) : section.rows;
         const slotAt = drag && drag.over === section.name ? drag.index : -1;
         // Replié : le tableau est masqué (et ne reçoit plus de création glissée)
-        const folded = collapsed.includes(section.name);
+        // La liste mémorise les projets dont l'état diffère du défaut : déplié, ou replié pour un projet archivé
+        const folded = section.archived ? !collapsed.includes(section.name) : collapsed.includes(section.name);
         return (
           // Un projet = un seul bloc (en-tête + créations) ; survoler son en-tête met tout le bloc en surbrillance. Archivé : bloc atténué (pointillés), net au survol
           <section key={section.name} aria-label={`Projet ${section.name}`} className={`overflow-hidden rounded-2xl border border-border bg-surface/40 transition-[color,background-color,border-color,opacity] has-[[data-lab-head]:hover]:border-accent/40 has-[[data-lab-head]:hover]:bg-accent/5 ${section.archived ? "border-dashed opacity-55 hover:opacity-100 focus-within:opacity-100" : ""}`}>
