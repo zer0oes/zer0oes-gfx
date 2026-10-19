@@ -135,7 +135,7 @@ function FormulaComposition({ formula, price, items, options, categories, onChan
       )}
       {sort.drag && <SortPreview drag={sort.drag} />}
       <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-2.5">
-        <select value="" onChange={(e) => add(e.target.value)} aria-label={`Ajouter un produit à ${formula.label}`} className={`${input} max-w-xs py-1.5`}>
+        <select defaultValue="" onChange={(e) => { add(e.target.value); e.target.value = ""; }} aria-label={`Ajouter un produit à ${formula.label}`} className={`${input} max-w-xs py-1.5`}>
           <option value="">+ Ajouter un produit…</option>
           {categories.map((category) => (
             <optgroup key={category} label={category}>
