@@ -3,6 +3,7 @@ import Image from "next/image";
 import { site } from "@/data/site";
 import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
+import { PackSwiper } from "@/components/PackSwiper";
 import { PackCard } from "@/components/PackCard";
 import { ReviewsCarousel } from "@/components/ReviewsCarousel";
 import { TestimonialQuote, testimonialImage } from "@/components/TestimonialQuote";
@@ -272,11 +273,11 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
             {c.text("offers.link")}
           </Link>
         </div>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
+        <PackSwiper className="mt-10" start={Math.max(0, packs.findIndex((p) => p.highlight))} labels={packs.map((p) => p.name)}>
           {packs.map((p) => (
             <PackCard key={p.id} pack={p} settings={settings} compact locale={lang} />
           ))}
-        </div>
+        </PackSwiper>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 sm:pt-10">
