@@ -5,10 +5,11 @@ import { useId, useState, Fragment, type CSSProperties } from "react";
 import { useFormStatus } from "react-dom";
 import { createCheckout } from "@/app/actions";
 import { href, t, type Locale } from "@/lib/i18n";
-import { formatPrice, optionCategories, type Option, type Pack, type PricingSettings } from "@/lib/pricing";
+import { formatPrice, type Option, type Pack, type PricingSettings } from "@/lib/pricing";
 import { glossaryIdFor, type GlossaryHint } from "@/lib/glossary";
 import type { OptionContent } from "@/lib/option-content";
-import { optionProducts, optionProductTitle, optionThemeColors } from "@/lib/option-products";
+import { optionProducts, optionProductTitle } from "@/lib/option-products";
+import { categoryColor, type ProductCategory } from "@/lib/product-categories";
 import { recommendPack } from "@/lib/pack-recommendation";
 import { Hint } from "./Hint";
 import { ProductPreview } from "./ProductPreview";
@@ -38,7 +39,7 @@ export type CatalogTexts = {
   labels: { receive: string; revision: string; add: string; quote: string; quoteHeading: string; custom: string; customLink: string };
 };
 
-function ProductCard({ product, locale, add, texts }: { product: ReturnType<typeof optionProducts>[number]; locale: Locale; add: (option: Option, quantity: number) => void; texts: CatalogTexts }) {
+function ProductCard({ product, color, locale, add, texts }: { product: ReturnType<typeof optionProducts>[number]; color: string; locale: Locale; add: (option: Option, quantity: number) => void; texts: CatalogTexts }) {
   const variantGroup = useId();
   const [variantId, setVariantId] = useState(product.variants[0].id);
   const [quantity, setQuantity] = useState(1);
@@ -53,9 +54,9 @@ function ProductCard({ product, locale, add, texts }: { product: ReturnType<type
   const bySize = counts.length > 1;
   const variants = bySize ? product.variants.filter((v) => count(v) === count(option)) : product.variants;
   const toggle = new Set(product.variants.map(animatedOf)).size > 1;
-  return <article style={{ "--product-color": optionThemeColors[product.category] } as CSSProperties} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--product-color)_35%,var(--border))] bg-surface">
+  return <article style={{ "--product-color": color } as CSSProperties} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--product-color)_35%,var(--border))] bg-surface">
     <div className="relative">
-      <ProductPreview option={option} animated={animatedOf(option)} locale={locale} />
+      <ProductPreview option={option} visual={content.visual} color={color} animated={animatedOf(option)} locale={locale} />
 
     </div>
     <div className="flex flex-col gap-2.5 p-4">
@@ -80,7 +81,7 @@ function ProductCard({ product, locale, add, texts }: { product: ReturnType<type
   </article>;
 }
 
-export function OptionCatalog({ options, packs, settings, locale, texts, installOption }: { options: Option[]; packs: Pack[]; settings: PricingSettings; locale: Locale; texts: CatalogTexts; installOption?: Option }) {
+export function OptionCatalog({ options, categories, packs, settings, locale, texts, installOption }: { options: Option[]; categories: ProductCategory[]; packs: Pack[]; settings: PricingSettings; locale: Locale; texts: CatalogTexts; installOption?: Option }) {
   const showPack = useOfferNavigation();
   const [filter, setFilter] = useState("all");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -97,8 +98,10 @@ export function OptionCatalog({ options, packs, settings, locale, texts, install
   const recommendation = recommendPack(packs, options, cartItems, settings);
   const tooMany = items.length > 20 || JSON.stringify(items).length > 500;
   const count = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const labels: Record<string, string> = locale === "en" ? { all: "All", overlays: "Overlays", emotes: "Emotes", branding: "Visual identity", motion: "Animation" } : { all: "Tout", overlays: "Overlays", emotes: "Emotes", branding: "Identité visuelle", motion: "Animation" };
-  const products = optionProducts(options, (o) => texts.content[o.id]?.group ?? null).filter((product) => filter === "all" || product.category === filter).sort((a, b) => filter === "all" ? Number(a.variants.every((v) => v.priceFrom)) - Number(b.variants.every((v) => v.priceFrom)) : 0);
+  const allProducts = optionProducts(options, (o) => texts.content[o.id]?.group ?? null);
+  // Filtres : les catégories de l'admin (dans leur ordre) qui ont au moins une création
+  const filters = categories.filter((c) => allProducts.some((p) => p.category === c.id));
+  const products = allProducts.filter((product) => filter === "all" || product.category === filter).sort((a, b) => filter === "all" ? Number(a.variants.every((v) => v.priceFrom)) - Number(b.variants.every((v) => v.priceFrom)) : 0);
   const change = (id: string, quantity: number) => setQuantities((current) => ({ ...current, [id]: quantity }));
   return <section className="pb-24 lg:pb-0">
 
@@ -106,9 +109,9 @@ export function OptionCatalog({ options, packs, settings, locale, texts, install
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div>
     <div className="mb-3 flex flex-wrap gap-2" aria-label={t(locale, { fr: "Filtrer les créations", en: "Filter creations" })}>
-      {["all", ...optionCategories.map((c) => c.id)].map((id) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} style={id !== "all" ? { "--filter-color": optionThemeColors[id as keyof typeof optionThemeColors] } as CSSProperties : undefined} className={`rounded-full border px-4 py-2 text-sm font-medium ${filter === id ? id === "all" ? "border-accent bg-accent text-background" : "border-[var(--filter-color)] bg-[var(--filter-color)] text-background" : id === "all" ? "border-border bg-surface text-muted hover:text-foreground" : "border-[color-mix(in_srgb,var(--filter-color)_40%,var(--border))] bg-surface text-[var(--filter-color)]"}`}>{labels[id]}</button>)}
+      {[{ id: "all", name: t(locale, { fr: "Tout", en: "All" }), color: "" }, ...filters].map(({ id, name, color }) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} style={id !== "all" ? { "--filter-color": color } as CSSProperties : undefined} className={`rounded-full border px-4 py-2 text-sm font-medium ${filter === id ? id === "all" ? "border-accent bg-accent text-background" : "border-[var(--filter-color)] bg-[var(--filter-color)] text-background" : id === "all" ? "border-border bg-surface text-muted hover:text-foreground" : "border-[color-mix(in_srgb,var(--filter-color)_40%,var(--border))] bg-surface text-[var(--filter-color)]"}`}>{name}</button>)}
     </div>
-      <div className="grid items-start gap-4 sm:grid-cols-2">{products.map((product, index) => <Fragment key={product.id}>{product.variants.every((v) => v.priceFrom) && (index === 0 || !products[index - 1].variants.every((v) => v.priceFrom)) && <h3 className="col-span-full mt-3 border-t border-border pt-4 font-display text-base font-semibold">{texts.labels.quoteHeading}</h3>}<ProductCard product={product} locale={locale} texts={texts} add={(option, quantity) => {
+      <div className="grid items-start gap-4 sm:grid-cols-2">{products.map((product, index) => <Fragment key={product.id}>{product.variants.every((v) => v.priceFrom) && (index === 0 || !products[index - 1].variants.every((v) => v.priceFrom)) && <h3 className="col-span-full mt-3 border-t border-border pt-4 font-display text-base font-semibold">{texts.labels.quoteHeading}</h3>}<ProductCard product={product} color={categoryColor(categories, product.category)} locale={locale} texts={texts} add={(option, quantity) => {
         const next = (quantities[option.id] ?? 0) + quantity;
         if (next > 20) { setMessage(t(locale, { fr: "Maximum 20 exemplaires par produit. Contacte-moi pour une commande plus importante.", en: "Maximum 20 of each product. Contact me for larger orders." })); return; }
         change(option.id, next);

@@ -25,7 +25,7 @@ export function LabNewMenu({ disabled, className, projectDrawer }: { disabled?: 
     return () => { document.removeEventListener("pointerdown", away); document.removeEventListener("keydown", key); };
   }, [open]);
 
-  const item = "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-accent/10 hover:text-accent disabled:opacity-50";
+  const item = "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent/10 hover:text-accent disabled:opacity-50";
   return (
     <div ref={root} className="relative">
       <button type="button" disabled={disabled} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} className={`${className} inline-flex items-center gap-1`}>
@@ -33,7 +33,7 @@ export function LabNewMenu({ disabled, className, projectDrawer }: { disabled?: 
         <MaterialIcon name="expand_more" className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 z-30 mt-2 w-60 rounded-xl border border-border bg-background p-1.5 shadow-xl shadow-black/40">
+        <div role="menu" className="absolute right-0 z-30 mt-2 w-60 rounded-xl border border-border bg-surface-2 p-1.5 shadow-xl shadow-black/40">
           {creations.map((c) => (
             <form key={c.kind} action={createLabAction}>
               <input type="hidden" name="kind" value={c.kind} />

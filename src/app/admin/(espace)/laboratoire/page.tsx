@@ -56,12 +56,13 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
   const { documents, projects, message } = await Promise.all([listLabDocuments(), listLabProjects().catch(() => [] as LabProject[])])
     .then(([documents, projects]) => ({ documents, projects, message: "" }))
     .catch((error: unknown) => ({ documents: [], projects: [] as LabProject[], message: error instanceof LabStorageError ? error.message : "La bibliothèque est indisponible. Réessaie dans un instant." }));
-  // Groupes : projets enregistrés (archivés en dernier), puis noms de projet utilisés par des créations mais non enregistrés
+  // Groupes : projets enregistrés, puis noms de projet utilisés par des créations mais non enregistrés, et les projets archivés tout en bas
   const known = new Set(projects.map((p) => p.name));
   const loose = [...new Set(documents.map((d) => d.project).filter((name) => !known.has(name)))].sort((a, b) => a.localeCompare(b, "fr"));
   const groups = [
-    ...[...projects].sort((a, b) => Number(a.archived) - Number(b.archived)).map((p) => ({ name: p.name, project: p })),
+    ...projects.filter((p) => !p.archived).map((p) => ({ name: p.name, project: p as LabProject | undefined })),
     ...loose.map((name) => ({ name, project: undefined as LabProject | undefined })),
+    ...projects.filter((p) => p.archived).map((p) => ({ name: p.name, project: p as LabProject | undefined })),
   ];
   const platformsById = new Map(documents.map((d) => [d.id, d.platforms]));
   const small = "rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-50";
@@ -87,17 +88,17 @@ export default async function LaboratoirePage({ searchParams }: { searchParams: 
         const docs = documents.filter((d) => d.project === name);
         return {
           name,
+          archived: Boolean(project?.archived),
           header: (
             <>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <MaterialIcon name="folder" className="size-5 text-accent" />
+              <div className="flex min-h-7 flex-wrap items-baseline gap-x-3 gap-y-1">
+                <MaterialIcon name={project?.archived ? "inventory_2" : "folder"} className="size-5 self-center text-accent" />
                 <h2 className="font-display text-xl font-bold">{name}</h2>
                 <span className="text-sm text-muted">{docs.length} création{docs.length > 1 ? "s" : ""}</span>
-                {project?.archived && <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted">Archivé</span>}
                 {project ? (
-                  <DrawerButton drawer={`laboratoire-projet-${project.id}`} className="ml-auto text-sm text-accent hover:underline">Modifier le projet</DrawerButton>
+                  <span title="Paramètres du projet" className="-my-1 ml-auto self-center"><DrawerButton drawer={`laboratoire-projet-${project.id}`} className="inline-flex size-8 items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent"><MaterialIcon name="settings" className="size-5" /><span className="sr-only">Paramètres du projet {name}</span></DrawerButton></span>
                 ) : (
-                  <form action={saveLabProjectAction} className="ml-auto"><input type="hidden" name="name" value={name} /><button className="text-sm text-accent hover:underline">Enregistrer comme projet</button></form>
+                  <form action={saveLabProjectAction} className="ml-auto self-center"><input type="hidden" name="name" value={name} /><button className="text-sm text-accent hover:underline">Enregistrer comme projet</button></form>
                 )}
               </div>
               {project?.description && <p className="mt-1 text-sm text-muted">{project.description}</p>}

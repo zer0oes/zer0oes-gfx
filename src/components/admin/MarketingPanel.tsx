@@ -4,7 +4,8 @@ import { activePeriod, bannerLinks, LAUNCH_LINK, promotionProducts, promotionRat
 import { formatPrice, type Catalog } from "@/lib/pricing";
 import { launchProductRates, launchQuota } from "@/lib/launch-offer";
 import { MarketingDates } from "@/components/admin/MarketingDates";
-import { saveBannerAction, savePromotionAction, deleteMarketingAction, reorderBannersAction } from "@/app/admin/promotions-actions";
+import { saveBannerAction, savePromotionAction, deleteMarketingAction, duplicateMarketingAction, reorderBannersAction } from "@/app/admin/promotions-actions";
+import { RowActionsMenu } from "./RowActionsMenu";
 import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "./Drawer";
 import { SortHandle, SortableRows } from "./SortableRows";
 import { PromotionFields } from "./PromotionFields";
@@ -87,13 +88,13 @@ export async function DiscountsPanel({ feedback }: { feedback: Feedback }) {
   };
   const value = (p: Promotion) => p.mode === "sale" ? range(promotionRates(p, products)) : p.kind === "percent" ? `−${p.value} %` : `−${formatPrice(p.value)}`;
   return <section className="mt-6">
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <p className="max-w-2xl text-sm text-muted">Clique sur une ligne pour modifier la remise. Chaque remise peut avoir son bandeau sous le menu.</p>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+      <p className="min-w-0 flex-1 basis-80 text-sm text-muted">Clique sur une ligne pour modifier la remise. Chaque remise peut avoir son bandeau sous le menu.</p>
       <DrawerButton drawer="remise-nouvelle" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouvelle remise</DrawerButton>
     </div>
     <div className="overflow-x-auto rounded-2xl border border-border">
       <table className="w-full text-left text-sm">
-        <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className={th}>Remise</th><th className={th}>Type</th><th className={th}>Valeur</th><th className={th}>Période</th><th className={th}>Bandeau</th><th className={th}>Statut</th></tr></thead>
+        <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className={th}>Remise</th><th className={th}>Type</th><th className={th}>Valeur</th><th className={th}>Période</th><th className={th}>Bandeau</th><th className={th}>Statut</th><th className="w-12"><span className="sr-only">Actions</span></th></tr></thead>
         <tbody className="divide-y divide-border">
           <DrawerRow drawer="remise-lancement" label="Modifier l’offre de lancement">
             <td className={td}><span className="font-semibold">Offre de lancement</span><p className="mt-1 text-xs text-muted">{launchQuota(launch) === null ? "Places illimitées" : `${launch.remaining} place${launch.remaining > 1 ? "s" : ""} sur ${launchQuota(launch)}`}</p></td>
@@ -102,6 +103,7 @@ export async function DiscountsPanel({ feedback }: { feedback: Feedback }) {
             <td className={`${td} whitespace-nowrap`}>{launch.startsAt ? periodLabel({ startsAt: launch.startsAt, endsAt: launch.endsAt ?? "" }) : "Non programmée"}</td>
             <td className={td}><LinkedBanners banners={banners} link={LAUNCH_LINK} /></td>
             <td className={td}><Pill label={launchStatus(launch)} /></td>
+            <td />
           </DrawerRow>
           {promotions.map((p) => <DrawerRow key={p.id} drawer={`remise-${p.id}`} label={`Modifier ${promoName(p)}`}>
             <td className={td}><span className="font-semibold">{promoName(p)}</span>{p.mode !== "sale" && <p className="mt-1 font-mono text-xs text-muted">{p.code}</p>}</td>
@@ -110,6 +112,7 @@ export async function DiscountsPanel({ feedback }: { feedback: Feedback }) {
             <td className={`${td} whitespace-nowrap`}>{periodLabel(p)}</td>
             <td className={td}><LinkedBanners banners={banners} link={p.id} /></td>
             <td className={td}><Pill label={status(p)} /></td>
+            <td className="pr-2 text-right"><RowActionsMenu id={p.id} name={promoName(p)} fields={{ kind: "promotion" }} duplicateAction={duplicateMarketingAction} deleteAction={deleteMarketingAction} deleteNote={banners.some((b) => bannerLinks(b).includes(p.id)) ? "Ses bandeaux restent, sans cette remise." : undefined} /></td>
           </DrawerRow>)}
         </tbody>
       </table>
@@ -151,13 +154,13 @@ export async function BannersPanel({ feedback, linkTo }: { feedback: Feedback; l
   };
   const pages = (b: Banner) => b.pages.includes("*") ? "Toutes" : `${b.pages.length} page${b.pages.length > 1 ? "s" : ""}`;
   return <section className="mt-6">
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <p className="max-w-2xl text-sm text-muted">Les bandeaux s’affichent sous le menu. Ceux « Dans le carrousel » tournent ensemble, dans l’ordre du tableau : tire une ligne par sa poignée pour le changer.</p>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+      <p className="min-w-0 flex-1 basis-80 text-sm text-muted">Les bandeaux s’affichent sous le menu. Ceux « Dans le carrousel » tournent ensemble, dans l’ordre du tableau : tire une ligne par sa poignée pour le changer.</p>
       <DrawerButton drawer="bandeau-nouveau" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouveau bandeau</DrawerButton>
     </div>
     {banners.length ? <div className="overflow-x-auto rounded-2xl border border-border">
       <table className="w-full text-left text-sm">
-        <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className={th}>Bandeau</th><th className={th}>Quand</th><th className={th}>Affichage</th><th className={th}>Pages</th><th className={th}>Statut</th></tr></thead>
+        <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className={th}>Bandeau</th><th className={th}>Quand</th><th className={th}>Affichage</th><th className={th}>Pages</th><th className={th}>Statut</th><th className="w-12"><span className="sr-only">Actions</span></th></tr></thead>
         <SortableRows onReorder={reorderBannersAction}>
           {banners.map((b) => <DrawerRow key={b.id} sortId={b.id} drawer={`bandeau-${b.id}`} label={`Modifier ${b.badge || b.text}`}>
             <td className="px-2 py-3"><SortHandle id={b.id} label={b.badge || b.text} /></td>
@@ -166,6 +169,7 @@ export async function BannersPanel({ feedback, linkTo }: { feedback: Feedback; l
             <td className={td}>{b.carousel === false ? "Fixe" : "Carrousel"}</td>
             <td className={td}>{pages(b)}</td>
             <td className={td}><Pill label={schedule(b).state} /></td>
+            <td className="pr-2 text-right"><RowActionsMenu id={b.id} name={b.badge || b.text} fields={{ kind: "banner" }} duplicateAction={duplicateMarketingAction} deleteAction={deleteMarketingAction} /></td>
           </DrawerRow>)}
         </SortableRows>
       </table>

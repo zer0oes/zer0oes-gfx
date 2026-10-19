@@ -16,7 +16,7 @@ export function ChartTooltip({ children }: { children: ReactNode }) {
   }
   return <div className="relative" onPointerMove={show} onPointerLeave={() => setTip(null)} onFocus={show} onBlur={() => setTip(null)} onKeyDown={(event) => { if (event.key === "Escape") setTip(null); }}>
     {children}
-    {tip && <div id={id} role="tooltip" className="pointer-events-none absolute z-20 w-60 max-w-full rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground shadow-xl" style={{ left: tip.x, top: tip.y }}>
+    {tip && <div id={id} role="tooltip" className="pointer-events-none absolute z-20 w-60 max-w-full rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground shadow-xl shadow-black/40" style={{ left: tip.x, top: tip.y }}>
       <p className="text-xs text-muted">{tip.label}</p>
       <p className="mt-1 flex items-center gap-2 font-display font-semibold"><span className="size-2 shrink-0 rounded-full" style={{ background: tip.color }} />{tip.value}</p>
       {tip.total && <p className="mt-2 flex items-center justify-between gap-3 border-t border-border pt-2 text-xs"><span className="text-muted">Total encaissé</span><strong className="font-display text-sm tabular-nums">{tip.total}</strong></p>}

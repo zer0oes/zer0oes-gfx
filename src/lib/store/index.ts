@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { withTranslations } from "@/lib/admin-translations";
+import { readCategories, resolveCategory } from "@/lib/product-categories";
 import { localStoreAllowed, supabaseConfigured } from "@/lib/env";
 import { mediaBaseUrl, mediaUrl } from "@/lib/media";
 import { s3Configured, s3DeliverableRead, s3DeliverableUrl, s3DeliverableWrite, s3Download, s3Upload } from "@/lib/s3";
@@ -42,10 +43,12 @@ export function getStore(): Store {
     getHomeContent: getHomeContentForRender,
     async getCatalog() {
       const [catalog, raw] = await Promise.all([base.getCatalog(), getHomeContentForRender()]);
+      const categories = readCategories(raw);
       return {
         settings: withTranslations(catalog.settings, raw, "settings", ["deliveryDays"]),
         packs: catalog.packs.map((pack) => withTranslations({ ...pack, formulas: pack.formulas?.map((formula) => withTranslations(formula, raw, `pack:${pack.id}:formula:${formula.id}`, ["label"])) }, raw, `pack:${pack.id}`, ["name", "tagline", "deliverables", "extras", "note"], ["deliverables", "extras"])),
-        options: catalog.options.map((option) => withTranslations(option, raw, `option:${option.id}`, ["name", "unit"])),
+        options: catalog.options.map((option) => withTranslations({ ...option, category: resolveCategory(option, categories) }, raw, `option:${option.id}`, ["name", "unit"])),
+        categories: categories.map((category) => withTranslations(category, raw, `categorie:${category.id}`, ["name"])),
       };
     },
     async getPortfolio() {

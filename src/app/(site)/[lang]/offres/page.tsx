@@ -163,7 +163,7 @@ export default async function OffresPage({ params, searchParams }: PageProps<"/[
         <OfferGuide locale={lang} />
 
         </>} options={
-          <OptionCatalog settings={site} packs={packs.map((p) => trDeep(lang, p))} options={catalog.options.filter((o) => o.id !== INSTALL_OPTION_ID).map((o) => trDeep(lang, o))} installOption={catalog.options.find((o) => o.id === INSTALL_OPTION_ID)} locale={lang} texts={{
+          <OptionCatalog settings={site} categories={(catalog.categories ?? []).map((c) => trDeep(lang, c))} packs={packs.map((p) => trDeep(lang, p))} options={catalog.options.filter((o) => o.id !== INSTALL_OPTION_ID).map((o) => trDeep(lang, o))} installOption={catalog.options.find((o) => o.id === INSTALL_OPTION_ID)} locale={lang} texts={{
             hints: glossaryHints(texts),
             content: resolveOptionContent(catalog.options, stored, lang),
             labels: Object.fromEntries((["receive", "revision", "add", "quote", "quoteHeading", "custom", "customLink"] as const).map((k) => [k, texts.text(`options.${k}`)])) as CatalogTexts["labels"],

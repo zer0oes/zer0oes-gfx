@@ -263,31 +263,12 @@ select:not([multiple]):not([size]) {
   50% { translate: 0 -7px; rotate: 3deg; }
 }
 
-.product-preview-animated {
-  animation: preview-float 3s ease-in-out infinite;
-}
-
-.product-preview-animated svg,
-.product-preview-animated > div > span {
-  animation: preview-icon 2.4s ease-in-out infinite;
-}
-
-.product-preview-animated svg:nth-child(2),
-.product-preview-animated > div > span:nth-child(2) {
-  animation-delay: -0.8s;
-}
-
-.product-preview-animated svg:nth-child(3),
-.product-preview-animated > div > span:nth-child(3) {
-  animation-delay: -1.6s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .product-preview-animated,
-  .product-preview-animated svg,
-  .product-preview-animated > div > span {
-    animation: none;
-  }
+/* Visuels des créations à la carte (bibliothèque de l'admin) : le dessin remplit son cadre ;
+   leur animation est le CSS propre à chaque visuel (voir product-visuals.ts) */
+.product-visual > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* Barres de défilement aux couleurs du site (page, panneaux latéraux, tableaux, listes) :
@@ -319,4 +300,23 @@ html,
 }
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Déplier / replier : même animation partout que <Collapse> (hauteur + fondu, 260 ms, ease-out),
+   appliquée aussi aux blocs <details>. Les menus déroulants (<details data-menu>) s'ouvrent sans animation. */
+:root {
+  interpolate-size: allow-keywords;
+}
+details:not([data-menu])::details-content {
+  block-size: 0;
+  opacity: 0;
+  overflow: clip;
+  transition: block-size 260ms ease-out, opacity 260ms ease-out, content-visibility 260ms allow-discrete;
+}
+details:not([data-menu])[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  details::details-content { transition: none; }
 }

@@ -1,19 +1,25 @@
 import { BannersPanel, DiscountsPanel } from "@/components/admin/MarketingPanel";
 import { AffiliatePanel } from "@/components/admin/AffiliatePanel";
+import { VisualsPanel } from "@/components/admin/VisualsPanel";
+import { CategoriesPanel } from "@/components/admin/CategoriesPanel";
+import { categoryColor } from "@/lib/product-categories";
+import { VisualPicker } from "@/components/admin/VisualFields";
+import { readVisuals } from "@/lib/product-visuals";
 import { TranslationTabs, TranslationInput } from "@/components/admin/TranslationTabs";
 import { translationValues } from "@/lib/admin-translations";
 import { homeDefaultsEn, offersPageFields, resolveHome, type HomeField } from "@/lib/home-content";
 import { optionContentFor, platforms } from "@/lib/option-content";
-import { optionProductTitle, optionThemeColors } from "@/lib/option-products";
+import { optionProductTitle } from "@/lib/option-products";
 import { ConfirmDelete, Drawer, DrawerButton, DrawerRow } from "@/components/admin/Drawer";
 import { SortHandle, SortableRows } from "@/components/admin/SortableRows";
+import { RowActionsMenu } from "@/components/admin/RowActionsMenu";
 import { Segmented } from "@/components/admin/Segmented";
 import { saveOffersPageAction } from "../../portfolio-actions";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NetTable, priceCases } from "@/components/admin/NetTable";
 import { chargesRate, formatRate, netBreakdown, type FinanceSettings } from "@/lib/finance";
-import { formatPrice, optionCategories, optionCategory, type Pack, type PricingSettings } from "@/lib/pricing";
+import { formatPrice, type Pack, type PricingSettings } from "@/lib/pricing";
 import { watermarkLevels } from "@/lib/protection";
 import { getStore } from "@/lib/store";
 import {
@@ -25,6 +31,8 @@ import {
   saveProtectionAction,
   createOptionAction,
   deleteOptionAction,
+  duplicateOptionAction,
+  duplicatePackAction,
   reorderOptionsAction,
   saveOptionAction,
   savePackAction,
@@ -48,7 +56,7 @@ const save = "rounded-full bg-accent px-5 py-2 text-sm font-semibold text-backgr
 // La page est découpée en trois parties (Catalogue, Promotions, Finances), chacune en onglets :
 // on n'affiche qu'un onglet à la fois.
 const groups = [
-  { label: "Catalogue", tabs: [{ id: "offres", label: "Offres" }, { id: "options", label: "Options à la carte" }, { id: "reglages", label: "Réglages" }] },
+  { label: "Catalogue", tabs: [{ id: "offres", label: "Offres" }, { id: "options", label: "Options à la carte" }, { id: "categories", label: "Catégories" }, { id: "visuels", label: "Visuels" }, { id: "reglages", label: "Réglages" }] },
   { label: "Promotions", tabs: [{ id: "remises", label: "Remises et codes" }, { id: "bandeaux", label: "Bandeaux" }, { id: "affiliation", label: "Affiliation" }] },
   { label: "Finances", tabs: [{ id: "cotisations", label: "Frais et cotisations" }, { id: "simulateur", label: "Simulateur de revenus" }] },
 ] as const;
@@ -76,7 +84,7 @@ function Check({ name, label, defaultChecked }: { name: string; label: string; d
 }
 
 function Intro({ children }: { children: React.ReactNode }) {
-  return <p className="mb-4 max-w-2xl text-sm text-muted">{children}</p>;
+  return <p className="mb-4 text-sm text-muted">{children}</p>;
 }
 
 function PackForm({ pack, formId }: { pack: Pack; formId: string }) {
@@ -176,7 +184,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const feedback = { open: reopen, saved: !!enregistre, error: typeof erreur === "string" ? erreur : undefined };
 
   const store = getStore();
-  const [{ settings, packs, options }, finance, protection] = await Promise.all([
+  const [{ settings, packs, options, categories = [] }, finance, protection] = await Promise.all([
     store.getCatalog(),
     store.getFinance(),
     store.getProtection(),
@@ -195,7 +203,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
   const cardMates = (o: (typeof options)[number]) => (groupOf(o) ? options.filter((x) => x.id !== o.id && groupOf(x) === groupOf(o)) : []);
 
   return (
-    <TranslationTabs stored={translationValues(translationContent)}>
+    <>
       <h1 className="font-display text-3xl font-bold">Offres et réglages</h1>
       <p className="mt-2 text-sm text-muted">Les modifications sont visibles sur le site dès l&apos;enregistrement.</p>
 
@@ -240,11 +248,14 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
       {tab === "remises" && <DiscountsPanel feedback={feedback} />}
       {tab === "bandeaux" && <BannersPanel feedback={feedback} linkTo={one(sp.lien)} />}
       {tab === "affiliation" && <AffiliatePanel />}
+      {tab === "categories" && <CategoriesPanel content={translationContent} categories={categories} options={options} open={one(sp.categorie)} feedback={feedback} />}
+      {tab === "visuels" && <VisualsPanel content={translationContent} options={options} open={one(sp.visuel)} feedback={feedback} />}
       {tab === "offres" && (
         <section className="mt-6">
           <details className={`${card} mb-6`}>
           <summary className="cursor-pointer font-semibold">Textes de la page Offres</summary>
-          <form action={saveOffersPageAction} className="mt-4 space-y-4">
+          <div className="mt-4"><TranslationTabs compact stored={translationValues(translationContent)}>
+          <form action={saveOffersPageAction} className="space-y-4">
             <h2 className="font-semibold">Textes de la page Offres</h2>
             <p className="text-xs text-muted">Tous les textes de la page, en français et en anglais. Un texte vidé reprend la version d’origine.</p>
             {offerTextGroups.map((group) => (
@@ -260,14 +271,15 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
             ))}
             <button type="submit" className={save}>Enregistrer les textes</button>
           </form>
+          </TranslationTabs></div>
           </details>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="max-w-2xl text-sm text-muted">Clique sur une ligne pour modifier l&apos;offre. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <p className="min-w-0 flex-1 basis-80 text-sm text-muted">Clique sur une ligne pour modifier l&apos;offre. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
             <DrawerButton drawer="offre-nouvelle" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouvelle offre</DrawerButton>
           </div>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Offre</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th></tr></thead>
+              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Offre</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th><th className="w-12"><span className="sr-only">Actions</span></th></tr></thead>
               <SortableRows onReorder={reorderPacksAction}>
                 {packs.map((p) => (
                   <DrawerRow key={p.id} sortId={p.id} drawer={`offre-${p.id}`} label={`Modifier ${p.name}`} className={`${openPack === p.id ? "bg-accent/10" : ""} ${p.archived ? "opacity-60" : ""}`}>
@@ -275,6 +287,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                     <td className="px-4 py-3"><span className="font-semibold">{p.name}</span><p className="mt-1 line-clamp-1 max-w-xl text-xs text-muted">{p.tagline}</p></td>
                     <td className="whitespace-nowrap px-4 py-3">{p.priceFrom ? "À partir de " : ""}{euro(p.price)}</td>
                     <td className="px-4 py-3"><span className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${p.archived ? "border-border text-muted" : p.checkout ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300" : "border-violet-400/40 bg-violet-400/10 text-violet-300"}`}>{p.archived ? "Archivée" : p.checkout ? "En ligne" : "Sur devis"}</span></td>
+                    <td className="pr-2 text-right"><RowActionsMenu id={p.id} name={p.name} duplicateAction={duplicatePackAction} items={[p.archived ? { label: "Réafficher sur le site", icon: "visibility", action: archivePackAction, fields: { restore: "1" } } : { label: "Archiver", icon: "inventory_2", action: archivePackAction }]} deleteAction={deletePackAction} deleteNote="Si elle a déjà des commandes, elle est archivée (masquée du site) au lieu d’être supprimée." /></td>
                   </DrawerRow>
                 ))}
               </SortableRows>
@@ -328,24 +341,25 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
 
       {tab === "options" && (
         <section className="mt-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="max-w-2xl text-sm text-muted">Créations à la carte de la page Offres. Clique sur une ligne pour modifier tout ce qui s&apos;affiche sur sa carte. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <p className="min-w-0 flex-1 basis-80 text-sm text-muted">Créations à la carte de la page Offres. Clique sur une ligne pour modifier tout ce qui s&apos;affiche sur sa carte. Tire une ligne par sa poignée pour changer l&apos;ordre du site.</p>
             <DrawerButton drawer="option-nouvelle" className="rounded-full border border-accent/50 px-4 py-1.5 text-sm text-accent hover:bg-accent/10">+ Nouvelle option</DrawerButton>
           </div>
           <div className="mb-6 overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Option</th><th className="px-4 py-3">Carte</th><th className="px-4 py-3">Catégorie</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th></tr></thead>
+              <thead className="bg-surface text-xs uppercase tracking-wider text-muted"><tr><th className="w-12 px-2 py-3"><span className="sr-only">Ordre</span></th><th className="px-4 py-3">Option</th><th className="px-4 py-3">Carte</th><th className="px-4 py-3">Catégorie</th><th className="px-4 py-3">Prix</th><th className="px-4 py-3">Statut</th><th className="w-12"><span className="sr-only">Actions</span></th></tr></thead>
               <SortableRows onReorder={reorderOptionsAction}>
                 {options.map((o) => {
-                  const category = optionCategory(o);
+                  const color = categoryColor(categories, o.category);
                   return (
                     <DrawerRow key={o.id} sortId={o.id} drawer={`option-${o.id}`} label={`Modifier ${o.name}`} className={openOption === o.id ? "bg-accent/10" : ""}>
                       <td className="px-2 py-3"><SortHandle id={o.id} label={o.name} /></td>
                       <td className="px-4 py-3"><span className="font-semibold">{o.name}</span><p className="mt-1 line-clamp-1 max-w-md text-xs text-muted">{optionContentFor(o, translationContent, "fr").description}</p></td>
                       <td className="px-4 py-3">{cardMates(o).length > 0 ? <span title={`Avec : ${cardMates(o).map((m) => m.name).join(", ")}`} className="whitespace-nowrap font-medium">{optionContentFor(o, translationContent, "fr").groupName || optionProductTitle(cardMates(o)[0].name).main}</span> : <span className="whitespace-nowrap text-muted">{optionProductTitle(o.name).main}</span>}</td>
-                      <td className="px-4 py-3"><span style={{ color: optionThemeColors[category], borderColor: `color-mix(in srgb, ${optionThemeColors[category]} 45%, transparent)`, background: `color-mix(in srgb, ${optionThemeColors[category]} 10%, transparent)` }} className="inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium">{optionCategories.find((c) => c.id === category)?.label}</span></td>
+                      <td className="px-4 py-3"><span style={{ color, borderColor: `color-mix(in srgb, ${color} 45%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }} className="inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium">{categories.find((c) => c.id === o.category)?.name ?? "—"}</span></td>
                       <td className="whitespace-nowrap px-4 py-3">{o.priceFrom ? "À partir de " : ""}{euro(o.price)}</td>
                       <td className="px-4 py-3 text-muted">{o.priceFrom ? "Sur devis" : "En ligne"}</td>
+                      <td className="pr-2 text-right"><RowActionsMenu id={o.id} name={o.name} duplicateAction={duplicateOptionAction} deleteAction={deleteOptionAction} deleteNote="La suppression est définitive." /></td>
                     </DrawerRow>
                   );
                 })}
@@ -364,7 +378,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                     <input type="hidden" name="id" value={o.id} />
                     <Field label="Nom"><TranslationInput translationKey={`translation:option:${o.id}:name`} name="name" defaultValue={o.name} required className={input} /></Field>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label="Catégorie"><select name="category" defaultValue={optionCategory(o)} className={input}>{optionCategories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
+                      <Field label="Catégorie"><select name="category" defaultValue={o.category} className={input}>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
                       <Field label="Prix (€)"><input name="price" defaultValue={euros(o.price)} inputMode="decimal" required className={input} /></Field>
                     </div>
                     <label className="flex items-start gap-2 text-sm"><input type="checkbox" name="priceFrom" defaultChecked={o.priceFrom} className="mt-1 accent-[var(--accent)]" /> Prix « à partir de » : sur devis (bouton « Demander un devis » au lieu d&apos;« Ajouter »)</label>
@@ -383,6 +397,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                         <Segmented name="variant" legend="Variante" options={[["statique", "Statique"], ["anime", "Animée"]]} defaultValue={content.animated ? "anime" : "statique"} />
                         <Field label="Nombre" hint="Ex. 5 pour un pack de 5 emotes."><input name="count" type="number" min={1} max={999} defaultValue={content.count} className={input} /></Field>
                       </div>
+                      <VisualPicker visuals={readVisuals(translationContent)} defaultValue={content.visual.id} color={categoryColor(categories, o.category)} animated={content.animated} />
                     </fieldset>
                     <fieldset>
                       <legend className="mb-2 text-sm font-medium">Compatible avec <span className="font-normal text-muted">(logos affichés sur la carte)</span></legend>
@@ -397,7 +412,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
             <form id="option-creer" action={createOptionAction} className="space-y-4">
               <Field label="Nom"><input name="name" required className={input} /></Field>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Catégorie"><select name="category" className={input}>{optionCategories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
+                <Field label="Catégorie"><select name="category" className={input}>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
                 <Field label="Prix (€)"><input name="price" required inputMode="decimal" className={input} /></Field>
               </div>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="priceFrom" className="accent-[var(--accent)]" /> Sur devis (« à partir de »)</label>
@@ -411,6 +426,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
         <div className="mt-6 space-y-8">
           <section>
             <h2 className="mb-4 font-display text-xl font-bold">Commande</h2>
+            <TranslationTabs compact stored={translationValues(translationContent)}>
             <form action={saveSettingsAction} className={`${card} grid gap-4 sm:grid-cols-3`}>
               <Field label="Acompte (%)" hint="Proposé à la commande en ligne.">
                 <input name="depositPercent" type="number" min={0} max={100} defaultValue={settings.depositPercent} required className={input} />
@@ -427,6 +443,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
                 </button>
               </div>
             </form>
+            </TranslationTabs>
           </section>
 
           <section>
@@ -608,6 +625,6 @@ export default async function AdminOffersPage({ searchParams }: PageProps<"/admi
           </div>
         </section>
       )}
-    </TranslationTabs>
+    </>
   );
 }
