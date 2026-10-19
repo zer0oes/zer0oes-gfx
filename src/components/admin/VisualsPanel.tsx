@@ -1,5 +1,6 @@
 import { createVisualAction, deleteVisualAction, duplicateVisualAction, saveVisualAction } from "@/app/admin/offres-actions";
 import { MaterialIcon } from "./MaterialIcon";
+import { RowActionsMenu } from "./RowActionsMenu";
 import { ProductVisualView } from "@/components/ProductVisualView";
 import type { Option } from "@/lib/pricing";
 import { readVisuals, visualUsage } from "@/lib/product-visuals";
@@ -28,7 +29,7 @@ export function VisualsPanel({ content, options, open, feedback }: { content: un
       <div className="overflow-x-auto rounded-2xl border border-border">
         <table className="w-full text-left text-sm">
           <thead className="bg-surface text-xs uppercase tracking-wider text-muted">
-            <tr className="border-b border-border/50"><th className="w-28 px-4 py-3">Aperçu</th><th className="px-4 py-3">Visuel</th><th className="px-4 py-3">Utilisé par</th></tr>
+            <tr className="border-b border-border/50"><th className="w-28 px-4 py-3">Aperçu</th><th className="px-4 py-3">Visuel</th><th className="px-4 py-3">Utilisé par</th><th className="w-12"><span className="sr-only">Actions</span></th></tr>
           </thead>
           <tbody className="divide-y divide-border">
             {visuals.map((v) => (
@@ -36,9 +37,10 @@ export function VisualsPanel({ content, options, open, feedback }: { content: un
                 <td className="px-4 py-2"><div className="h-12 w-20 text-accent"><ProductVisualView visual={v} animated={false} className="h-full w-full" /></div></td>
                 <td className="px-4 py-3 font-semibold">{v.name}</td>
                 <td className="px-4 py-3 text-muted">{usage[v.id]?.map((o) => o.name).join(", ") || "—"}</td>
+                <td className="pr-2 text-right"><RowActionsMenu id={v.id} name={v.name} duplicateAction={duplicateVisualAction} deleteAction={deleteVisualAction} deleteNote={usage[v.id]?.length ? "Les produits qui l’utilisent reprendront le visuel choisi d’après leur nom." : "La suppression est définitive."} /></td>
               </DrawerRow>
             ))}
-            {!visuals.length && <tr><td colSpan={3} className="px-4 py-6 text-center text-muted">Aucun visuel : les cartes utilisent le dessin « scène » d&apos;origine.</td></tr>}
+            {!visuals.length && <tr><td colSpan={4} className="px-4 py-6 text-center text-muted">Aucun visuel : les cartes utilisent le dessin « scène » d&apos;origine.</td></tr>}
           </tbody>
         </table>
       </div>
