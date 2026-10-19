@@ -50,6 +50,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const texts = resolveHome(stored, lang);
   // Pastilles du contenu de chaque projet aux couleurs des catégories (Admin > Offres et réglages > Catégories)
   const productCategories = readCategories(stored);
+  const tagLimit = 3;
   return (
     <>
       <PageHeader eyebrow={texts.text("portfolio.kicker")} title={texts.text("portfolio.title")}>
@@ -69,10 +70,12 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
               const n = c.id === "emotes" ? items.reduce((sum, w) => sum + (w.emotes?.length ?? 1), 0) : items.length;
               const label = c.label.toLowerCase();
               const en = countLabelsEn[c.id];
-              return { ...c, n, label: lang === "en" && en ? en[n > 1 ? 1 : 0] : n > 1 ? label : label.replace(/s$/, "") };
+              return { ...c, n, label: lang === "en" && en ? en[n > 1 ? 1 : 0] : n > 1 ? label : label.replace("réseaux sociaux", "réseau social").replace(/s$/, "") };
             })
             .filter((c) => c.n > 0);
           const big = hasFeatured && s.id === featured;
+          // Petite carte : pastilles sur une seule ligne (les suivantes résumées par « +N », toutes visibles sur mobile)
+          const tight = !big && !pair && counts.length > tagLimit + 1;
           return (
             <Link
               key={s.id}
@@ -105,14 +108,19 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
                 </div>
                 <p className="mt-2 text-muted">{s.description}</p>
                 <ul className="mt-auto flex flex-wrap gap-2 pt-4" aria-label={t(lang, { fr: "Contenu du projet", en: "Project contents" })}>
-                  {counts.map((c) => {
+                  {counts.map((c, index) => {
                     const color = portfolioCategoryColor(productCategories, c.id, categories.find((k) => k.id === c.id)?.label ?? c.id);
                     return (
-                      <li key={c.id} style={{ color, borderColor: `color-mix(in srgb, ${color} 45%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }} className="rounded-full border px-3 py-1 text-xs">
+                      <li key={c.id} style={{ color, borderColor: `color-mix(in srgb, ${color} 45%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }} className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs ${tight && index >= tagLimit ? "md:hidden" : ""}`}>
                         {c.n} {c.label}
                       </li>
                     );
                   })}
+                  {tight && (
+                    <li aria-hidden title={counts.slice(tagLimit).map((c) => `${c.n} ${c.label}`).join(", ")} className="hidden whitespace-nowrap rounded-full border border-border px-3 py-1 text-xs text-muted md:block">
+                      +{counts.length - tagLimit}
+                    </li>
+                  )}
                 </ul>
               </div>
             </Link>
