@@ -39,7 +39,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
   const store = getStore();
   const [portfolio, stored] = await Promise.all([store.getPortfolio(), store.getHomeContent()]);
   const { streamers: ordered, works } = trDeep(lang, withoutDrafts(portfolio));
-  // Cartes images 16:9, texte posé sur l'image (toutes à la même hauteur). Projet mis en avant (Admin > Portfolio) :
+  // Cartes images 4:3, texte posé sur l'image (toutes à la même hauteur). Projet mis en avant (Admin > Portfolio) :
   // en premier, sur deux colonnes à la même hauteur que les autres (image recadrée)
   const featured = featuredProjectId(stored);
   const streamers = [...ordered.filter((s) => s.id === featured), ...ordered.filter((s) => s.id !== featured)];
@@ -81,7 +81,7 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
               href={href(lang, projectHref(s.id))}
               data-hover-root
               data-reveal
-              className={`group relative block aspect-video overflow-hidden rounded-3xl border border-border bg-background transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2 md:aspect-[32/9] lg:aspect-auto" : ""}`}
+              className={`group relative block aspect-[4/3] overflow-hidden rounded-3xl border border-border bg-background transition hover:-translate-y-1 hover:border-accent/60 focus-visible:border-accent focus-visible:outline-none ${big ? "md:col-span-2 md:aspect-[8/3] lg:aspect-auto" : ""}`}
             >
               {cover?.image && (
                 <ProtectedMedia className="absolute inset-0">
@@ -96,17 +96,15 @@ export default async function PortfolioPage({ params }: PageProps<"/[lang]/portf
                   {coverVideo && <HoverVideo src={coverVideo} />}
                 </ProtectedMedia>
               )}
-              {/* Texte posé sur l'image : nom et pastilles, description et lien au survol */}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/95 via-background/60 to-transparent px-5 pb-4 pt-16">
+              {/* Texte posé sur l'image, visible seulement au survol (toujours visible sur mobile, sans survol) */}
+              <div className="absolute inset-x-0 bottom-0 translate-y-0 bg-gradient-to-t from-background/95 via-background/70 to-transparent px-5 pb-4 pt-16 transition duration-300 md:translate-y-3 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 md:group-focus-visible:translate-y-0 md:group-focus-visible:opacity-100">
                 <div className="flex items-end justify-between gap-4">
                   <h2 className={`font-display font-bold ${big ? "text-2xl" : "text-xl"}`}>{s.name}</h2>
-                  <span className="whitespace-nowrap text-sm text-accent opacity-0 transition group-hover:translate-x-1 group-hover:opacity-100" aria-hidden>
+                  <span className="whitespace-nowrap text-sm text-accent transition group-hover:translate-x-1" aria-hidden>
                     {texts.text("portfolio.link")}
                   </span>
                 </div>
-                <p className="grid grid-rows-[0fr] text-sm text-muted transition-all duration-300 group-hover:grid-rows-[1fr] group-focus-visible:grid-rows-[1fr]">
-                  <span className="overflow-hidden"><span className="line-clamp-2 pt-1">{s.description}</span></span>
-                </p>
+                <p className="line-clamp-2 pt-1 text-sm text-muted">{s.description}</p>
                 <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={t(lang, { fr: "Contenu du projet", en: "Project contents" })}>
                   {(big ? counts : counts.slice(0, tagLimit)).map((c) => (
                     <li key={c.id} style={{ color: c.color, borderColor: `color-mix(in srgb, ${c.color} 45%, transparent)`, background: `color-mix(in srgb, ${c.color} 15%, rgb(0 0 0 / 0.4))` }} className="whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs">
