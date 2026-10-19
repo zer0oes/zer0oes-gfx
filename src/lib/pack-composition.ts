@@ -125,14 +125,15 @@ export function withoutCorrectionsLines(free: string[], template: string) {
   return free.filter((line) => !pattern.test(line.trim()));
 }
 
-// Livrables générés par le pack de base (et la ligne des corrections), puis les lignes libres de l'offre
+// Livrables générés par le pack de base, puis les lignes libres de l'offre, et la ligne des corrections en dernier
 // (en français et en anglais). names : nom affiché de chaque produit dans la langue voulue.
 export function deliverablesWith(items: CompositionItem[], names: (option: Option) => string, options: Option[], free: string[], extra: string[] = []) {
-  const generated = [...items.flatMap((item) => {
+  const products = items.flatMap((item) => {
     const option = options.find((o) => o.id === item.option);
     return option ? [compositionLine(item, { name: names(option) })] : [];
-  }), ...extra.filter(Boolean)];
-  return [...generated, ...free.filter((line) => !generated.includes(line))];
+  });
+  const lines = [...products, ...free.filter((line) => !products.includes(line))];
+  return [...lines, ...extra.filter((line) => line && !lines.includes(line))];
 }
 
 // Lignes d'une option : affichage sur le site (« Overlay animé au lieu de Overlay statique » pour un remplacement,

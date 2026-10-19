@@ -58,6 +58,8 @@ test("corrections incluses : valeur réglée (0 à 20), sinon valeur par défaut
   assert.equal(correctionsLine("{n} corrections incluses", 0), "");
   const items = [{ option: "logo", qty: 1 }];
   assert.deepEqual(deliverablesWith(items, (o) => o.name, options, ["2 corrections incluses", "Intégration"], ["2 corrections incluses"]), ["Logo", "2 corrections incluses", "Intégration"]);
+  // Offre sans composition : la ligne des corrections reste après les lignes libres
+  assert.deepEqual(deliverablesWith([], (o) => o.name, options, ["Logo et ses déclinaisons", "5 overlays animés"], ["3 corrections incluses"]), ["Logo et ses déclinaisons", "5 overlays animés", "3 corrections incluses"]);
   assert.deepEqual(withoutCorrectionsLines(["2 corrections incluses par élément du pack", "Intégration"], "{n} corrections incluses par élément du pack"), ["Intégration"]);
   assert.deepEqual(withoutCorrectionsLines(["2 corrections (x)"], "{n} corrections (x)"), []);
 });
