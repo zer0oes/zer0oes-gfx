@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BASE, compositionValue, MAX_QTY, savingPercent, type CompositionItem, type PackComposition } from "@/lib/pack-composition";
+import { BASE, compositionValue, MAX_QTY, optionValue, savingPercent, type CompositionItem, type PackComposition } from "@/lib/pack-composition";
 import { formatPrice, type Option } from "@/lib/pricing";
 import { MaterialIcon } from "./MaterialIcon";
 import { shift, SortPreview } from "./SortableRows";
@@ -58,13 +58,12 @@ export function PackCompositionField({ formId, base, formulas, options, initial 
         <ItemsBlock title="Pack de base" price={prices[BASE] ?? null} value={baseValue} items={baseItems} options={options} categories={categories} onChange={(items) => setItems(BASE, items)} />
         {formulas.length > 0 && (
           <div className="space-y-3">
-            <p className="text-sm font-medium">Options <span className="text-xs font-normal text-muted">· pack de base + produits ajoutés</span></p>
+            <p className="text-sm font-medium">Options <span className="text-xs font-normal text-muted">· pack de base + produits ajoutés, ou à la place d&apos;un produit du pack de base (« Remplace : … »)</span></p>
             {formulas.map((f) => {
               const items = composition[f.id] ?? [];
-              const added = compositionValue(items, options);
               return (
                 <ItemsBlock key={f.id} title={f.label} subtitle="Pack de base +" price={prices[f.id] ?? null}
-                  value={{ total: baseValue.total + added.total, priceFrom: baseValue.priceFrom || added.priceFrom }}
+                  value={optionValue(baseItems, items, options)} base={baseItems}
                   items={items} options={options} categories={categories} onChange={(next) => setItems(f.id, next)} />
               );
             })}
@@ -75,14 +74,16 @@ export function PackCompositionField({ formId, base, formulas, options, initial 
   );
 }
 
-function ItemsBlock({ title, subtitle, price, value, items, options, categories, onChange }: {
-  title: string; subtitle?: string; price: number | null; value: { total: number; priceFrom: boolean }; items: CompositionItem[];
+// base : produits du pack de base qu'un produit d'une option peut remplacer (absent pour le pack de base lui-même)
+function ItemsBlock({ title, subtitle, price, value, base, items, options, categories, onChange }: {
+  title: string; subtitle?: string; price: number | null; value: { total: number; priceFrom: boolean }; base?: CompositionItem[]; items: CompositionItem[];
   options: CompositionOption[]; categories: string[]; onChange: (items: CompositionItem[]) => void;
 }) {
   const list = useRef<HTMLUListElement>(null);
   const sort = usePointerSort((from, to) => onChange(moveItem(items, from, to)));
   useEffect(() => shift(list.current, sort.drag), [sort.drag]);
   const saving = price === null ? null : savingPercent(price, value.total);
+  const optionName = (id: string) => options.find((o) => o.id === id)?.name ?? id;
 
   const add = (id: string) => {
     if (!id) return;
@@ -112,7 +113,17 @@ function ItemsBlock({ title, subtitle, price, value, items, options, categories,
               <li key={item.option} data-sort-id={item.option} aria-label={name} className="grid grid-cols-[auto_1fr_4.5rem_auto_auto] items-center gap-2 bg-background px-2 py-1.5 text-sm">
                 <span {...sort.handle(i, item.option)} role="button" tabIndex={0} aria-label={`Déplacer ${name} (flèches haut et bas)`} title="Glisser pour changer l’ordre · ↑/↓ au clavier"
                   className="inline-flex size-7 cursor-grab items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent active:cursor-grabbing"><MaterialIcon name="drag_indicator" className="size-5" /></span>
-                <span className={option ? "" : "text-amber-300"}>{name}{option && <span className="ml-2 text-xs text-muted">{option.priceLabel}</span>}</span>
+                <span className={option ? "" : "text-amber-300"}>
+                  {name}{option && <span className="ml-2 text-xs text-muted">{option.priceLabel}</span>}
+                  {base && base.length > 0 && (
+                    <select value={item.replaces ?? ""} aria-label={`Produit du pack de base remplacé par ${name}`}
+                      onChange={(e) => onChange(items.map((x, k) => (k === i ? { option: x.option, qty: x.qty, ...(e.target.value ? { replaces: e.target.value } : {}) } : x)))}
+                      className={`mt-1 block max-w-full rounded-md border bg-background px-2 py-0.5 text-xs ${item.replaces ? "border-accent/50 text-accent" : "border-border text-muted"}`}>
+                      <option value="">En plus du pack de base</option>
+                      {base.map((b) => <option key={b.option} value={b.option}>Remplace : {b.qty > 1 ? `${b.qty} × ` : ""}{optionName(b.option)}</option>)}
+                    </select>
+                  )}
+                </span>
                 <QuantityInput value={item.qty} label={`Quantité de ${name}`} onChange={(qty) => onChange(items.map((x, k) => (k === i ? { ...x, qty } : x)))} />
                 <span className="w-20 text-right text-xs text-muted">{option ? euro((option.normalPrice ?? option.price) * item.qty) : "—"}</span>
                 <button type="button" onClick={() => window.confirm("Es-tu sûre de vouloir supprimer ?") && onChange(items.filter((_, k) => k !== i))}

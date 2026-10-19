@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BASE, compositionFromForm, correctionsKey, correctionsLine, deliverablesWith, withoutCorrectionsLines, compositionKey, readCorrections, compositionLine, compositionValue, readComposition, savingPercent, writeComposition } from "./pack-composition";
+import { BASE, compositionFromForm, correctionsKey, correctionsLine, deliverablesWith, optionLines, optionValue, withoutCorrectionsLines, compositionKey, readCorrections, compositionLine, compositionValue, readComposition, savingPercent, writeComposition } from "./pack-composition";
 import type { Option } from "./pricing";
 
 const options: Option[] = [
@@ -60,4 +60,17 @@ test("corrections incluses : valeur réglée (0 à 20), sinon valeur par défaut
   assert.deepEqual(deliverablesWith(items, (o) => o.name, options, ["2 corrections incluses", "Intégration"], ["2 corrections incluses"]), ["Logo", "2 corrections incluses", "Intégration"]);
   assert.deepEqual(withoutCorrectionsLines(["2 corrections incluses par élément du pack", "Intégration"], "{n} corrections incluses par élément du pack"), ["Intégration"]);
   assert.deepEqual(withoutCorrectionsLines(["2 corrections (x)"], "{n} corrections (x)"), []);
+});
+
+test("option qui remplace un produit du pack de base : valeur, lignes du site et livrables de la commande", () => {
+  const base = [{ option: "overlay", qty: 5 }, { option: "logo", qty: 1 }];
+  const variant = [{ option: "emotes-5", qty: 1, replaces: "overlay" }];
+  // 5 × 12000 remplacés par 20000 (prix habituel) : 25000 + 20000
+  assert.equal(optionValue(base, variant, options).total, 45000);
+  assert.deepEqual(optionLines(base, variant, (o) => o.name, options, "{produit} au lieu de {remplacé}"),
+    { display: ["Pack de 5 emotes au lieu de 5 × Overlay animé"], adds: ["Pack de 5 emotes"], removes: ["5 × Overlay animé"] });
+  assert.deepEqual(optionLines(base, [{ option: "logo", qty: 2 }], (o) => o.name, options, "{produit} au lieu de {remplacé}").display, ["2 × Logo"]);
+  // Remplacement d'un produit absent du pack de base : ignoré à l'enregistrement
+  const json = JSON.stringify({ [BASE]: base, v: [{ option: "emotes-5", qty: 1, replaces: "overlay" }, { option: "logo", qty: 1, replaces: "inconnu" }] });
+  assert.deepEqual(compositionFromForm(json, ["v"], options).v, [{ option: "emotes-5", qty: 1, replaces: "overlay" }, { option: "logo", qty: 1 }]);
 });

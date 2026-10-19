@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { withTranslations } from "@/lib/admin-translations";
 import { readCategories, resolveCategory } from "@/lib/product-categories";
-import { BASE, correctionsLine, deliverablesWith, readComposition, readCorrections, withoutCorrectionsLines } from "@/lib/pack-composition";
+import { BASE, correctionsLine, deliverablesWith, optionLines, readComposition, readCorrections, withoutCorrectionsLines } from "@/lib/pack-composition";
 import { resolveHome } from "@/lib/home-content";
 import type { Formula, Option, Pack } from "@/lib/pricing";
 import { tr } from "@/lib/translations-en";
@@ -48,11 +48,16 @@ function withComposedDeliverables(pack: WithEnglish<Pack>, raw: unknown, options
   const composition = readComposition(raw, pack.id);
   const fr = (o: Option) => o.name;
   const en = (o: Option) => ((o as WithEnglish<Option>).__en?.name as string | undefined) ?? tr("en", o.name);
-  const formulas = pack.formulas?.map((formula: WithEnglish<Formula>, i) => {
-    const items = i > 0 ? composition[formula.id] : undefined;
-    return items?.length ? { ...formula, deliverables: deliverablesWith(items, fr, options, []), __en: { ...formula.__en, deliverables: deliverablesWith(items, en, options, []) } } : formula;
-  });
   const items = composition[BASE] ?? [];
+  // Options : produits ajoutés (ou remplaçant un produit du pack de base), affichés en option sur le site
+  const replacesFr = resolveHome(raw).text("pricing.replacesLine");
+  const replacesEn = resolveHome(raw, "en").text("pricing.replacesLine");
+  const formulas = pack.formulas?.map((formula: WithEnglish<Formula>, i) => {
+    const added = i > 0 ? composition[formula.id] : undefined;
+    if (!added?.length) return formula;
+    const lines = optionLines(items, added, fr, options, replacesFr);
+    return { ...formula, deliverables: lines.display, delivery: { removes: lines.removes, adds: lines.adds }, __en: { ...formula.__en, deliverables: optionLines(items, added, en, options, replacesEn).display } };
+  });
   const corrections = readCorrections(raw, pack.id);
   const freeEn = (pack.__en?.deliverables as string[] | undefined) ?? pack.deliverables.map((line) => tr("en", line));
   // Ligne des corrections générée à partir du nombre réglé ; une ancienne ligne écrite à la main est retirée
@@ -89,7 +94,7 @@ export function getStore(): Store {
       const { ownDeliverables, corrections, __en, ...rest } = pack as WithEnglish<Pack>;
       void __en;
       void corrections;
-      const formulas = rest.formulas?.map(({ deliverables, __en: english, ...formula }: WithEnglish<Formula>) => (void deliverables, void english, formula));
+      const formulas = rest.formulas?.map(({ deliverables, delivery, __en: english, ...formula }: WithEnglish<Formula>) => (void deliverables, void delivery, void english, formula));
       await base.savePack({ ...rest, formulas, deliverables: ownDeliverables ?? pack.deliverables });
     },
     async getPortfolio() {

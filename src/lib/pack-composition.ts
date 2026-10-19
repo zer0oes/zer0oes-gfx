@@ -3,9 +3,11 @@
 // Sert dans l'admin à comparer la valeur à la carte au prix, et génère les livrables du pack sur le site.
 // Rangé dans le contenu JSON existant (pas de colonne en base) : « page:offres:composition:<id de l'offre> »
 // = { "_base": [{ "option": "<id produit>", "qty": 2 }, …], "<id de formule>": [produits ajoutés…] }.
+// Un produit d'une option peut remplacer un produit du pack de base (« replaces » : id du produit remplacé),
+// par exemple des overlays animés à la place des overlays statiques.
 import { formatOfferPrice, splitOptionName, type Option } from "./pricing";
 
-export type CompositionItem = { option: string; qty: number };
+export type CompositionItem = { option: string; qty: number; replaces?: string };
 export type PackComposition = Record<string, CompositionItem[]>;
 
 export const compositionKey = (packId: string) => `page:offres:composition:${packId}`;
@@ -18,9 +20,10 @@ const asRecord = (raw: unknown) => (raw && typeof raw === "object" ? (raw as Rec
 export function cleanItems(list: unknown): CompositionItem[] {
   if (!Array.isArray(list)) return [];
   return list.flatMap((item) => {
-    const { option, qty } = asRecord(item);
+    const { option, qty, replaces } = asRecord(item);
     const n = Math.floor(Number(qty));
-    return typeof option === "string" && option && Number.isFinite(n) && n >= 1 ? [{ option: option.slice(0, 60), qty: Math.min(n, MAX_QTY) }] : [];
+    if (typeof option !== "string" || !option || !Number.isFinite(n) || n < 1) return [];
+    return [{ option: option.slice(0, 60), qty: Math.min(n, MAX_QTY), ...(typeof replaces === "string" && replaces ? { replaces: replaces.slice(0, 60) } : {}) }];
   }).slice(0, 50);
 }
 
@@ -55,7 +58,11 @@ export function compositionFromForm(json: string, optionFormulaIds: string[], op
     return {};
   }
   for (const [from, to] of Object.entries(aliases)) if (from in parsed) parsed[to] = parsed[from];
-  return Object.fromEntries([BASE, ...optionFormulaIds].map((id) => [id, cleanItems(parsed[id]).filter((item) => options.some((o) => o.id === item.option))]));
+  const exists = (id: string) => options.some((o) => o.id === id);
+  const base = cleanItems(parsed[BASE]).filter((item) => exists(item.option));
+  const replaceable = (id?: string) => !id || base.some((item) => item.option === id);
+  return Object.fromEntries([[BASE, base], ...optionFormulaIds.map((id) => [id, cleanItems(parsed[id]).filter((item) => exists(item.option))
+    .map(({ replaces, ...item }) => (replaceable(replaces) ? { ...item, ...(replaces ? { replaces } : {}) } : item))])]);
 }
 
 // Valeur à la carte : somme des prix habituels (hors remise temporaire) × quantités.
@@ -74,6 +81,14 @@ export function compositionValue(items: CompositionItem[], options: Option[]) {
     priceFrom ||= Boolean(option.priceFrom);
   }
   return { total, priceFrom, missing };
+}
+
+// Valeur à la carte d'une option : pack de base, moins les produits qu'elle remplace, plus ses produits
+export function optionValue(base: CompositionItem[], items: CompositionItem[], options: Option[]) {
+  const replaced = new Set(items.flatMap((item) => (item.replaces ? [item.replaces] : [])));
+  const kept = compositionValue(base.filter((item) => !replaced.has(item.option)), options);
+  const added = compositionValue(items, options);
+  return { total: kept.total + added.total, priceFrom: kept.priceFrom || added.priceFrom, missing: [...kept.missing, ...added.missing] };
 }
 
 // Économie du pack par rapport à la carte, en % arrondi (négatif si le pack coûte plus cher)
@@ -118,4 +133,26 @@ export function deliverablesWith(items: CompositionItem[], names: (option: Optio
     return option ? [compositionLine(item, { name: names(option) })] : [];
   }), ...extra.filter(Boolean)];
   return [...generated, ...free.filter((line) => !generated.includes(line))];
+}
+
+// Lignes d'une option : affichage sur le site (« Overlay animé au lieu de Overlay statique » pour un remplacement,
+// texte modifiable « {produit} » / « {remplacé} ») et livrables de la commande (pack de base moins les lignes remplacées, plus les ajouts)
+export function optionLines(base: CompositionItem[], items: CompositionItem[], names: (option: Option) => string, options: Option[], replacesTemplate: string) {
+  const line = (item: CompositionItem) => {
+    const option = options.find((o) => o.id === item.option);
+    return option ? compositionLine(item, { name: names(option) }) : "";
+  };
+  const display: string[] = [];
+  const adds: string[] = [];
+  const removes: string[] = [];
+  for (const item of items) {
+    const added = line(item);
+    if (!added) continue;
+    adds.push(added);
+    const replaced = item.replaces ? base.find((b) => b.option === item.replaces) : undefined;
+    const old = replaced ? line(replaced) : "";
+    if (old && !removes.includes(old)) removes.push(old);
+    display.push(old && replacesTemplate.trim() ? replacesTemplate.replaceAll("{produit}", added).replaceAll("{remplacé}", old) : added);
+  }
+  return { display, adds, removes };
 }

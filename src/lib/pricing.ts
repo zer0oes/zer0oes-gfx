@@ -17,6 +17,8 @@ export type Formula = {
   stripePriceId?: string;
   // Produits ajoutés au pack de base par cette formule (lignes générées par la composition, voir pack-composition)
   deliverables?: string[];
+  // Livrables de la commande pour cette formule : lignes du pack de base remplacées, lignes ajoutées
+  delivery?: { removes: string[]; adds: string[] };
 };
 
 export type Pack = {
@@ -64,6 +66,12 @@ export function getPack(packs: Pack[], id: string | undefined | null) {
 }
 
 // Livrables ajoutés par une formule au pack de base : produits de la composition, sinon les anciennes options de l'offre
+// Livrables d'une commande : ceux du pack, sans les produits remplacés par la formule, puis ses ajouts
+export function orderDeliverables(pack: Pack, formula: Formula | undefined) {
+  if (formula?.delivery && formula.id !== pack.formulas?.[0]?.id) return [...pack.deliverables.filter((line) => !formula.delivery!.removes.includes(line)), ...formula.delivery.adds];
+  return [...pack.deliverables, ...formulaExtras(pack, formula)];
+}
+
 export function formulaExtras(pack: Pack, formula: Formula | undefined) {
   if (!formula || formula.id === pack.formulas?.[0]?.id) return [];
   if (formula.deliverables) return formula.deliverables;
