@@ -56,24 +56,6 @@ body {
   color: var(--foreground);
 }
 
-/* Page en cours dans le menu : texte et soulignement au dégradé de la marque */
-.nav-active {
-  position: relative;
-  background: linear-gradient(90deg, var(--accent-3), var(--accent), var(--accent-2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.nav-active::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  bottom: -6px;
-  height: 2px;
-  border-radius: 9999px;
-  background: linear-gradient(90deg, var(--accent-3), var(--accent), var(--accent-2));
-}
-
 .text-gradient {
   background: linear-gradient(90deg, var(--accent-3), var(--accent), var(--accent-2));
   -webkit-background-clip: text;

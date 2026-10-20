@@ -34,9 +34,9 @@ export function Header() {
                 key={l.href}
                 href={to(l.href)}
                 aria-current={active(l.href) ? "page" : undefined}
-                className={`px-3 py-2 text-sm transition-colors ${active(l.href) ? "font-semibold" : "text-muted hover:text-foreground"}`}
+                className={`px-3 py-2 text-sm transition-colors ${active(l.href) ? "font-semibold text-accent" : "text-muted hover:text-foreground"}`}
               >
-                <span className={active(l.href) ? "nav-active" : undefined}>{l.label}</span>
+                {l.label}
               </Link>
             ))}
           </div>
@@ -73,9 +73,9 @@ export function Header() {
               href={to(l.href)}
               onClick={() => setOpen(false)}
               aria-current={active(l.href) ? "page" : undefined}
-              className={`block py-3 ${active(l.href) ? "font-semibold" : "text-muted hover:text-foreground"}`}
+              className={`block py-3 ${active(l.href) ? "font-semibold text-accent" : "text-muted hover:text-foreground"}`}
             >
-              <span className={active(l.href) ? "nav-active" : undefined}>{l.label}</span>
+              {l.label}
             </Link>
           ))}
           <div className="mt-2 flex flex-wrap items-center gap-4">
