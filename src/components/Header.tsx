@@ -27,21 +27,21 @@ export function Header() {
           <Image src="/logo-zeroes-gfx.png" alt="zer0oes gfx" width={1400} height={250} sizes="(min-width: 640px) 224px, 202px" preload className="h-9 w-auto sm:h-10" />
         </Link>
 
-        <nav className="hidden items-center gap-8 md:flex" aria-label={t(locale, { fr: "Navigation principale", en: "Main navigation" })}>
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={to(l.href)}
-              aria-current={active(l.href) ? "page" : undefined}
-              className={`relative py-2 text-sm transition-colors hover:text-foreground ${
-                active(l.href)
-                  ? "text-foreground after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-accent"
-                  : "text-muted"
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+        <nav className="hidden items-center gap-6 md:flex" aria-label={t(locale, { fr: "Navigation principale", en: "Main navigation" })}>
+          <div className="flex items-center gap-1">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={to(l.href)}
+                aria-current={active(l.href) ? "page" : undefined}
+                className={`rounded-full px-4 py-2 text-sm transition-colors ${
+                  active(l.href) ? "bg-accent/20 font-semibold text-accent ring-1 ring-inset ring-accent/40" : "text-muted hover:bg-foreground/5 hover:text-foreground"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </div>
           <LanguageSwitch />
           <Link
             href={to("/contact")}
@@ -75,8 +75,8 @@ export function Header() {
               href={to(l.href)}
               onClick={() => setOpen(false)}
               aria-current={active(l.href) ? "page" : undefined}
-              className={`-ml-3 block border-l-2 py-3 pl-[10px] hover:text-foreground ${
-                active(l.href) ? "border-accent font-semibold text-foreground" : "border-transparent text-muted"
+              className={`-mx-3 my-0.5 block rounded-xl px-3 py-2.5 ${
+                active(l.href) ? "bg-accent/20 font-semibold text-accent ring-1 ring-inset ring-accent/40" : "text-muted hover:text-foreground"
               }`}
             >
               {l.label}
