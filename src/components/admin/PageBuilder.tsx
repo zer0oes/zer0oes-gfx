@@ -1,5 +1,7 @@
 "use client";
 
+import { MaterialIcon } from "./MaterialIcon";
+import { notifySiteChanged } from "@/lib/site-refresh";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { resetProjectPageAction, saveProjectPageAction } from "@/app/admin/portfolio-actions";
 import { layoutIds, layouts, type Block, type BuilderPage, type L, type LayoutId, type Slot } from "@/lib/page-builder";
@@ -168,7 +170,7 @@ function BlockEditor({
       <div className="flex items-center gap-3 p-3">
         {/* Poignée : tirer pour déplacer le bloc (ou flèches haut et bas au clavier) */}
         <span {...handle} role="button" tabIndex={0} aria-label="Déplacer le bloc (flèches haut et bas)" title="Glisser pour déplacer" className="inline-flex size-8 shrink-0 cursor-grab items-center justify-center rounded text-muted hover:bg-accent/10 hover:text-accent active:cursor-grabbing">
-          <svg viewBox="0 0 24 24" className="size-5" fill="currentColor"><path d="M9 5h2v2H9V5zm4 0h2v2h-2V5zM9 11h2v2H9v-2zm4 0h2v2h-2v-2zM9 17h2v2H9v-2zm4 0h2v2h-2v-2z" /></svg>
+          <MaterialIcon name="drag_indicator" className="size-5" />
         </span>
         <button type="button" onClick={onToggle} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <LayoutThumb id={block.layout} className="w-14 shrink-0" />
@@ -319,9 +321,21 @@ export function PageBuilder({ streamerId, streamerName, initial, custom, works }
     setSaving(false);
     if (res.ok) {
       setDirty(false);
+      notifySiteChanged();
       setStatus({ tone: "ok", text: `Enregistré à ${new Date(res.savedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} — la page publique est à jour.` });
     } else setStatus({ tone: "error", text: res.error });
   };
+
+  // Ctrl + S (⌘ + S) : enregistrer la mise en page
+  const saveRef = useRef(save);
+  useEffect(() => { saveRef.current = save; });
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); void saveRef.current(); }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, []);
 
   const reset = async () => {
     if (!window.confirm("Revenir à la mise en page d'origine ? Les blocs et textes personnalisés seront perdus.")) return;
@@ -333,7 +347,7 @@ export function PageBuilder({ streamerId, streamerName, initial, custom, works }
   const setHeader = (patch: Partial<BuilderPage["header"]>) => update({ ...page, header: { ...h, ...patch } });
 
   return (
-    <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+    <div data-own-save className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <div className="min-w-0 space-y-4">
         <div className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface/95 p-3 backdrop-blur">
           <div role="group" aria-label="Langue des textes" className="flex rounded-full border border-border p-0.5 text-xs">
@@ -400,7 +414,7 @@ export function PageBuilder({ streamerId, streamerName, initial, custom, works }
             className="pointer-events-none fixed z-50 flex items-center gap-3 rounded-2xl border border-accent bg-surface p-3 shadow-2xl"
           >
             <span className="inline-flex size-8 shrink-0 items-center justify-center text-accent">
-              <svg viewBox="0 0 24 24" className="size-5" fill="currentColor"><path d="M9 5h2v2H9V5zm4 0h2v2h-2V5zM9 11h2v2H9v-2zm4 0h2v2h-2v-2zM9 17h2v2H9v-2zm4 0h2v2h-2v-2z" /></svg>
+              <MaterialIcon name="drag_indicator" className="size-5" />
             </span>
             <LayoutThumb id={page.blocks[sort.drag.from].layout} className="w-14 shrink-0" />
             <span className="min-w-0 truncate font-semibold">

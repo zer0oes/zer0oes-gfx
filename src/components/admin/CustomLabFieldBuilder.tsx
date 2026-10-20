@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FieldDefinition } from "@/lib/custom-lab/types";
+import { Collapse } from "@/components/Collapse";
 import { MaterialIcon } from "./MaterialIcon";
 import { shift, SortPreview } from "./SortableRows";
 import { moveItem, usePointerSort } from "./usePointerSort";
@@ -85,7 +86,7 @@ export function CustomLabFieldBuilder({ value, onChange }: { value: string; onCh
             <div className="flex items-center gap-2 px-2 py-1.5">
               <span {...sort.handle(i)} role="button" tabIndex={0} aria-label={`Déplacer ${field.label || key} (flèches haut et bas)`} title="Glisser pour changer l’ordre · ↑/↓ au clavier" className="inline-flex size-7 shrink-0 cursor-grab items-center justify-center rounded text-[var(--cl-muted)] hover:bg-[#ac8bfa1f] hover:text-[var(--cl-accent)] active:cursor-grabbing"><MaterialIcon name="drag_indicator" className="size-5" /></span>
               <button type="button" onClick={() => setOpen(isOpen ? null : key)} aria-expanded={isOpen} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                <span className={`inline-flex text-[var(--cl-muted)] transition-transform ${isOpen ? "" : "-rotate-90"}`}><MaterialIcon name="expand_more" className="size-4" /></span>
+                <span className={`inline-flex text-[var(--cl-muted)] transition-transform duration-[260ms] ease-out motion-reduce:transition-none ${isOpen ? "" : "-rotate-90"}`}><MaterialIcon name="expand_more" className="size-4" /></span>
                 <span className="truncate font-semibold">{field.label || key}</span>
                 <code className="text-[10px] text-[var(--cl-muted)]">{key}</code>
                 <span className="ml-auto shrink-0 rounded-full border border-[var(--cl-line)] px-2 py-0.5 text-[10px] text-[var(--cl-muted)]">{typeLabel}</span>
@@ -94,7 +95,7 @@ export function CustomLabFieldBuilder({ value, onChange }: { value: string; onCh
                 <MaterialIcon name="delete" className="size-4" />
               </button>
             </div>
-            {isOpen && (
+            <Collapse open={isOpen}>
               <div className="grid gap-2 border-t border-[var(--cl-line)] p-2 sm:grid-cols-2">
                 <label className="grid gap-1">Identifiant (dans le code)<input className={input} defaultValue={key} onBlur={(e) => rename(i, e.target.value.trim())} /></label>
                 <label className="grid gap-1">Type<select className={input} value={field.type} onChange={(e) => update(i, { type: e.target.value, value: coerce(e.target.value, field.value) })}>{fieldTypes.map(([t, l]) => <option key={t} value={t}>{l}</option>)}{!fieldTypes.some(([t]) => t === field.type) && <option value={field.type}>{field.type}</option>}</select></label>
@@ -125,7 +126,7 @@ export function CustomLabFieldBuilder({ value, onChange }: { value: string; onCh
                 )}
                 {field.type === "button" && <p className="cl-field-hint sm:col-span-2">Un bouton envoie un événement au widget quand on clique dessus dans la plateforme.</p>}
               </div>
-            )}
+            </Collapse>
           </div>
           </div>
         );

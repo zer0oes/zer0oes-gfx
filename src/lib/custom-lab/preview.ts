@@ -1,5 +1,6 @@
 // Document HTML d'aperçu d'une création (widget ou pack d'alertes) pour une plateforme, dans une iframe isolée.
 // Partagé par l'éditeur de widgets et l'éditeur d'overlays.
+import { demoSession } from "./eventSimulatorData";
 import { normalizeAlertboxConfig } from "./alertbox";
 import { fieldValues, jsonObject, parseFields } from "./model";
 import { buildStreamlabsLoadDetail, type Platform } from "./platformEvents";
@@ -35,10 +36,10 @@ export function buildLabPreview(content: LabContent, platform: Platform, options
 
 // Message de chargement envoyé au widget une fois l'iframe prête (onWidgetLoad / onLoad)
 export function labLoadMessage(preview: LabPreview, platform: Platform) {
-  const session = { data: {}, count: 0 };
+  const { session, recents } = demoSession();
   const detail = platform === "streamlabs"
     ? buildStreamlabsLoadDetail(preview.fields, preview.values, session)
-    : { fieldData: preview.values, session, recents: [], currency: { code: "EUR", symbol: "€" }, channel: { username: "zer0oes-demo" } };
+    : { fieldData: preview.values, session, recents, currency: { code: "EUR", symbol: "€" }, channel: { username: "zer0oes-demo" } };
   return { source: "se-lab", kind: "dispatch", eventType: platform === "streamlabs" ? "onLoad" : "onWidgetLoad", eventTarget: platform === "streamlabs" ? "document" : "window", detail };
 }
 

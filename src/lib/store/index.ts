@@ -1,6 +1,12 @@
 import "server-only";
 import { cache } from "react";
 import { withTranslations } from "@/lib/admin-translations";
+import { readCategories, resolveCategory } from "@/lib/product-categories";
+import { optionPlural } from "@/lib/option-content";
+import { BASE, correctionsLine, deliverablesWith, optionLines, pluralize, readComposition, readCorrections, withoutCorrectionsLines, type ProductName } from "@/lib/pack-composition";
+import { resolveHome } from "@/lib/home-content";
+import type { Formula, Option, Pack } from "@/lib/pricing";
+import { tr } from "@/lib/translations-en";
 import { localStoreAllowed, supabaseConfigured } from "@/lib/env";
 import { mediaBaseUrl, mediaUrl } from "@/lib/media";
 import { s3Configured, s3DeliverableRead, s3DeliverableUrl, s3DeliverableWrite, s3Download, s3Upload } from "@/lib/s3";
@@ -35,6 +41,42 @@ function withMediaUrls(p: Portfolio): Portfolio {
   };
 }
 
+type WithEnglish<T> = T & { __en?: Record<string, unknown> };
+
+// Livrables d'une offre composée de produits à la carte : ceux du pack de base, puis ses lignes libres ;
+// chaque autre formule reçoit les produits qu'elle ajoute au pack de base (affichés en option sur le site)
+function withComposedDeliverables(pack: WithEnglish<Pack>, raw: unknown, options: WithEnglish<Option>[]) {
+  const composition = readComposition(raw, pack.id);
+  const enName = (o: Option) => ((o as WithEnglish<Option>).__en?.name as string | undefined) ?? tr("en", o.name);
+  // Noms des produits dans les livrables, avec le pluriel saisi dans l'admin (sinon accord automatique)
+  const fr = (o: Option): ProductName => ({ name: o.name, plural: optionPlural(raw, o.id, "fr") });
+  const en = (o: Option): ProductName => ({ name: enName(o), plural: optionPlural(raw, o.id, "en") ?? pluralize(enName(o), "en") });
+  const items = composition[BASE] ?? [];
+  // Options : produits ajoutés (ou remplaçant un produit du pack de base), affichés en option sur le site
+  const replacesFr = resolveHome(raw).text("pricing.replacesLine");
+  const replacesEn = resolveHome(raw, "en").text("pricing.replacesLine");
+  const formulas = pack.formulas?.map((formula: WithEnglish<Formula>, i) => {
+    const added = i > 0 ? composition[formula.id] : undefined;
+    if (!added?.length) return formula;
+    const lines = optionLines(items, added, fr, options, replacesFr);
+    return { ...formula, deliverables: lines.display, delivery: { removes: lines.removes, adds: lines.adds }, __en: { ...formula.__en, deliverables: optionLines(items, added, en, options, replacesEn).display } };
+  });
+  const corrections = readCorrections(raw, pack.id);
+  const freeEn = (pack.__en?.deliverables as string[] | undefined) ?? pack.deliverables.map((line) => tr("en", line));
+  // Ligne des corrections générée à partir du nombre réglé ; une ancienne ligne écrite à la main est retirée
+  const templateFr = resolveHome(raw).text("pricing.correctionsLine");
+  const templateEn = resolveHome(raw, "en").text("pricing.correctionsLine");
+  return {
+    ...pack,
+    formulas,
+    corrections,
+    ownDeliverables: pack.deliverables,
+    composedCount: items.filter((item) => options.some((o) => o.id === item.option)).length,
+    deliverables: deliverablesWith(items, fr, options, withoutCorrectionsLines(pack.deliverables, templateFr), [correctionsLine(templateFr, corrections)]),
+    __en: { ...pack.__en, deliverables: deliverablesWith(items, en, options, withoutCorrectionsLines(freeEn, templateEn), [correctionsLine(templateEn, corrections)]) },
+  };
+}
+
 export function getStore(): Store {
   const base = baseStore();
   const store: Store = {
@@ -42,11 +84,23 @@ export function getStore(): Store {
     getHomeContent: getHomeContentForRender,
     async getCatalog() {
       const [catalog, raw] = await Promise.all([base.getCatalog(), getHomeContentForRender()]);
+      const categories = readCategories(raw);
+      const options = catalog.options.map((option) => withTranslations({ ...option, category: resolveCategory(option, categories) }, raw, `option:${option.id}`, ["name", "unit"]));
       return {
         settings: withTranslations(catalog.settings, raw, "settings", ["deliveryDays"]),
-        packs: catalog.packs.map((pack) => withTranslations({ ...pack, formulas: pack.formulas?.map((formula) => withTranslations(formula, raw, `pack:${pack.id}:formula:${formula.id}`, ["label"])) }, raw, `pack:${pack.id}`, ["name", "tagline", "deliverables", "extras", "note"], ["deliverables", "extras"])),
-        options: catalog.options.map((option) => withTranslations(option, raw, `option:${option.id}`, ["name", "unit"])),
+        packs: catalog.packs.map((pack) => withComposedDeliverables(withTranslations({ ...pack, formulas: pack.formulas?.map((formula) => withTranslations(formula, raw, `pack:${pack.id}:formula:${formula.id}`, ["label"])) }, raw, `pack:${pack.id}`, ["name", "tagline", "deliverables", "extras", "note"], ["deliverables", "extras"]), raw, options)),
+        options,
+        categories: categories.map((category) => withTranslations(category, raw, `categorie:${category.id}`, ["name"])),
       };
+    },
+    // Les livrables générés par la composition ne sont pas enregistrés avec l'offre : seulement ses lignes libres
+    async savePack(pack) {
+      const { ownDeliverables, corrections, composedCount, __en, ...rest } = pack as WithEnglish<Pack>;
+      void composedCount;
+      void __en;
+      void corrections;
+      const formulas = rest.formulas?.map(({ deliverables, delivery, __en: english, ...formula }: WithEnglish<Formula>) => (void deliverables, void delivery, void english, formula));
+      await base.savePack({ ...rest, formulas, deliverables: ownDeliverables ?? pack.deliverables });
     },
     async getPortfolio() {
       const [portfolio, raw] = await Promise.all([base.getPortfolio(), getHomeContentForRender()]);

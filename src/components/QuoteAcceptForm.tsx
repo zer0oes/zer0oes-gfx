@@ -43,6 +43,7 @@ export function QuoteAcceptForm({ token, en, request, deliverables, updatedAt, t
       <p className="text-xs leading-relaxed text-muted">{en ? "Accept and pay securely on Stripe. Complete your brief after payment." : "Accepte le devis, complète ton brief, puis confirme pour ouvrir le paiement sécurisé Stripe."}</p>
     </fieldset>
     <form id="quote-checkout" action={action} className="mt-4 space-y-3">
+      <input type="hidden" name="expectedPrice" value={totalPrice} />
       <input type="hidden" name="token" value={token} /><input type="hidden" name="updatedAt" value={updatedAt} /><input type="hidden" name="decision" value="accept" /><input type="hidden" name="payment" value={payment} /><input type="hidden" name="lang" value={en ? "en" : "fr"} />
       <label className="flex gap-3 text-sm"><input type="checkbox" name="consent" required /><span>{en ? "I accept the quote and terms of sale." : "J?accepte le devis et les conditions g?n?rales de vente."}</span></label>
       {state && <p role="alert" className="text-sm text-amber-300">{state.error}</p>}
@@ -52,6 +53,7 @@ export function QuoteAcceptForm({ token, en, request, deliverables, updatedAt, t
       <h2 id="accept-title" className="font-display text-xl font-bold">{en ? "Complete your brief" : "Complète ton brief"}</h2>
       <p className="mt-2 text-sm text-muted">{en ? "Tell me about your ideas for each creation before confirming your order." : "Précise tes idées pour chaque création avant de confirmer ta commande."}</p>
       <form action={action} className="mt-5 space-y-5">
+        <input type="hidden" name="expectedPrice" value={totalPrice} />
         <input type="hidden" name="token" value={token} /><input type="hidden" name="decision" value="accept" /><input type="hidden" name="updatedAt" value={updatedAt} /><input type="hidden" name="lang" value={en ? "en" : "fr"} />
         {state && <p role="alert" className="text-sm text-amber-300">{state.error}</p>}
         <input type="hidden" name="payment" value={payment} />

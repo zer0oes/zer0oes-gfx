@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { href, t, type Locale } from "@/lib/i18n";
-import { type Pack, type PricingSettings } from "@/lib/pricing";
+import { formatPrice, type Pack, type PricingSettings } from "@/lib/pricing";
 import { glossaryFor } from "@/lib/glossary";
 import type { HomeContent } from "@/lib/home-content";
 import { trDeep } from "@/lib/translations-en";
@@ -23,6 +23,7 @@ export function PackCard({
   settings,
   order = false,
   compact = false,
+  showSaleBadge = true,
   openOptions = false,
   locale = "fr",
   texts,
@@ -33,6 +34,7 @@ export function PackCard({
   openOptions?: boolean;
   // Version courte (accueil) : prix, bénéfice, trois livrables et bouton
   compact?: boolean;
+  showSaleBadge?: boolean;
   locale?: Locale;
   // Textes de la page (bulles « ? » des termes techniques) ; absents sur l'accueil
   texts?: HomeContent;
@@ -45,9 +47,14 @@ export function PackCard({
   const buttonClass = `w-full rounded-full px-5 py-3 text-center font-semibold transition hover:brightness-110 ${
     pack.highlight || quote ? "bg-accent text-background" : "bg-foreground text-background"
   }`;
-  // Détails des ajouts, visibles en complément du sélecteur de formule.
+  // Détails des ajouts, visibles en complément du sélecteur de formule : produits ajoutés par chaque formule
+  // (composition du pack dans l'admin) et leur supplément, sinon les options saisies dans l'offre.
   // Ancien contenu du catalogue : ces scènes font déjà partie des cinq overlays inclus.
-  const extras = pack.id === "univers-complet"
+  const baseFormula = pack.formulas?.[0];
+  const composed = baseFormula ? pack.formulas!.slice(1).filter((f) => f.deliverables?.length) : [];
+  const extras = composed.length
+    ? composed.map((f) => `${f.deliverables!.join(" + ")} ${t(locale, { fr: "pour", en: "for" })} ${formatPrice(f.price - baseFormula!.price, locale)}`)
+    : pack.id === "univers-complet"
     ? pack.extras?.filter((extra) => ![
         "Scènes animées : démarrage, pause, discussion, fin de live",
         "Animated scenes: starting, break, just chatting, ending",
@@ -67,8 +74,8 @@ export function PackCard({
             : "border-border bg-surface"
       }`}
     >
-      <SaleBadge item={pack} locale={locale} className="absolute right-4 top-4" />
-      <div className={`flex flex-wrap items-center gap-2 ${discountPercent(pack) ? "pr-20" : ""}`}>
+      {showSaleBadge && <SaleBadge item={pack} locale={locale} className="absolute right-4 top-4" />}
+      <div className={`flex flex-wrap items-center gap-2 ${showSaleBadge && discountPercent(pack) ? "pr-20" : ""}`}>
         <h3 className="font-display text-xl font-bold">{pack.name}</h3>
         {quote && (
           <span className="rounded-full border border-accent-3/60 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-accent-3">
@@ -83,7 +90,8 @@ export function PackCard({
 
       {compact ? (
         <ul className="mt-4 space-y-1.5 text-sm">
-          {pack.deliverables.slice(0, 3).map((item) => (
+          {/* Carte de l'accueil : tous les produits du pack de base, sinon les trois premiers livrables */}
+          {pack.deliverables.slice(0, Math.max(3, pack.composedCount ?? 0)).map((item) => (
             <li key={item} className="flex gap-2">
               <span className="text-accent-2" aria-hidden>✓</span>
               <span>{item}</span>
@@ -135,7 +143,6 @@ export function PackCard({
       {!compact && (pack.id === "premier-look" || pack.id === "identite-signature") && <p className="mt-4 text-xs text-muted">{t(locale, { fr: pack.formulas?.some((f) => f.id === "emotes-animations") ? "Overlays statiques inclus. Variante animée disponible dans la formule avec emotes et animations." : "Overlays statiques inclus.", en: pack.formulas?.some((f) => f.id === "emotes-animations") ? "Static overlays included. Animated variant available in the package with emotes and animations." : "Static overlays included." })}</p>}
       {order && <Link href={to(`/contact?offre=${pack.id}&sujet=offre`)} className="mt-4 text-sm text-accent underline underline-offset-4">{t(locale, { fr: "Poser une question sur ce pack", en: "Ask about this package" })}</Link>}
       {!compact && quote && <p className="mt-5 text-xs leading-relaxed text-muted">{t(locale, { fr: "Alertes, widgets et transition (stinger) ne sont pas inclus dans le tarif de base : ces ajouts sont chiffrés séparément sur le devis.", en: "Alerts, widgets and a stinger transition are not included in the base price: these add-ons are priced separately in your quote." })}</p>}
-      {!compact && pack.note && <p className="mt-5 text-xs leading-relaxed text-muted">{pack.note}</p>}
       {!compact && <div className="flex-1" />}
 
       {!order ? (
@@ -150,7 +157,7 @@ export function PackCard({
           </Link>
         </div>
       ) : pack.checkout ? (
-        <OrderForm key={`${pack.id}-${openOptions}`} pack={pack} settings={settings} buttonClass={buttonClass} defaultOpen={openOptions} />
+        <OrderForm showSaleBadge={showSaleBadge} key={`${pack.id}-${openOptions}`} pack={pack} settings={settings} buttonClass={buttonClass} defaultOpen={openOptions} />
       ) : (
         <div className="mt-8 space-y-3">
           <p className="text-center text-xs leading-relaxed text-muted">{t(locale, { fr: `Généralement ${settings.deliveryDays} jours ouvrés après réception du brief complet, selon le projet.`, en: `Usually ${settings.deliveryDays.replace(" à ", " to ")} business days after receiving the complete brief, depending on the project.` })}</p>

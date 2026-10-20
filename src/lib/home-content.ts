@@ -120,6 +120,9 @@ export const portfolioPageFields: HomeField[] = [
 ];
 
 export const offersPageFields: HomeField[] = [
+  { key: "pricing.packsTab", label: "Onglet Packs complets", kind: "text", max: 60 },
+  { key: "pricing.optionsTab", label: "Onglet Créations à la carte", kind: "text", max: 60 },
+  { key: "pricing.discountUpTo", label: "Préfixe si plusieurs remises coexistent", kind: "text", max: 30 },
   { key: "pricing.kicker", label: "Surtitre", kind: "text", max: 60 },
   { key: "pricing.title", label: "Titre — début", kind: "text", max: 80 },
   { key: "pricing.titleAccent", label: "Titre — partie en dégradé", kind: "text", max: 80 },
@@ -127,6 +130,8 @@ export const offersPageFields: HomeField[] = [
   { key: "pricing.explanationTitle", label: "Titre de l’explication des packs", kind: "text", max: 120 },
   { key: "pricing.summary", label: "Phrase courte sous le titre des packs", kind: "long" },
   { key: "pricing.optionsIntro", label: "Introduction de l’onglet À la carte", kind: "long" },
+  { key: "pricing.correctionsLine", label: "Packs — ligne des corrections incluses ({n} = nombre réglé sur la page du pack)", kind: "text", max: 120 },
+  { key: "pricing.replacesLine", label: "Packs — option qui remplace un produit du pack de base ({produit} = produit de l'option, {remplacé} = produit remplacé)", kind: "text", max: 120 },
   ...glossaryFields(),
   { key: "options.receive", label: "Cartes — titre de la liste « Tu reçois »", kind: "text", max: 40 },
   { key: "options.revision", label: "Cartes — mention des modifications incluses", kind: "text", max: 80 },
@@ -164,6 +169,9 @@ function glossaryFields(): HomeField[] {
 }
 
 export const homeDefaults: Record<string, string> = {
+  "pricing.packsTab": "Packs complets",
+  "pricing.optionsTab": "Créations à la carte",
+  "pricing.discountUpTo": "Jusqu’à",
   "pricing.kicker": "Packs & à la carte",
   "pricing.title": "Un univers",
   "pricing.titleAccent": "à ton image.",
@@ -171,6 +179,8 @@ export const homeDefaults: Record<string, string> = {
   "pricing.explanationTitle": "Une identité pensée dans son ensemble.",
   "pricing.summary": "Logo et habillage conçus autour d’une même direction graphique.",
   "pricing.optionsIntro": "Les prestations à la carte répondent à un besoin ponctuel ou permettent de compléter ton univers existant.",
+  "pricing.correctionsLine": "{n} corrections incluses par élément du pack",
+  "pricing.replacesLine": "{produit} au lieu de {remplacé}",
   "hero.title1": "Ton stream.",
   "hero.title2": "Ton univers.",
   "hero.text": "Logos, overlays et emotes sur mesure pour Twitch et YouTube.",
@@ -250,6 +260,9 @@ export const homeDefaults: Record<string, string> = {
 // Version anglaise des textes (/en). Les visuels et les noms d'emotes sont communs aux deux langues.
 // Une traduction saisie dans l'admin est enregistrée sous la clé « en:<clé> ».
 export const homeDefaultsEn: Record<string, string> = {
+  "pricing.packsTab": "Complete packages",
+  "pricing.optionsTab": "À la carte creations",
+  "pricing.discountUpTo": "Up to",
   "pricing.kicker": "Packages & à la carte",
   "pricing.title": "A universe",
   "pricing.titleAccent": "that reflects you.",
@@ -257,6 +270,8 @@ export const homeDefaultsEn: Record<string, string> = {
   "pricing.explanationTitle": "An identity designed as a whole.",
   "pricing.summary": "Your logo and channel visuals designed around a shared visual direction.",
   "pricing.optionsIntro": "À la carte services meet a specific need or help expand your existing visual universe.",
+  "pricing.correctionsLine": "{n} corrections included per package item",
+  "pricing.replacesLine": "{produit} instead of {remplacé}",
   "hero.title1": "Your stream.",
   "hero.title2": "Your universe.",
   "hero.text": "Custom logos, overlays and emotes for Twitch and YouTube.",

@@ -6,6 +6,7 @@
 import type { Locale } from "./i18n";
 import { animatedOption, defaultGroup, emoteCount, optionFiles, optionIncludes } from "./option-products";
 import type { Option } from "./pricing";
+import { optionVisualKey, readVisuals, visualFor, type ProductVisual } from "./product-visuals";
 
 export const platforms = [
   { id: "obs", name: "OBS" },
@@ -15,8 +16,8 @@ export const platforms = [
 export type PlatformId = (typeof platforms)[number]["id"];
 
 const MAX = 1200;
-export const contentKey = (field: "description" | "fichiers" | "compat" | "groupe" | "variante" | "nombre", id: string) => `page:offres:${field}:${id}`;
-export const contentTranslationKey = (field: "description" | "files", id: string) => `translation:option-${field}:${id}`;
+export const contentKey = (field: "description" | "fichiers" | "compat" | "groupe" | "variante" | "nombre" | "pluriel", id: string) => `page:offres:${field}:${id}`;
+export const contentTranslationKey = (field: "description" | "files" | "plural", id: string) => `translation:option-${field}:${id}`;
 
 const asRecord = (raw: unknown) => (raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {});
 const lines = (v: string) => v.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -35,7 +36,8 @@ export function defaultCompat(option: Option): PlatformId[] {
 
 // group : carte partagée avec les options du même regroupement (null : carte seule) ;
 // animated / count : place de l'option dans sa carte (bouton Statique / Animé, menu du nombre)
-export type OptionContent = { description: string; files: string[]; compat: PlatformId[]; group: string | null; groupName: string; animated: boolean; count: number };
+// visual : dessin de la carte (bibliothèque « Visuels » de l'admin)
+export type OptionContent = { description: string; files: string[]; compat: PlatformId[]; group: string | null; groupName: string; animated: boolean; count: number; visual: ProductVisual };
 
 // Nom de la carte d'un regroupement (titre affiché sur la page Offres), en FR et EN
 export const groupNameKey = (group: string) => `page:offres:nom-groupe:${group}`;
@@ -83,6 +85,7 @@ export function optionContentFor(option: Option, raw: unknown, locale: Locale): 
     compat: compat === undefined ? defaultCompat(option) : (compat.split(",").filter((p) => platforms.some((x) => x.id === p)) as PlatformId[]),
     ...optionGroupingFor(option, raw),
     groupName: groupNameFor(optionGroupingFor(option, raw).group, raw, locale),
+    visual: visualFor(option, raw),
   };
 }
 
@@ -99,9 +102,17 @@ export function optionContentFromForm(raw: unknown, id: string, form: FormData):
   content[contentKey("fichiers", id)] = lines(get("files")).join("\n");
   content[contentKey("compat", id)] = platforms.filter((p) => form.get(`compat_${p.id}`) === "on").map((p) => p.id).join(",");
   content[contentKey("variante", id)] = form.get("variant") === "anime" ? "anime" : "statique";
+  const visual = get("visual");
+  if (readVisuals(raw).some((v) => v.id === visual)) content[optionVisualKey(id)] = visual;
   const count = Number(get("count"));
   content[contentKey("nombre", id)] = String(Number.isInteger(count) && count > 0 && count <= 999 ? count : 1);
-  for (const [name, key] of [["en:description", contentTranslationKey("description", id)], ["en:files", contentTranslationKey("files", id)]] as const) {
+  // Nom au pluriel (quantité > 1 dans la composition des packs) : vide = accord automatique
+  if (form.has("plural")) {
+    if (get("plural")) content[contentKey("pluriel", id)] = get("plural").slice(0, 200);
+    else delete content[contentKey("pluriel", id)];
+  }
+  for (const [name, key] of [["en:description", contentTranslationKey("description", id)], ["en:files", contentTranslationKey("files", id)], ["en:plural", contentTranslationKey("plural", id)]] as const) {
+    if (!form.has(name) && name === "en:plural") continue;
     const v = name === "en:files" ? lines(get(name)).join("\n") : get(name);
     if (v) content[key] = v;
     else delete content[key];
@@ -111,8 +122,21 @@ export function optionContentFromForm(raw: unknown, id: string, form: FormData):
 
 // Option supprimée : son contenu aussi
 export function withoutOptionContent(raw: unknown, id: string): Record<string, string> {
-  const keys = new Set([contentKey("description", id), contentKey("fichiers", id), contentKey("compat", id), contentKey("groupe", id), contentKey("variante", id), contentKey("nombre", id), contentTranslationKey("description", id), contentTranslationKey("files", id)]);
+  const keys = new Set([contentKey("description", id), contentKey("fichiers", id), contentKey("compat", id), contentKey("groupe", id), contentKey("variante", id), optionVisualKey(id), contentKey("nombre", id), contentKey("pluriel", id), contentTranslationKey("description", id), contentTranslationKey("files", id), contentTranslationKey("plural", id)]);
   return Object.fromEntries(Object.entries(asRecord(raw)).filter(([k, v]) => typeof v === "string" && !keys.has(k))) as Record<string, string>;
+}
+
+// Copie du contenu de la carte d'une option vers une autre (dupliquer) ; la copie a sa propre carte (pas de regroupement)
+export function withCopiedOptionContent(raw: unknown, from: string, to: string): Record<string, string> {
+  const content = Object.fromEntries(Object.entries(asRecord(raw)).filter(([, v]) => typeof v === "string")) as Record<string, string>;
+  const pairs: [string, string][] = [
+    ...(["description", "fichiers", "compat", "variante", "nombre", "pluriel"] as const).map((f) => [contentKey(f, from), contentKey(f, to)] as [string, string]),
+    ...(["description", "files", "plural"] as const).map((f) => [contentTranslationKey(f, from), contentTranslationKey(f, to)] as [string, string]),
+    [optionVisualKey(from), optionVisualKey(to)],
+  ];
+  for (const [a, b] of pairs) if (a in content) content[b] = content[a];
+  content[contentKey("groupe", to)] = "";
+  return content;
 }
 
 // « Regrouper avec » : l'option rejoint la carte de l'option choisie (qui reçoit un regroupement si elle n'en avait pas) ;
@@ -141,4 +165,9 @@ export function withGroupName(raw: unknown, option: Option, form: FormData): Rec
     else delete content[key];
   }
   return content;
+}
+
+// Nom au pluriel d'une option saisi dans l'admin (FR, ou EN avec repli sur l'accord automatique du nom anglais)
+export function optionPlural(raw: unknown, id: string, locale: Locale) {
+  return read(raw, locale === "en" ? contentTranslationKey("plural", id) : contentKey("pluriel", id))?.trim() || undefined;
 }

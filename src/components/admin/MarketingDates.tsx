@@ -3,12 +3,12 @@ import { useState } from "react";
 import { DatePicker } from "@/components/DatePicker";
 
 // Jour local (AAAA-MM-JJ) d'une date ISO, et retour : début du jour pour « Début », fin du jour pour « Fin »
-const dayOf = (iso: string) => {
+export const dayOf = (iso: string) => {
   if (!iso) return "";
   const d = new Date(iso);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
-const toIso = (day: string, end: boolean) => (day ? new Date(`${day}T${end ? "23:59:59.999" : "00:00:00"}`).toISOString() : "");
+export const toIso = (day: string, end: boolean) => (day ? new Date(`${day}T${end ? "23:59:59.999" : "00:00:00"}`).toISOString() : "");
 
 export function MarketingDates({ startsAt = "", endsAt = "" }: { startsAt?: string; endsAt?: string }) {
   const [start, setStart] = useState(startsAt);

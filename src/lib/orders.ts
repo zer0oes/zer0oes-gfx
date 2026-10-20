@@ -1,4 +1,5 @@
 import "server-only";
+import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { abbyConfigured, createAbbyApi } from "@/lib/abby";
@@ -9,6 +10,7 @@ import { siteUrl } from "@/lib/site-url";
 import {
   amountToPay,
   formatPrice,
+  orderDeliverables,
   formulaName,
   getFormula,
   getPack,
@@ -122,14 +124,14 @@ export function quote(
   if (!pack || !pack.checkout || pack.archived) return null;
   const formula = getFormula(pack, input.formulaId);
   if (!formula) return null;
-  const s = packPricingSettings(catalog.settings, pack.id);
+  const s = packPricingSettings(catalog.settings, pack.id, formula);
   const payment = parsePaymentType(input.payment);
   const hasLogo = Boolean(input.hasLogo);
   const totalPrice = orderPrice(formula.price, hasLogo, s);
   if (amountToPay(totalPrice, payment, s) < 50) return null;
   return {
     packId: pack.id,
-    deliveryTemplate: [...pack.deliverables, ...((formula.id === "emotes" ? pack.extras?.slice(0, 1) : formula.id === "emotes-animations" ? pack.extras : []) ?? [])],
+    deliveryTemplate: orderDeliverables(pack, formula),
     formulaId: formula.id,
     offerName: formulaName(pack, formula),
     payment,
@@ -351,6 +353,10 @@ export async function handleCheckoutCompleted(s: Stripe.Checkout.Session) {
   if (s.payment_status !== "paid") return;
   const store = getStore();
   const m = s.metadata ?? {};
+  if (m.launchSlot && m.kind === "commande") {
+    await store.settleLaunchSlot(m.launchSlot, true);
+    revalidatePath("/", "layout");
+  }
 
   const fee = await realStripeFee(s.id);
   if (m.kind === "solde" && m.orderId) {

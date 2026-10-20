@@ -10,7 +10,8 @@ import {
 import { correctionPending, itemRevisionLimit, deliverableTypes, formatBytes, itemType, mediaKind, pendingPreview, deliveryLocked, deliveryLockedMessage } from "@/lib/delivery";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/env";
 import { siteUrl } from "@/lib/site-url";
-import type { Deliverable, Order } from "@/lib/store";
+import { getStore, type Deliverable, type Order } from "@/lib/store";
+import { readCorrections } from "@/lib/pack-composition";
 import { DeliveryUpload } from "./DeliveryUpload";
 import { ClientSpaceLinks } from "./DeliveryControls";
 import { NewDeliverable } from "./NewDeliverable";
@@ -40,6 +41,7 @@ export async function DeliverySection({ order, items, message }: { order: Order;
   const newCount = items.filter((item) => pendingPreview(item)).length;
   // Commande entièrement validée : plus de retrait possible (sauf en repassant la commande « En cours »)
   const locked = deliveryLocked(order, items);
+  const revisionLimit = itemRevisionLimit(order, readCorrections(await getStore().getHomeContent(), order.packId));
   return (
     <section id="livraison" className="scroll-mt-24 rounded-2xl border border-border bg-surface p-5 sm:p-6">
       <h2 className="font-semibold">Livraison</h2>
@@ -76,7 +78,7 @@ export async function DeliverySection({ order, items, message }: { order: Order;
               const finals = (d.finalAssets?.length ?? 0) + (d.storagePath || d.url ? 1 : 0);
               const status = deliveryState(order, d);
               return <DrawerRow key={d.id} drawer={`livrable-${d.id}`} label={`Modifier ${d.label}`}>
-                <td className="px-3 py-3 font-medium">{status === "Téléchargé" ? <details><summary className="cursor-pointer">{d.label}</summary><ul className="mt-2 space-y-1 text-xs font-normal text-muted">{(d.finalAssets ?? []).map((asset, index) => <li key={index}>{asset.label} · Téléchargé</li>)}{(d.storagePath || d.url) && <li>{d.label} · Téléchargé</li>}</ul></details> : d.label}{correctionPending(d) && <span className="mt-1 block text-xs text-amber-300">Retour client à traiter</span>}<span className="mt-1 block text-xs font-normal text-muted">{d.clientNotes?.length ?? 0}/{itemRevisionLimit(order)} corrections utilisées</span></td>
+                <td className="px-3 py-3 font-medium">{status === "Téléchargé" ? <details><summary className="cursor-pointer">{d.label}</summary><ul className="mt-2 space-y-1 text-xs font-normal text-muted">{(d.finalAssets ?? []).map((asset, index) => <li key={index}>{asset.label} · Téléchargé</li>)}{(d.storagePath || d.url) && <li>{d.label} · Téléchargé</li>}</ul></details> : d.label}{correctionPending(d) && <span className="mt-1 block text-xs text-amber-300">Retour client à traiter</span>}<span className="mt-1 block text-xs font-normal text-muted">{d.clientNotes?.length ?? 0}/{revisionLimit} corrections utilisées</span></td>
                 <td className={`px-3 py-3 ${ready ? "text-emerald-300" : "text-muted"}`}>{ready ? "Prêt" : "À ajouter"}</td>
                 <td className="px-3 py-3">{finals ? `${finals} fichier(s) / lien(s)` : "Aucun"}</td>
                 <td className="px-3 py-3"><span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold ${statusStyles[status]}`}><span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />{status}</span></td>

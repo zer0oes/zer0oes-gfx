@@ -5,6 +5,8 @@
 
 import { intlLocale, type Locale } from "@/lib/i18n";
 import { trDeep } from "@/lib/translations-en";
+import { hasLaunchOffer } from "@/lib/launch-offer";
+import type { ProductCategory } from "./product-categories";
 
 export type Formula = {
   normalPrice?: number;
@@ -13,6 +15,10 @@ export type Formula = {
   label: string;
   price: number;
   stripePriceId?: string;
+  // Produits ajoutés au pack de base par cette formule (lignes générées par la composition, voir pack-composition)
+  deliverables?: string[];
+  // Livrables de la commande pour cette formule : lignes du pack de base remplacées, lignes ajoutées
+  delivery?: { removes: string[]; adds: string[] };
 };
 
 export type Pack = {
@@ -25,6 +31,12 @@ export type Pack = {
   priceFrom?: boolean;
   checkout: boolean;
   deliverables: string[];
+  // Lignes libres saisies dans l'admin, quand les livrables sont générés par la composition du pack (voir pack-composition)
+  ownDeliverables?: string[];
+  // Nombre de livrables générés par les produits du pack de base (tous affichés sur la carte de l'accueil)
+  composedCount?: number;
+  // Corrections incluses par élément (page de l'offre dans l'admin)
+  corrections?: number;
   // Options propres à l'offre, affichées sous les livrables
   extras?: string[];
   // Formules commandables (la première est la formule de base)
@@ -46,12 +58,26 @@ export type PricingSettings = {
   deliveryDays: string;
 };
 
-export type Catalog = { settings: PricingSettings; packs: Pack[]; options: Option[] };
+// categories : liste gérée dans l'admin (ajoutée par getStore().getCatalog())
+export type Catalog = { settings: PricingSettings; packs: Pack[]; options: Option[]; categories?: ProductCategory[] };
 
 export type PaymentType = "total" | "acompte";
 
 export function getPack(packs: Pack[], id: string | undefined | null) {
   return packs.find((p) => p.id === id);
+}
+
+// Livrables ajoutés par une formule au pack de base : produits de la composition, sinon les anciennes options de l'offre
+// Livrables d'une commande : ceux du pack, sans les produits remplacés par la formule, puis ses ajouts
+export function orderDeliverables(pack: Pack, formula: Formula | undefined) {
+  if (formula?.delivery && formula.id !== pack.formulas?.[0]?.id) return [...pack.deliverables.filter((line) => !formula.delivery!.removes.includes(line)), ...formula.delivery.adds];
+  return [...pack.deliverables, ...formulaExtras(pack, formula)];
+}
+
+export function formulaExtras(pack: Pack, formula: Formula | undefined) {
+  if (!formula || formula.id === pack.formulas?.[0]?.id) return [];
+  if (formula.deliverables) return formula.deliverables;
+  return (formula.id === "emotes" ? pack.extras?.slice(0, 1) : formula.id === "emotes-animations" ? pack.extras : []) ?? [];
 }
 
 // Offres visibles sur le site
@@ -117,8 +143,11 @@ export function orderPrice(price: number, hasLogo: boolean, s: PricingSettings) 
 }
 
 // Identité signature : 765 € avec création du logo, 515 € avec logo fourni.
-export function packPricingSettings(settings: PricingSettings, packId: string): PricingSettings {
-  return packId === "identite-signature" ? { ...settings, logoDiscount: 25000 } : settings;
+export function packPricingSettings(settings: PricingSettings, packId: string, formula?: { price: number; normalPrice?: number; promotionCode?: string }): PricingSettings {
+  const packSettings = packId === "identite-signature" ? { ...settings, logoDiscount: 25000 } : settings;
+  // Pendant le lancement, la remise « logo fourni » baisse dans la même proportion que le prix de la formule.
+  return hasLaunchOffer(formula?.promotionCode) && formula?.normalPrice
+    ? { ...packSettings, logoDiscount: Math.round(packSettings.logoDiscount * formula.price / formula.normalPrice) } : packSettings;
 }
 
 export function amountToPay(price: number, payment: PaymentType, s: PricingSettings) {
@@ -142,17 +171,12 @@ export function parsePaymentType(value: unknown): PaymentType {
 // Types d'overlays proposés au choix dans le brief.
 export const overlayTypes = ["Démarrage", "Pause", "Fin", "Discussion", "Gameplay"];
 
-// Catégories des options à la carte (page Offres), déduites du nom de l'option
-export const optionCategories = [
-  { id: "overlays", label: "Overlays", hint: "Scènes et habillage du live" },
-  { id: "emotes", label: "Emotes", hint: "Pour ton tchat et tes abonnés" },
-  { id: "branding", label: "Identité visuelle", hint: "Ta chaîne sur toutes les plateformes" },
-  { id: "motion", label: "Animation", hint: "Pour donner vie à ton univers" },
-] as const;
-export type OptionCategory = (typeof optionCategories)[number]["id"];
+// Catégorie d'une option à la carte : celle enregistrée, sinon devinée d'après son nom.
+// La liste des catégories (nom, couleur, ordre) se gère dans l'admin : voir product-categories.ts.
+export type OptionCategory = string;
 
 export function optionCategory(o: Pick<Option, "name" | "category">): OptionCategory {
-  if (o.category && optionCategories.some((c) => c.id === o.category)) return o.category;
+  if (o.category) return o.category;
   const n = o.name.toLowerCase();
   if (n.includes("emote")) return "emotes";
   // Overlays, alertes et widgets (même animés) : habillage du live

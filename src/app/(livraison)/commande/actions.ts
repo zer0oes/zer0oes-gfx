@@ -9,6 +9,7 @@ import { createBalanceLink } from "@/lib/orders";
 import { requestLocale } from "@/lib/request-locale";
 import { siteUrl } from "@/lib/site-url";
 import { balanceDue, getStore } from "@/lib/store";
+import { readCorrections } from "@/lib/pack-composition";
 
 // Retours du client sur sa page de livraison. Le jeton du lien privé sert d'accès :
 // on vérifie qu'il correspond à une commande et que l'élément appartient bien à cette commande.
@@ -67,7 +68,7 @@ export async function addClientNoteAction(formData: FormData) {
   if (item.approvedAt) back(token, item.id, "deja-valide");
   if (correctionPending(item)) back(token, item.id, "attente");
   if (!canCancelApproval(order)) back(token, item.id, "cloturee");
-  if ((item.clientNotes?.length ?? 0) >= itemRevisionLimit(order)) back(token, item.id, "limite");
+  if ((item.clientNotes?.length ?? 0) >= itemRevisionLimit(order, readCorrections(await store.getHomeContent(), order.packId))) back(token, item.id, "limite");
   const body = cleanNote(formData.get("body"));
   if (!body) back(token, item.id, "vide");
   await store.addDeliverableNote(item.id, body);
