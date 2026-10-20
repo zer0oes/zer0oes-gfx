@@ -17,6 +17,7 @@ export function Header() {
     { href: "/offres", label: t(locale, { fr: "Packs & à la carte", en: "Packages & à la carte" }) },
     { href: "/a-propos", label: t(locale, { fr: "À propos", en: "About" }) },
   ];
+  const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const cta = t(locale, { fr: "Parlons de ton projet ↗", en: "Let's talk about your project ↗" });
 
   return (
@@ -26,22 +27,26 @@ export function Header() {
           <Image src="/logo-zeroes-gfx.png" alt="zer0oes gfx" width={1400} height={250} sizes="(min-width: 640px) 224px, 202px" preload className="h-9 w-auto sm:h-10" />
         </Link>
 
-        <nav className="hidden items-center gap-8 md:flex" aria-label={t(locale, { fr: "Navigation principale", en: "Main navigation" })}>
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={to(l.href)}
-              className={`text-sm transition-colors hover:text-foreground ${
-                pathname.startsWith(l.href) ? "text-foreground" : "text-muted"
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+        <nav className="hidden items-center gap-6 md:flex" aria-label={t(locale, { fr: "Navigation principale", en: "Main navigation" })}>
+          <div className="flex items-center gap-2">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={to(l.href)}
+                aria-current={active(l.href) ? "page" : undefined}
+                className={`px-3 py-2 text-sm transition-colors ${active(l.href) ? "font-semibold text-accent" : "text-muted hover:text-foreground"}`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </div>
           <LanguageSwitch />
           <Link
             href={to("/contact")}
-            className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
+            aria-current={active("/contact") ? "page" : undefined}
+            className={`rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background transition hover:brightness-110 ${
+              active("/contact") ? "ring-2 ring-accent ring-offset-2 ring-offset-background" : ""
+            }`}
           >
             {cta}
           </Link>
@@ -67,7 +72,8 @@ export function Header() {
               key={l.href}
               href={to(l.href)}
               onClick={() => setOpen(false)}
-              className="block py-3 text-muted hover:text-foreground"
+              aria-current={active(l.href) ? "page" : undefined}
+              className={`block py-3 ${active(l.href) ? "font-semibold text-accent" : "text-muted hover:text-foreground"}`}
             >
               {l.label}
             </Link>
