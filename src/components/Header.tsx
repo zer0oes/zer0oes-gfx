@@ -28,17 +28,15 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex" aria-label={t(locale, { fr: "Navigation principale", en: "Main navigation" })}>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {links.map((l) => (
               <Link
                 key={l.href}
                 href={to(l.href)}
                 aria-current={active(l.href) ? "page" : undefined}
-                className={`rounded-full px-4 py-2 text-sm transition-colors ${
-                  active(l.href) ? "bg-accent/20 font-semibold text-accent ring-1 ring-inset ring-accent/40" : "text-muted hover:bg-foreground/5 hover:text-foreground"
-                }`}
+                className={`px-3 py-2 text-sm transition-colors ${active(l.href) ? "font-semibold" : "text-muted hover:text-foreground"}`}
               >
-                {l.label}
+                <span className={active(l.href) ? "nav-active" : undefined}>{l.label}</span>
               </Link>
             ))}
           </div>
@@ -75,11 +73,9 @@ export function Header() {
               href={to(l.href)}
               onClick={() => setOpen(false)}
               aria-current={active(l.href) ? "page" : undefined}
-              className={`-mx-3 my-0.5 block rounded-xl px-3 py-2.5 ${
-                active(l.href) ? "bg-accent/20 font-semibold text-accent ring-1 ring-inset ring-accent/40" : "text-muted hover:text-foreground"
-              }`}
+              className={`block py-3 ${active(l.href) ? "font-semibold" : "text-muted hover:text-foreground"}`}
             >
-              {l.label}
+              <span className={active(l.href) ? "nav-active" : undefined}>{l.label}</span>
             </Link>
           ))}
           <div className="mt-2 flex flex-wrap items-center gap-4">
