@@ -7,6 +7,8 @@ import { MaterialIcon } from "./MaterialIcon";
 // footer : boutons d'action, sous un séparateur en bas du panneau
 export function Drawer({ id, kicker, title, openOnLoad = false, footer, children }: { id: string; kicker: string; title: string; openOnLoad?: boolean; footer?: React.ReactNode; children: React.ReactNode }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  // Fermeture au clic sur le fond seulement si le clic y a aussi commencé (pas après une sélection de texte lâchée dehors)
+  const pressedOutside = useRef(false);
   useEffect(() => {
     if (openOnLoad && !dialog.current?.open) dialog.current?.showModal();
   }, [openOnLoad]);
@@ -15,9 +17,13 @@ export function Drawer({ id, kicker, title, openOnLoad = false, footer, children
       ref={dialog}
       id={id}
       aria-labelledby={`${id}-title`}
+      onPointerDown={(event) => { pressedOutside.current = event.target === event.currentTarget; }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) dialog.current?.close();
+        if (event.target === event.currentTarget && pressedOutside.current) dialog.current?.close();
       }}
+      // Échap ne ferme pas le panneau (seuls la croix et un clic sur le fond le ferment)
+      onKeyDown={(event) => { if (event.key === "Escape") event.preventDefault(); }}
+      onCancel={(event) => event.preventDefault()}
       className="fixed inset-y-0 left-auto right-0 m-0 h-dvh max-h-none w-full max-w-xl border-l border-border bg-surface p-0 text-foreground shadow-2xl backdrop:bg-black/60"
     >
       <div className="flex h-full flex-col text-left">
