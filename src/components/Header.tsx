@@ -17,6 +17,7 @@ export function Header() {
     { href: "/offres", label: t(locale, { fr: "Packs & à la carte", en: "Packages & à la carte" }) },
     { href: "/a-propos", label: t(locale, { fr: "À propos", en: "About" }) },
   ];
+  const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const cta = t(locale, { fr: "Parlons de ton projet ↗", en: "Let's talk about your project ↗" });
 
   return (
@@ -31,8 +32,11 @@ export function Header() {
             <Link
               key={l.href}
               href={to(l.href)}
-              className={`text-sm transition-colors hover:text-foreground ${
-                pathname.startsWith(l.href) ? "text-foreground" : "text-muted"
+              aria-current={active(l.href) ? "page" : undefined}
+              className={`relative py-2 text-sm transition-colors hover:text-foreground ${
+                active(l.href)
+                  ? "text-foreground after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-accent"
+                  : "text-muted"
               }`}
             >
               {l.label}
@@ -41,7 +45,10 @@ export function Header() {
           <LanguageSwitch />
           <Link
             href={to("/contact")}
-            className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
+            aria-current={active("/contact") ? "page" : undefined}
+            className={`rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-background transition hover:brightness-110 ${
+              active("/contact") ? "ring-2 ring-accent ring-offset-2 ring-offset-background" : ""
+            }`}
           >
             {cta}
           </Link>
@@ -67,7 +74,10 @@ export function Header() {
               key={l.href}
               href={to(l.href)}
               onClick={() => setOpen(false)}
-              className="block py-3 text-muted hover:text-foreground"
+              aria-current={active(l.href) ? "page" : undefined}
+              className={`-ml-3 block border-l-2 py-3 pl-[10px] hover:text-foreground ${
+                active(l.href) ? "border-accent font-semibold text-foreground" : "border-transparent text-muted"
+              }`}
             >
               {l.label}
             </Link>
